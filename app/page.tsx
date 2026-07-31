@@ -1051,7 +1051,12 @@ function AppShell({ session }: { session: Session | null }) {
               <div className="pizza-criteria">
                 {pizzaCriteria.map((criterion) => (
                   <div className={`pizza-criterion criterion-${criterion.tone}`} key={criterion.label}>
-                    <span>{criterion.label}</span>
+                    <span>
+                      {criterion.label}
+                      {criterion.label === "Bonus Fabio" ? (
+                        <img className="bonus-fabio-icon" src={`${basePath}/bonus-fabio.jpg`} alt="" />
+                      ) : null}
+                    </span>
                     <b>{criterion.max}</b>
                     <small>{criterion.source}</small>
                   </div>

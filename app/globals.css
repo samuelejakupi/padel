@@ -1905,6 +1905,17 @@ form select:focus,
   text-transform: uppercase;
 }
 
+.bonus-fabio-icon {
+  border-radius: 999px;
+  display: inline-block;
+  height: 22px;
+  margin-left: 6px;
+  object-fit: cover;
+  object-position: center top;
+  vertical-align: middle;
+  width: 22px;
+}
+
 .pizza-criterion b {
   font-size: 30px;
   letter-spacing: -1px;
