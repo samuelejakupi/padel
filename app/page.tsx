@@ -176,7 +176,15 @@ function SetupScreen() {
   );
 }
 
-function MatchCard({ match }: { match: PadelMatch }) {
+function MatchCard({
+  match,
+  onDelete,
+  deleting = false,
+}: {
+  match: PadelMatch;
+  onDelete?: (match: PadelMatch) => void;
+  deleting?: boolean;
+}) {
   const team1 = match.players.filter((player) => player.team === 1);
   const team2 = match.players.filter((player) => player.team === 2);
   const formatTeam = (players: typeof team1) => players.map((player) => player.profile.display_name).join(" · ");
@@ -214,6 +222,17 @@ function MatchCard({ match }: { match: PadelMatch }) {
         <span className={match.winner_team === 1 ? "positive" : "negative"}>{match.winner_team === 1 ? "+" : "−"}{match.rating_delta ?? 16}</span>
         <small>PT RANKING</small>
       </div>
+      {onDelete ? (
+        <button
+          className="match-delete-button"
+          disabled={deleting}
+          onClick={() => onDelete(match)}
+          aria-label={`Elimina la partita del ${new Intl.DateTimeFormat("it-IT").format(new Date(match.played_at))}`}
+        >
+          <span>{deleting ? "Elimino…" : "Elimina"}</span>
+          <b aria-hidden="true">×</b>
+        </button>
+      ) : null}
     </article>
   );
 }
@@ -379,6 +398,7 @@ function AppShell({ session }: { session: Session | null }) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [matches, setMatches] = useState<PadelMatch[]>([]);
   const [showMatch, setShowMatch] = useState(false);
+  const [deletingMatchId, setDeletingMatchId] = useState<string | null>(null);
   const [loading, setLoading] = useState(Boolean(supabase));
   const [notice, setNotice] = useState("");
   const [profileName, setProfileName] = useState("");
@@ -466,6 +486,27 @@ function AppShell({ session }: { session: Session | null }) {
     setShowMatch(false);
     await loadData();
     setNotice("Partita salvata. La classifica è stata aggiornata.");
+  }
+
+  async function deleteMatch(match: PadelMatch) {
+    if (!supabase || deletingMatchId) return;
+    const playedAt = new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "long", year: "numeric" })
+      .format(new Date(match.played_at));
+    const confirmed = window.confirm(
+      `Eliminare definitivamente la partita del ${playedAt}?\n\nClassifica e statistiche verranno ricalcolate.`,
+    );
+    if (!confirmed) return;
+
+    setDeletingMatchId(match.id);
+    setNotice("");
+    const { error } = await supabase.rpc("delete_match", { p_match_id: match.id });
+    if (error) {
+      setNotice(error.message);
+    } else {
+      await loadData();
+      setNotice("Partita eliminata. Classifica e statistiche sono state ricalcolate.");
+    }
+    setDeletingMatchId(null);
   }
 
   async function uploadAvatar(file: File | undefined) {
@@ -634,7 +675,16 @@ function AppShell({ session }: { session: Session | null }) {
                   <button className="text-link" onClick={() => setPadelView("matches")}>Vedi tutte →</button>
                 </div>
                 {matches.length ? (
-                  <div className="match-list">{matches.slice(0, 3).map((match) => <MatchCard key={match.id} match={match} />)}</div>
+                  <div className="match-list">
+                    {matches.slice(0, 3).map((match) => (
+                      <MatchCard
+                        key={match.id}
+                        match={match}
+                        deleting={deletingMatchId === match.id}
+                        onDelete={(selected) => void deleteMatch(selected)}
+                      />
+                    ))}
+                  </div>
                 ) : (
                   <div className="compact-empty"><span>00</span><p>Nessuna partita registrata. La prima scriverà la storia.</p></div>
                 )}
@@ -691,7 +741,16 @@ function AppShell({ session }: { session: Session | null }) {
               <button className="button button-primary" onClick={() => setShowMatch(true)}>＋ Registra partita</button>
             </div>
             {matches.length ? (
-              <div className="match-list match-list-full">{matches.map((match) => <MatchCard key={match.id} match={match} />)}</div>
+              <div className="match-list match-list-full">
+                {matches.map((match) => (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    deleting={deletingMatchId === match.id}
+                    onDelete={(selected) => void deleteMatch(selected)}
+                  />
+                ))}
+              </div>
             ) : (
               <div className="empty-board"><span>00</span><h2>Ancora nessuna partita</h2><p>Registra il primo risultato per iniziare lo storico.</p></div>
             )}

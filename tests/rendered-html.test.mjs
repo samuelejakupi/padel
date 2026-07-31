@@ -20,10 +20,13 @@ test("include configurazione Supabase e pubblicazione Pages", async () => {
     readFile(new URL("app/page.tsx", root), "utf8"),
   ]);
   assert.match(schema, /record_match/);
+  assert.match(schema, /delete_match/);
+  assert.match(schema, /theboyz_padel_results/);
   assert.match(schema, /Registrazione pubblica disabilitata/);
   assert.match(schema, /samu@theboyz\.local/);
   assert.match(workflow, /deploy-pages/);
   assert.match(page, /signInWithPassword/);
+  assert.match(page, /Partita eliminata/);
   assert.doesNotMatch(page, /signUp\s*\(/);
   assert.match(page, /avatars/);
   assert.match(page, /PORTEGO DE MA/);

@@ -1333,6 +1333,7 @@ form select:focus,
   grid-template-columns: 44px minmax(0, 1fr) 52px;
   min-height: 110px;
   padding: 15px 20px;
+  position: relative;
   transition: border-color 150ms ease, transform 150ms ease;
 }
 
@@ -1456,6 +1457,39 @@ form select:focus,
   font-size: 6px;
   font-weight: 900;
   letter-spacing: 0.8px;
+}
+
+.match-delete-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #9aa3a9;
+  cursor: pointer;
+  display: flex;
+  font-size: 7px;
+  font-weight: 900;
+  gap: 3px;
+  letter-spacing: 0.6px;
+  padding: 4px 6px;
+  position: absolute;
+  right: 8px;
+  text-transform: uppercase;
+  top: 6px;
+  transition: color 150ms ease;
+}
+
+.match-delete-button b {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.match-delete-button:hover {
+  color: var(--danger);
+}
+
+.match-delete-button:disabled {
+  cursor: wait;
+  opacity: 0.5;
 }
 
 /* Full pages */
@@ -2522,7 +2556,23 @@ form select:focus,
   .match-card {
     gap: 10px;
     grid-template-columns: 34px minmax(0, 1fr);
-    padding: 14px 12px;
+    padding: 18px 38px 14px 12px;
+  }
+
+  .match-delete-button {
+    align-items: center;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    height: 25px;
+    justify-content: center;
+    padding: 0;
+    right: 8px;
+    top: 8px;
+    width: 25px;
+  }
+
+  .match-delete-button span {
+    display: none;
   }
 
   .match-points {
