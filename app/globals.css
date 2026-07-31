@@ -2516,7 +2516,8 @@ button.pizza-ranking-row {
 
 @media (max-width: 780px) {
   body {
-    padding-bottom: 70px;
+    overflow-x: hidden;
+    padding-bottom: calc(70px + env(safe-area-inset-bottom));
   }
 
   .topbar {
@@ -2543,7 +2544,7 @@ button.pizza-ranking-row {
   }
 
   .content {
-    padding: 30px 16px 40px;
+    padding: 24px 14px 36px;
   }
 
   .hub-page {
@@ -2551,9 +2552,10 @@ button.pizza-ranking-row {
   }
 
   .hub-hero {
+    gap: 28px;
     grid-template-columns: 1fr;
-    min-height: 650px;
-    padding: 38px 24px;
+    min-height: 0;
+    padding: 32px 22px;
   }
 
   .hub-hero-copy {
@@ -2561,16 +2563,25 @@ button.pizza-ranking-row {
   }
 
   .hub-hero-copy h1 {
-    font-size: 52px;
+    font-size: clamp(40px, 12vw, 52px);
     letter-spacing: -3px;
   }
 
+  .hub-hero-copy > p:not(.eyebrow) {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .hub-members {
+    margin-top: 24px;
+  }
+
   .hub-logo-stage {
-    margin-top: 15px;
+    margin-top: 0;
   }
 
   .hub-logo-stage img {
-    max-width: 245px;
+    max-width: 190px;
   }
 
   .hub-section-title h2 {
@@ -2582,7 +2593,24 @@ button.pizza-ranking-row {
   }
 
   .hub-card {
-    min-height: 260px;
+    gap: 14px;
+    grid-template-columns: 48px minmax(0, 1fr);
+    min-height: 230px;
+    padding: 24px 20px;
+  }
+
+  .hub-card-icon {
+    height: 46px;
+    width: 46px;
+  }
+
+  .hub-card-copy {
+    grid-column: 2;
+  }
+
+  .hub-card-meta {
+    gap: 14px;
+    grid-column: 2;
   }
 
   .hub-card-copy h3 {
@@ -2610,6 +2638,7 @@ button.pizza-ranking-row {
 
   .section-context nav button {
     flex: 1;
+    min-height: 38px;
   }
 
   .mobile-nav {
@@ -2619,7 +2648,7 @@ button.pizza-ranking-row {
     bottom: 0;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    height: 70px;
+    height: calc(70px + env(safe-area-inset-bottom));
     left: 0;
     position: fixed;
     right: 0;
@@ -2696,6 +2725,10 @@ button.pizza-ranking-row {
     display: block;
   }
 
+  .dashboard-side {
+    order: initial;
+  }
+
   .match-card {
     gap: 10px;
     grid-template-columns: 34px minmax(0, 1fr);
@@ -2760,13 +2793,25 @@ button.pizza-ranking-row {
   }
 
   .ranking-table {
-    overflow-x: auto;
-    padding: 8px 14px;
+    background: transparent;
+    overflow: visible;
+    padding: 0;
   }
 
   .ranking-table .ranking-row {
-    grid-template-columns: 30px 46px minmax(110px, 1fr) 64px 64px 60px 56px;
-    min-width: 620px;
+    background: var(--white);
+    border: 0;
+    border-radius: 8px;
+    box-shadow: 0 5px 18px rgba(16, 29, 43, 0.04);
+    grid-template-columns: 30px 42px minmax(0, 1fr) auto;
+    margin-bottom: 10px;
+    min-height: 0;
+    padding: 14px;
+  }
+
+  .ranking-table .ranking-row > .table-stat,
+  .ranking-table .ranking-row > .streak {
+    display: none;
   }
 
   .podium {
@@ -2805,18 +2850,24 @@ button.pizza-ranking-row {
     grid-template-columns: 1fr;
   }
 
+  .profile-card,
+  .settings-card {
+    padding: 28px 20px;
+  }
+
   .pizza-page {
-    margin: -14px;
-    padding: 30px 20px 35px;
+    margin: -10px;
+    padding: 26px 16px 32px;
   }
 
   .pizza-hero {
+    gap: 26px;
     grid-template-columns: 1fr;
-    min-height: 540px;
+    min-height: 0;
   }
 
   .pizza-hero h1 {
-    font-size: 62px;
+    font-size: clamp(48px, 16vw, 62px);
     letter-spacing: -4px;
   }
 
@@ -2848,6 +2899,7 @@ button.pizza-ranking-row {
 
   .pizza-podium-card {
     grid-template-columns: 40px minmax(0, 1fr) auto;
+    min-height: 96px;
   }
 
   .pizza-podium-card > b {
@@ -2867,19 +2919,68 @@ button.pizza-ranking-row {
     min-height: 86px;
   }
 
-  .pizza-board-head,
-  .pizza-ranking-row {
-    gap: 8px;
-    grid-template-columns: 34px minmax(170px, 1fr) repeat(5, 56px) 68px;
-    min-width: 650px;
-  }
-
   .pizza-board-head {
-    padding: 15px 14px;
+    display: none;
+  }
+
+  .pizza-board {
+    background: transparent;
+    overflow: visible;
+  }
+
+  .pizza-ranking-list {
+    display: grid;
+    gap: 10px;
   }
 
   .pizza-ranking-row {
-    padding: 11px 14px;
+    background: #f4f5f1;
+    border: 0;
+    border-radius: 8px;
+    gap: 10px 12px;
+    grid-template-areas:
+      "position name total"
+      ". location pizza"
+      ". dessert price"
+      ". fabio fabio";
+    grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr);
+    min-height: 0;
+    min-width: 0;
+    padding: 16px 14px;
+  }
+
+  .pizza-ranking-row > .pizza-position { grid-area: position; }
+  .pizza-ranking-row > .pizza-name-cell { grid-area: name; }
+  .pizza-ranking-row > .pizza-category-score:nth-child(3) { grid-area: location; }
+  .pizza-ranking-row > .pizza-category-score:nth-child(4) { grid-area: pizza; }
+  .pizza-ranking-row > .pizza-category-score:nth-child(5) { grid-area: dessert; }
+  .pizza-ranking-row > .pizza-category-score:nth-child(6) { grid-area: price; }
+  .pizza-ranking-row > .pizza-category-score:nth-child(7) { grid-area: fabio; }
+  .pizza-ranking-row > .pizza-total-score { grid-area: total; }
+
+  .pizza-category-score {
+    background: rgba(11, 27, 44, 0.045);
+    border-radius: 5px;
+    justify-content: space-between;
+    min-height: 34px;
+    padding: 7px 8px;
+  }
+
+  .pizza-category-score::before {
+    color: var(--muted);
+    font-size: 6px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+  }
+
+  .pizza-category-score:nth-child(3)::before { content: "LOCATION"; }
+  .pizza-category-score:nth-child(4)::before { content: "PIZZA"; }
+  .pizza-category-score:nth-child(5)::before { content: "DOLCE"; }
+  .pizza-category-score:nth-child(6)::before { content: "PREZZO"; }
+  .pizza-category-score:nth-child(7)::before { content: "BONUS FABIO"; }
+
+  .pizza-score-track {
+    width: 100%;
   }
 
   .pizza-total-score b {
@@ -2893,6 +2994,7 @@ button.pizza-ranking-row {
 
   .modal {
     border-radius: 8px;
+    max-height: calc(100dvh - 24px);
     padding: 24px 18px;
   }
 
@@ -2905,7 +3007,7 @@ button.pizza-ranking-row {
   }
 
   .login-showcase {
-    min-height: 390px;
+    min-height: 315px;
     padding: 26px 24px;
   }
 
@@ -2914,18 +3016,183 @@ button.pizza-ranking-row {
   }
 
   .login-copy h1 {
-    font-size: 44px;
+    font-size: clamp(38px, 12vw, 44px);
     letter-spacing: -3px;
     margin-bottom: 18px;
   }
 
   .login-panel {
-    min-height: calc(100vh - 390px);
-    padding: 42px 24px;
+    min-height: calc(100vh - 315px);
+    padding: 34px 22px;
   }
 
   .login-card h2 {
     font-size: 31px;
+  }
+}
+
+@media (max-width: 520px) {
+  .topbar {
+    padding: 0 14px;
+  }
+
+  .notice {
+    bottom: calc(82px + env(safe-area-inset-bottom));
+    width: calc(100vw - 24px);
+  }
+
+  .hub-section-title > span,
+  .season {
+    display: none;
+  }
+
+  .hub-card-copy h3 {
+    font-size: 34px;
+  }
+
+  .hub-card-meta {
+    flex-wrap: wrap;
+  }
+
+  .welcome-row h1,
+  .page-title h1 {
+    font-size: 31px;
+    letter-spacing: -1.8px;
+  }
+
+  .hero-stat {
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) 92px;
+    min-height: 335px;
+    padding: 26px 20px;
+  }
+
+  .position {
+    font-size: 62px;
+    letter-spacing: -5px;
+  }
+
+  .hero-player .avatar-xl {
+    height: 80px;
+    width: 80px;
+  }
+
+  .orbit-one {
+    height: 105px;
+    width: 105px;
+  }
+
+  .orbit-two {
+    height: 128px;
+    width: 128px;
+  }
+
+  .hero-kpis {
+    height: 62px;
+  }
+
+  .hero-kpis span {
+    align-items: center;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .hero-kpis b {
+    font-size: 16px;
+  }
+
+  .dashboard-side {
+    padding: 20px 16px;
+  }
+
+  .match-card {
+    grid-template-columns: 1fr;
+    padding: 14px 38px 16px 14px;
+  }
+
+  .match-date {
+    border-bottom: 1px solid var(--line);
+    border-right: 0;
+    flex-direction: row;
+    gap: 5px;
+    justify-content: flex-start;
+    min-height: 0;
+    padding-bottom: 8px;
+  }
+
+  .match-date b {
+    font-size: 15px;
+  }
+
+  .match-main {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+
+  .match-team > span {
+    line-height: 1.35;
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .podium {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .podium-card,
+  .podium-1 {
+    display: grid;
+    gap: 4px 14px;
+    grid-template-columns: 64px minmax(0, 1fr);
+    min-height: 0;
+    order: initial;
+    padding: 18px;
+    text-align: left;
+  }
+
+  .podium-card .avatar-lg {
+    grid-row: 1 / span 3;
+    height: 60px;
+    width: 60px;
+  }
+
+  .podium-card .podium-number {
+    left: 58px;
+    top: 12px;
+  }
+
+  .podium-card h3,
+  .podium-card > b,
+  .podium-card > small {
+    margin: 0;
+    text-align: left;
+  }
+
+  .pizza-method {
+    gap: 20px;
+  }
+
+  .pizza-criteria {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pizza-criterion {
+    min-height: 96px;
+  }
+
+  .modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal {
+    border-radius: 12px 12px 0 0;
+    max-height: 92dvh;
+    padding-bottom: calc(22px + env(safe-area-inset-bottom));
+  }
+
+  .modal-actions .button {
+    flex: 1;
   }
 }
 
