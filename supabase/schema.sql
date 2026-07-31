@@ -47,6 +47,32 @@ create index if not exists matches_played_at_idx on public.matches (played_at de
 create index if not exists match_players_profile_idx on public.match_players (profile_id);
 create index if not exists profiles_rating_idx on public.profiles (rating desc);
 
+-- Ranking pizzerie interattivo: tre voti per ogni pizzeria, uno per Samu,
+-- Fabio e Dani. Il bonus Fabio resta assegnabile solo da Fabio.
+create table if not exists public.pizza_restaurants (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (char_length(trim(name)) between 2 and 80),
+  place text check (place is null or char_length(trim(place)) <= 80),
+  created_by uuid not null references public.profiles(id),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.pizza_votes (
+  restaurant_id uuid not null references public.pizza_restaurants(id) on delete cascade,
+  voter_id uuid not null references public.profiles(id) on delete restrict,
+  location smallint not null check (location between 0 and 7),
+  pizza smallint not null check (pizza between 0 and 10),
+  dessert smallint not null check (dessert between 0 and 4),
+  price smallint not null check (price between 0 and 10),
+  bonus_fabio smallint not null default 0 check (bonus_fabio between 0 and 7),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (restaurant_id, voter_id)
+);
+
+create index if not exists pizza_restaurants_created_at_idx on public.pizza_restaurants (created_at desc);
+create index if not exists pizza_votes_restaurant_idx on public.pizza_votes (restaurant_id);
+
 alter table public.matches
   drop constraint if exists matches_rating_delta_check;
 alter table public.matches
@@ -664,10 +690,91 @@ $$;
 revoke all on function public.delete_match(uuid) from public;
 grant execute on function public.delete_match(uuid) to authenticated;
 
+create or replace function public.is_pizza_editor()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select lower(coalesce(auth.jwt() ->> 'email', '')) in (
+    'samu@theboyz.local',
+    'fabio@theboyz.local',
+    'dani@theboyz.local'
+  );
+$$;
+
+create or replace function public.create_pizza_restaurant(p_name text, p_place text default null)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  new_id uuid;
+begin
+  if auth.uid() is null or not public.is_pizza_editor() then
+    raise exception 'Solo Samu, Fabio e Dani possono aggiungere pizzerie';
+  end if;
+
+  insert into public.pizza_restaurants (name, place, created_by)
+  values (trim(p_name), nullif(trim(p_place), ''), auth.uid())
+  returning id into new_id;
+  return new_id;
+end;
+$$;
+
+create or replace function public.save_pizza_vote(
+  p_restaurant_id uuid,
+  p_location smallint,
+  p_pizza smallint,
+  p_dessert smallint,
+  p_price smallint,
+  p_bonus_fabio smallint default 0
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if auth.uid() is null or not public.is_pizza_editor() then
+    raise exception 'Solo Samu, Fabio e Dani possono votare';
+  end if;
+
+  if not exists (select 1 from public.pizza_restaurants where id = p_restaurant_id) then
+    raise exception 'Pizzeria non trovata';
+  end if;
+
+  if lower(coalesce(auth.jwt() ->> 'email', '')) <> 'fabio@theboyz.local' and p_bonus_fabio <> 0 then
+    raise exception 'Il bonus Fabio può essere assegnato solo da Fabio';
+  end if;
+
+  insert into public.pizza_votes (restaurant_id, voter_id, location, pizza, dessert, price, bonus_fabio)
+  values (p_restaurant_id, auth.uid(), p_location, p_pizza, p_dessert, p_price, p_bonus_fabio)
+  on conflict (restaurant_id, voter_id) do update set
+    location = excluded.location,
+    pizza = excluded.pizza,
+    dessert = excluded.dessert,
+    price = excluded.price,
+    bonus_fabio = excluded.bonus_fabio,
+    updated_at = now();
+end;
+$$;
+
+revoke all on function public.is_pizza_editor() from public;
+revoke all on function public.create_pizza_restaurant(text, text) from public;
+revoke all on function public.save_pizza_vote(uuid, smallint, smallint, smallint, smallint, smallint) from public;
+grant execute on function public.is_pizza_editor() to authenticated;
+grant execute on function public.create_pizza_restaurant(text, text) to authenticated;
+grant execute on function public.save_pizza_vote(uuid, smallint, smallint, smallint, smallint, smallint) to authenticated;
+
 alter table public.profiles enable row level security;
 alter table public.matches enable row level security;
 alter table public.match_players enable row level security;
 alter table public.match_sets enable row level security;
+alter table public.pizza_restaurants enable row level security;
+alter table public.pizza_votes enable row level security;
 
 drop policy if exists "Membri leggono i profili" on public.profiles;
 create policy "Membri leggono i profili"
@@ -700,12 +807,26 @@ on public.match_sets for select
 to authenticated
 using (true);
 
+drop policy if exists "Membri leggono le pizzerie" on public.pizza_restaurants;
+create policy "Membri leggono le pizzerie"
+on public.pizza_restaurants for select
+to authenticated
+using (true);
+
+drop policy if exists "Membri leggono i voti pizzeria" on public.pizza_votes;
+create policy "Membri leggono i voti pizzeria"
+on public.pizza_votes for select
+to authenticated
+using (true);
+
 -- I client possono leggere tutto il club, ma non alterare punti o risultati.
 grant select on public.profiles, public.matches, public.match_players, public.match_sets to authenticated;
+grant select on public.pizza_restaurants, public.pizza_votes to authenticated;
 revoke insert, delete on public.profiles from anon, authenticated;
 revoke update on public.profiles from anon, authenticated;
 grant update (display_name, avatar_path) on public.profiles to authenticated;
 revoke insert, update, delete on public.matches, public.match_players, public.match_sets from anon, authenticated;
+revoke insert, update, delete on public.pizza_restaurants, public.pizza_votes from anon, authenticated;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('avatars', 'avatars', true, 3145728, array['image/jpeg', 'image/png', 'image/webp'])

@@ -23,8 +23,35 @@ type PizzaRankingEntry = {
   total: number;
 };
 
+type PizzaVote = {
+  restaurant_id: string;
+  voter_id: string;
+  location: number;
+  pizza: number;
+  dessert: number;
+  price: number;
+  bonus_fabio: number;
+};
+
+type PizzaRestaurantRecord = {
+  id: string;
+  name: string;
+  place: string | null;
+  created_by: string;
+  created_at: string;
+  votes: PizzaVote[];
+};
+
+type PizzaDisplayEntry = PizzaRankingEntry & {
+  id?: string;
+  isNew?: boolean;
+  votesCount?: number;
+  votes?: PizzaVote[];
+};
+
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const groupUsers = ["Samu", "Dani", "Atti", "Matte", "Fabio", "Alban", "Mattia", "Manu"] as const;
+const pizzaEditors = ["Samu", "Fabio", "Dani"] as const;
 const pizzaRanking: readonly PizzaRankingEntry[] = [
   { name: "PORTEGO DE MA", location: 16, pizza: 25, dessert: 8, price: 22, fabio: 7, total: 78 },
   { name: "L’OASI La Pizza", location: 17, pizza: 21, dessert: 7, price: 19, fabio: 6, total: 70 },
@@ -47,6 +74,48 @@ const pizzaCriteria = [
   { label: "Prezzo", max: 30, source: "3 × 0–10", tone: "yellow" },
   { label: "Bonus Fabio", max: 7, source: "0–7", tone: "blue" },
 ] as const;
+
+function canManagePizza(displayName: string) {
+  return pizzaEditors.includes(displayName as (typeof pizzaEditors)[number]);
+}
+
+function buildPizzaRanking(restaurants: PizzaRestaurantRecord[]): PizzaDisplayEntry[] {
+  const historical: PizzaDisplayEntry[] = pizzaRanking.map((entry) => ({ ...entry, isNew: false, votesCount: 3 }));
+  const interactive = restaurants.map((restaurant) => {
+    const votes = restaurant.votes ?? [];
+    const totals = votes.reduce(
+      (sum, vote) => ({
+        location: sum.location + vote.location,
+        pizza: sum.pizza + vote.pizza,
+        dessert: sum.dessert + vote.dessert,
+        price: sum.price + vote.price,
+        fabio: sum.fabio + vote.bonus_fabio,
+      }),
+      { location: 0, pizza: 0, dessert: 0, price: 0, fabio: 0 },
+    );
+    return {
+      id: restaurant.id,
+      name: restaurant.name,
+      place: restaurant.place ?? undefined,
+      location: totals.location,
+      pizza: totals.pizza,
+      dessert: totals.dessert,
+      price: totals.price,
+      fabio: totals.fabio,
+      total: totals.location + totals.pizza + totals.dessert + totals.price + totals.fabio,
+      isNew: true,
+      votesCount: votes.length,
+      votes,
+    };
+  });
+
+  return [...historical, ...interactive].sort((a, b) => {
+    const aComplete = !a.isNew || a.votesCount === 3;
+    const bComplete = !b.isNew || b.votesCount === 3;
+    if (aComplete !== bComplete) return aComplete ? -1 : 1;
+    return b.total - a.total || a.name.localeCompare(b.name, "it");
+  });
+}
 
 function initials(name: string) {
   return name
@@ -415,12 +484,140 @@ function NewMatchModal({
   );
 }
 
+function PizzaCreateModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => Promise<void> }) {
+  const [name, setName] = useState("");
+  const [place, setPlace] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!supabase || !name.trim()) return;
+    setBusy(true);
+    setError("");
+    const { error: rpcError } = await supabase.rpc("create_pizza_restaurant", {
+      p_name: name.trim(),
+      p_place: place.trim() || null,
+    });
+    if (rpcError) {
+      setError(rpcError.message);
+      setBusy(false);
+      return;
+    }
+    await onSaved();
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal pizza-vote-modal" role="dialog" aria-modal="true" aria-labelledby="pizza-create-title">
+        <div className="modal-head">
+          <div><p className="eyebrow dark">NUOVA SCHEDA</p><h2 id="pizza-create-title">Aggiungi pizzeria</h2></div>
+          <button className="icon-button" onClick={onClose} aria-label="Chiudi">×</button>
+        </div>
+        <form onSubmit={submit}>
+          <label>Nome pizzeria<input value={name} onChange={(event) => setName(event.target.value)} placeholder="Es. La Nuova Pala" maxLength={80} required /></label>
+          <label>Località <span className="optional-label">facoltativa</span><input value={place} onChange={(event) => setPlace(event.target.value)} placeholder="Es. Sanremo" maxLength={80} /></label>
+          {error ? <p className="form-message error">{error}</p> : null}
+          <div className="modal-actions">
+            <button type="button" className="button button-ghost" onClick={onClose}>Annulla</button>
+            <button className="button button-primary" disabled={busy}>{busy ? "Creazione…" : "Crea pizzeria"}</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+function PizzaVoteModal({
+  restaurant,
+  voter,
+  onClose,
+  onSaved,
+}: {
+  restaurant: PizzaRestaurantRecord;
+  voter: Profile;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const previous = restaurant.votes?.find((vote) => vote.voter_id === voter.id);
+  const [scores, setScores] = useState({
+    location: previous?.location?.toString() ?? "",
+    pizza: previous?.pizza?.toString() ?? "",
+    dessert: previous?.dessert?.toString() ?? "",
+    price: previous?.price?.toString() ?? "",
+    fabio: previous?.bonus_fabio?.toString() ?? "0",
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const isFabio = voter.display_name.toLowerCase() === "fabio";
+
+  function updateScore(key: keyof typeof scores, value: string) {
+    setScores((current) => ({ ...current, [key]: value }));
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!supabase) return;
+    const values = [scores.location, scores.pizza, scores.dessert, scores.price];
+    if (values.some((value) => value === "")) {
+      setError("Compila tutti i punteggi prima di salvare.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    const { error: rpcError } = await supabase.rpc("save_pizza_vote", {
+      p_restaurant_id: restaurant.id,
+      p_location: Number(scores.location),
+      p_pizza: Number(scores.pizza),
+      p_dessert: Number(scores.dessert),
+      p_price: Number(scores.price),
+      p_bonus_fabio: isFabio ? Number(scores.fabio || 0) : 0,
+    });
+    if (rpcError) {
+      setError(rpcError.message);
+      setBusy(false);
+      return;
+    }
+    await onSaved();
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal pizza-vote-modal" role="dialog" aria-modal="true" aria-labelledby="pizza-vote-title">
+        <div className="modal-head">
+          <div><p className="eyebrow dark">VOTO DI {voter.display_name.toUpperCase()}</p><h2 id="pizza-vote-title">{restaurant.name}</h2><p className="modal-subtitle">Il totale finale nasce dalla somma dei tre voti.</p></div>
+          <button className="icon-button" onClick={onClose} aria-label="Chiudi">×</button>
+        </div>
+        <form onSubmit={submit}>
+          <div className="pizza-vote-fields">
+            <label>Location <small>0–7</small><input type="number" min="0" max="7" value={scores.location} onChange={(event) => updateScore("location", event.target.value)} required /></label>
+            <label>Pizza <small>0–10</small><input type="number" min="0" max="10" value={scores.pizza} onChange={(event) => updateScore("pizza", event.target.value)} required /></label>
+            <label>Dolce <small>0–4</small><input type="number" min="0" max="4" value={scores.dessert} onChange={(event) => updateScore("dessert", event.target.value)} required /></label>
+            <label>Prezzo <small>0–10</small><input type="number" min="0" max="10" value={scores.price} onChange={(event) => updateScore("price", event.target.value)} required /></label>
+            {isFabio ? <label>Bonus Fabio <small>0–7</small><input type="number" min="0" max="7" value={scores.fabio} onChange={(event) => updateScore("fabio", event.target.value)} /></label> : null}
+          </div>
+          {!isFabio ? <p className="pizza-vote-hint">Il Bonus Fabio verrà aggiunto da Fabio.</p> : null}
+          {error ? <p className="form-message error">{error}</p> : null}
+          <div className="modal-actions">
+            <button type="button" className="button button-ghost" onClick={onClose}>Annulla</button>
+            <button className="button button-primary" disabled={busy}>{busy ? "Salvataggio…" : previous ? "Aggiorna voto" : "Salva voto"}</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
+}
+
 function AppShell({ session }: { session: Session | null }) {
   const [view, setView] = useState<View>("hub");
   const [padelView, setPadelView] = useState<PadelView>("overview");
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [matches, setMatches] = useState<PadelMatch[]>([]);
+  const [pizzaRestaurants, setPizzaRestaurants] = useState<PizzaRestaurantRecord[]>([]);
   const [showMatch, setShowMatch] = useState(false);
+  const [showPizzaCreate, setShowPizzaCreate] = useState(false);
+  const [votingRestaurant, setVotingRestaurant] = useState<PizzaRestaurantRecord | null>(null);
+  const [pizzaSchemaReady, setPizzaSchemaReady] = useState(true);
   const [deletingMatchId, setDeletingMatchId] = useState<string | null>(null);
   const [loading, setLoading] = useState(Boolean(supabase));
   const [notice, setNotice] = useState("");
@@ -429,13 +626,17 @@ function AppShell({ session }: { session: Session | null }) {
   const loadData = useCallback(async () => {
     const client = supabase;
     if (!client) return;
-    const [profilesResult, matchesResult] = await Promise.all([
+    const [profilesResult, matchesResult, pizzaResult] = await Promise.all([
       client.from("profiles").select("*").order("rating", { ascending: false }),
       client
         .from("matches")
         .select("id, played_at, created_by, winner_team, notes, rating_delta, sets:match_sets(set_number, team1_games, team2_games), players:match_players(profile_id, team, rating_delta, profile:profiles(*))")
         .order("played_at", { ascending: false })
         .limit(50),
+      client
+        .from("pizza_restaurants")
+        .select("id, name, place, created_by, created_at, votes:pizza_votes(restaurant_id, voter_id, location, pizza, dessert, price, bonus_fabio)")
+        .order("created_at", { ascending: false }),
     ]);
 
     if (profilesResult.error || matchesResult.error) {
@@ -457,6 +658,8 @@ function AppShell({ session }: { session: Session | null }) {
       })) as unknown as PadelMatch[];
       setProfiles(withAvatars);
       setMatches(normalized);
+      setPizzaSchemaReady(!pizzaResult.error);
+      if (!pizzaResult.error) setPizzaRestaurants((pizzaResult.data ?? []) as PizzaRestaurantRecord[]);
       setProfileName(withAvatars.find((profile) => profile.id === session?.user.id)?.display_name ?? "");
     }
     setLoading(false);
@@ -469,6 +672,7 @@ function AppShell({ session }: { session: Session | null }) {
 
   const sorted = useMemo(() => sortPadelProfiles(profiles), [profiles]);
   const rankedProfiles = useMemo(() => sorted.filter((profile) => profile.matches_played > 0), [sorted]);
+  const pizzaEntries = useMemo(() => buildPizzaRanking(pizzaRestaurants), [pizzaRestaurants]);
   const currentUser = profiles.find((profile) => profile.id === session?.user.id);
   const currentRank = currentUser?.matches_played
     ? Math.max(1, sorted.findIndex((profile) => profile.id === currentUser.id) + 1)
@@ -558,6 +762,13 @@ function AppShell({ session }: { session: Session | null }) {
     const { error } = await supabase.from("profiles").update({ display_name: profileName.trim() }).eq("id", session.user.id);
     setNotice(error ? error.message : "Profilo aggiornato.");
     if (!error) await loadData();
+  }
+
+  async function handlePizzaSaved(message: string) {
+    setShowPizzaCreate(false);
+    setVotingRestaurant(null);
+    await loadData();
+    setNotice(message);
   }
 
   return (
@@ -800,18 +1011,23 @@ function AppShell({ session }: { session: Session | null }) {
               <div>
                 <p className="eyebrow">CLASSIFICA UFFICIALMENTE NON UFFICIALE</p>
                 <h1>Pizzeria<br /><span>Ranking.</span></h1>
-                <p>Dodici pizzerie, cinque criteri e un solo verdetto: la graduatoria gastronomica dei TheBoyz.</p>
+                <p>Le pizzerie dei TheBoyz, tre voti per ogni nuova scheda e un solo verdetto gastronomico.</p>
               </div>
-              <div className="pizza-stamp">
-                <span>01</span>
-                <b>PORTEGO<br />DE MA</b>
-                <strong>78 / 100</strong>
-                <small>CAMPIONE IN CARICA</small>
+              <div className="pizza-hero-actions">
+                <div className="pizza-stamp">
+                  <span>01</span>
+                  <b>PORTEGO<br />DE MA</b>
+                  <strong>78 / 100</strong>
+                  <small>CAMPIONE IN CARICA</small>
+                </div>
+                {canManagePizza(currentUser.display_name) && pizzaSchemaReady ? <button className="button button-primary" onClick={() => setShowPizzaCreate(true)}>＋ Aggiungi pizzeria</button> : null}
               </div>
             </div>
 
+            {!pizzaSchemaReady ? <div className="pizza-schema-note">La votazione interattiva sarà disponibile dopo l’aggiornamento del database.</div> : null}
+
             <div className="pizza-podium" aria-label="Podio pizzerie">
-              {pizzaRanking.slice(0, 3).map((restaurant, index) => (
+              {pizzaEntries.filter((restaurant) => !restaurant.isNew || restaurant.votesCount === 3).slice(0, 3).map((restaurant, index) => (
                 <article className={`pizza-podium-card pizza-place-${index + 1}`} key={restaurant.name}>
                   <span className="pizza-medal">{String(index + 1).padStart(2, "0")}</span>
                   <div>
@@ -853,27 +1069,35 @@ function AppShell({ session }: { session: Session | null }) {
                 <span>TOTALE</span>
               </div>
               <div className="pizza-ranking-list">
-                {pizzaRanking.map((restaurant, index) => (
-                  <article className={`pizza-ranking-row ${index < 3 ? "pizza-ranking-top" : ""}`} key={`${restaurant.name}-${index}`}>
+                {pizzaEntries.map((restaurant, index) => {
+                  const dbRestaurant = restaurant.id ? pizzaRestaurants.find((item) => item.id === restaurant.id) : null;
+                  const complete = !restaurant.isNew || restaurant.votesCount === 3;
+                  const rowClass = `pizza-ranking-row ${index < 3 && complete ? "pizza-ranking-top" : ""} ${restaurant.isNew ? "pizza-ranking-interactive" : ""} ${restaurant.isNew && !complete ? "pizza-ranking-pending" : ""}`;
+                  const rowContent = (<>
                     <span className="pizza-position">{String(index + 1).padStart(2, "0")}</span>
                     <div className="pizza-name-cell">
                       <b>{restaurant.name}</b>
-                      <small>{restaurant.place ?? "THEBOYZ TESTED"}</small>
+                      <small>{restaurant.isNew ? `${restaurant.place ?? "NUOVA SCHEDA"} · ${restaurant.votesCount ?? 0}/3 VOTI` : (restaurant.place ?? "THEBOYZ TESTED")}</small>
                       <span className="pizza-score-track" aria-hidden="true">
-                        <i style={{ width: `${restaurant.total}%` }} />
+                        <i style={{ width: `${complete ? restaurant.total : 0}%` }} />
                       </span>
                     </div>
-                    <span className="pizza-category-score"><b>{restaurant.location}</b><small>/21</small></span>
-                    <span className="pizza-category-score"><b>{restaurant.pizza}</b><small>/30</small></span>
-                    <span className="pizza-category-score"><b>{restaurant.dessert}</b><small>/12</small></span>
-                    <span className="pizza-category-score"><b>{restaurant.price}</b><small>/30</small></span>
-                    <span className="pizza-category-score pizza-fabio-score"><b>{restaurant.fabio}</b><small>/7</small></span>
-                    <span className="pizza-total-score"><b>{restaurant.total}</b><small>/100</small></span>
-                  </article>
-                ))}
+                    <span className="pizza-category-score"><b>{restaurant.isNew && !complete ? "—" : restaurant.location}</b><small>/21</small></span>
+                    <span className="pizza-category-score"><b>{restaurant.isNew && !complete ? "—" : restaurant.pizza}</b><small>/30</small></span>
+                    <span className="pizza-category-score"><b>{restaurant.isNew && !complete ? "—" : restaurant.dessert}</b><small>/12</small></span>
+                    <span className="pizza-category-score"><b>{restaurant.isNew && !complete ? "—" : restaurant.price}</b><small>/30</small></span>
+                    <span className="pizza-category-score pizza-fabio-score"><b>{restaurant.isNew && !complete ? "—" : restaurant.fabio}</b><small>/7</small></span>
+                    <span className="pizza-total-score"><b>{restaurant.isNew && !complete ? "N/C" : restaurant.total}</b><small>{restaurant.isNew && !complete ? "" : "/100"}</small></span>
+                  </>);
+                  return restaurant.isNew && dbRestaurant ? (
+                    <button type="button" className={rowClass} key={`${restaurant.name}-${index}`} onClick={() => setVotingRestaurant(dbRestaurant)} aria-label={`Vota ${restaurant.name}`}>
+                      {rowContent}
+                    </button>
+                  ) : <article className={rowClass} key={`${restaurant.name}-${index}`}>{rowContent}</article>;
+                })}
               </div>
             </div>
-            <p className="pizza-source-note">Classifica importata dal foglio storico TheBoyz · La votazione interattiva arriverà nel prossimo aggiornamento.</p>
+            <p className="pizza-source-note">Classifica storica TheBoyz · Le nuove schede si attivano con i voti di Samu, Fabio e Dani.</p>
           </section>
         ) : null}
 
@@ -927,6 +1151,8 @@ function AppShell({ session }: { session: Session | null }) {
       </nav>
 
       {showMatch ? <NewMatchModal profiles={profiles} onClose={() => setShowMatch(false)} onSaved={() => void handleSaved()} /> : null}
+      {showPizzaCreate ? <PizzaCreateModal onClose={() => setShowPizzaCreate(false)} onSaved={() => handlePizzaSaved("Pizzeria aggiunta. Ora potete inserire i tre voti.")} /> : null}
+      {votingRestaurant ? <PizzaVoteModal restaurant={votingRestaurant} voter={currentUser} onClose={() => setVotingRestaurant(null)} onSaved={() => handlePizzaSaved("Voto salvato. Il totale si aggiorna con i voti del gruppo.")} /> : null}
     </div>
   );
 }

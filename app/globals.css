@@ -1740,6 +1740,27 @@ form select:focus,
   margin-top: 8px;
 }
 
+.pizza-hero-actions {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  justify-self: center;
+  position: relative;
+  z-index: 2;
+}
+
+.pizza-schema-note {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(24, 223, 228, 0.24);
+  border-radius: 7px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  line-height: 1.5;
+  margin: -12px 0 18px;
+  padding: 12px 14px;
+}
+
 .pizza-podium {
   display: grid;
   gap: 12px;
@@ -1945,6 +1966,58 @@ form select:focus,
   border-bottom: 1px solid #dfe4df;
   min-height: 78px;
   padding: 12px 22px;
+}
+
+button.pizza-ranking-row {
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+}
+
+.pizza-ranking-interactive:hover,
+.pizza-ranking-interactive:focus-visible {
+  background: #eaf8f4;
+  outline: none;
+}
+
+.pizza-ranking-pending {
+  background: #fbfcf8;
+}
+
+.pizza-ranking-pending .pizza-position,
+.pizza-ranking-pending .pizza-total-score {
+  color: var(--blue-dark);
+}
+
+.pizza-vote-fields {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, 1fr);
+  margin-bottom: 12px;
+}
+
+.pizza-vote-fields label {
+  margin: 0;
+}
+
+.pizza-vote-fields label small {
+  color: var(--muted);
+  float: right;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.pizza-vote-hint,
+.modal-subtitle,
+.optional-label {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.pizza-vote-hint {
+  margin: 12px 0 0;
 }
 
 .pizza-ranking-row:last-child {
@@ -2702,6 +2775,14 @@ form select:focus,
 
   .pizza-stamp strong {
     font-size: 18px;
+  }
+
+  .pizza-hero-actions {
+    gap: 16px;
+  }
+
+  .pizza-vote-fields {
+    grid-template-columns: 1fr;
   }
 
   .pizza-podium {
