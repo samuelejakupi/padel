@@ -38,6 +38,9 @@ test("include configurazione Supabase e pubblicazione Pages", async () => {
   assert.match(page, /Partita eliminata/);
   assert.match(page, /match_players\(profile_id, team, rating_delta/);
   assert.match(page, /MEDIA \|Δ ELO\|/);
+  assert.match(page, /sortPadelProfiles/);
+  assert.match(page, /0 PARTITE/);
+  assert.match(page, /Gioca la prima partita per entrare nella classifica/);
   assert.doesNotMatch(page, /signUp\s*\(/);
   assert.match(page, /avatars/);
   assert.match(page, /PORTEGO DE MA/);

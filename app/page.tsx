@@ -57,6 +57,16 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+function sortPadelProfiles(profiles: Profile[]) {
+  return [...profiles].sort((a, b) => {
+    const aRanked = a.matches_played > 0;
+    const bRanked = b.matches_played > 0;
+    if (aRanked !== bRanked) return aRanked ? -1 : 1;
+    if (!aRanked) return a.display_name.localeCompare(b.display_name, "it");
+    return b.rating - a.rating || a.display_name.localeCompare(b.display_name, "it");
+  });
+}
+
 function Avatar({
   profile,
   size = "md",
@@ -243,14 +253,17 @@ function MatchCard({
 }
 
 function RankingList({ profiles, expanded = false }: { profiles: Profile[]; expanded?: boolean }) {
-  const sorted = [...profiles].sort((a, b) => b.rating - a.rating);
+  const sorted = sortPadelProfiles(profiles);
   return (
     <div className={expanded ? "ranking-table" : "ranking-list"}>
       {sorted.map((profile, index) => {
+        const isRanked = profile.matches_played > 0;
         const winRate = profile.matches_played ? Math.round((profile.wins / profile.matches_played) * 100) : 0;
         return (
-          <div className="ranking-row" key={profile.id}>
-            <span className={`rank-number rank-${index + 1}`}>{String(index + 1).padStart(2, "0")}</span>
+          <div className={`ranking-row ${isRanked ? "" : "unranked"}`} key={profile.id}>
+            <span className={`rank-number ${isRanked ? `rank-${index + 1}` : "rank-nc"}`}>
+              {isRanked ? String(index + 1).padStart(2, "0") : "N/C"}
+            </span>
             <Avatar profile={profile} size={expanded ? "md" : "sm"} />
             <div className="ranking-name">
               <b>{profile.display_name}</b>
@@ -260,14 +273,19 @@ function RankingList({ profiles, expanded = false }: { profiles: Profile[]; expa
               <>
                 <span className="table-stat"><b>{profile.wins}</b><small>Vinte</small></span>
                 <span className="table-stat"><b>{winRate}%</b><small>Win rate</small></span>
-                <span className={`streak ${profile.current_streak >= 0 ? "up" : "down"}`}>
-                  {profile.current_streak >= 0 ? "↗" : "↘"} {Math.abs(profile.current_streak)}
+                <span className={`streak ${isRanked ? (profile.current_streak >= 0 ? "up" : "down") : ""}`}>
+                  {isRanked ? `${profile.current_streak >= 0 ? "↗" : "↘"} ${Math.abs(profile.current_streak)}` : "N/C"}
                 </span>
               </>
             ) : (
-              <span className={`trend ${profile.current_streak >= 0 ? "up" : "down"}`}>{profile.current_streak >= 0 ? "↑" : "↓"}</span>
+              <span className={`trend ${isRanked ? (profile.current_streak >= 0 ? "up" : "down") : ""}`}>
+                {isRanked ? (profile.current_streak >= 0 ? "↑" : "↓") : "—"}
+              </span>
             )}
-            <span className="ranking-points"><b>{profile.rating}</b><small>PT</small></span>
+            <span className="ranking-points">
+              <b>{isRanked ? profile.rating : "N/C"}</b>
+              <small>{isRanked ? "PT" : "0 PARTITE"}</small>
+            </span>
           </div>
         );
       })}
@@ -449,10 +467,15 @@ function AppShell({ session }: { session: Session | null }) {
     return () => window.clearTimeout(timer);
   }, [loadData]);
 
-  const sorted = useMemo(() => [...profiles].sort((a, b) => b.rating - a.rating), [profiles]);
+  const sorted = useMemo(() => sortPadelProfiles(profiles), [profiles]);
+  const rankedProfiles = useMemo(() => sorted.filter((profile) => profile.matches_played > 0), [sorted]);
   const currentUser = profiles.find((profile) => profile.id === session?.user.id);
-  const currentRank = currentUser
+  const currentRank = currentUser?.matches_played
     ? Math.max(1, sorted.findIndex((profile) => profile.id === currentUser.id) + 1)
+    : 0;
+  const nextRankedPlayer = currentRank > 1 ? sorted[currentRank - 2] : null;
+  const pointsToNext = nextRankedPlayer && currentUser
+    ? Math.max(0, nextRankedPlayer.rating - currentUser.rating)
     : 0;
   const winRate = currentUser?.matches_played
     ? Math.round((currentUser.wins / currentUser.matches_played) * 100)
@@ -553,7 +576,7 @@ function AppShell({ session }: { session: Session | null }) {
           ))}
         </nav>
         <button className="profile-chip" onClick={() => setView("profile")}>
-          <span><b>{currentUser.display_name}</b><small>Padel #{currentRank}</small></span>
+          <span><b>{currentUser.display_name}</b><small>Padel {currentRank ? `#${currentRank}` : "N/C"}</small></span>
           <Avatar profile={currentUser} size="sm" />
         </button>
       </header>
@@ -658,18 +681,24 @@ function AppShell({ session }: { session: Session | null }) {
                 <article className="hero-stat">
                   <div className="hero-stat-copy">
                     <p className="eyebrow">LA TUA POSIZIONE</p>
-                    <div className="position"><span>#</span>{currentRank}</div>
-                    <p>Sei a <b>{Math.max(0, sorted[Math.max(0, currentRank - 2)]?.rating - currentUser.rating || 24)} punti</b> dal prossimo posto.</p>
-                    <div className="progress-track"><span style={{ width: `${Math.min(92, 48 + winRate / 2)}%` }} /></div>
-                    <small>Continua così: {currentUser.current_streak > 0 ? `${currentUser.current_streak} vittorie consecutive` : "la prossima è quella buona"}.</small>
+                    <div className="position">{currentRank ? <><span>#</span>{currentRank}</> : "N/C"}</div>
+                    <p>
+                      {currentRank === 0
+                        ? "Gioca la prima partita per entrare nella classifica."
+                        : currentRank === 1
+                          ? "Sei in testa alla classifica."
+                          : <>Sei a <b>{pointsToNext} punti</b> dal prossimo posto.</>}
+                    </p>
+                    <div className="progress-track"><span style={{ width: `${currentRank ? Math.min(92, 48 + winRate / 2) : 0}%` }} /></div>
+                    <small>{currentRank ? `Continua così: ${currentUser.current_streak > 0 ? `${currentUser.current_streak} vittorie consecutive` : "la prossima è quella buona"}.` : "Il ranking si attiva dopo il primo risultato."}</small>
                   </div>
                   <div className="hero-player">
                     <div className="orbit orbit-one" />
                     <div className="orbit orbit-two" />
-                    <Avatar profile={currentUser} size="xl" rank={currentRank} />
+                    <Avatar profile={currentUser} size="xl" rank={currentRank || undefined} />
                   </div>
                   <div className="hero-kpis">
-                    <span><b>{currentUser.rating}</b><small>PUNTI</small></span>
+                    <span><b>{currentRank ? currentUser.rating : "N/C"}</b><small>PUNTI</small></span>
                     <span><b>{winRate}%</b><small>WIN RATE</small></span>
                     <span><b>{currentUser.current_streak > 0 ? currentUser.current_streak : 0}</b><small>STRISCIA</small></span>
                   </div>
@@ -700,11 +729,11 @@ function AppShell({ session }: { session: Session | null }) {
                   <div><p className="eyebrow dark">TOP PLAYERS</p><h2>Classifica</h2></div>
                   <span className="season">STAGIONE 2026</span>
                 </div>
-                <RankingList profiles={profiles.slice(0, 6)} />
+                <RankingList profiles={sorted.slice(0, 6)} />
                 <button className="button button-dark button-full" onClick={() => setPadelView("ranking")}>Classifica completa</button>
                 <div className="next-game">
                   <span className="next-icon">◆</span>
-                  <div><small>PROSSIMO OBIETTIVO</small><b>Arriva a {Math.ceil(currentUser.rating / 50) * 50 + 50} punti</b></div>
+                  <div><small>PROSSIMO OBIETTIVO</small><b>{currentRank ? `Arriva a ${Math.ceil(currentUser.rating / 50) * 50 + 50} punti` : "Gioca la prima partita"}</b></div>
                   <span>→</span>
                 </div>
               </aside>
@@ -722,7 +751,7 @@ function AppShell({ session }: { session: Session | null }) {
               <button className="button button-primary" onClick={() => setShowMatch(true)}>＋ Registra partita</button>
             </div>
             <div className="podium">
-              {sorted.slice(0, 3).map((profile, index) => (
+              {rankedProfiles.slice(0, 3).map((profile, index) => (
                 <article key={profile.id} className={`podium-card podium-${index + 1}`}>
                   <span className="podium-number">{index + 1}</span>
                   <Avatar profile={profile} size="lg" />
@@ -856,7 +885,7 @@ function AppShell({ session }: { session: Session | null }) {
             <div className="profile-grid">
               <article className="profile-card">
                 <div className="profile-photo">
-                  <Avatar profile={currentUser} size="xl" rank={currentRank} />
+                  <Avatar profile={currentUser} size="xl" rank={currentRank || undefined} />
                   {supabase ? (
                     <label className="photo-button">
                       Cambia foto
@@ -867,7 +896,7 @@ function AppShell({ session }: { session: Session | null }) {
                 <h2>{currentUser.display_name}</h2>
                 <p>In campo dal {new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(new Date(currentUser.created_at ?? "2026-01-01"))}</p>
                 <div className="profile-stats">
-                  <span><b>{currentUser.rating}</b><small>Punti</small></span>
+                  <span><b>{currentRank ? currentUser.rating : "N/C"}</b><small>Punti</small></span>
                   <span><b>{currentUser.wins}</b><small>Vittorie</small></span>
                   <span><b>{winRate}%</b><small>Win rate</small></span>
                 </div>

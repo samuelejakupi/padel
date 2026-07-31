@@ -1273,6 +1273,11 @@ form select:focus,
   letter-spacing: 1px;
 }
 
+.ranking-row.unranked .rank-number,
+.ranking-row.unranked .ranking-points b {
+  color: #89949b;
+}
+
 .dashboard-side .button {
   margin-top: 18px;
 }
