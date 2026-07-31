@@ -11,7 +11,8 @@ Un piccolo club digitale per tenere lo storico delle partite di padel tra amici.
 - layout responsive per telefono e desktop;
 - pubblicazione automatica su GitHub Pages.
 
-Senza credenziali Supabase il sito si apre in modalità anteprima, con dati dimostrativi.
+Il progetto non contiene dati dimostrativi: senza credenziali Supabase mostra una
+schermata di configurazione e non simula utenti o partite.
 
 ## 1. Prepara Supabase
 

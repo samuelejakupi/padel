@@ -433,6 +433,63 @@ form select:focus,
   margin-top: 36px;
 }
 
+.setup-page {
+  align-items: center;
+  background:
+    linear-gradient(115deg, rgba(201, 255, 54, 0.08), transparent 45%),
+    var(--paper);
+  display: flex;
+  flex-direction: column;
+  gap: 80px;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.setup-page section {
+  max-width: 720px;
+}
+
+.setup-page h1,
+.empty-state h1 {
+  font-size: clamp(42px, 6vw, 72px);
+  letter-spacing: -4px;
+  line-height: 0.94;
+  margin: 0 0 28px;
+}
+
+.setup-page section > p:last-child,
+.empty-state > p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.setup-page code {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--blue);
+  display: inline-block;
+  font-size: 11px;
+  margin: 4px;
+  padding: 3px 7px;
+}
+
+.empty-state {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+}
+
+.empty-state > p {
+  margin: 0 auto 24px;
+  max-width: 560px;
+}
+
 /* App shell */
 .topbar {
   align-items: center;

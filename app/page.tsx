@@ -12,61 +12,6 @@ import {
 
 type View = "home" | "ranking" | "matches" | "profile";
 
-const DEMO_PROFILES: Profile[] = [
-  { id: "luca", display_name: "Luca", avatar_path: null, rating: 1184, matches_played: 24, wins: 17, losses: 7, current_streak: 4 },
-  { id: "matteo", display_name: "Matteo", avatar_path: null, rating: 1152, matches_played: 22, wins: 14, losses: 8, current_streak: 2 },
-  { id: "sofia", display_name: "Sofia", avatar_path: null, rating: 1128, matches_played: 19, wins: 12, losses: 7, current_streak: 3 },
-  { id: "andrea", display_name: "Andrea", avatar_path: null, rating: 1094, matches_played: 21, wins: 11, losses: 10, current_streak: -1 },
-  { id: "marco", display_name: "Marco", avatar_path: null, rating: 1068, matches_played: 18, wins: 9, losses: 9, current_streak: 1 },
-  { id: "giulia", display_name: "Giulia", avatar_path: null, rating: 1032, matches_played: 16, wins: 7, losses: 9, current_streak: -2 },
-  { id: "davide", display_name: "Davide", avatar_path: null, rating: 998, matches_played: 15, wins: 6, losses: 9, current_streak: -1 },
-  { id: "elena", display_name: "Elena", avatar_path: null, rating: 972, matches_played: 13, wins: 4, losses: 9, current_streak: -3 },
-];
-
-const demoPlayer = (id: string, team: 1 | 2) => ({
-  profile_id: id,
-  team,
-  profile: DEMO_PROFILES.find((profile) => profile.id === id)!,
-});
-
-const DEMO_MATCHES: PadelMatch[] = [
-  {
-    id: "m1",
-    played_at: new Date(Date.now() - 86400000).toISOString(),
-    winner_team: 1,
-    rating_delta: 18,
-    notes: "Rimonta nel terzo set",
-    sets: [
-      { set_number: 1, team1_games: 6, team2_games: 4 },
-      { set_number: 2, team1_games: 3, team2_games: 6 },
-      { set_number: 3, team1_games: 10, team2_games: 8 },
-    ],
-    players: [demoPlayer("luca", 1), demoPlayer("sofia", 1), demoPlayer("matteo", 2), demoPlayer("andrea", 2)],
-  },
-  {
-    id: "m2",
-    played_at: new Date(Date.now() - 4 * 86400000).toISOString(),
-    winner_team: 2,
-    rating_delta: 14,
-    sets: [
-      { set_number: 1, team1_games: 4, team2_games: 6 },
-      { set_number: 2, team1_games: 5, team2_games: 7 },
-    ],
-    players: [demoPlayer("giulia", 1), demoPlayer("elena", 1), demoPlayer("marco", 2), demoPlayer("davide", 2)],
-  },
-  {
-    id: "m3",
-    played_at: new Date(Date.now() - 8 * 86400000).toISOString(),
-    winner_team: 1,
-    rating_delta: 21,
-    sets: [
-      { set_number: 1, team1_games: 7, team2_games: 5 },
-      { set_number: 2, team1_games: 6, team2_games: 2 },
-    ],
-    players: [demoPlayer("matteo", 1), demoPlayer("marco", 1), demoPlayer("luca", 2), demoPlayer("davide", 2)],
-  },
-];
-
 function initials(name: string) {
   return name
     .split(" ")
@@ -198,6 +143,24 @@ function LoginScreen() {
           </button>
         </div>
         <p className="login-footer">Accesso protetto da Supabase · Solo per i membri del gruppo</p>
+      </section>
+    </main>
+  );
+}
+
+function SetupScreen() {
+  return (
+    <main className="setup-page">
+      <Brand />
+      <section>
+        <p className="eyebrow dark">CONFIGURAZIONE NECESSARIA</p>
+        <h1>Collega Supabase<br />per entrare nel club.</h1>
+        <p>
+          Questa installazione non contiene dati dimostrativi. Configura
+          <code>NEXT_PUBLIC_SUPABASE_URL</code> e
+          <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> per visualizzare soltanto
+          giocatori e partite reali.
+        </p>
       </section>
     </main>
   );
@@ -402,8 +365,8 @@ function NewMatchModal({
 
 function AppShell({ session }: { session: Session | null }) {
   const [view, setView] = useState<View>("home");
-  const [profiles, setProfiles] = useState<Profile[]>(DEMO_PROFILES);
-  const [matches, setMatches] = useState<PadelMatch[]>(DEMO_MATCHES);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [matches, setMatches] = useState<PadelMatch[]>([]);
   const [showMatch, setShowMatch] = useState(false);
   const [loading, setLoading] = useState(Boolean(supabase));
   const [notice, setNotice] = useState("");
@@ -451,18 +414,38 @@ function AppShell({ session }: { session: Session | null }) {
   }, [loadData]);
 
   const sorted = useMemo(() => [...profiles].sort((a, b) => b.rating - a.rating), [profiles]);
-  const currentUser = profiles.find((profile) => profile.id === session?.user.id) ?? profiles[2] ?? DEMO_PROFILES[2];
-  const currentRank = Math.max(1, sorted.findIndex((profile) => profile.id === currentUser.id) + 1);
-  const winRate = currentUser.matches_played ? Math.round((currentUser.wins / currentUser.matches_played) * 100) : 0;
+  const currentUser = profiles.find((profile) => profile.id === session?.user.id);
+  const currentRank = currentUser
+    ? Math.max(1, sorted.findIndex((profile) => profile.id === currentUser.id) + 1)
+    : 0;
+  const winRate = currentUser?.matches_played
+    ? Math.round((currentUser.wins / currentUser.matches_played) * 100)
+    : 0;
+
+  if (!currentUser) {
+    return (
+      <div className="app-shell">
+        <header className="topbar"><Brand /></header>
+        <main className="content">
+          {loading ? (
+            <div className="loading-state"><span>●</span><p>Carichiamo i dati reali…</p></div>
+          ) : (
+            <div className="empty-state">
+              <p className="eyebrow dark">PROFILO NON DISPONIBILE</p>
+              <h1>Nessun dato dimostrativo.</h1>
+              <p>{notice || "Il tuo profilo non è ancora presente nel database Supabase."}</p>
+              <button className="button button-dark" onClick={() => void supabase?.auth.signOut()}>Esci</button>
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
 
   async function handleSaved() {
     setShowMatch(false);
-    if (supabase) {
-      await loadData();
-      setNotice("Partita salvata. La classifica è stata aggiornata.");
-    } else {
-      setNotice("Partita registrata in modalità demo.");
-    }
+    await loadData();
+    setNotice("Partita salvata. La classifica è stata aggiornata.");
   }
 
   async function uploadAvatar(file: File | undefined) {
@@ -508,12 +491,6 @@ function AppShell({ session }: { session: Session | null }) {
         </button>
       </header>
 
-      {!hasSupabaseConfig ? (
-        <div className="demo-banner">
-          <span>ANTEPRIMA</span>
-          <p>Stai esplorando dati dimostrativi. Collega Supabase per attivare accesso, foto e salvataggio.</p>
-        </div>
-      ) : null}
       {notice ? <button className="notice" onClick={() => setNotice("")}>{notice}<span>×</span></button> : null}
 
       <main className="content">
@@ -682,7 +659,10 @@ export default function Home() {
   if (checking) {
     return <main className="splash"><Brand /><span className="splash-ball">●</span><p>Prepariamo il campo…</p></main>;
   }
-  if (hasSupabaseConfig && !session) {
+  if (!hasSupabaseConfig) {
+    return <SetupScreen />;
+  }
+  if (!session) {
     return <LoginScreen />;
   }
   return <AppShell session={session} />;
