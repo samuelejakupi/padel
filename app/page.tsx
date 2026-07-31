@@ -784,9 +784,9 @@ function AppShell({ session }: { session: Session | null }) {
           {([
             ["hub", "TheBoyz"],
             ["padel", "Padel"],
-            ["pizza", "Pizzeria ranking"],
+            ["pizza", "Pizze"],
           ] as [View, string][]).map(([target, label]) => (
-            <button key={target} className={view === target ? "active" : ""} onClick={() => setView(target)}>{label}</button>
+            <button key={target} className={view === target ? "active" : ""} onClick={() => { setView(target); if (target === "padel") setPadelView("overview"); }}>{label}</button>
           ))}
         </nav>
         <button className="profile-chip" onClick={() => setView("profile")}>
@@ -835,7 +835,7 @@ function AppShell({ session }: { session: Session | null }) {
             <div className="hub-cards">
               <button className="hub-card hub-card-padel" onClick={() => { setView("padel"); setPadelView("overview"); }}>
                 <span className="hub-card-index">01</span>
-                <div className="hub-card-icon"><span>●</span></div>
+                <div className="hub-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" /><path d="M4.5 6.5C7 9 7 15 4.5 17.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /><path d="M19.5 6.5C17 9 17 15 19.5 17.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg></div>
                 <div className="hub-card-copy">
                   <p>SEZIONE ATTIVA</p>
                   <h3>Padel</h3>
@@ -850,7 +850,7 @@ function AppShell({ session }: { session: Session | null }) {
 
               <button className="hub-card hub-card-pizza" onClick={() => setView("pizza")}>
                 <span className="hub-card-index">02</span>
-                <div className="hub-card-icon pizza-icon"><span>△</span></div>
+                <div className="hub-card-icon pizza-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3L21 19C15.5 16 8.5 16 3 19L12 3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M6.5 17.3C10.2 15.5 13.8 15.5 17.5 17.3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /><circle cx="11" cy="11" r="1" fill="currentColor" /><circle cx="14.2" cy="13.6" r="1" fill="currentColor" /></svg></div>
                 <div className="hub-card-copy">
                   <p>PROSSIMAMENTE</p>
                   <h3>Pizzeria<br />Ranking</h3>
@@ -958,7 +958,7 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "ranking" ? (
           <section className="page-section">
             <div className="section-context">
-              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><button onClick={() => setPadelView("overview")}>PADEL</button><span>/</span><b>CLASSIFICA</b>
+              <button className="back-arrow" onClick={() => setPadelView("overview")} aria-label="Torna alla panoramica Padel">←</button><button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><button onClick={() => setPadelView("overview")}>PADEL</button><span>/</span><b>CLASSIFICA</b>
             </div>
             <div className="page-title">
               <div><p className="eyebrow dark">THEBOYZ PADEL · STAGIONE 2026</p><h1>La classifica del gruppo</h1><p>Il ranking si aggiorna automaticamente dopo ogni risultato.</p></div>
@@ -982,7 +982,7 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "matches" ? (
           <section className="page-section">
             <div className="section-context">
-              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><button onClick={() => setPadelView("overview")}>PADEL</button><span>/</span><b>PARTITE</b>
+              <button className="back-arrow" onClick={() => setPadelView("overview")} aria-label="Torna alla panoramica Padel">←</button><button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><button onClick={() => setPadelView("overview")}>PADEL</button><span>/</span><b>PARTITE</b>
             </div>
             <div className="page-title">
               <div><p className="eyebrow dark">ARCHIVIO THEBOYZ PADEL</p><h1>Tutte le partite</h1><p>{matches.length} risultati registrati dal gruppo.</p></div>
@@ -1150,10 +1150,10 @@ function AppShell({ session }: { session: Session | null }) {
         {([
           ["hub", "⌂", "TheBoyz"],
           ["padel", "●", "Padel"],
-          ["pizza", "△", "Pizzerie"],
+          ["pizza", "△", "Pizze"],
           ["profile", "○", "Profilo"],
         ] as [View, string, string][]).map(([target, icon, label]) => (
-          <button key={target} className={view === target ? "active" : ""} onClick={() => setView(target)}><span>{icon}</span>{label}</button>
+          <button key={target} className={view === target ? "active" : ""} onClick={() => { setView(target); if (target === "padel") setPadelView("overview"); }}><span>{icon}</span>{label}</button>
         ))}
       </nav>
 
