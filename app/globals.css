@@ -790,6 +790,54 @@ form select:focus,
   transform: translateY(-2px);
 }
 
+.hub-card-icon img {
+  height: 34px;
+  object-fit: contain;
+  width: 34px;
+}
+
+.podium-trophy {
+  height: 40px;
+  margin-bottom: 6px;
+  object-fit: contain;
+  width: 40px;
+}
+
+.pizza-podium-card {
+  position: relative;
+}
+
+.pizza-medal-icon {
+  height: 30px;
+  object-fit: contain;
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  width: 30px;
+}
+
+.back-arrow {
+  font-size: 14px;
+  margin-right: 2px;
+  transition: transform 160ms ease;
+}
+
+.back-arrow:hover {
+  transform: translateX(-3px);
+}
+
+.icon-credit {
+  color: var(--muted);
+  font-size: 7px;
+  letter-spacing: 0.8px;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.icon-credit:hover {
+  text-decoration: underline;
+}
+
 .pizza-icon {
   background: var(--lime);
   color: var(--ink);
@@ -866,7 +914,7 @@ form select:focus,
   border-top: 1px solid var(--line);
   display: grid;
   gap: 12px;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
   padding: 18px 4px 0;
 }
 
@@ -2536,7 +2584,7 @@ button.pizza-ranking-row {
     grid-template-columns: auto 1fr;
   }
 
-  .hub-status > span:last-child {
+  .hub-status > span:last-child , .icon-credit {
     display: none;
   }
 
