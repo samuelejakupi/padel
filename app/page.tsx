@@ -75,8 +75,10 @@ const pizzaCriteria = [
   { label: "Bonus Fabio", max: 7, source: "0–7", tone: "blue" },
 ] as const;
 
-function canManagePizza(displayName: string) {
-  return pizzaEditors.includes(displayName as (typeof pizzaEditors)[number]);
+function canManagePizza(displayName: string, email?: string | null) {
+  const normalizedEmail = email?.toLowerCase();
+  return normalizedEmail === "samu@theboyz.local" || normalizedEmail === "fabio@theboyz.local" || normalizedEmail === "dani@theboyz.local"
+    || pizzaEditors.includes(displayName as (typeof pizzaEditors)[number]);
 }
 
 function buildPizzaRanking(restaurants: PizzaRestaurantRecord[]): PizzaDisplayEntry[] {
@@ -674,6 +676,7 @@ function AppShell({ session }: { session: Session | null }) {
   const rankedProfiles = useMemo(() => sorted.filter((profile) => profile.matches_played > 0), [sorted]);
   const pizzaEntries = useMemo(() => buildPizzaRanking(pizzaRestaurants), [pizzaRestaurants]);
   const currentUser = profiles.find((profile) => profile.id === session?.user.id);
+  const currentUserCanManagePizza = currentUser ? canManagePizza(currentUser.display_name, session?.user.email) : false;
   const currentRank = currentUser?.matches_played
     ? Math.max(1, sorted.findIndex((profile) => profile.id === currentUser.id) + 1)
     : 0;
@@ -1020,11 +1023,15 @@ function AppShell({ session }: { session: Session | null }) {
                   <strong>78 / 100</strong>
                   <small>CAMPIONE IN CARICA</small>
                 </div>
-                {canManagePizza(currentUser.display_name) && pizzaSchemaReady ? <button className="button button-primary" onClick={() => setShowPizzaCreate(true)}>＋ Aggiungi pizzeria</button> : null}
+                {currentUserCanManagePizza ? <button className="button button-primary" onClick={() => {
+                  if (!pizzaSchemaReady) {
+                    setNotice("Prima di aggiungere una pizzeria devi eseguire lo schema aggiornato in Supabase.");
+                    return;
+                  }
+                  setShowPizzaCreate(true);
+                }}>＋ Aggiungi pizzeria</button> : null}
               </div>
             </div>
-
-            {!pizzaSchemaReady ? <div className="pizza-schema-note">La votazione interattiva sarà disponibile dopo l’aggiornamento del database.</div> : null}
 
             <div className="pizza-podium" aria-label="Podio pizzerie">
               {pizzaEntries.filter((restaurant) => !restaurant.isNew || restaurant.votesCount === 3).slice(0, 3).map((restaurant, index) => (

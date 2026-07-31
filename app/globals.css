@@ -1750,17 +1750,6 @@ form select:focus,
   z-index: 2;
 }
 
-.pizza-schema-note {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(24, 223, 228, 0.24);
-  border-radius: 7px;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 11px;
-  line-height: 1.5;
-  margin: -12px 0 18px;
-  padding: 12px 14px;
-}
-
 .pizza-podium {
   display: grid;
   gap: 12px;
