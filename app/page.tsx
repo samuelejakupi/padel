@@ -945,11 +945,6 @@ function AppShell({ session }: { session: Session | null }) {
                 </div>
                 <RankingList profiles={sorted.slice(0, 6)} />
                 <button className="button button-dark button-full" onClick={() => setPadelView("ranking")}>Classifica completa</button>
-                <div className="next-game">
-                  <span className="next-icon">◆</span>
-                  <div><small>PROSSIMO OBIETTIVO</small><b>{currentRank ? `Arriva a ${Math.ceil(currentUser.rating / 50) * 50 + 50} punti` : "Gioca la prima partita"}</b></div>
-                  <span>→</span>
-                </div>
               </aside>
             </section>
           </>
