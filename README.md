@@ -17,6 +17,16 @@ Il sito di gruppo dei TheBoyz. La prima versione include:
 Il progetto non contiene dati dimostrativi: senza credenziali Supabase mostra una
 schermata di configurazione e non simula utenti o partite.
 
+## Account riservati
+
+La registrazione pubblica non è disponibile. Gli account previsti sono Samu,
+Dani, Atti, Matte, Fabio e Alban. Il frontend converte il nome selezionato in
+un’identità Supabase interna; gli indirizzi tecnici non vengono mostrati.
+
+Gli account vanno amministrati direttamente dal pannello Supabase. La service
+role key e le password non devono mai essere aggiunte alle Repository variables,
+ai file `.env` pubblicati, alle GitHub Actions o al codice frontend.
+
 ## 1. Prepara Supabase
 
 1. Crea un progetto su Supabase.

@@ -14,6 +14,7 @@ type View = "hub" | "padel" | "pizza" | "profile";
 type PadelView = "overview" | "ranking" | "matches";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+const groupUsers = ["Samu", "Dani", "Atti", "Matte", "Fabio", "Alban"] as const;
 
 function initials(name: string) {
   return name
@@ -60,9 +61,7 @@ function Brand() {
 }
 
 function LoginScreen() {
-  const [mode, setMode] = useState<"login" | "signup">("login");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState<(typeof groupUsers)[number]>("Samu");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -73,23 +72,11 @@ function LoginScreen() {
     setBusy(true);
     setMessage("");
 
-    const result =
-      mode === "login"
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({
-            email,
-            password,
-            options: { data: { display_name: name.trim() } },
-          });
+    const email = `${username.toLowerCase()}@theboyz.local`;
+    const result = await supabase.auth.signInWithPassword({ email, password });
 
     if (result.error) {
-      setMessage(
-        result.error.message.includes("Database error")
-          ? "Il gruppo ha già raggiunto il limite di 10 giocatori."
-          : result.error.message,
-      );
-    } else if (mode === "signup" && !result.data.session) {
-      setMessage("Controlla la tua email per confermare l’iscrizione.");
+      setMessage("Nome o password non corretti.");
     }
     setBusy(false);
   }
@@ -109,23 +96,19 @@ function LoginScreen() {
       <section className="login-panel">
         <div className="login-card">
           <p className="eyebrow dark">AREA RISERVATA THEBOYZ</p>
-          <h2>{mode === "login" ? "Entra nel gruppo" : "Crea il tuo profilo"}</h2>
-          <p className="login-subtitle">
-            {mode === "login"
-              ? "Usa le credenziali con cui ti sei registrato."
-              : "I profili disponibili sono limitati a 10."}
-          </p>
+          <h2>Entra nel gruppo</h2>
+          <p className="login-subtitle">Scegli il tuo nome e inserisci la password assegnata.</p>
 
           <form onSubmit={submit}>
-            {mode === "signup" ? (
-              <label>
-                Nome nel gruppo
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Es. Alessandro" required />
-              </label>
-            ) : null}
             <label>
-              Email
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nome@email.it" required />
+              Nome
+              <select
+                value={username}
+                onChange={(event) => setUsername(event.target.value as (typeof groupUsers)[number])}
+                required
+              >
+                {groupUsers.map((name) => <option key={name} value={name}>{name}</option>)}
+              </select>
             </label>
             <label>
               Password
@@ -133,12 +116,9 @@ function LoginScreen() {
             </label>
             {message ? <p className="form-message">{message}</p> : null}
             <button className="button button-primary button-full" disabled={busy}>
-              {busy ? "Un momento…" : mode === "login" ? "Entra in TheBoyz" : "Crea il mio profilo"}
+              {busy ? "Un momento…" : "Entra in TheBoyz"}
             </button>
           </form>
-          <button className="text-button" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setMessage(""); }}>
-            {mode === "login" ? "Non hai un profilo? Registrati" : "Hai già un profilo? Accedi"}
-          </button>
         </div>
         <p className="login-footer">Accesso protetto da Supabase · Solo per TheBoyz</p>
       </section>

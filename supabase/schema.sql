@@ -63,7 +63,7 @@ create trigger profiles_touch_updated_at
 before update on public.profiles
 for each row execute function public.touch_updated_at();
 
--- Crea il profilo al momento dell'iscrizione e impedisce l'undicesimo membro.
+-- Crea profili esclusivamente per i sei account amministrati dai TheBoyz.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -74,23 +74,29 @@ declare
   member_count integer;
   requested_name text;
 begin
-  perform pg_advisory_xact_lock(hashtext('theboyz_max_10_members'));
+  perform pg_advisory_xact_lock(hashtext('theboyz_six_members'));
   select count(*) into member_count from public.profiles;
 
-  if member_count >= 10 then
-    raise exception 'Il gruppo ha raggiunto il limite di 10 giocatori';
+  requested_name := case lower(coalesce(new.email, ''))
+    when 'samu@theboyz.local' then 'Samu'
+    when 'dani@theboyz.local' then 'Dani'
+    when 'atti@theboyz.local' then 'Atti'
+    when 'matte@theboyz.local' then 'Matte'
+    when 'fabio@theboyz.local' then 'Fabio'
+    when 'alban@theboyz.local' then 'Alban'
+    else null
+  end;
+
+  if requested_name is null then
+    raise exception 'Registrazione pubblica disabilitata';
   end if;
 
-  requested_name := nullif(trim(new.raw_user_meta_data ->> 'display_name'), '');
-  if requested_name is null then
-    requested_name := split_part(coalesce(new.email, 'Giocatore'), '@', 1);
-  end if;
-  if char_length(requested_name) < 2 then
-    requested_name := 'Giocatore';
+  if member_count >= 6 then
+    raise exception 'Tutti i profili TheBoyz sono già stati creati';
   end if;
 
   insert into public.profiles (id, display_name)
-  values (new.id, left(requested_name, 40));
+  values (new.id, requested_name);
   return new;
 end;
 $$;
@@ -100,32 +106,34 @@ create trigger on_auth_user_created
 after insert on auth.users
 for each row execute function public.handle_new_user();
 
--- Recupera automaticamente gli utenti registrati prima dell'installazione
--- dello schema. Non supera mai il limite complessivo di 10 profili.
+-- Recupera soltanto gli account TheBoyz creati prima dell'installazione.
 with existing_users as (
   select
     user_account.id,
-    coalesce(
-      nullif(trim(user_account.raw_user_meta_data ->> 'display_name'), ''),
-      nullif(split_part(coalesce(user_account.email, ''), '@', 1), ''),
-      'Giocatore'
-    ) as requested_name
+    case lower(user_account.email)
+      when 'samu@theboyz.local' then 'Samu'
+      when 'dani@theboyz.local' then 'Dani'
+      when 'atti@theboyz.local' then 'Atti'
+      when 'matte@theboyz.local' then 'Matte'
+      when 'fabio@theboyz.local' then 'Fabio'
+      when 'alban@theboyz.local' then 'Alban'
+    end as requested_name
   from auth.users as user_account
   where not exists (
     select 1 from public.profiles as profile where profile.id = user_account.id
   )
+    and lower(user_account.email) in (
+      'samu@theboyz.local',
+      'dani@theboyz.local',
+      'atti@theboyz.local',
+      'matte@theboyz.local',
+      'fabio@theboyz.local',
+      'alban@theboyz.local'
+    )
   order by user_account.created_at
-  limit (
-    select greatest(0, 10 - count(*))::integer from public.profiles
-  )
 )
 insert into public.profiles (id, display_name)
-select
-  id,
-  case
-    when char_length(requested_name) < 2 then 'Giocatore'
-    else left(requested_name, 40)
-  end
+select id, requested_name
 from existing_users
 on conflict (id) do nothing;
 
