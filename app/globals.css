@@ -1920,7 +1920,7 @@ form select:focus,
   align-items: center;
   display: grid;
   gap: 12px;
-  grid-template-columns: 42px minmax(190px, 1fr) repeat(5, 62px) 76px;
+  grid-template-columns: 42px minmax(220px, 1fr) repeat(5, 66px) 82px;
   min-width: 790px;
 }
 
@@ -1931,6 +1931,14 @@ form select:focus,
   font-weight: 900;
   letter-spacing: 0.8px;
   padding: 17px 22px;
+}
+
+.pizza-board-head span:nth-child(n + 3) {
+  text-align: right;
+}
+
+.pizza-board-head span:last-child {
+  color: var(--blue-dark);
 }
 
 .pizza-ranking-row {
@@ -2724,7 +2732,7 @@ form select:focus,
   .pizza-board-head,
   .pizza-ranking-row {
     gap: 8px;
-    grid-template-columns: 34px minmax(150px, 1fr) repeat(5, 52px) 60px;
+    grid-template-columns: 34px minmax(170px, 1fr) repeat(5, 56px) 68px;
     min-width: 650px;
   }
 
