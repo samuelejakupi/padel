@@ -22,6 +22,11 @@ test("include configurazione Supabase e pubblicazione Pages", async () => {
   assert.match(schema, /record_match/);
   assert.match(schema, /delete_match/);
   assert.match(schema, /theboyz_padel_results/);
+  assert.match(schema, /ELO V2/);
+  assert.match(schema, /padel_margin_factor/);
+  assert.match(schema, /32\.0\s+\* margin_factor/);
+  assert.match(schema, /current_player\.rating/);
+  assert.match(schema, /match_player\.rating_delta/);
   assert.match(schema, /current_streak = 0\s+where true/);
   assert.match(schema, /Registrazione pubblica disabilitata/);
   assert.match(schema, /samu@theboyz\.local/);
@@ -31,6 +36,8 @@ test("include configurazione Supabase e pubblicazione Pages", async () => {
   assert.match(page, /signInWithPassword/);
   assert.match(page, /"Mattia", "Manu"/);
   assert.match(page, /Partita eliminata/);
+  assert.match(page, /match_players\(profile_id, team, rating_delta/);
+  assert.match(page, /MEDIA \|Δ ELO\|/);
   assert.doesNotMatch(page, /signUp\s*\(/);
   assert.match(page, /avatars/);
   assert.match(page, /PORTEGO DE MA/);

@@ -187,7 +187,12 @@ function MatchCard({
 }) {
   const team1 = match.players.filter((player) => player.team === 1);
   const team2 = match.players.filter((player) => player.team === 2);
-  const formatTeam = (players: typeof team1) => players.map((player) => player.profile.display_name).join(" · ");
+  const formatTeam = (players: typeof team1) => players
+    .map((player) => {
+      const delta = player.rating_delta ?? 0;
+      return `${player.profile.display_name} ${delta > 0 ? "+" : ""}${delta}`;
+    })
+    .join(" · ");
 
   return (
     <article className="match-card">
@@ -219,8 +224,8 @@ function MatchCard({
         </div>
       </div>
       <div className="match-points">
-        <span className={match.winner_team === 1 ? "positive" : "negative"}>{match.winner_team === 1 ? "+" : "−"}{match.rating_delta ?? 16}</span>
-        <small>PT RANKING</small>
+        <span>{match.rating_delta ?? 0}</span>
+        <small>MEDIA |Δ ELO|</small>
       </div>
       {onDelete ? (
         <button
@@ -410,7 +415,7 @@ function AppShell({ session }: { session: Session | null }) {
       client.from("profiles").select("*").order("rating", { ascending: false }),
       client
         .from("matches")
-        .select("id, played_at, created_by, winner_team, notes, rating_delta, sets:match_sets(set_number, team1_games, team2_games), players:match_players(profile_id, team, profile:profiles(*))")
+        .select("id, played_at, created_by, winner_team, notes, rating_delta, sets:match_sets(set_number, team1_games, team2_games), players:match_players(profile_id, team, rating_delta, profile:profiles(*))")
         .order("played_at", { ascending: false })
         .limit(50),
     ]);

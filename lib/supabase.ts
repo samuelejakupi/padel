@@ -37,6 +37,7 @@ export type PadelSet = {
 export type MatchPlayer = {
   profile_id: string;
   team: 1 | 2;
+  rating_delta: number;
   profile: Profile;
 };
 
