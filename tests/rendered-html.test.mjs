@@ -26,4 +26,7 @@ test("include configurazione Supabase e pubblicazione Pages", async () => {
   assert.match(page, /signInWithPassword/);
   assert.doesNotMatch(page, /signUp\s*\(/);
   assert.match(page, /avatars/);
+  assert.match(page, /PORTEGO DE MA/);
+  assert.match(page, /Bonus Fabio/);
+  assert.doesNotMatch(page, /Pizzium/i);
 });

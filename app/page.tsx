@@ -12,9 +12,41 @@ import {
 
 type View = "hub" | "padel" | "pizza" | "profile";
 type PadelView = "overview" | "ranking" | "matches";
+type PizzaRankingEntry = {
+  name: string;
+  place?: string;
+  location: number;
+  pizza: number;
+  dessert: number;
+  price: number;
+  fabio: number;
+  total: number;
+};
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const groupUsers = ["Samu", "Dani", "Atti", "Matte", "Fabio", "Alban"] as const;
+const pizzaRanking: readonly PizzaRankingEntry[] = [
+  { name: "PORTEGO DE MA", location: 16, pizza: 25, dessert: 8, price: 22, fabio: 7, total: 78 },
+  { name: "L’OASI La Pizza", location: 17, pizza: 21, dessert: 7, price: 19, fabio: 6, total: 70 },
+  { name: "FERMENTO", location: 15, pizza: 24, dessert: 5, price: 17, fabio: 7, total: 68 },
+  { name: "SENESE", place: "Sanremo", location: 11, pizza: 25, dessert: 5, price: 18, fabio: 7, total: 66 },
+  { name: "SANTA FE", location: 9, pizza: 22, dessert: 5, price: 24, fabio: 6, total: 66 },
+  { name: "SCIABECCO", location: 9, pizza: 23, dessert: 8, price: 19, fabio: 6, total: 65 },
+  { name: "LE CAVE", location: 9, pizza: 21, dessert: 7, price: 21, fabio: 6, total: 64 },
+  { name: "FRA DIAVOLO", place: "Diano", location: 11, pizza: 23, dessert: 8, price: 14, fabio: 6, total: 62 },
+  { name: "BONGA", location: 11, pizza: 21, dessert: 6, price: 17, fabio: 7, total: 62 },
+  { name: "LE LOGGE", location: 8, pizza: 20, dessert: 4, price: 17, fabio: 7, total: 56 },
+  { name: "KILO", location: 10, pizza: 24, dessert: 7, price: 14, fabio: 0, total: 55 },
+  { name: "A GHE SEMMU", location: 6, pizza: 16, dessert: 6, price: 18, fabio: 6, total: 52 },
+];
+
+const pizzaCriteria = [
+  { label: "Location", max: 21, source: "3 × 0–7", tone: "cyan" },
+  { label: "Pizza", max: 30, source: "3 × 0–10", tone: "lime" },
+  { label: "Dolce", max: 12, source: "3 × 0–4", tone: "pink" },
+  { label: "Prezzo", max: 30, source: "3 × 0–10", tone: "yellow" },
+  { label: "Bonus Fabio", max: 7, source: "0–7", tone: "blue" },
+] as const;
 
 function initials(name: string) {
   return name
@@ -673,27 +705,82 @@ function AppShell({ session }: { session: Session | null }) {
             </div>
             <div className="pizza-hero">
               <div>
-                <p className="eyebrow">NUOVA SEZIONE</p>
+                <p className="eyebrow">CLASSIFICA UFFICIALMENTE NON UFFICIALE</p>
                 <h1>Pizzeria<br /><span>Ranking.</span></h1>
-                <p>La classifica ufficialmente non ufficiale delle pizzerie provate dai TheBoyz.</p>
+                <p>Dodici pizzerie, cinque criteri e un solo verdetto: la graduatoria gastronomica dei TheBoyz.</p>
               </div>
               <div className="pizza-stamp">
-                <span>△</span>
-                <b>COMING<br />SOON</b>
-                <small>THEBOYZ TESTED</small>
+                <span>01</span>
+                <b>PORTEGO<br />DE MA</b>
+                <strong>78 / 100</strong>
+                <small>CAMPIONE IN CARICA</small>
               </div>
             </div>
+
+            <div className="pizza-podium" aria-label="Podio pizzerie">
+              {pizzaRanking.slice(0, 3).map((restaurant, index) => (
+                <article className={`pizza-podium-card pizza-place-${index + 1}`} key={restaurant.name}>
+                  <span className="pizza-medal">{String(index + 1).padStart(2, "0")}</span>
+                  <div>
+                    <small>{index === 0 ? "THEBOYZ CHAMPION" : "TOP THREE"}</small>
+                    <h2>{restaurant.name}</h2>
+                    {restaurant.place ? <p>{restaurant.place}</p> : null}
+                  </div>
+                  <b>{restaurant.total}<small>/100</small></b>
+                </article>
+              ))}
+            </div>
+
+            <section className="pizza-method">
+              <div className="pizza-method-copy">
+                <p className="eyebrow dark">COME FUNZIONA</p>
+                <h2>Ogni punto conta.</h2>
+                <p>I voti del gruppo si sommano nelle quattro categorie, poi arriva il Bonus Fabio. Totale massimo: 100 punti.</p>
+              </div>
+              <div className="pizza-criteria">
+                {pizzaCriteria.map((criterion) => (
+                  <div className={`pizza-criterion criterion-${criterion.tone}`} key={criterion.label}>
+                    <span>{criterion.label}</span>
+                    <b>{criterion.max}</b>
+                    <small>{criterion.source}</small>
+                  </div>
+                ))}
+              </div>
+            </section>
+
             <div className="pizza-board">
               <div className="pizza-board-head">
-                <span>#</span><span>PIZZERIA</span><span>CITTÀ</span><span>VOTO</span>
+                <span>#</span>
+                <span>PIZZERIA</span>
+                <span>LOCATION</span>
+                <span>PIZZA</span>
+                <span>DOLCE</span>
+                <span>PREZZO</span>
+                <span>BONUS F.</span>
+                <span>TOTALE</span>
               </div>
-              <div className="pizza-board-empty">
-                <span className="empty-slice">△</span>
-                <h2>La classifica parte da zero.</h2>
-                <p>Per ora lasciamo questo spazio vuoto. Qui costruiremo insieme criteri, voti e recensioni.</p>
-                <span className="empty-label">NESSUNA PIZZERIA INSERITA</span>
+              <div className="pizza-ranking-list">
+                {pizzaRanking.map((restaurant, index) => (
+                  <article className={`pizza-ranking-row ${index < 3 ? "pizza-ranking-top" : ""}`} key={`${restaurant.name}-${index}`}>
+                    <span className="pizza-position">{String(index + 1).padStart(2, "0")}</span>
+                    <div className="pizza-name-cell">
+                      <b>{restaurant.name}</b>
+                      <small>{restaurant.place ?? "THEBOYZ TESTED"}</small>
+                      <span className="pizza-score-track" aria-hidden="true">
+                        <i style={{ width: `${restaurant.total}%` }} />
+                      </span>
+                    </div>
+                    <span className="pizza-category-score"><b>{restaurant.location}</b><small>/21</small></span>
+                    <span className="pizza-category-score"><b>{restaurant.pizza}</b><small>/30</small></span>
+                    <span className="pizza-category-score"><b>{restaurant.dessert}</b><small>/12</small></span>
+                    <span className="pizza-category-score"><b>{restaurant.price}</b><small>/30</small></span>
+                    <span className="pizza-category-score pizza-fabio-score"><b>{restaurant.fabio}</b><small>/7</small></span>
+                    <span className="pizza-total-score"><b>{restaurant.total}</b><small>/100</small></span>
+                  </article>
+                ))}
               </div>
             </div>
+            <p className="pizza-source-note">Classifica importata dal foglio storico TheBoyz · La votazione interattiva arriverà nel prossimo aggiornamento.</p>
           </section>
         ) : null}
 
