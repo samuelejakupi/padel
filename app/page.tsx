@@ -102,13 +102,7 @@ function LoginScreen() {
           <span>TB</span>
         </div>
         <div className="login-copy">
-          <p className="eyebrow">IL NOSTRO GRUPPO. LE NOSTRE COSE.</p>
           <h1>Benvenuto<br />nel quartier generale.</h1>
-          <p>Le nostre storie, le nostre idee e tutto quello che ci inventeremo. Un posto solo, rigorosamente TheBoyz.</p>
-        </div>
-        <div className="login-proof">
-          <span><b>01</b> gruppo</span>
-          <span><b>∞</b> cose da aggiungere</span>
         </div>
       </section>
 

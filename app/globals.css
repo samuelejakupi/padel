@@ -253,13 +253,6 @@ button {
   text-transform: uppercase;
 }
 
-.login-copy > p:last-child {
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 18px;
-  line-height: 1.6;
-  max-width: 520px;
-}
-
 .boyz-grid {
   align-items: center;
   border: 2px solid rgba(24, 223, 228, 0.16);
@@ -288,31 +281,6 @@ button {
   font-style: italic;
   font-weight: 1000;
   letter-spacing: -2vw;
-}
-
-.login-proof {
-  bottom: 44px;
-  display: flex;
-  gap: 34px;
-  left: 6vw;
-  position: absolute;
-  z-index: 2;
-}
-
-.login-proof span {
-  align-items: center;
-  color: rgba(255, 255, 255, 0.72);
-  display: flex;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-
-.login-proof b {
-  color: var(--lime);
-  font-size: 30px;
-  margin-right: 10px;
 }
 
 .login-panel {
@@ -2429,15 +2397,6 @@ form select:focus,
     font-size: 44px;
     letter-spacing: -3px;
     margin-bottom: 18px;
-  }
-
-  .login-copy > p:last-child {
-    font-size: 13px;
-    max-width: 90%;
-  }
-
-  .login-proof {
-    display: none;
   }
 
   .login-panel {
