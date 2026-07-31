@@ -967,7 +967,7 @@ function AppShell({ session }: { session: Session | null }) {
               {rankedProfiles.slice(0, 3).map((profile, index) => (
                 <article key={profile.id} className={`podium-card podium-${index + 1}`}>
                   <span className="podium-number">{index + 1}</span>
-                  {index === 0 ? <img className="podium-trophy" src="https://cdn-icons-gif.flaticon.com/18830/18830460.gif" alt="Trofeo primo posto" /> : null
+                  {index === 0 ? <img className="podium-trophy" src="https://cdn-icons-gif.flaticon.com/18830/18830460.gif" alt="Trofeo primo posto" /> : null}
                   <Avatar profile={profile} size="lg" />
                   <h3>{profile.display_name}</h3>
                   <b>{profile.rating} pt</b>
@@ -1037,7 +1037,7 @@ function AppShell({ session }: { session: Session | null }) {
               {pizzaEntries.filter((restaurant) => !restaurant.isNew || restaurant.votesCount === 3).slice(0, 3).map((restaurant, index) => (
                 <article className={`pizza-podium-card pizza-place-${index + 1}`} key={restaurant.name}>
                   <span className="pizza-medal">{String(index + 1).padStart(2, "0")}</span>
-                  {index === 0 ? <img className="pizza-medal-icon" src="https://cdn-icons-gif.flaticon.com/19016/19016244.gif" alt="Trofeo primo posto pizza" /> : null
+                  {index === 0 ? <img className="pizza-medal-icon" src="https://cdn-icons-gif.flaticon.com/19016/19016244.gif" alt="Trofeo primo posto pizza" /> : null}
                   <div>
                     <small>{index === 0 ? "THEBOYZ CHAMPION" : "TOP THREE"}</small>
                     <h2>{restaurant.name}</h2>
