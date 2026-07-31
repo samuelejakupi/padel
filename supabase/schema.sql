@@ -74,7 +74,7 @@ declare
   member_count integer;
   requested_name text;
 begin
-  perform pg_advisory_xact_lock(hashtext('padel_house_max_10_members'));
+  perform pg_advisory_xact_lock(hashtext('theboyz_max_10_members'));
   select count(*) into member_count from public.profiles;
 
   if member_count >= 10 then
@@ -84,6 +84,9 @@ begin
   requested_name := nullif(trim(new.raw_user_meta_data ->> 'display_name'), '');
   if requested_name is null then
     requested_name := split_part(coalesce(new.email, 'Giocatore'), '@', 1);
+  end if;
+  if char_length(requested_name) < 2 then
+    requested_name := 'Giocatore';
   end if;
 
   insert into public.profiles (id, display_name)
@@ -96,6 +99,35 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
 after insert on auth.users
 for each row execute function public.handle_new_user();
+
+-- Recupera automaticamente gli utenti registrati prima dell'installazione
+-- dello schema. Non supera mai il limite complessivo di 10 profili.
+with existing_users as (
+  select
+    user_account.id,
+    coalesce(
+      nullif(trim(user_account.raw_user_meta_data ->> 'display_name'), ''),
+      nullif(split_part(coalesce(user_account.email, ''), '@', 1), ''),
+      'Giocatore'
+    ) as requested_name
+  from auth.users as user_account
+  where not exists (
+    select 1 from public.profiles as profile where profile.id = user_account.id
+  )
+  order by user_account.created_at
+  limit (
+    select greatest(0, 10 - count(*))::integer from public.profiles
+  )
+)
+insert into public.profiles (id, display_name)
+select
+  id,
+  case
+    when char_length(requested_name) < 2 then 'Giocatore'
+    else left(requested_name, 40)
+  end
+from existing_users
+on conflict (id) do nothing;
 
 -- Registra un risultato e aggiorna il ranking Elo in una sola transazione.
 create or replace function public.record_match(
@@ -298,3 +330,6 @@ create policy "Elimina la propria foto"
 on storage.objects for delete
 to authenticated
 using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Aggiorna immediatamente la cache delle API Supabase.
+notify pgrst, 'reload schema';

@@ -420,6 +420,9 @@ function AppShell({ session }: { session: Session | null }) {
   const winRate = currentUser?.matches_played
     ? Math.round((currentUser.wins / currentUser.matches_played) * 100)
     : 0;
+  const missingDatabaseSchema =
+    notice.includes("public.profiles") ||
+    notice.includes("schema cache");
 
   if (!currentUser) {
     return (
@@ -430,9 +433,15 @@ function AppShell({ session }: { session: Session | null }) {
             <div className="loading-state"><span>●</span><p>Carichiamo i dati reali…</p></div>
           ) : (
             <div className="empty-state">
-              <p className="eyebrow dark">PROFILO NON DISPONIBILE</p>
-              <h1>Nessun dato dimostrativo.</h1>
-              <p>{notice || "Il tuo profilo non è ancora presente nel database Supabase."}</p>
+              <p className="eyebrow dark">
+                {missingDatabaseSchema ? "DATABASE DA CONFIGURARE" : "PROFILO DA COMPLETARE"}
+              </p>
+              <h1>{missingDatabaseSchema ? "Completa Supabase." : "Profilo non disponibile."}</h1>
+              <p>
+                {missingDatabaseSchema
+                  ? "Esegui lo script schema.sql nel SQL Editor di Supabase, poi ricarica questa pagina."
+                  : notice || "Il tuo profilo non è ancora presente nel database Supabase."}
+              </p>
               <button className="button button-dark" onClick={() => void supabase?.auth.signOut()}>Esci</button>
             </div>
           )}
