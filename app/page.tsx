@@ -15,6 +15,7 @@ type PadelView = "overview" | "ranking" | "matches";
 type PizzaRankingEntry = {
   name: string;
   place?: string;
+  address?: string;
   location: number;
   pizza: number;
   dessert: number;
@@ -53,18 +54,18 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const groupUsers = ["Samu", "Dani", "Atti", "Matte", "Fabio", "Alban", "Mattia", "Manu"] as const;
 const pizzaEditors = ["Samu", "Fabio", "Dani"] as const;
 const pizzaRanking: readonly PizzaRankingEntry[] = [
-  { name: "PORTEGO DE MA", location: 16, pizza: 25, dessert: 8, price: 22, fabio: 7, total: 78 },
-  { name: "L’OASI La Pizza", location: 17, pizza: 21, dessert: 7, price: 19, fabio: 6, total: 70 },
-  { name: "FERMENTO", location: 15, pizza: 24, dessert: 5, price: 17, fabio: 7, total: 68 },
-  { name: "SENESE", place: "Sanremo", location: 11, pizza: 25, dessert: 5, price: 18, fabio: 7, total: 66 },
-  { name: "SANTA FE", location: 9, pizza: 22, dessert: 5, price: 24, fabio: 6, total: 66 },
-  { name: "SCIABECCO", location: 9, pizza: 23, dessert: 8, price: 19, fabio: 6, total: 65 },
-  { name: "LE CAVE", location: 9, pizza: 21, dessert: 7, price: 21, fabio: 6, total: 64 },
-  { name: "FRA DIAVOLO", place: "Diano", location: 11, pizza: 23, dessert: 8, price: 14, fabio: 6, total: 62 },
-  { name: "BONGA", location: 11, pizza: 21, dessert: 6, price: 17, fabio: 7, total: 62 },
-  { name: "LE LOGGE", location: 8, pizza: 20, dessert: 4, price: 17, fabio: 7, total: 56 },
-  { name: "KILO", location: 10, pizza: 24, dessert: 7, price: 14, fabio: 0, total: 55 },
-  { name: "A GHE SEMMU", location: 6, pizza: 16, dessert: 6, price: 18, fabio: 6, total: 52 },
+  { name: "PORTEGO DE MA", location: 16, pizza: 25, dessert: 8, price: 22, fabio: 7, total: 78, address: "Calata Giovanni Battista Cuneo, 29, 18100 Imperia (IM)" },
+  { name: "L’OASI La Pizza", location: 17, pizza: 21, dessert: 7, price: 19, fabio: 6, total: 70, address: "Piazza Sant'Antonio, 15, 18100 Imperia (IM)" },
+  { name: "FERMENTO", location: 15, pizza: 24, dessert: 5, price: 17, fabio: 7, total: 68, address: "Calata Gian Battista Cuneo, 49, 18100 Imperia (IM)" },
+  { name: "SENESE", place: "Sanremo", location: 11, pizza: 25, dessert: 5, price: 18, fabio: 7, total: 66, address: "Via Privata Scoglio, 14, 18038 Sanremo (IM)" },
+  { name: "SANTA FE", location: 9, pizza: 22, dessert: 5, price: 24, fabio: 6, total: 66, address: "Via Nino Lamboglia, 4, 18100 Imperia (IM)" },
+  { name: "SCIABECCO", location: 9, pizza: 23, dessert: 8, price: 19, fabio: 6, total: 65, address: "Via Nizza, 29, 18100 Imperia (IM)" },
+  { name: "LE CAVE", location: 9, pizza: 21, dessert: 7, price: 21, fabio: 6, total: 64, address: "Via Nazionale, 6, 18100 Imperia (IM)" },
+  { name: "FRA DIAVOLO", place: "Diano", location: 11, pizza: 23, dessert: 8, price: 14, fabio: 6, total: 62, address: "Corso Giuseppe Garibaldi, 1, 18013 Diano Marina (IM)" },
+  { name: "BONGA", location: 11, pizza: 21, dessert: 6, price: 17, fabio: 7, total: 62, address: "Via Nino Lamboglia, 10, 18100 Imperia (IM)" },
+  { name: "LE LOGGE", location: 8, pizza: 20, dessert: 4, price: 17, fabio: 7, total: 56, address: "Piazza San Giovanni, 2, 18021 Borgomaro (IM)" },
+  { name: "KILO", location: 10, pizza: 24, dessert: 7, price: 14, fabio: 0, total: 55, address: "Lungomare C. Colombo, 188, 18100 Imperia (IM)" },
+  { name: "A GHE SEMMU", location: 6, pizza: 16, dessert: 6, price: 18, fabio: 6, total: 52, address: "Via Trento, 77, 18100 Imperia (IM)" },
 ];
 
 const pizzaCriteria = [
@@ -835,7 +836,8 @@ function AppShell({ session }: { session: Session | null }) {
             <div className="hub-cards">
               <button className="hub-card hub-card-padel" onClick={() => { setView("padel"); setPadelView("overview"); }}>
                 <span className="hub-card-index">01</span>
-                <div className="hub-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" /><path d="M4.5 6.5C7 9 7 15 4.5 17.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /><path d="M19.5 6.5C17 9 17 15 19.5 17.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg></div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <div className="hub-card-icon" aria-hidden="true"><img src="https://cdn-icons-gif.flaticon.com/6451/6451035.gif" alt="" /></div>
                 <div className="hub-card-copy">
                   <p>SEZIONE ATTIVA</p>
                   <h3>Padel</h3>
@@ -850,7 +852,8 @@ function AppShell({ session }: { session: Session | null }) {
 
               <button className="hub-card hub-card-pizza" onClick={() => setView("pizza")}>
                 <span className="hub-card-index">02</span>
-                <div className="hub-card-icon pizza-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3L21 19C15.5 16 8.5 16 3 19L12 3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M6.5 17.3C10.2 15.5 13.8 15.5 17.5 17.3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /><circle cx="11" cy="11" r="1" fill="currentColor" /><circle cx="14.2" cy="13.6" r="1" fill="currentColor" /></svg></div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <div className="hub-card-icon pizza-icon" aria-hidden="true"><img src="https://cdn-icons-gif.flaticon.com/15240/15240280.gif" alt="" /></div>
                 <div className="hub-card-copy">
                   <p>PROSSIMAMENTE</p>
                   <h3>Pizzeria<br />Ranking</h3>
@@ -868,6 +871,7 @@ function AppShell({ session }: { session: Session | null }) {
               <span className="status-pulse" />
               <p><b>TheBoyz è online.</b> La prossima sezione la decidiamo noi.</p>
               <span>TB / 2026</span>
+              <a className="icon-credit" href="https://www.flaticon.com" target="_blank" rel="noopener noreferrer">Icone animate by Flaticon</a>
             </div>
           </section>
         ) : null}
@@ -963,6 +967,7 @@ function AppShell({ session }: { session: Session | null }) {
               {rankedProfiles.slice(0, 3).map((profile, index) => (
                 <article key={profile.id} className={`podium-card podium-${index + 1}`}>
                   <span className="podium-number">{index + 1}</span>
+                  {index === 0 ? <img className="podium-trophy" src="https://cdn-icons-gif.flaticon.com/18830/18830460.gif" alt="Trofeo primo posto" /> : null
                   <Avatar profile={profile} size="lg" />
                   <h3>{profile.display_name}</h3>
                   <b>{profile.rating} pt</b>
@@ -1032,6 +1037,7 @@ function AppShell({ session }: { session: Session | null }) {
               {pizzaEntries.filter((restaurant) => !restaurant.isNew || restaurant.votesCount === 3).slice(0, 3).map((restaurant, index) => (
                 <article className={`pizza-podium-card pizza-place-${index + 1}`} key={restaurant.name}>
                   <span className="pizza-medal">{String(index + 1).padStart(2, "0")}</span>
+                  {index === 0 ? <img className="pizza-medal-icon" src="https://cdn-icons-gif.flaticon.com/19016/19016244.gif" alt="Trofeo primo posto pizza" /> : null
                   <div>
                     <small>{index === 0 ? "THEBOYZ CHAMPION" : "TOP THREE"}</small>
                     <h2>{restaurant.name}</h2>
@@ -1084,7 +1090,7 @@ function AppShell({ session }: { session: Session | null }) {
                     <span className="pizza-position">{String(index + 1).padStart(2, "0")}</span>
                     <div className="pizza-name-cell">
                       <b>{restaurant.name}</b>
-                      <small>{restaurant.isNew ? `${restaurant.place ?? "NUOVA SCHEDA"} · ${restaurant.votesCount ?? 0}/3 VOTI` : (restaurant.place ?? "THEBOYZ TESTED")}</small>
+                      <small>{restaurant.isNew ? `${restaurant.place ?? "NUOVA SCHEDA"} · ${restaurant.votesCount ?? 0}/3 VOTI` : restaurant.address ? <a className="pizza-address-link" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.address)}`} target="_blank" rel="noopener noreferrer">{restaurant.address}</a> : (restaurant.place ?? "THEBOYZ TESTED")}</small>
                       <span className="pizza-score-track" aria-hidden="true">
                         <i style={{ width: `${complete ? restaurant.total : 0}%` }} />
                       </span>
