@@ -2107,6 +2107,15 @@ button.pizza-ranking-row {
   text-transform: uppercase;
 }
 
+.pizza-address-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.pizza-address-link:hover {
+  text-decoration: underline;
+}
+
 .pizza-score-track {
   background: #dfe5df;
   border-radius: 999px;
