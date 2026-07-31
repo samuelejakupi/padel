@@ -22,6 +22,7 @@ test("include configurazione Supabase e pubblicazione Pages", async () => {
   assert.match(schema, /record_match/);
   assert.match(schema, /delete_match/);
   assert.match(schema, /theboyz_padel_results/);
+  assert.match(schema, /current_streak = 0\s+where true/);
   assert.match(schema, /Registrazione pubblica disabilitata/);
   assert.match(schema, /samu@theboyz\.local/);
   assert.match(workflow, /deploy-pages/);

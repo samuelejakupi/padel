@@ -307,7 +307,8 @@ begin
     matches_played = 0,
     wins = 0,
     losses = 0,
-    current_streak = 0;
+    current_streak = 0
+  where true;
 
   for replay_match in
     select id, winner_team
