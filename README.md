@@ -4,9 +4,9 @@ Il sito di gruppo dei TheBoyz. La prima versione include:
 
 - home comune con le sezioni del gruppo;
 - sezione Padel con storico e ranking;
-- sezione Pizzeria Ranking predisposta e ancora vuota;
+- sezione Pizzeria Ranking con voto pesato per criterio e classifica aggiornata in tempo reale;
 - accesso email/password con Supabase;
-- massimo 10 profili;
+- massimo 8 profili;
 - foto profilo;
 - partite 2 contro 2 con due o tre set;
 - ranking Padel Elo aggiornato automaticamente;
@@ -17,10 +17,12 @@ Il sito di gruppo dei TheBoyz. La prima versione include:
 Il progetto non contiene dati dimostrativi: senza credenziali Supabase mostra una
 schermata di configurazione e non simula utenti o partite.
 
+Prima di modificare il progetto, leggi `CONVENTIONS.md`: raccoglie le regole e lo stile da seguire per restare coerenti con il codice esistente.
+
 ## Account riservati
 
 La registrazione pubblica non è disponibile. Gli account previsti sono Samu,
-Dani, Atti, Matte, Fabio e Alban. Il frontend converte il nome selezionato in
+Dani, Atti, Matte, Fabio, Alban, Mattia e Manu (massimo 8 profili). Il frontend converte il nome selezionato in
 un’identità Supabase interna; gli indirizzi tecnici non vengono mostrati.
 
 Gli account vanno amministrati direttamente dal pannello Supabase. La service
@@ -38,7 +40,7 @@ ai file `.env` pubblicati, alle GitHub Actions o al codice frontend.
    - Project URL
    - anon / publishable key
 
-Lo script crea anche il contenitore `avatars`, le regole di sicurezza e il limite di 10 membri.
+Lo script crea anche il contenitore `avatars`, le regole di sicurezza e il limite di 8 membri.
 
 ## 2. Prova in locale
 
