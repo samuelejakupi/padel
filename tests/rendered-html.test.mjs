@@ -25,8 +25,11 @@ test("include configurazione Supabase e pubblicazione Pages", async () => {
   assert.match(schema, /current_streak = 0\s+where true/);
   assert.match(schema, /Registrazione pubblica disabilitata/);
   assert.match(schema, /samu@theboyz\.local/);
+  assert.match(schema, /mattia@theboyz\.local/);
+  assert.match(schema, /manu@theboyz\.local/);
   assert.match(workflow, /deploy-pages/);
   assert.match(page, /signInWithPassword/);
+  assert.match(page, /"Mattia", "Manu"/);
   assert.match(page, /Partita eliminata/);
   assert.doesNotMatch(page, /signUp\s*\(/);
   assert.match(page, /avatars/);

@@ -24,7 +24,7 @@ type PizzaRankingEntry = {
 };
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-const groupUsers = ["Samu", "Dani", "Atti", "Matte", "Fabio", "Alban"] as const;
+const groupUsers = ["Samu", "Dani", "Atti", "Matte", "Fabio", "Alban", "Mattia", "Manu"] as const;
 const pizzaRanking: readonly PizzaRankingEntry[] = [
   { name: "PORTEGO DE MA", location: 16, pizza: 25, dessert: 8, price: 22, fabio: 7, total: 78 },
   { name: "L’OASI La Pizza", location: 17, pizza: 21, dessert: 7, price: 19, fabio: 6, total: 70 },

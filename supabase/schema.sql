@@ -63,7 +63,7 @@ create trigger profiles_touch_updated_at
 before update on public.profiles
 for each row execute function public.touch_updated_at();
 
--- Crea profili esclusivamente per i sei account amministrati dai TheBoyz.
+-- Crea profili esclusivamente per gli account amministrati dai TheBoyz.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -74,7 +74,7 @@ declare
   member_count integer;
   requested_name text;
 begin
-  perform pg_advisory_xact_lock(hashtext('theboyz_six_members'));
+  perform pg_advisory_xact_lock(hashtext('theboyz_members'));
   select count(*) into member_count from public.profiles;
 
   requested_name := case lower(coalesce(new.email, ''))
@@ -84,6 +84,8 @@ begin
     when 'matte@theboyz.local' then 'Matte'
     when 'fabio@theboyz.local' then 'Fabio'
     when 'alban@theboyz.local' then 'Alban'
+    when 'mattia@theboyz.local' then 'Mattia'
+    when 'manu@theboyz.local' then 'Manu'
     else null
   end;
 
@@ -91,7 +93,7 @@ begin
     raise exception 'Registrazione pubblica disabilitata';
   end if;
 
-  if member_count >= 6 then
+  if member_count >= 8 then
     raise exception 'Tutti i profili TheBoyz sono già stati creati';
   end if;
 
@@ -117,6 +119,8 @@ with existing_users as (
       when 'matte@theboyz.local' then 'Matte'
       when 'fabio@theboyz.local' then 'Fabio'
       when 'alban@theboyz.local' then 'Alban'
+      when 'mattia@theboyz.local' then 'Mattia'
+      when 'manu@theboyz.local' then 'Manu'
     end as requested_name
   from auth.users as user_account
   where not exists (
@@ -128,7 +132,9 @@ with existing_users as (
       'atti@theboyz.local',
       'matte@theboyz.local',
       'fabio@theboyz.local',
-      'alban@theboyz.local'
+      'alban@theboyz.local',
+      'mattia@theboyz.local',
+      'manu@theboyz.local'
     )
   order by user_account.created_at
 )
