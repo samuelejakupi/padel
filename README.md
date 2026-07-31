@@ -1,12 +1,15 @@
-# Padel House
+# TheBoyz · Group HQ
 
-Un piccolo club digitale per tenere lo storico delle partite di padel tra amici. Include:
+Il sito di gruppo dei TheBoyz. La prima versione include:
 
+- home comune con le sezioni del gruppo;
+- sezione Padel con storico e ranking;
+- sezione Pizzeria Ranking predisposta e ancora vuota;
 - accesso email/password con Supabase;
 - massimo 10 profili;
 - foto profilo;
 - partite 2 contro 2 con due o tre set;
-- ranking Elo aggiornato automaticamente;
+- ranking Padel Elo aggiornato automaticamente;
 - classifica, win rate, serie positiva/negativa e storico;
 - layout responsive per telefono e desktop;
 - pubblicazione automatica su GitHub Pages.

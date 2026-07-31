@@ -4,22 +4,22 @@ import "./globals.css";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
 export const metadata: Metadata = {
-  title: "Padel House · La classifica del tuo gruppo",
+  title: "TheBoyz · Group HQ",
   description:
-    "Partite, statistiche e ranking del tuo gruppo di padel, in un unico posto.",
+    "Il quartier generale dei TheBoyz: padel, pizzeria ranking e tutte le nostre cose.",
   metadataBase: siteUrl ? new URL(siteUrl) : undefined,
   openGraph: {
-    title: "Padel House",
-    description: "Ogni partita lascia il segno.",
+    title: "TheBoyz · Group HQ",
+    description: "Padel, Pizzeria Ranking e tutte le nostre cose.",
     type: "website",
     locale: "it_IT",
-    images: siteUrl ? [{ url: "/og.png", width: 1200, height: 630, alt: "Padel House" }] : undefined,
+    images: siteUrl ? [{ url: "/og-theboyz.png", width: 1200, height: 630, alt: "TheBoyz Group HQ" }] : undefined,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Padel House",
-    description: "Ogni partita lascia il segno.",
-    images: siteUrl ? ["/og.png"] : undefined,
+    title: "TheBoyz · Group HQ",
+    description: "Padel, Pizzeria Ranking e tutte le nostre cose.",
+    images: siteUrl ? ["/og-theboyz.png"] : undefined,
   },
 };
 

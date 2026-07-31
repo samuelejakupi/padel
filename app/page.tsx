@@ -10,7 +10,10 @@ import {
   supabase,
 } from "@/lib/supabase";
 
-type View = "home" | "ranking" | "matches" | "profile";
+type View = "hub" | "padel" | "pizza" | "profile";
+type PadelView = "overview" | "ranking" | "matches";
+
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 function initials(name: string) {
   return name
@@ -45,11 +48,12 @@ function Avatar({
 
 function Brand() {
   return (
-    <div className="brand" aria-label="Padel House">
-      <span className="brand-mark">P</span>
+    <div className="brand" aria-label="TheBoyz">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="brand-logo" src={`${basePath}/theboyz-logo.png`} alt="" />
       <span>
-        <b>PADEL</b>
-        <small>HOUSE</small>
+        <b>THEBOYZ</b>
+        <small>GROUP HQ</small>
       </span>
     </div>
   );
@@ -94,24 +98,24 @@ function LoginScreen() {
     <main className="login-page">
       <section className="login-showcase">
         <Brand />
-        <div className="court-lines" aria-hidden="true">
-          <span className="court-ball">●</span>
+        <div className="boyz-grid" aria-hidden="true">
+          <span>TB</span>
         </div>
         <div className="login-copy">
-          <p className="eyebrow">IL TUO CLUB. LE TUE REGOLE.</p>
-          <h1>Ogni partita<br />lascia il segno.</h1>
-          <p>Risultati, rivalità e classifica del tuo gruppo di padel. Finalmente tutti d’accordo sui numeri.</p>
+          <p className="eyebrow">IL NOSTRO GRUPPO. LE NOSTRE COSE.</p>
+          <h1>Benvenuto<br />nel quartier generale.</h1>
+          <p>Le nostre storie, le nostre idee e tutto quello che ci inventeremo. Un posto solo, rigorosamente TheBoyz.</p>
         </div>
         <div className="login-proof">
-          <span><b>10</b> posti nel gruppo</span>
-          <span><b>∞</b> partite da ricordare</span>
+          <span><b>01</b> gruppo</span>
+          <span><b>∞</b> cose da aggiungere</span>
         </div>
       </section>
 
       <section className="login-panel">
         <div className="login-card">
-          <p className="eyebrow dark">BENTORNATO IN CAMPO</p>
-          <h2>{mode === "login" ? "Accedi al tuo club" : "Entra nel gruppo"}</h2>
+          <p className="eyebrow dark">AREA RISERVATA THEBOYZ</p>
+          <h2>{mode === "login" ? "Entra nel gruppo" : "Crea il tuo profilo"}</h2>
           <p className="login-subtitle">
             {mode === "login"
               ? "Usa le credenziali con cui ti sei registrato."
@@ -121,7 +125,7 @@ function LoginScreen() {
           <form onSubmit={submit}>
             {mode === "signup" ? (
               <label>
-                Nome in classifica
+                Nome nel gruppo
                 <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Es. Alessandro" required />
               </label>
             ) : null}
@@ -135,14 +139,14 @@ function LoginScreen() {
             </label>
             {message ? <p className="form-message">{message}</p> : null}
             <button className="button button-primary button-full" disabled={busy}>
-              {busy ? "Un momento…" : mode === "login" ? "Entra nel club" : "Crea il mio profilo"}
+              {busy ? "Un momento…" : mode === "login" ? "Entra in TheBoyz" : "Crea il mio profilo"}
             </button>
           </form>
           <button className="text-button" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setMessage(""); }}>
             {mode === "login" ? "Non hai un profilo? Registrati" : "Hai già un profilo? Accedi"}
           </button>
         </div>
-        <p className="login-footer">Accesso protetto da Supabase · Solo per i membri del gruppo</p>
+        <p className="login-footer">Accesso protetto da Supabase · Solo per TheBoyz</p>
       </section>
     </main>
   );
@@ -154,7 +158,7 @@ function SetupScreen() {
       <Brand />
       <section>
         <p className="eyebrow dark">CONFIGURAZIONE NECESSARIA</p>
-        <h1>Collega Supabase<br />per entrare nel club.</h1>
+        <h1>Collega Supabase<br />a TheBoyz.</h1>
         <p>
           Questa installazione non contiene dati dimostrativi. Configura
           <code>NEXT_PUBLIC_SUPABASE_URL</code> e
@@ -364,7 +368,8 @@ function NewMatchModal({
 }
 
 function AppShell({ session }: { session: Session | null }) {
-  const [view, setView] = useState<View>("home");
+  const [view, setView] = useState<View>("hub");
+  const [padelView, setPadelView] = useState<PadelView>("overview");
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [matches, setMatches] = useState<PadelMatch[]>([]);
   const [showMatch, setShowMatch] = useState(false);
@@ -474,19 +479,20 @@ function AppShell({ session }: { session: Session | null }) {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <Brand />
+        <button className="brand-home" onClick={() => setView("hub")} aria-label="Vai alla home TheBoyz">
+          <Brand />
+        </button>
         <nav className="desktop-nav" aria-label="Navigazione principale">
           {([
-            ["home", "Panoramica"],
-            ["ranking", "Classifica"],
-            ["matches", "Partite"],
-            ["profile", "Profilo"],
+            ["hub", "TheBoyz"],
+            ["padel", "Padel"],
+            ["pizza", "Pizzeria ranking"],
           ] as [View, string][]).map(([target, label]) => (
             <button key={target} className={view === target ? "active" : ""} onClick={() => setView(target)}>{label}</button>
           ))}
         </nav>
         <button className="profile-chip" onClick={() => setView("profile")}>
-          <span><b>{currentUser.display_name}</b><small>#{currentRank} in classifica</small></span>
+          <span><b>{currentUser.display_name}</b><small>Padel #{currentRank}</small></span>
           <Avatar profile={currentUser} size="sm" />
         </button>
       </header>
@@ -498,11 +504,89 @@ function AppShell({ session }: { session: Session | null }) {
           <div className="loading-state"><span>●</span><p>Prepariamo il campo…</p></div>
         ) : null}
 
-        {!loading && view === "home" ? (
+        {!loading && view === "hub" ? (
+          <section className="hub-page">
+            <div className="hub-hero">
+              <div className="hub-hero-copy">
+                <p className="eyebrow">THEBOYZ · GROUP HQ</p>
+                <h1>Le nostre cose.<br /><span>Un posto solo.</span></h1>
+                <p>Classifiche serissime, discussioni inutili e nuove idee. Questo è il nostro spazio.</p>
+                <div className="hub-members">
+                  <div className="mini-avatars">
+                    {sorted.slice(0, 5).map((profile) => <Avatar key={profile.id} profile={profile} size="sm" />)}
+                  </div>
+                  <span><b>{profiles.length}</b> membri attivi</span>
+                </div>
+              </div>
+              <div className="hub-logo-stage">
+                <span className="logo-glow" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`${basePath}/theboyz-logo.png`} alt="Simbolo TheBoyz" />
+                <small>EST. BY THE GROUP</small>
+              </div>
+            </div>
+
+            <div className="hub-section-title">
+              <div>
+                <p className="eyebrow dark">I NOSTRI SPAZI</p>
+                <h2>Cosa facciamo qui</h2>
+              </div>
+              <span>02 SEZIONI</span>
+            </div>
+
+            <div className="hub-cards">
+              <button className="hub-card hub-card-padel" onClick={() => { setView("padel"); setPadelView("overview"); }}>
+                <span className="hub-card-index">01</span>
+                <div className="hub-card-icon"><span>●</span></div>
+                <div className="hub-card-copy">
+                  <p>SEZIONE ATTIVA</p>
+                  <h3>Padel</h3>
+                  <span>Partite, risultati e rivalità del gruppo.</span>
+                </div>
+                <div className="hub-card-meta">
+                  <span><b>{matches.length}</b> partite</span>
+                  <span><b>{profiles.length}</b> giocatori</span>
+                </div>
+                <span className="hub-card-arrow">↗</span>
+              </button>
+
+              <button className="hub-card hub-card-pizza" onClick={() => setView("pizza")}>
+                <span className="hub-card-index">02</span>
+                <div className="hub-card-icon pizza-icon"><span>△</span></div>
+                <div className="hub-card-copy">
+                  <p>PROSSIMAMENTE</p>
+                  <h3>Pizzeria<br />Ranking</h3>
+                  <span>La classifica ufficialmente non ufficiale.</span>
+                </div>
+                <div className="hub-card-meta">
+                  <span>Spazio pronto</span>
+                  <span>Classifica vuota</span>
+                </div>
+                <span className="hub-card-arrow">↗</span>
+              </button>
+            </div>
+
+            <div className="hub-status">
+              <span className="status-pulse" />
+              <p><b>TheBoyz è online.</b> La prossima sezione la decidiamo noi.</p>
+              <span>TB / 2026</span>
+            </div>
+          </section>
+        ) : null}
+
+        {!loading && view === "padel" && padelView === "overview" ? (
           <>
+            <div className="section-context">
+              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b>
+              <nav aria-label="Navigazione sezione padel">
+                <button className="active" onClick={() => setPadelView("overview")}>Panoramica</button>
+                <button onClick={() => setPadelView("ranking")}>Classifica</button>
+                <button onClick={() => setPadelView("matches")}>Partite</button>
+              </nav>
+            </div>
             <section className="welcome-row">
               <div>
-                <p className="eyebrow dark">VENERDÌ, {new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long" }).format(new Date()).toUpperCase()}</p>
+                <p className="eyebrow dark">THEBOYZ PADEL CLUB</p>
                 <h1>Ciao, {currentUser.display_name}.<br /><span>Pronto a difendere la posizione?</span></h1>
               </div>
               <button className="button button-primary add-match" onClick={() => setShowMatch(true)}><span>＋</span> Registra partita</button>
@@ -532,9 +616,13 @@ function AppShell({ session }: { session: Session | null }) {
 
                 <div className="section-head">
                   <div><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
-                  <button className="text-link" onClick={() => setView("matches")}>Vedi tutte →</button>
+                  <button className="text-link" onClick={() => setPadelView("matches")}>Vedi tutte →</button>
                 </div>
-                <div className="match-list">{matches.slice(0, 3).map((match) => <MatchCard key={match.id} match={match} />)}</div>
+                {matches.length ? (
+                  <div className="match-list">{matches.slice(0, 3).map((match) => <MatchCard key={match.id} match={match} />)}</div>
+                ) : (
+                  <div className="compact-empty"><span>00</span><p>Nessuna partita registrata. La prima scriverà la storia.</p></div>
+                )}
               </div>
 
               <aside className="dashboard-side">
@@ -543,7 +631,7 @@ function AppShell({ session }: { session: Session | null }) {
                   <span className="season">STAGIONE 2026</span>
                 </div>
                 <RankingList profiles={profiles.slice(0, 6)} />
-                <button className="button button-dark button-full" onClick={() => setView("ranking")}>Classifica completa</button>
+                <button className="button button-dark button-full" onClick={() => setPadelView("ranking")}>Classifica completa</button>
                 <div className="next-game">
                   <span className="next-icon">◆</span>
                   <div><small>PROSSIMO OBIETTIVO</small><b>Arriva a {Math.ceil(currentUser.rating / 50) * 50 + 50} punti</b></div>
@@ -554,10 +642,13 @@ function AppShell({ session }: { session: Session | null }) {
           </>
         ) : null}
 
-        {!loading && view === "ranking" ? (
+        {!loading && view === "padel" && padelView === "ranking" ? (
           <section className="page-section">
+            <div className="section-context">
+              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><button onClick={() => setPadelView("overview")}>PADEL</button><span>/</span><b>CLASSIFICA</b>
+            </div>
             <div className="page-title">
-              <div><p className="eyebrow dark">STAGIONE 2026</p><h1>La classifica del club</h1><p>Il ranking si aggiorna automaticamente dopo ogni risultato.</p></div>
+              <div><p className="eyebrow dark">THEBOYZ PADEL · STAGIONE 2026</p><h1>La classifica del gruppo</h1><p>Il ranking si aggiorna automaticamente dopo ogni risultato.</p></div>
               <button className="button button-primary" onClick={() => setShowMatch(true)}>＋ Registra partita</button>
             </div>
             <div className="podium">
@@ -575,20 +666,58 @@ function AppShell({ session }: { session: Session | null }) {
           </section>
         ) : null}
 
-        {!loading && view === "matches" ? (
+        {!loading && view === "padel" && padelView === "matches" ? (
           <section className="page-section">
+            <div className="section-context">
+              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><button onClick={() => setPadelView("overview")}>PADEL</button><span>/</span><b>PARTITE</b>
+            </div>
             <div className="page-title">
-              <div><p className="eyebrow dark">ARCHIVIO DEL CLUB</p><h1>Tutte le partite</h1><p>{matches.length} risultati registrati dal gruppo.</p></div>
+              <div><p className="eyebrow dark">ARCHIVIO THEBOYZ PADEL</p><h1>Tutte le partite</h1><p>{matches.length} risultati registrati dal gruppo.</p></div>
               <button className="button button-primary" onClick={() => setShowMatch(true)}>＋ Registra partita</button>
             </div>
-            <div className="match-list match-list-full">{matches.map((match) => <MatchCard key={match.id} match={match} />)}</div>
+            {matches.length ? (
+              <div className="match-list match-list-full">{matches.map((match) => <MatchCard key={match.id} match={match} />)}</div>
+            ) : (
+              <div className="empty-board"><span>00</span><h2>Ancora nessuna partita</h2><p>Registra il primo risultato per iniziare lo storico.</p></div>
+            )}
+          </section>
+        ) : null}
+
+        {!loading && view === "pizza" ? (
+          <section className="pizza-page">
+            <div className="section-context section-context-dark">
+              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PIZZERIA RANKING</b>
+            </div>
+            <div className="pizza-hero">
+              <div>
+                <p className="eyebrow">NUOVA SEZIONE</p>
+                <h1>Pizzeria<br /><span>Ranking.</span></h1>
+                <p>La classifica ufficialmente non ufficiale delle pizzerie provate dai TheBoyz.</p>
+              </div>
+              <div className="pizza-stamp">
+                <span>△</span>
+                <b>COMING<br />SOON</b>
+                <small>THEBOYZ TESTED</small>
+              </div>
+            </div>
+            <div className="pizza-board">
+              <div className="pizza-board-head">
+                <span>#</span><span>PIZZERIA</span><span>CITTÀ</span><span>VOTO</span>
+              </div>
+              <div className="pizza-board-empty">
+                <span className="empty-slice">△</span>
+                <h2>La classifica parte da zero.</h2>
+                <p>Per ora lasciamo questo spazio vuoto. Qui costruiremo insieme criteri, voti e recensioni.</p>
+                <span className="empty-label">NESSUNA PIZZERIA INSERITA</span>
+              </div>
+            </div>
           </section>
         ) : null}
 
         {!loading && view === "profile" ? (
           <section className="page-section profile-page">
             <div className="page-title">
-              <div><p className="eyebrow dark">IL MIO SPAZIO</p><h1>Profilo giocatore</h1><p>Aggiorna la foto e il nome visibile agli amici.</p></div>
+              <div><p className="eyebrow dark">IL MIO SPAZIO THEBOYZ</p><h1>Profilo del gruppo</h1><p>Aggiorna la foto e il nome visibile agli amici.</p></div>
             </div>
             <div className="profile-grid">
               <article className="profile-card">
@@ -613,7 +742,7 @@ function AppShell({ session }: { session: Session | null }) {
                 <h2>Dati del profilo</h2>
                 <form onSubmit={updateProfile}>
                   <label>Nome in classifica<input value={profileName || currentUser.display_name} onChange={(e) => setProfileName(e.target.value)} disabled={!supabase} /></label>
-                  <label>Email<input value={session?.user.email ?? "demo@padelhouse.it"} disabled /></label>
+                  <label>Email<input value={session?.user.email ?? ""} disabled /></label>
                   <button className="button button-primary" disabled={!supabase}>Salva modifiche</button>
                 </form>
                 {supabase ? <button className="signout-button" onClick={() => void supabase?.auth.signOut()}>Esci dal club</button> : <p className="demo-profile-note">Il profilo diventa modificabile dopo il collegamento a Supabase.</p>}
@@ -625,9 +754,9 @@ function AppShell({ session }: { session: Session | null }) {
 
       <nav className="mobile-nav" aria-label="Navigazione mobile">
         {([
-          ["home", "⌂", "Home"],
-          ["ranking", "≡", "Ranking"],
-          ["matches", "◫", "Partite"],
+          ["hub", "⌂", "TheBoyz"],
+          ["padel", "●", "Padel"],
+          ["pizza", "△", "Pizzerie"],
           ["profile", "○", "Profilo"],
         ] as [View, string, string][]).map(([target, icon, label]) => (
           <button key={target} className={view === target ? "active" : ""} onClick={() => setView(target)}><span>{icon}</span>{label}</button>

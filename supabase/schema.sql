@@ -1,4 +1,4 @@
--- Padel House · schema completo per Supabase
+-- TheBoyz · schema Supabase della sezione Padel
 -- Esegui questo file una sola volta nel SQL Editor del tuo progetto Supabase.
 
 create extension if not exists pgcrypto;
