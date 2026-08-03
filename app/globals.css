@@ -70,7 +70,7 @@ button {
 }
 
 .brand small {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 2.5px;
   margin-top: 5px;
@@ -499,7 +499,7 @@ form select:focus,
 
 .profile-chip small {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   margin-top: 3px;
 }
 
@@ -640,7 +640,7 @@ form select:focus,
 
 .hub-logo-stage small {
   color: var(--lime);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 900;
   letter-spacing: 3px;
   margin-top: 22px;
@@ -674,7 +674,7 @@ form select:focus,
 .hub-section-title > span {
   border: 1px solid var(--line);
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 900;
   letter-spacing: 1.4px;
   padding: 8px 10px;
@@ -792,7 +792,7 @@ form select:focus,
 
 .icon-credit {
   color: var(--muted);
-  font-size: 7px;
+  font-size: 9px;
   letter-spacing: 0.8px;
   text-decoration: none;
   text-transform: uppercase;
@@ -815,7 +815,7 @@ form select:focus,
 
 .hub-card-copy p {
   color: rgba(11, 27, 44, 0.6);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 900;
   letter-spacing: 1.7px;
   margin: 0 0 10px;
@@ -851,7 +851,7 @@ form select:focus,
 }
 
 .hub-card-meta span {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -902,7 +902,7 @@ form select:focus,
 
 .hub-status > span:last-child {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 900;
   letter-spacing: 1px;
 }
@@ -911,7 +911,7 @@ form select:focus,
   align-items: center;
   color: var(--muted);
   display: flex;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 900;
   gap: 8px;
   letter-spacing: 1.2px;
@@ -945,7 +945,7 @@ form select:focus,
   border-radius: 3px;
   color: var(--muted);
   cursor: pointer;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.8px;
   padding: 7px 10px;
@@ -1109,7 +1109,7 @@ form select:focus,
 .hero-stat-copy > small {
   color: rgba(255, 255, 255, 0.58);
   display: block;
-  font-size: 9px;
+  font-size: 10px;
   margin-top: 10px;
 }
 
@@ -1168,7 +1168,7 @@ form select:focus,
 
 .hero-kpis small {
   color: rgba(255, 255, 255, 0.6);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 1px;
 }
@@ -1208,7 +1208,7 @@ form select:focus,
   border: 1px solid var(--line);
   border-radius: 3px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 1px;
   padding: 5px 7px;
@@ -1248,7 +1248,7 @@ form select:focus,
 
 .ranking-name span {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   margin-top: 4px;
 }
 
@@ -1281,7 +1281,7 @@ form select:focus,
 
 .ranking-points small {
   color: var(--muted);
-  font-size: 7px;
+  font-size: 9px;
   letter-spacing: 1px;
 }
 
@@ -1308,7 +1308,7 @@ form select:focus,
   border-radius: 7px;
   display: grid;
   gap: 18px;
-  grid-template-columns: 44px minmax(0, 1fr) 52px;
+  grid-template-columns: 44px minmax(0, 1fr) 70px;
   min-height: 110px;
   padding: 15px 20px;
   position: relative;
@@ -1335,7 +1335,7 @@ form select:focus,
 
 .match-date span {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -1366,7 +1366,7 @@ form select:focus,
 
 .match-team em {
   color: #299b66;
-  font-size: 7px;
+  font-size: 9px;
   font-style: normal;
   font-weight: 900;
   grid-column: 2;
@@ -1416,7 +1416,7 @@ form select:focus,
 
 .match-score i {
   color: #a7afb5;
-  font-size: 7px;
+  font-size: 9px;
 }
 
 .match-points {
@@ -1432,7 +1432,7 @@ form select:focus,
 
 .match-points small {
   color: var(--muted);
-  font-size: 6px;
+  font-size: 9px;
   font-weight: 900;
   letter-spacing: 0.8px;
 }
@@ -1444,7 +1444,7 @@ form select:focus,
   color: #9aa3a9;
   cursor: pointer;
   display: flex;
-  font-size: 7px;
+  font-size: 9px;
   font-weight: 900;
   gap: 3px;
   letter-spacing: 0.6px;
@@ -1546,7 +1546,7 @@ form select:focus,
 
 .podium-card > small {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   margin-top: 8px;
 }
 
@@ -1576,7 +1576,7 @@ form select:focus,
 
 .table-stat small {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
   margin-top: 3px;
   text-transform: uppercase;
 }
@@ -1592,11 +1592,6 @@ form select:focus,
 
 .streak.down {
   background: #fff1f0;
-}
-
-.match-list-full {
-  margin: 0 auto;
-  max-width: 1080px;
 }
 
 .match-list-full .match-card {
@@ -1694,7 +1689,7 @@ form select:focus,
 
 .pizza-stamp small {
   color: rgba(11, 27, 44, 0.56);
-  font-size: 6px;
+  font-size: 9px;
   font-weight: 900;
   letter-spacing: 1.4px;
   margin-top: 8px;
@@ -1756,7 +1751,7 @@ form select:focus,
 
 .pizza-podium-card div small {
   color: var(--blue);
-  font-size: 6px;
+  font-size: 9px;
   font-weight: 1000;
   letter-spacing: 1.2px;
 }
@@ -1776,7 +1771,7 @@ form select:focus,
 
 .pizza-podium-card p {
   color: rgba(255, 255, 255, 0.5);
-  font-size: 8px;
+  font-size: 10px;
   margin: 4px 0 0;
   text-transform: uppercase;
 }
@@ -1796,7 +1791,7 @@ form select:focus,
 }
 
 .pizza-podium-card > b small {
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0;
   margin-left: 2px;
 }
@@ -1859,7 +1854,7 @@ form select:focus,
 .criterion-blue { --criterion-color: #5978d9; }
 
 .pizza-criterion span {
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 900;
   min-height: 22px;
   text-transform: uppercase;
@@ -1884,7 +1879,7 @@ form select:focus,
 
 .pizza-criterion small {
   color: var(--muted);
-  font-size: 7px;
+  font-size: 9px;
   font-weight: 800;
   margin-top: 2px;
 }
@@ -1908,7 +1903,7 @@ form select:focus,
 .pizza-board-head {
   border-bottom: 1px solid #d7ddd7;
   color: var(--muted);
-  font-size: 7px;
+  font-size: 9px;
   font-weight: 900;
   letter-spacing: 0.8px;
   padding: 17px 22px;
@@ -2013,7 +2008,7 @@ button.pizza-ranking-row {
 
 .pizza-name-cell > small {
   color: var(--muted);
-  font-size: 7px;
+  font-size: 9px;
   letter-spacing: 0.8px;
   margin-top: 3px;
   text-transform: uppercase;
@@ -2061,7 +2056,7 @@ button.pizza-ranking-row {
 .pizza-category-score small,
 .pizza-total-score small {
   color: var(--muted);
-  font-size: 7px;
+  font-size: 9px;
   margin-left: 2px;
 }
 
@@ -2080,7 +2075,7 @@ button.pizza-ranking-row {
 
 .pizza-source-note {
   color: rgba(255, 255, 255, 0.38);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.6px;
   margin: 16px 0 0;
   text-align: right;
@@ -2120,7 +2115,7 @@ button.pizza-ranking-row {
   bottom: 0;
   color: var(--white);
   cursor: pointer;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.4px;
   padding: 8px 10px;
@@ -2163,7 +2158,7 @@ button.pizza-ranking-row {
 
 .profile-stats small {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
   margin-top: 5px;
   text-transform: uppercase;
 }
@@ -2285,7 +2280,7 @@ button.pizza-ranking-row {
 
 .sets-form > span {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 900;
   text-align: center;
 }
@@ -2574,7 +2569,7 @@ button.pizza-ranking-row {
     color: var(--muted);
     display: flex;
     flex-direction: column;
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 800;
     gap: 3px;
     height: 100%;
@@ -2687,7 +2682,7 @@ button.pizza-ranking-row {
   }
 
   .match-team > span {
-    font-size: 8px;
+    font-size: 10px;
     max-width: 92px;
   }
 
@@ -2879,7 +2874,7 @@ button.pizza-ranking-row {
 
   .pizza-category-score::before {
     color: var(--muted);
-    font-size: 6px;
+    font-size: 9px;
     font-weight: 900;
     letter-spacing: 0.5px;
   }
