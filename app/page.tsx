@@ -957,7 +957,7 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "ranking" ? (
           <section className="page-section">
             <div className="section-context">
-              <button className="back-arrow" onClick={() => setPadelView("overview")} aria-label="Torna alla panoramica Padel">←</button><button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><button onClick={() => setPadelView("overview")}>PADEL</button><span>/</span><b>CLASSIFICA</b>
+              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b><nav aria-label="Navigazione sezione padel"><button onClick={() => setPadelView("overview")}>Panoramica</button><button className="active" onClick={() => setPadelView("ranking")}>Classifica</button><button onClick={() => setPadelView("matches")}>Partite</button></nav>
             </div>
             <div className="page-title">
               <div><p className="eyebrow dark">THEBOYZ PADEL · STAGIONE 2026</p><h1>La classifica del gruppo</h1><p>Il ranking si aggiorna automaticamente dopo ogni risultato.</p></div>
@@ -967,7 +967,7 @@ function AppShell({ session }: { session: Session | null }) {
               {rankedProfiles.slice(0, 3).map((profile, index) => (
                 <article key={profile.id} className={`podium-card podium-${index + 1}`}>
                   <span className="podium-number">{index + 1}</span>
-                  {index === 0 ? <img className="podium-trophy" src="https://cdn-icons-gif.flaticon.com/18830/18830460.gif" alt="Trofeo primo posto" /> : null}
+                  {index === 0 ? <span className="podium-trophy"><img src="https://cdn-icons-gif.flaticon.com/18830/18830460.gif" alt="Trofeo primo posto" /></span> : null}
                   <Avatar profile={profile} size="lg" />
                   <h3>{profile.display_name}</h3>
                   <b>{profile.rating} pt</b>
@@ -982,7 +982,7 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "matches" ? (
           <section className="page-section">
             <div className="section-context">
-              <button className="back-arrow" onClick={() => setPadelView("overview")} aria-label="Torna alla panoramica Padel">←</button><button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><button onClick={() => setPadelView("overview")}>PADEL</button><span>/</span><b>PARTITE</b>
+              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b><nav aria-label="Navigazione sezione padel"><button onClick={() => setPadelView("overview")}>Panoramica</button><button onClick={() => setPadelView("ranking")}>Classifica</button><button className="active" onClick={() => setPadelView("matches")}>Partite</button></nav>
             </div>
             <div className="page-title">
               <div><p className="eyebrow dark">ARCHIVIO THEBOYZ PADEL</p><h1>Tutte le partite</h1><p>{matches.length} risultati registrati dal gruppo.</p></div>
@@ -1006,10 +1006,8 @@ function AppShell({ session }: { session: Session | null }) {
         ) : null}
 
         {!loading && view === "pizza" ? (
-          <section className="pizza-page">
-            <div className="section-context section-context-dark">
-              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PIZZERIA RANKING</b>
-            </div>
+          <><div className="section-context"><button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PIZZERIA RANKING</b></div><section className="pizza-page">
+            
             <div className="pizza-hero">
               <div>
                 <p className="eyebrow">CLASSIFICA UFFICIALMENTE NON UFFICIALE</p>
@@ -1111,11 +1109,11 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
             </div>
             <p className="pizza-source-note">Classifica storica TheBoyz · Le nuove schede si attivano con i voti di Samu, Fabio e Dani.</p>
-          </section>
+          </section></>
         ) : null}
 
         {!loading && view === "profile" ? (
-          <section className="page-section profile-page">
+          <section className="page-section profile-page"><div className="section-context"><button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PROFILO</b></div>
             <div className="page-title">
               <div><p className="eyebrow dark">IL MIO SPAZIO THEBOYZ</p><h1>Profilo del gruppo</h1><p>Aggiorna la foto e il nome visibile agli amici.</p></div>
             </div>
