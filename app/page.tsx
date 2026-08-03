@@ -153,6 +153,85 @@ function padelRanks(sorted: Profile[]) {
   });
 }
 
+type PadelTeam = {
+  id: string;
+  players: Profile[];
+  rating: number;
+  matches_played: number;
+  wins: number;
+  losses: number;
+  current_streak: number;
+};
+
+// Le coppie non stanno su Supabase: le ricaviamo dalle partite già registrate,
+// così una squadra nuova entra in classifica da sola al primo risultato.
+function buildPadelTeams(matches: PadelMatch[], profiles: Profile[]): PadelTeam[] {
+  const byId = new Map(profiles.map((profile) => [profile.id, profile]));
+  const teams = new Map<string, PadelTeam>();
+  const chronological = [...matches].sort(
+    (a, b) => new Date(a.played_at).getTime() - new Date(b.played_at).getTime(),
+  );
+
+  chronological.forEach((match) => {
+    ([1, 2] as const).forEach((side) => {
+      const members = match.players.filter((player) => player.team === side);
+      if (members.length !== 2) return;
+
+      const ids = members.map((member) => member.profile_id).sort();
+      const key = ids.join("|");
+      const won = match.winner_team === side;
+      const delta = members.reduce((sum, member) => sum + (member.rating_delta ?? 0), 0);
+      const team = teams.get(key);
+
+      if (team) {
+        team.rating += delta;
+        team.matches_played += 1;
+        team.wins += won ? 1 : 0;
+        team.losses += won ? 0 : 1;
+        team.current_streak = won
+          ? Math.max(1, team.current_streak + 1)
+          : Math.min(-1, team.current_streak - 1);
+      } else {
+        teams.set(key, {
+          id: key,
+          players: ids.map((id) => byId.get(id)).filter(Boolean) as Profile[],
+          rating: 1000 + delta,
+          matches_played: 1,
+          wins: won ? 1 : 0,
+          losses: won ? 0 : 1,
+          current_streak: won ? 1 : -1,
+        });
+      }
+    });
+  });
+
+  return [...teams.values()]
+    .filter((team) => team.players.length === 2)
+    .sort(
+      (a, b) =>
+        b.rating - a.rating ||
+        a.players[0].display_name.localeCompare(b.players[0].display_name, "it"),
+    );
+}
+
+function ranksByRating(items: { rating: number }[]) {
+  let lastRating: number | null = null;
+  let lastRank = 0;
+  return items.map((item, index) => {
+    if (lastRating !== null && item.rating === lastRating) return lastRank;
+    lastRating = item.rating;
+    lastRank = index + 1;
+    return lastRank;
+  });
+}
+
+function teamSides(team: PadelTeam) {
+  const sides = team.players.map((profile) =>
+    profile.court_side === "sinistra" ? "Rovescio" : profile.court_side === "destra" ? "Dritto" : null,
+  );
+  return sides.every(Boolean) ? sides.join(" / ") : null;
+}
+
 function rankOf(sorted: Profile[], profileId?: string) {
   if (!profileId) return 0;
   const index = sorted.findIndex((profile) => profile.id === profileId);
@@ -376,6 +455,41 @@ function MatchCard({
         </button>
       ) : null}
     </article>
+  );
+}
+
+function TeamRankingList({ teams }: { teams: PadelTeam[] }) {
+  const ranks = ranksByRating(teams);
+  return (
+    <div className="ranking-table ranking-table-team">
+      {teams.map((team, index) => {
+        const winRate = team.matches_played ? Math.round((team.wins / team.matches_played) * 100) : 0;
+        return (
+          <div className="ranking-row" key={team.id}>
+            <span className={`rank-number rank-${ranks[index]}`}>{ranks[index]}</span>
+            <div className="team-avatars">
+              {team.players.map((profile) => (
+                <Avatar key={profile.id} profile={profile} size="sm" />
+              ))}
+            </div>
+            <div className="ranking-name">
+              <b>{team.players.map((profile) => profile.display_name).join(" · ")}</b>
+              <span>{teamSides(team) ?? `${team.matches_played} partite`}</span>
+            </div>
+            <span className="table-stat"><b>{team.matches_played}</b><small>Partite</small></span>
+            <span className="table-stat"><b>{team.wins}</b><small>Vinte</small></span>
+            <span className="table-stat"><b>{winRate}%</b><small>Win rate</small></span>
+            <span className={`streak ${team.current_streak >= 0 ? "up" : "down"}`}>
+              {`${team.current_streak >= 0 ? "↗" : "↘"} ${Math.abs(team.current_streak)}`}
+            </span>
+            <span className="ranking-points">
+              <b>{team.rating}</b>
+              <small>PT</small>
+            </span>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -762,6 +876,7 @@ function AppShell({ session }: { session: Session | null }) {
   const [votingRestaurant, setVotingRestaurant] = useState<PizzaRestaurantRecord | null>(null);
   const [pizzaSchemaReady, setPizzaSchemaReady] = useState(true);
   const [editingMatch, setEditingMatch] = useState<PadelMatch | null>(null);
+  const [rankingMode, setRankingMode] = useState<"single" | "team">("single");
   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
   const [loading, setLoading] = useState(Boolean(supabase));
   const [notice, setNotice] = useState("");
@@ -821,17 +936,9 @@ function AppShell({ session }: { session: Session | null }) {
 
   const sorted = useMemo(() => sortPadelProfiles(profiles), [profiles]);
   const rankedProfiles = useMemo(() => sorted.filter((profile) => profile.matches_played > 0), [sorted]);
-  // I parimerito condividono lo stesso gradino invece di occuparne due.
-  const podiumGroups = useMemo(() => {
-    const ranks = padelRanks(rankedProfiles);
-    const groups: { rank: number; players: Profile[] }[] = [];
-    rankedProfiles.forEach((profile, index) => {
-      const last = groups[groups.length - 1];
-      if (last && last.rank === ranks[index]) last.players.push(profile);
-      else groups.push({ rank: ranks[index], players: [profile] });
-    });
-    return groups.slice(0, 3);
-  }, [rankedProfiles]);
+  const singleRanks = useMemo(() => padelRanks(rankedProfiles), [rankedProfiles]);
+  const teams = useMemo(() => buildPadelTeams(matches, profiles), [matches, profiles]);
+  const teamRanks = useMemo(() => ranksByRating(teams), [teams]);
   const pizzaEntries = useMemo(() => buildPizzaRanking(pizzaRestaurants), [pizzaRestaurants]);
   const currentUser = profiles.find((profile) => profile.id === session?.user.id);
   const currentUserCanManagePizza = currentUser ? canManagePizza(currentUser.display_name, session?.user.email) : false;
@@ -1112,33 +1219,66 @@ function AppShell({ session }: { session: Session | null }) {
             </div>
             <div className="page-title">
               <div><p className="eyebrow dark">THEBOYZ PADEL · STAGIONE 2026</p><h1>La classifica del gruppo</h1><p>Il ranking si aggiorna automaticamente dopo ogni risultato.</p></div>
-              <button className="button button-primary" onClick={() => setShowMatch(true)}>＋ Registra partita</button>
-            </div>
-            <div className="podium">
-              {podiumGroups.map((group, index) => (
-                <article
-                  key={group.rank}
-                  className={`podium-card podium-${index + 1} ${group.players.length > 1 ? "podium-shared" : ""}`}
+              <div className="ranking-switch" role="group" aria-label="Tipo di classifica">
+                <button
+                  className={rankingMode === "single" ? "active" : ""}
+                  onClick={() => setRankingMode("single")}
                 >
-                  <div className="podium-avatars">
-                    {group.players.map((profile) => (
-                      <Avatar key={profile.id} profile={profile} size="lg" rank={group.rank} />
-                    ))}
-                  </div>
-                  <h3>
-                    {group.players.map((profile, position) => (
-                      <span key={profile.id}>
-                        {position > 0 ? ", " : ""}
-                        <span className="podium-rank">#{group.rank}</span>
-                        {profile.display_name}
-                      </span>
-                    ))}
-                  </h3>
-                  <b>{group.players[0].rating} pt</b>
-                </article>
-              ))}
+                  Singolo
+                </button>
+                <button
+                  className={rankingMode === "team" ? "active" : ""}
+                  onClick={() => setRankingMode("team")}
+                >
+                  Squadra
+                </button>
+              </div>
             </div>
-            <RankingList profiles={profiles} expanded />
+            {rankingMode === "single" ? (
+              <>
+                <div className="podium">
+                  {rankedProfiles.slice(0, 3).map((profile, index) => (
+                    <article key={profile.id} className={`podium-card podium-${index + 1}`}>
+                      <div className="podium-avatars">
+                        <Avatar profile={profile} size="lg" rank={singleRanks[index]} />
+                      </div>
+                      <h3>
+                        <span className="podium-rank">#{singleRanks[index]}</span>
+                        {profile.display_name}
+                      </h3>
+                      <b>{profile.rating} pt</b>
+                    </article>
+                  ))}
+                </div>
+                <RankingList profiles={profiles} expanded />
+              </>
+            ) : teams.length ? (
+              <>
+                <div className="podium">
+                  {teams.slice(0, 3).map((team, index) => (
+                    <article key={team.id} className={`podium-card podium-${index + 1} podium-shared`}>
+                      <div className="podium-avatars">
+                        {team.players.map((profile) => (
+                          <Avatar key={profile.id} profile={profile} size="lg" rank={teamRanks[index]} />
+                        ))}
+                      </div>
+                      <h3>
+                        <span className="podium-rank">#{teamRanks[index]}</span>
+                        {team.players.map((profile) => profile.display_name).join(", ")}
+                      </h3>
+                      <b>{team.rating} pt</b>
+                    </article>
+                  ))}
+                </div>
+                <TeamRankingList teams={teams} />
+              </>
+            ) : (
+              <div className="empty-board">
+                <span>00</span>
+                <h2>Nessuna squadra in classifica</h2>
+                <p>Le coppie si formano da sole: registra una partita e compariranno qui.</p>
+              </div>
+            )}
           </section>
         ) : null}
 

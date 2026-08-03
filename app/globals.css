@@ -1572,6 +1572,56 @@ form select:focus,
   order: 3;
 }
 
+.ranking-switch {
+  background: #edf0ec;
+  border-radius: 8px;
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+}
+
+.ranking-switch button {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  min-height: 40px;
+  padding: 0 22px;
+  text-transform: uppercase;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.ranking-switch button.active {
+  background: var(--ink);
+  color: var(--white);
+}
+
+.team-avatars {
+  display: flex;
+}
+
+.team-avatars .avatar {
+  position: relative;
+  z-index: 1;
+}
+
+.team-avatars .avatar:first-child {
+  z-index: 2;
+}
+
+.team-avatars .avatar + .avatar {
+  margin-left: -12px;
+}
+
+/* Due avatar affiancati non stanno nella colonna del singolo. */
+.ranking-table-team .ranking-row {
+  grid-template-columns: 40px 66px minmax(140px, 1fr) 76px 76px 84px 80px 70px;
+}
+
 .podium-avatars {
   display: flex;
   justify-content: center;
@@ -2717,6 +2767,19 @@ button.pizza-ranking-row {
   .welcome-row .button,
   .page-title .button {
     width: 100%;
+  }
+
+  .ranking-switch {
+    width: 100%;
+  }
+
+  .ranking-switch button {
+    flex: 1;
+    padding: 0;
+  }
+
+  .ranking-table-team .ranking-row {
+    grid-template-columns: 30px 58px minmax(0, 1fr) auto;
   }
 
   .hero-stat {
