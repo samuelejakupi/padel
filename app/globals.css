@@ -775,22 +775,11 @@ form select:focus,
   mix-blend-mode: multiply;
 }
 
-.podium-trophy {
-  align-items: center;
-  background: var(--lime);
-  border-radius: 50%;
-  display: flex;
-  height: 48px;
-  justify-content: center;
-  margin-bottom: 6px;
-  width: 48px;
-}
-
-.podium-trophy img {
-  height: 30px;
-  mix-blend-mode: multiply;
-  object-fit: contain;
-  width: 30px;
+/* Sul podio l'avatar è da 84px: il badge va rimpicciolito di conseguenza. */
+.avatar-lg .rank-badge-award {
+  border-width: 2px;
+  height: 38px;
+  width: 38px;
 }
 
 .pizza-podium-card {
@@ -1583,21 +1572,18 @@ form select:focus,
   order: 3;
 }
 
-.podium-card .podium-number {
-  align-items: center;
-  background: var(--lime);
-  border-radius: 50%;
-  color: var(--ink);
-  display: flex;
-  font-size: 12px;
+.podium-rank {
   font-weight: 900;
-  height: 28px;
-  justify-content: center;
-  left: calc(50% + 25px);
-  position: absolute;
-  top: 24px;
-  width: 28px;
-  z-index: 2;
+  margin-right: 6px;
+}
+
+.podium-1 .podium-rank {
+  color: var(--lime);
+}
+
+.podium-2 .podium-rank,
+.podium-3 .podium-rank {
+  color: var(--blue-dark);
 }
 
 .podium-card h3 {
@@ -1629,7 +1615,7 @@ form select:focus,
 }
 
 .ranking-table .ranking-row {
-  grid-template-columns: 40px 50px minmax(140px, 1fr) 90px 90px 80px 70px;
+  grid-template-columns: 40px 50px minmax(140px, 1fr) 76px 76px 84px 80px 70px;
   min-height: 78px;
 }
 
@@ -2842,9 +2828,9 @@ button.pizza-ranking-row {
     width: 60px;
   }
 
-  .podium-card .podium-number {
-    left: calc(50% + 16px);
-    top: 18px;
+  .podium-card .avatar-lg .rank-badge-award {
+    height: 28px;
+    width: 28px;
   }
 
   .podium-card h3 {
@@ -3193,11 +3179,6 @@ button.pizza-ranking-row {
     grid-row: 1 / span 3;
     height: 60px;
     width: 60px;
-  }
-
-  .podium-card .podium-number {
-    left: 58px;
-    top: 12px;
   }
 
   .podium-card h3,

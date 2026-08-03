@@ -139,6 +139,34 @@ function sortPadelProfiles(profiles: Profile[]) {
   });
 }
 
+// Parimerito: a punteggio uguale la posizione è la stessa, e quella successiva
+// riparte contando anche gli ex aequo (1, 1, 3) come nelle classifiche sportive.
+function padelRanks(sorted: Profile[]) {
+  let lastRating: number | null = null;
+  let lastRank = 0;
+  return sorted.map((profile, index) => {
+    if (profile.matches_played === 0) return 0;
+    if (lastRating !== null && profile.rating === lastRating) return lastRank;
+    lastRating = profile.rating;
+    lastRank = index + 1;
+    return lastRank;
+  });
+}
+
+function rankOf(sorted: Profile[], profileId?: string) {
+  if (!profileId) return 0;
+  const index = sorted.findIndex((profile) => profile.id === profileId);
+  return index < 0 ? 0 : padelRanks(sorted)[index];
+}
+
+// In padel il lato di campo si chiama dritto (destra) e rovescio (sinistra).
+function padelTraits(profile: Profile) {
+  const hand = profile.handedness === "mancino" ? "Mancino" : profile.handedness === "destro" ? "Destro" : null;
+  const side = profile.court_side === "sinistra" ? "Rovescio" : profile.court_side === "destra" ? "Dritto" : null;
+  const parts = [hand, side].filter(Boolean);
+  return parts.length ? parts.join(" · ") : null;
+}
+
 function Avatar({
   profile,
   size = "md",
@@ -353,23 +381,26 @@ function MatchCard({
 
 function RankingList({ profiles, expanded = false }: { profiles: Profile[]; expanded?: boolean }) {
   const sorted = sortPadelProfiles(profiles);
+  const ranks = padelRanks(sorted);
   return (
     <div className={expanded ? "ranking-table" : "ranking-list"}>
       {sorted.map((profile, index) => {
         const isRanked = profile.matches_played > 0;
+        const rank = ranks[index];
         const winRate = profile.matches_played ? Math.round((profile.wins / profile.matches_played) * 100) : 0;
         return (
           <div className={`ranking-row ${isRanked ? "" : "unranked"}`} key={profile.id}>
-            <span className={`rank-number ${isRanked ? `rank-${index + 1}` : "rank-nc"}`}>
-              {isRanked ? index + 1 : "N/C"}
+            <span className={`rank-number ${isRanked ? `rank-${rank}` : "rank-nc"}`}>
+              {isRanked ? rank : "N/C"}
             </span>
             <Avatar profile={profile} size={expanded ? "md" : "sm"} />
             <div className="ranking-name">
               <b>{profile.display_name}</b>
-              <span>{profile.matches_played} partite</span>
+              <span>{padelTraits(profile) ?? `${profile.matches_played} partite`}</span>
             </div>
             {expanded ? (
               <>
+                <span className="table-stat"><b>{profile.matches_played}</b><small>Partite</small></span>
                 <span className="table-stat"><b>{profile.wins}</b><small>Vinte</small></span>
                 <span className="table-stat"><b>{winRate}%</b><small>Win rate</small></span>
                 <span className={`streak ${isRanked ? (profile.current_streak >= 0 ? "up" : "down") : ""}`}>
@@ -790,13 +821,16 @@ function AppShell({ session }: { session: Session | null }) {
 
   const sorted = useMemo(() => sortPadelProfiles(profiles), [profiles]);
   const rankedProfiles = useMemo(() => sorted.filter((profile) => profile.matches_played > 0), [sorted]);
+  const podiumRanks = useMemo(() => padelRanks(rankedProfiles), [rankedProfiles]);
   const pizzaEntries = useMemo(() => buildPizzaRanking(pizzaRestaurants), [pizzaRestaurants]);
   const currentUser = profiles.find((profile) => profile.id === session?.user.id);
   const currentUserCanManagePizza = currentUser ? canManagePizza(currentUser.display_name, session?.user.email) : false;
-  const currentRank = currentUser?.matches_played
-    ? Math.max(1, sorted.findIndex((profile) => profile.id === currentUser.id) + 1)
-    : 0;
-  const nextRankedPlayer = currentRank > 1 ? sorted[currentRank - 2] : null;
+  const currentRank = currentUser?.matches_played ? rankOf(sorted, currentUser.id) : 0;
+  // Con i parimerito il giocatore da raggiungere è il primo con punteggio più
+  // alto, non semplicemente quello nella riga precedente.
+  const nextRankedPlayer = currentUser
+    ? [...sorted].reverse().find((profile) => profile.rating > currentUser.rating) ?? null
+    : null;
   const pointsToNext = nextRankedPlayer && currentUser
     ? Math.max(0, nextRankedPlayer.rating - currentUser.rating)
     : 0;
@@ -1073,10 +1107,11 @@ function AppShell({ session }: { session: Session | null }) {
             <div className="podium">
               {rankedProfiles.slice(0, 3).map((profile, index) => (
                 <article key={profile.id} className={`podium-card podium-${index + 1}`}>
-                  <span className="podium-number">{index + 1}</span>
-                  {index === 0 ? <span className="podium-trophy"><img src="https://cdn-icons-gif.flaticon.com/18830/18830460.gif" alt="Trofeo primo posto" /></span> : null}
-                  <Avatar profile={profile} size="lg" />
-                  <h3>{profile.display_name}</h3>
+                  <Avatar profile={profile} size="lg" rank={podiumRanks[index]} />
+                  <h3>
+                    <span className="podium-rank">#{podiumRanks[index]}</span>
+                    {profile.display_name}
+                  </h3>
                   <b>{profile.rating} pt</b>
                   <small>{profile.wins} vittorie · {profile.matches_played} partite</small>
                 </article>
