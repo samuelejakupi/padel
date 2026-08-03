@@ -21,6 +21,9 @@
 html {
   background: var(--paper);
   scroll-behavior: smooth;
+  /* Riserva sempre lo spazio della scrollbar: senza questo le pagine corte,
+     che non la mostrano, risultano spostate di ~15px rispetto alle altre. */
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -922,6 +925,9 @@ form select:focus,
   gap: 8px;
   letter-spacing: 1.2px;
   margin-bottom: 24px;
+  /* Altezza fissa: nel padel la riga è alzata dai tasti di sezione, altrove
+     c'è solo testo. Senza questo le due sezioni partono a quote diverse. */
+  min-height: 32px;
 }
 
 .section-context > button {

@@ -1275,8 +1275,8 @@ function AppShell({ session }: { session: Session | null }) {
               <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b>
               <nav aria-label="Navigazione sezione padel">
                 <button className="active" onClick={() => setPadelView("overview")}>Panoramica</button>
-                <button onClick={() => setPadelView("ranking")}>Classifica</button>
                 <button onClick={() => setPadelView("matches")}>Partite</button>
+                <button onClick={() => setPadelView("ranking")}>Classifica</button>
               </nav>
             </div>
             <section className="welcome-row">
@@ -1350,7 +1350,7 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "ranking" ? (
           <section className="page-section">
             <div className="section-context">
-              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b><nav aria-label="Navigazione sezione padel"><button onClick={() => setPadelView("overview")}>Panoramica</button><button className="active" onClick={() => setPadelView("ranking")}>Classifica</button><button onClick={() => setPadelView("matches")}>Partite</button></nav>
+              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b><nav aria-label="Navigazione sezione padel"><button onClick={() => setPadelView("overview")}>Panoramica</button><button onClick={() => setPadelView("matches")}>Partite</button><button className="active" onClick={() => setPadelView("ranking")}>Classifica</button></nav>
             </div>
             <div className="page-title">
               <div><p className="eyebrow dark">THEBOYZ PADEL · STAGIONE 2026</p><h1>La classifica del gruppo</h1><p>Il ranking si aggiorna automaticamente dopo ogni risultato.</p></div>
@@ -1478,7 +1478,7 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "matches" ? (
           <section className="page-section">
             <div className="section-context">
-              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b><nav aria-label="Navigazione sezione padel"><button onClick={() => setPadelView("overview")}>Panoramica</button><button onClick={() => setPadelView("ranking")}>Classifica</button><button className="active" onClick={() => setPadelView("matches")}>Partite</button></nav>
+              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b><nav aria-label="Navigazione sezione padel"><button onClick={() => setPadelView("overview")}>Panoramica</button><button className="active" onClick={() => setPadelView("matches")}>Partite</button><button onClick={() => setPadelView("ranking")}>Classifica</button></nav>
             </div>
             <div className="page-title">
               <div><p className="eyebrow dark">ARCHIVIO THEBOYZ PADEL</p><h1>Tutte le partite</h1><p>{matches.length} risultati registrati dal gruppo.</p></div>
@@ -1631,7 +1631,7 @@ function AppShell({ session }: { session: Session | null }) {
                 <p>In campo dal {new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(new Date(currentUser.created_at ?? "2026-01-01"))}</p>
                 <div className="profile-stats">
                   <span><b>{currentRank ? currentUser.rating : "N/C"}</b><small>Punti</small></span>
-                  <span><b>{currentUser.wins}</b><small>Vittorie</small></span>
+                  <span><b>{currentUser.wins}/{currentUser.matches_played}</b><small>Vittorie</small></span>
                   <span><b>{winRate}%</b><small>Win rate</small></span>
                 </div>
               </article>
