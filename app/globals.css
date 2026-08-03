@@ -762,6 +762,10 @@ form select:focus,
   background: var(--blue);
 }
 
+.hub-card-padel .hub-card-icon {
+  background: var(--lime);
+}
+
 .hub-card-pizza {
   background: var(--ink);
   color: var(--white);
