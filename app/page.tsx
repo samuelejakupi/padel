@@ -153,6 +153,15 @@ function padelRanks(sorted: Profile[]) {
   });
 }
 
+type PadelTeamRecord = {
+  id: string;
+  player_a: string;
+  player_b: string;
+  name: string | null;
+  image_path: string | null;
+  image_url?: string | null;
+};
+
 type PadelTeam = {
   id: string;
   players: Profile[];
@@ -161,11 +170,23 @@ type PadelTeam = {
   wins: number;
   losses: number;
   current_streak: number;
+  name?: string | null;
+  imageUrl?: string | null;
 };
+
+function teamLabel(team: PadelTeam) {
+  return team.name?.trim() || team.players.map((profile) => profile.display_name).join(" · ");
+}
 
 // Le coppie non stanno su Supabase: le ricaviamo dalle partite già registrate,
 // così una squadra nuova entra in classifica da sola al primo risultato.
-function buildPadelTeams(matches: PadelMatch[], profiles: Profile[]): PadelTeam[] {
+// Da padel_teams arrivano soltanto nome e immagine scelti dai due membri.
+function buildPadelTeams(
+  matches: PadelMatch[],
+  profiles: Profile[],
+  records: PadelTeamRecord[] = [],
+): PadelTeam[] {
+  const meta = new Map(records.map((record) => [`${record.player_a}|${record.player_b}`, record]));
   const byId = new Map(profiles.map((profile) => [profile.id, profile]));
   const teams = new Map<string, PadelTeam>();
   const chronological = [...matches].sort(
@@ -180,11 +201,9 @@ function buildPadelTeams(matches: PadelMatch[], profiles: Profile[]): PadelTeam[
       const ids = members.map((member) => member.profile_id).sort();
       const key = ids.join("|");
       const won = match.winner_team === side;
-      const delta = members.reduce((sum, member) => sum + (member.rating_delta ?? 0), 0);
       const team = teams.get(key);
 
       if (team) {
-        team.rating += delta;
         team.matches_played += 1;
         team.wins += won ? 1 : 0;
         team.losses += won ? 0 : 1;
@@ -192,14 +211,21 @@ function buildPadelTeams(matches: PadelMatch[], profiles: Profile[]): PadelTeam[
           ? Math.max(1, team.current_streak + 1)
           : Math.min(-1, team.current_streak - 1);
       } else {
+        const players = ids.map((id) => byId.get(id)).filter(Boolean) as Profile[];
+        const record = meta.get(key);
         teams.set(key, {
           id: key,
-          players: ids.map((id) => byId.get(id)).filter(Boolean) as Profile[],
-          rating: 1000 + delta,
+          players,
+          // Media dei punteggi attuali dei due componenti.
+          rating: players.length
+            ? Math.round(players.reduce((sum, profile) => sum + profile.rating, 0) / players.length)
+            : 0,
           matches_played: 1,
           wins: won ? 1 : 0,
           losses: won ? 0 : 1,
           current_streak: won ? 1 : -1,
+          name: record?.name ?? null,
+          imageUrl: record?.image_url ?? null,
         });
       }
     });
