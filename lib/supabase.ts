@@ -26,6 +26,8 @@ export type Profile = {
   losses: number;
   current_streak: number;
   created_at?: string;
+  handedness?: string | null;
+  court_side?: string | null;
 };
 
 export type PadelSet = {
@@ -47,6 +49,7 @@ export type PadelMatch = {
   created_by?: string;
   winner_team: 1 | 2;
   notes?: string | null;
+  video_url?: string | null;
   sets: PadelSet[];
   players: MatchPlayer[];
   rating_delta?: number;

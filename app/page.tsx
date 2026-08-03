@@ -156,7 +156,14 @@ function Avatar({
       ) : (
         <span>{initials(profile.display_name)}</span>
       )}
-      {rank ? <b className="rank-badge">{rank}</b> : null}
+      {rank === 1 ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          className="rank-badge rank-badge-award"
+          src="https://cdn-icons-gif.flaticon.com/18830/18830460.gif"
+          alt="Primo in classifica"
+        />
+      ) : null}
     </span>
   );
 }
@@ -165,7 +172,7 @@ function Brand() {
   return (
     <div className="brand" aria-label="TheBoyz">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img className="brand-logo" src={`${basePath}/theboyz-logo.png`} alt="" />
+      <img className="brand-logo" src={`${basePath}/theBOYZ.png`} alt="" />
       <span>
         <b>THEBOYZ</b>
         <small>GROUP HQ</small>
@@ -258,23 +265,38 @@ function SetupScreen() {
   );
 }
 
+function youtubeId(url?: string | null) {
+  if (!url) return null;
+  const match = url.match(
+    /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/,
+  );
+  return match ? match[1] : null;
+}
+
 function MatchCard({
   match,
-  onDelete,
-  deleting = false,
+  onEdit,
+  onPlayVideo,
 }: {
   match: PadelMatch;
-  onDelete?: (match: PadelMatch) => void;
-  deleting?: boolean;
+  onEdit?: (match: PadelMatch) => void;
+  onPlayVideo?: (videoId: string) => void;
 }) {
   const team1 = match.players.filter((player) => player.team === 1);
   const team2 = match.players.filter((player) => player.team === 2);
-  const formatTeam = (players: typeof team1) => players
-    .map((player) => {
-      const delta = player.rating_delta ?? 0;
-      return `${player.profile.display_name} ${delta > 0 ? "+" : ""}${delta}`;
-    })
-    .join(" · ");
+  const videoId = youtubeId(match.video_url);
+  const formatTeam = (players: typeof team1) => players.map((player, index) => {
+    const delta = player.rating_delta ?? 0;
+    return (
+      <span key={player.profile_id}>
+        {index > 0 ? " · " : ""}
+        {player.profile.display_name}{" "}
+        <b className={`elo-delta ${delta >= 0 ? "up" : "down"}`}>
+          {delta > 0 ? "+" : ""}{delta}
+        </b>
+      </span>
+    );
+  });
 
   return (
     <article className="match-card">
@@ -305,19 +327,26 @@ function MatchCard({
           {match.winner_team === 2 ? <em>VITTORIA</em> : null}
         </div>
       </div>
-      <div className="match-points">
-        <span>{match.rating_delta ?? 0}</span>
-        <small>MEDIA |Δ ELO|</small>
+      <div className="match-video">
+        {videoId ? (
+          <button
+            className="match-video-preview"
+            onClick={() => onPlayVideo?.(videoId)}
+            aria-label="Guarda il video della partita"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`} alt="" />
+            <b aria-hidden="true">▶</b>
+          </button>
+        ) : null}
       </div>
-      {onDelete ? (
+      {onEdit ? (
         <button
-          className="match-delete-button"
-          disabled={deleting}
-          onClick={() => onDelete(match)}
-          aria-label={`Elimina la partita del ${new Intl.DateTimeFormat("it-IT").format(new Date(match.played_at))}`}
+          className="match-menu-button"
+          onClick={() => onEdit(match)}
+          aria-label={`Modifica la partita del ${new Intl.DateTimeFormat("it-IT").format(new Date(match.played_at))}`}
         >
-          <span>{deleting ? "Elimino…" : "Elimina"}</span>
-          <b aria-hidden="true">×</b>
+          <span aria-hidden="true">···</span>
         </button>
       ) : null}
     </article>
@@ -367,19 +396,60 @@ function RankingList({ profiles, expanded = false }: { profiles: Profile[]; expa
 
 function NewMatchModal({
   profiles,
+  match,
   onClose,
   onSaved,
 }: {
   profiles: Profile[];
+  match?: PadelMatch | null;
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [players, setPlayers] = useState(profiles.slice(0, 4).map((profile) => profile.id));
-  const [scores, setScores] = useState([["6", "4"], ["6", "3"], ["", ""]]);
-  const [playedAt, setPlayedAt] = useState(new Date().toISOString().slice(0, 10));
-  const [notes, setNotes] = useState("");
+  const editing = Boolean(match);
+  const initialPlayers = match
+    ? [
+        ...match.players.filter((player) => player.team === 1).map((player) => player.profile_id),
+        ...match.players.filter((player) => player.team === 2).map((player) => player.profile_id),
+      ]
+    : profiles.slice(0, 4).map((profile) => profile.id);
+  const initialScores = match
+    ? [0, 1, 2].map((index) => {
+        const set = [...match.sets].sort((a, b) => a.set_number - b.set_number)[index];
+        return set ? [String(set.team1_games), String(set.team2_games)] : ["", ""];
+      })
+    : [["6", "4"], ["6", "3"], ["", ""]];
+
+  const [players, setPlayers] = useState(initialPlayers);
+  const [scores, setScores] = useState(initialScores);
+  const [playedAt, setPlayedAt] = useState(
+    match ? new Date(match.played_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+  );
+  const [notes, setNotes] = useState(match?.notes ?? "");
+  const [videoUrl, setVideoUrl] = useState(match?.video_url ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function removeMatch() {
+    if (!match) return;
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    if (!supabase) return;
+    setDeleting(true);
+    setError("");
+    const { error: rpcError } = await supabase.rpc("delete_match", { p_match_id: match.id });
+    if (rpcError) {
+      setError(rpcError.message);
+      setDeleting(false);
+      setConfirmDelete(false);
+      return;
+    }
+    onSaved();
+    setDeleting(false);
+  }
 
   function updatePlayer(index: number, id: string) {
     setPlayers((current) => current.map((value, playerIndex) => (playerIndex === index ? id : value)));
@@ -411,14 +481,31 @@ function NewMatchModal({
       return;
     }
 
+    const cleanVideo = videoUrl.trim();
+    if (cleanVideo && !youtubeId(cleanVideo)) {
+      setError("Il link del video deve essere un indirizzo YouTube valido.");
+      return;
+    }
+
     setBusy(true);
     if (supabase) {
+      // Modificare = rimuovere e riregistrare: delete_match e record_match
+      // ricalcolano entrambi l'Elo, quindi la classifica resta coerente.
+      if (match) {
+        const { error: deleteError } = await supabase.rpc("delete_match", { p_match_id: match.id });
+        if (deleteError) {
+          setError(deleteError.message);
+          setBusy(false);
+          return;
+        }
+      }
       const { error: rpcError } = await supabase.rpc("record_match", {
         p_played_at: new Date(`${playedAt}T20:00:00`).toISOString(),
         p_team1: players.slice(0, 2),
         p_team2: players.slice(2, 4),
         p_sets: sets,
         p_notes: notes.trim() || null,
+        p_video_url: cleanVideo || null,
       });
       if (rpcError) {
         setError(rpcError.message);
@@ -435,8 +522,8 @@ function NewMatchModal({
       <section className="modal" role="dialog" aria-modal="true" aria-labelledby="match-title">
         <div className="modal-head">
           <div>
-            <p className="eyebrow dark">NUOVO RISULTATO</p>
-            <h2 id="match-title">Registra una partita</h2>
+            <p className="eyebrow dark">{editing ? "MODIFICA RISULTATO" : "NUOVO RISULTATO"}</p>
+            <h2 id="match-title">{editing ? "Modifica la partita" : "Registra una partita"}</h2>
           </div>
           <button className="icon-button" onClick={onClose} aria-label="Chiudi">×</button>
         </div>
@@ -473,13 +560,37 @@ function NewMatchModal({
             ))}
           </div>
           <label>
+            Video YouTube <span className="optional-label">facoltativo</span>
+            <input
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              placeholder="https://youtu.be/..."
+              inputMode="url"
+            />
+          </label>
+          <label>
             Nota facoltativa
             <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Es. Rimonta incredibile al terzo set" />
           </label>
           {error ? <p className="form-message error">{error}</p> : null}
+          {editing && confirmDelete ? (
+            <p className="form-message error">
+              Eliminando la partita la classifica viene ricalcolata. Premi di nuovo Elimina per confermare.
+            </p>
+          ) : null}
           <div className="modal-actions">
+            {editing ? (
+              <button
+                type="button"
+                className={`button match-delete-action ${confirmDelete ? "is-confirming" : ""}`}
+                onClick={() => void removeMatch()}
+                disabled={deleting || busy}
+              >
+                {deleting ? "Elimino…" : confirmDelete ? "Confermi?" : "Elimina"}
+              </button>
+            ) : null}
             <button type="button" className="button button-ghost" onClick={onClose}>Annulla</button>
-            <button className="button button-primary" disabled={busy}>{busy ? "Salvataggio…" : "Salva risultato"}</button>
+            <button className="button button-primary" disabled={busy || deleting}>{busy ? "Salvataggio…" : "Salva risultato"}</button>
           </div>
         </form>
       </section>
@@ -621,10 +732,13 @@ function AppShell({ session }: { session: Session | null }) {
   const [showPizzaCreate, setShowPizzaCreate] = useState(false);
   const [votingRestaurant, setVotingRestaurant] = useState<PizzaRestaurantRecord | null>(null);
   const [pizzaSchemaReady, setPizzaSchemaReady] = useState(true);
-  const [deletingMatchId, setDeletingMatchId] = useState<string | null>(null);
+  const [editingMatch, setEditingMatch] = useState<PadelMatch | null>(null);
+  const [playingVideo, setPlayingVideo] = useState<string | null>(null);
   const [loading, setLoading] = useState(Boolean(supabase));
   const [notice, setNotice] = useState("");
   const [profileName, setProfileName] = useState("");
+  const [handedness, setHandedness] = useState("");
+  const [courtSide, setCourtSide] = useState("");
 
   const loadData = useCallback(async () => {
     const client = supabase;
@@ -633,7 +747,7 @@ function AppShell({ session }: { session: Session | null }) {
       client.from("profiles").select("*").order("rating", { ascending: false }),
       client
         .from("matches")
-        .select("id, played_at, created_by, winner_team, notes, rating_delta, sets:match_sets(set_number, team1_games, team2_games), players:match_players(profile_id, team, rating_delta, profile:profiles(*))")
+        .select("id, played_at, created_by, winner_team, notes, video_url, rating_delta, sets:match_sets(set_number, team1_games, team2_games), players:match_players(profile_id, team, rating_delta, profile:profiles(*))")
         .order("played_at", { ascending: false })
         .limit(50),
       client
@@ -663,7 +777,10 @@ function AppShell({ session }: { session: Session | null }) {
       setMatches(normalized);
       setPizzaSchemaReady(!pizzaResult.error);
       if (!pizzaResult.error) setPizzaRestaurants((pizzaResult.data ?? []) as PizzaRestaurantRecord[]);
-      setProfileName(withAvatars.find((profile) => profile.id === session?.user.id)?.display_name ?? "");
+      const own = withAvatars.find((profile) => profile.id === session?.user.id);
+      setProfileName(own?.display_name ?? "");
+      setHandedness(own?.handedness ?? "");
+      setCourtSide(own?.court_side ?? "");
     }
     setLoading(false);
   }, [session?.user.id]);
@@ -719,30 +836,15 @@ function AppShell({ session }: { session: Session | null }) {
   }
 
   async function handleSaved() {
+    const wasEditing = Boolean(editingMatch);
     setShowMatch(false);
+    setEditingMatch(null);
     await loadData();
-    setNotice("Partita salvata. La classifica è stata aggiornata.");
-  }
-
-  async function deleteMatch(match: PadelMatch) {
-    if (!supabase || deletingMatchId) return;
-    const playedAt = new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "long", year: "numeric" })
-      .format(new Date(match.played_at));
-    const confirmed = window.confirm(
-      `Eliminare definitivamente la partita del ${playedAt}?\n\nClassifica e statistiche verranno ricalcolate.`,
+    setNotice(
+      wasEditing
+        ? "Fatto. Classifica e statistiche sono state ricalcolate."
+        : "Partita salvata. La classifica è stata aggiornata.",
     );
-    if (!confirmed) return;
-
-    setDeletingMatchId(match.id);
-    setNotice("");
-    const { error } = await supabase.rpc("delete_match", { p_match_id: match.id });
-    if (error) {
-      setNotice(error.message);
-    } else {
-      await loadData();
-      setNotice("Partita eliminata. Classifica e statistiche sono state ricalcolate.");
-    }
-    setDeletingMatchId(null);
   }
 
   async function uploadAvatar(file: File | undefined) {
@@ -763,7 +865,14 @@ function AppShell({ session }: { session: Session | null }) {
   async function updateProfile(event: FormEvent) {
     event.preventDefault();
     if (!supabase || !session || !profileName.trim()) return;
-    const { error } = await supabase.from("profiles").update({ display_name: profileName.trim() }).eq("id", session.user.id);
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        display_name: profileName.trim(),
+        handedness: handedness || null,
+        court_side: courtSide || null,
+      })
+      .eq("id", session.user.id);
     setNotice(error ? error.message : "Profilo aggiornato.");
     if (!error) await loadData();
   }
@@ -932,8 +1041,8 @@ function AppShell({ session }: { session: Session | null }) {
                       <MatchCard
                         key={match.id}
                         match={match}
-                        deleting={deletingMatchId === match.id}
-                        onDelete={(selected) => void deleteMatch(selected)}
+                        onEdit={(selected) => setEditingMatch(selected)}
+                        onPlayVideo={(id) => setPlayingVideo(id)}
                       />
                     ))}
                   </div>
@@ -994,8 +1103,8 @@ function AppShell({ session }: { session: Session | null }) {
                   <MatchCard
                     key={match.id}
                     match={match}
-                    deleting={deletingMatchId === match.id}
-                    onDelete={(selected) => void deleteMatch(selected)}
+                    onEdit={(selected) => setEditingMatch(selected)}
+                    onPlayVideo={(id) => setPlayingVideo(id)}
                   />
                 ))}
               </div>
@@ -1128,7 +1237,10 @@ function AppShell({ session }: { session: Session | null }) {
                     </label>
                   ) : null}
                 </div>
-                <h2>{currentUser.display_name}</h2>
+                <h2>
+                  {currentRank ? <span className="profile-rank">#{currentRank}</span> : null}
+                  {currentUser.display_name}
+                </h2>
                 <p>In campo dal {new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(new Date(currentUser.created_at ?? "2026-01-01"))}</p>
                 <div className="profile-stats">
                   <span><b>{currentRank ? currentUser.rating : "N/C"}</b><small>Punti</small></span>
@@ -1140,6 +1252,22 @@ function AppShell({ session }: { session: Session | null }) {
                 <h2>Dati del profilo</h2>
                 <form onSubmit={updateProfile}>
                   <label>Nome in classifica<input value={profileName || currentUser.display_name} onChange={(e) => setProfileName(e.target.value)} disabled={!supabase} /></label>
+                  <label>
+                    Mano della racchetta
+                    <select value={handedness} onChange={(e) => setHandedness(e.target.value)} disabled={!supabase}>
+                      <option value="">Non indicata</option>
+                      <option value="destro">Destro</option>
+                      <option value="mancino">Mancino</option>
+                    </select>
+                  </label>
+                  <label>
+                    Lato del campo
+                    <select value={courtSide} onChange={(e) => setCourtSide(e.target.value)} disabled={!supabase}>
+                      <option value="">Non indicato</option>
+                      <option value="destra">Destra</option>
+                      <option value="sinistra">Sinistra</option>
+                    </select>
+                  </label>
                   <label>Email<input value={session?.user.email ?? ""} disabled /></label>
                   <button className="button button-primary" disabled={!supabase}>Salva modifiche</button>
                 </form>
@@ -1152,7 +1280,7 @@ function AppShell({ session }: { session: Session | null }) {
 
       <nav className="mobile-nav" aria-label="Navigazione mobile">
 {([
-["hub", basePath + "/theboyz-logo.png", "TheBoyz"],
+["hub", basePath + "/theBOYZ.png", "TheBoyz"],
 ["padel", "https://cdn-icons-gif.flaticon.com/6451/6451035.gif", "Padel"],
 ["pizza", "https://cdn-icons-gif.flaticon.com/15240/15240280.gif", "Pizze"],
 ] as [View, string, string][]).map(([target, icon, label]) => (
@@ -1164,7 +1292,32 @@ function AppShell({ session }: { session: Session | null }) {
 <button className={view === "profile" ? "active" : ""} onClick={() => setView("profile")}><span className="mobile-nav-icon"><Avatar profile={currentUser} size="sm" /></span>Profilo</button>
 </nav>
 
-      {showMatch ? <NewMatchModal profiles={profiles} onClose={() => setShowMatch(false)} onSaved={() => void handleSaved()} /> : null}
+      {showMatch || editingMatch ? (
+        <NewMatchModal
+          profiles={profiles}
+          match={editingMatch}
+          onClose={() => { setShowMatch(false); setEditingMatch(null); }}
+          onSaved={() => void handleSaved()}
+        />
+      ) : null}
+      {playingVideo ? (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setPlayingVideo(null)}>
+          <section className="modal video-modal" role="dialog" aria-modal="true" aria-label="Video della partita">
+            <div className="modal-head">
+              <div><p className="eyebrow dark">VIDEO PARTITA</p></div>
+              <button className="icon-button" onClick={() => setPlayingVideo(null)} aria-label="Chiudi">×</button>
+            </div>
+            <div className="video-frame">
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${playingVideo}?autoplay=1`}
+                title="Video della partita"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </section>
+        </div>
+      ) : null}
       {showPizzaCreate ? <PizzaCreateModal onClose={() => setShowPizzaCreate(false)} onSaved={() => handlePizzaSaved("Pizzeria aggiunta. Ora potete inserire i tre voti.")} /> : null}
       {votingRestaurant ? <PizzaVoteModal restaurant={votingRestaurant} voter={currentUser} onClose={() => setVotingRestaurant(null)} onSaved={() => handlePizzaSaved("Voto salvato. Il totale si aggiorna con i voti del gruppo.")} /> : null}
     </div>

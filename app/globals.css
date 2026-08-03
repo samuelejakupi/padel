@@ -205,6 +205,15 @@ button {
   z-index: 3;
 }
 
+/* Il premio è un GIF su fondo bianco: il cerchio lime lo assorbe con multiply,
+   come già facciamo per il trofeo del podio. */
+.rank-badge-award {
+  border-width: 3px;
+  mix-blend-mode: multiply;
+  object-fit: contain;
+  padding: 2px;
+}
+
 /* Login */
 .login-page {
   display: grid;
@@ -1419,55 +1428,106 @@ form select:focus,
   font-size: 9px;
 }
 
-.match-points {
+.elo-delta {
+  font-weight: 900;
+}
+
+/* Il contenitore di destra è in rtl per invertire avatar e nome: senza questo
+   i frammenti del delta verrebbero disposti al contrario. */
+.match-team > span {
+  direction: ltr;
+}
+
+.match-video {
   align-items: center;
   display: flex;
-  flex-direction: column;
+  justify-content: flex-end;
 }
 
-.match-points span {
-  font-size: 13px;
-  font-weight: 900;
+.match-video-preview {
+  background: var(--paper);
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  display: block;
+  height: 48px;
+  overflow: hidden;
+  padding: 0;
+  position: relative;
+  transition: transform 150ms ease;
+  width: 70px;
 }
 
-.match-points small {
-  color: var(--muted);
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.8px;
+.match-video-preview:hover {
+  transform: scale(1.05);
 }
 
-.match-delete-button {
+.match-video-preview img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.match-video-preview b {
   align-items: center;
+  background: rgba(11, 27, 44, 0.55);
+  color: var(--white);
+  display: flex;
+  font-size: 15px;
+  inset: 0;
+  justify-content: center;
+  position: absolute;
+}
+
+.match-menu-button {
   background: transparent;
   border: 0;
+  border-radius: 50%;
   color: #9aa3a9;
   cursor: pointer;
-  display: flex;
-  font-size: 9px;
-  font-weight: 900;
-  gap: 3px;
-  letter-spacing: 0.6px;
-  padding: 4px 6px;
+  font-size: 15px;
+  height: 26px;
+  line-height: 1;
+  padding: 0;
   position: absolute;
   right: 8px;
-  text-transform: uppercase;
   top: 6px;
-  transition: color 150ms ease;
+  transition: background 150ms ease, color 150ms ease;
+  width: 26px;
 }
 
-.match-delete-button b {
-  font-size: 13px;
-  line-height: 1;
+.match-menu-button:hover {
+  background: var(--paper);
+  color: var(--ink);
 }
 
-.match-delete-button:hover {
+.match-delete-action {
+  background: #fff0ef;
   color: var(--danger);
+  margin-right: auto;
 }
 
-.match-delete-button:disabled {
-  cursor: wait;
-  opacity: 0.5;
+.match-delete-action.is-confirming {
+  background: var(--danger);
+  color: var(--white);
+}
+
+.video-modal {
+  max-width: 900px;
+}
+
+.video-frame {
+  aspect-ratio: 16 / 9;
+  background: var(--ink);
+  border-radius: 8px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.video-frame iframe {
+  border: 0;
+  height: 100%;
+  width: 100%;
 }
 
 /* Full pages */
@@ -2108,20 +2168,32 @@ button.pizza-ranking-row {
   position: relative;
 }
 
+/* Coperchio circolare sopra la foto: invisibile finché non si passa sopra,
+   ma sempre cliccabile, così su touch basta toccare la foto. */
 .photo-button {
-  background: var(--blue);
-  border: 3px solid var(--white);
-  border-radius: 4px;
-  bottom: 0;
+  align-items: center;
+  background: rgba(11, 27, 44, 0.62);
+  border: 0;
+  border-radius: 50%;
   color: var(--white);
   cursor: pointer;
-  font-size: 10px;
+  display: flex;
+  font-size: 11px;
   font-weight: 900;
+  inset: 0;
+  justify-content: center;
   letter-spacing: 0.4px;
-  padding: 8px 10px;
+  opacity: 0;
+  padding: 0;
   position: absolute;
-  right: -18px;
+  text-align: center;
   text-transform: uppercase;
+  transition: opacity 160ms ease;
+}
+
+.profile-photo:hover .photo-button,
+.photo-button:focus-within {
+  opacity: 1;
 }
 
 .photo-button input {
@@ -2131,6 +2203,12 @@ button.pizza-ranking-row {
 .profile-card h2 {
   font-size: 28px;
   margin: 24px 0 4px;
+}
+
+.profile-rank {
+  color: #9aa3a9;
+  font-weight: 900;
+  margin-right: 8px;
 }
 
 .profile-card > p {
@@ -2664,24 +2742,19 @@ button.pizza-ranking-row {
     padding: 18px 38px 14px 12px;
   }
 
-  .match-delete-button {
-    align-items: center;
+  .match-menu-button {
     border: 1px solid var(--line);
-    border-radius: 50%;
     height: 25px;
-    justify-content: center;
-    padding: 0;
     right: 8px;
     top: 8px;
     width: 25px;
   }
 
-  .match-delete-button span {
-    display: none;
-  }
-
-  .match-points {
-    display: none;
+  /* Su mobile la card perde la terza colonna: l'anteprima video scivola
+     sotto ai nomi invece di sparire. */
+  .match-video {
+    grid-column: 2;
+    justify-content: flex-start;
   }
 
   .match-date {
