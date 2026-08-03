@@ -54,18 +54,18 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const groupUsers = ["Samu", "Dani", "Atti", "Matte", "Fabio", "Alban", "Mattia", "Manu"] as const;
 const pizzaEditors = ["Samu", "Fabio", "Dani"] as const;
 const pizzaRanking: readonly PizzaRankingEntry[] = [
-  { name: "PORTEGO DE MA", location: 16, pizza: 25, dessert: 8, price: 22, fabio: 7, total: 78, address: "Calata Giovanni Battista Cuneo, 29, 18100 Imperia (IM)" },
-  { name: "L’OASI La Pizza", location: 17, pizza: 21, dessert: 7, price: 19, fabio: 6, total: 70, address: "Piazza Sant'Antonio, 15, 18100 Imperia (IM)" },
-  { name: "FERMENTO", location: 15, pizza: 24, dessert: 5, price: 17, fabio: 7, total: 68, address: "Calata Gian Battista Cuneo, 49, 18100 Imperia (IM)" },
-  { name: "SENESE", place: "Sanremo", location: 11, pizza: 25, dessert: 5, price: 18, fabio: 7, total: 66, address: "Via Privata Scoglio, 14, 18038 Sanremo (IM)" },
-  { name: "SANTA FE", location: 9, pizza: 22, dessert: 5, price: 24, fabio: 6, total: 66, address: "Via Nino Lamboglia, 4, 18100 Imperia (IM)" },
-  { name: "SCIABECCO", location: 9, pizza: 23, dessert: 8, price: 19, fabio: 6, total: 65, address: "Via Nizza, 29, 18100 Imperia (IM)" },
-  { name: "LE CAVE", location: 9, pizza: 21, dessert: 7, price: 21, fabio: 6, total: 64, address: "Via Nazionale, 6, 18100 Imperia (IM)" },
-  { name: "FRA DIAVOLO", place: "Diano", location: 11, pizza: 23, dessert: 8, price: 14, fabio: 6, total: 62, address: "Corso Giuseppe Garibaldi, 1, 18013 Diano Marina (IM)" },
-  { name: "BONGA", location: 11, pizza: 21, dessert: 6, price: 17, fabio: 7, total: 62, address: "Via Nino Lamboglia, 10, 18100 Imperia (IM)" },
-  { name: "LE LOGGE", location: 8, pizza: 20, dessert: 4, price: 17, fabio: 7, total: 56, address: "Piazza San Giovanni, 2, 18021 Borgomaro (IM)" },
-  { name: "KILO", location: 10, pizza: 24, dessert: 7, price: 14, fabio: 0, total: 55, address: "Lungomare C. Colombo, 188, 18100 Imperia (IM)" },
-  { name: "A GHE SEMMU", location: 6, pizza: 16, dessert: 6, price: 18, fabio: 6, total: 52, address: "Via Trento, 77, 18100 Imperia (IM)" },
+  { name: "Portego De Mà", location: 16, pizza: 25, dessert: 8, price: 22, fabio: 7, total: 78, address: "Calata Giovanni Battista Cuneo, 29, 18100 Imperia (IM)" },
+  { name: "Oasi La Pizza", location: 17, pizza: 21, dessert: 7, price: 19, fabio: 6, total: 70, address: "Piazza Sant'Antonio, 15, 18100 Imperia (IM)" },
+  { name: "Fermento", location: 15, pizza: 24, dessert: 5, price: 17, fabio: 7, total: 68, address: "Calata Gian Battista Cuneo, 49, 18100 Imperia (IM)" },
+  { name: "Senese", place: "Sanremo", location: 11, pizza: 25, dessert: 5, price: 18, fabio: 7, total: 66, address: "Via Privata Scoglio, 14, 18038 Sanremo (IM)" },
+  { name: "Santa Fè", location: 9, pizza: 22, dessert: 5, price: 24, fabio: 6, total: 66, address: "Via Nino Lamboglia, 4, 18100 Imperia (IM)" },
+  { name: "Sciabecco", location: 9, pizza: 23, dessert: 8, price: 19, fabio: 6, total: 65, address: "Via Nizza, 29, 18100 Imperia (IM)" },
+  { name: "Le Cave Ristoro e Caffè", location: 9, pizza: 21, dessert: 7, price: 21, fabio: 6, total: 64, address: "Via Nazionale, 6, 18100 Imperia (IM)" },
+  { name: "Locanda Fra Diavolo", place: "Diano", location: 11, pizza: 23, dessert: 8, price: 14, fabio: 6, total: 62, address: "Corso Giuseppe Garibaldi, 1, 18013 Diano Marina (IM)" },
+  { name: "La Bonga", location: 11, pizza: 21, dessert: 6, price: 17, fabio: 7, total: 62, address: "Via Nino Lamboglia, 10, 18100 Imperia (IM)" },
+  { name: "Le Logge", location: 8, pizza: 20, dessert: 4, price: 17, fabio: 7, total: 56, address: "Piazza San Giovanni, 2, 18021 Borgomaro (IM)" },
+  { name: "Kilo", location: 10, pizza: 24, dessert: 7, price: 14, fabio: 0, total: 55, address: "Lungomare C. Colombo, 188, 18100 Imperia (IM)" },
+  { name: "A Ghe Semmu", location: 6, pizza: 16, dessert: 6, price: 18, fabio: 6, total: 52, address: "Via Trento, 77, 18100 Imperia (IM)" },
 ];
 
 const pizzaCriteria = [
@@ -334,7 +334,7 @@ function RankingList({ profiles, expanded = false }: { profiles: Profile[]; expa
         return (
           <div className={`ranking-row ${isRanked ? "" : "unranked"}`} key={profile.id}>
             <span className={`rank-number ${isRanked ? `rank-${index + 1}` : "rank-nc"}`}>
-              {isRanked ? String(index + 1).padStart(2, "0") : "N/C"}
+              {isRanked ? index + 1 : "N/C"}
             </span>
             <Avatar profile={profile} size={expanded ? "md" : "sm"} />
             <div className="ranking-name">
@@ -1017,7 +1017,7 @@ function AppShell({ session }: { session: Session | null }) {
               <div className="pizza-hero-actions">
                 <div className="pizza-stamp">
                   <span>01</span>
-                  <b>PORTEGO<br />DE MA</b>
+                  <b>PORTEGO<br />DE MÀ</b>
                   <strong>78 / 100</strong>
                   <small>CAMPIONE IN CARICA</small>
                 </div>
@@ -1034,7 +1034,7 @@ function AppShell({ session }: { session: Session | null }) {
             <div className="pizza-podium" aria-label="Podio pizzerie">
               {pizzaEntries.filter((restaurant) => !restaurant.isNew || restaurant.votesCount === 3).slice(0, 3).map((restaurant, index) => (
                 <article className={`pizza-podium-card pizza-place-${index + 1}`} key={restaurant.name}>
-                  <span className="pizza-medal">{String(index + 1).padStart(2, "0")}</span>
+                  <span className="pizza-medal">{index + 1}</span>
                   {index === 0 ? <img className="pizza-medal-icon" src="https://cdn-icons-gif.flaticon.com/19016/19016244.gif" alt="Trofeo primo posto pizza" /> : null}
                   <div>
                     <small>{index === 0 ? "THEBOYZ CHAMPION" : "TOP THREE"}</small>
@@ -1085,7 +1085,7 @@ function AppShell({ session }: { session: Session | null }) {
                   const complete = !restaurant.isNew || restaurant.votesCount === 3;
                   const rowClass = `pizza-ranking-row ${index < 3 && complete ? "pizza-ranking-top" : ""} ${restaurant.isNew ? "pizza-ranking-interactive" : ""} ${restaurant.isNew && !complete ? "pizza-ranking-pending" : ""}`;
                   const rowContent = (<>
-                    <span className="pizza-position">{String(index + 1).padStart(2, "0")}</span>
+                    <span className="pizza-position">{index + 1}</span>
                     <div className="pizza-name-cell">
                       <b>{restaurant.name}</b>
                       <small>{restaurant.isNew ? `${restaurant.place ?? "NUOVA SCHEDA"} · ${restaurant.votesCount ?? 0}/3 VOTI` : restaurant.address ? <a className="pizza-address-link" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.address)}`} target="_blank" rel="noopener noreferrer">{restaurant.address}</a> : (restaurant.place ?? "THEBOYZ TESTED")}</small>
@@ -1151,15 +1151,18 @@ function AppShell({ session }: { session: Session | null }) {
       </main>
 
       <nav className="mobile-nav" aria-label="Navigazione mobile">
-        {([
-          ["hub", "⌂", "TheBoyz"],
-          ["padel", "●", "Padel"],
-          ["pizza", "△", "Pizze"],
-          ["profile", "○", "Profilo"],
-        ] as [View, string, string][]).map(([target, icon, label]) => (
-          <button key={target} className={view === target ? "active" : ""} onClick={() => { setView(target); if (target === "padel") setPadelView("overview"); }}><span>{icon}</span>{label}</button>
-        ))}
-      </nav>
+{([
+["hub", basePath + "/theboyz-logo.png", "TheBoyz"],
+["padel", "https://cdn-icons-gif.flaticon.com/6451/6451035.gif", "Padel"],
+["pizza", "https://cdn-icons-gif.flaticon.com/15240/15240280.gif", "Pizze"],
+] as [View, string, string][]).map(([target, icon, label]) => (
+<button key={target} className={view === target ? "active" : ""} onClick={() => { setView(target); if (target === "padel") setPadelView("overview"); }}>
+{/* eslint-disable-next-line @next/next/no-img-element */}
+<span className="mobile-nav-icon"><img src={icon} alt="" /></span>{label}
+</button>
+))}
+<button className={view === "profile" ? "active" : ""} onClick={() => setView("profile")}><span className="mobile-nav-icon"><Avatar profile={currentUser} size="sm" /></span>Profilo</button>
+</nav>
 
       {showMatch ? <NewMatchModal profiles={profiles} onClose={() => setShowMatch(false)} onSaved={() => void handleSaved()} /> : null}
       {showPizzaCreate ? <PizzaCreateModal onClose={() => setShowPizzaCreate(false)} onSaved={() => handlePizzaSaved("Pizzeria aggiunta. Ora potete inserire i tre voti.")} /> : null}
