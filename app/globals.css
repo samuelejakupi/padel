@@ -205,13 +205,18 @@ button {
   z-index: 3;
 }
 
-/* Il premio è un GIF su fondo bianco: il cerchio lime lo assorbe con multiply,
-   come già facciamo per il trofeo del podio. */
+/* Il badge resta il cerchio lime: il multiply va sull'immagine interna, così
+   il fondo bianco della GIF si fonde col giallo e non con la foto profilo. */
 .rank-badge-award {
-  border-width: 3px;
+  overflow: hidden;
+  padding: 4px;
+}
+
+.rank-badge-award img {
+  height: 100%;
   mix-blend-mode: multiply;
   object-fit: contain;
-  padding: 2px;
+  width: 100%;
 }
 
 /* Login */

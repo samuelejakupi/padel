@@ -157,12 +157,10 @@ function Avatar({
         <span>{initials(profile.display_name)}</span>
       )}
       {rank === 1 ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          className="rank-badge rank-badge-award"
-          src="https://cdn-icons-gif.flaticon.com/18830/18830460.gif"
-          alt="Primo in classifica"
-        />
+        <b className="rank-badge rank-badge-award" title="Primo in classifica">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="https://cdn-icons-gif.flaticon.com/18830/18830460.gif" alt="Primo in classifica" />
+        </b>
       ) : null}
     </span>
   );
