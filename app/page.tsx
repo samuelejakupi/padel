@@ -484,6 +484,80 @@ function MatchCard({
   );
 }
 
+function TeamAvatars({ team, size = "sm" }: { team: PadelTeam; size?: "sm" | "lg" }) {
+  if (team.imageUrl) {
+    return (
+      <span className={`team-image team-image-${size}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={team.imageUrl} alt="" />
+      </span>
+    );
+  }
+  return (
+    <div className={size === "lg" ? "podium-avatars" : "team-avatars"}>
+      {team.players.map((profile) => (
+        <Avatar key={profile.id} profile={profile} size={size} />
+      ))}
+    </div>
+  );
+}
+
+function TeamEditor({
+  team,
+  onSave,
+  disabled,
+}: {
+  team: PadelTeam;
+  onSave: (team: PadelTeam, name: string, file?: File) => Promise<void>;
+  disabled?: boolean;
+}) {
+  const [name, setName] = useState(team.name ?? "");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    await onSave(team, name);
+    setBusy(false);
+  }
+
+  async function pickImage(file?: File) {
+    if (!file) return;
+    setBusy(true);
+    await onSave(team, name, file);
+    setBusy(false);
+  }
+
+  return (
+    <form className="team-editor" onSubmit={submit}>
+      <label className="team-editor-photo">
+        <TeamAvatars team={team} />
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          disabled={disabled || busy}
+          onChange={(event) => void pickImage(event.target.files?.[0])}
+        />
+        <span>Foto</span>
+      </label>
+      <div className="team-editor-fields">
+        <input
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder={team.players.map((profile) => profile.display_name).join(" · ")}
+          maxLength={40}
+          disabled={disabled || busy}
+          aria-label="Nome della squadra"
+        />
+        <small>{team.matches_played} partite · {team.rating} pt</small>
+      </div>
+      <button className="button button-dark" disabled={disabled || busy}>
+        {busy ? "Salvo…" : "Salva"}
+      </button>
+    </form>
+  );
+}
+
 function TeamRankingList({ teams }: { teams: PadelTeam[] }) {
   const ranks = ranksByRating(teams);
   return (
@@ -493,14 +567,14 @@ function TeamRankingList({ teams }: { teams: PadelTeam[] }) {
         return (
           <div className="ranking-row" key={team.id}>
             <span className={`rank-number rank-${ranks[index]}`}>{ranks[index]}</span>
-            <div className="team-avatars">
-              {team.players.map((profile) => (
-                <Avatar key={profile.id} profile={profile} size="sm" />
-              ))}
-            </div>
+            <TeamAvatars team={team} />
             <div className="ranking-name">
-              <b>{team.players.map((profile) => profile.display_name).join(" · ")}</b>
-              <span>{teamSides(team) ?? `${team.matches_played} partite`}</span>
+              <b>{teamLabel(team)}</b>
+              <span>
+                {team.name
+                  ? team.players.map((profile) => profile.display_name).join(" · ")
+                  : teamSides(team) ?? `${team.matches_played} partite`}
+              </span>
             </div>
             <span className="table-stat"><b>{team.matches_played}</b><small>Partite</small></span>
             <span className="table-stat"><b>{team.wins}</b><small>Vinte</small></span>
@@ -1032,11 +1106,13 @@ function AppShell({ session }: { session: Session | null }) {
   const [profileName, setProfileName] = useState("");
   const [handedness, setHandedness] = useState("");
   const [courtSide, setCourtSide] = useState("");
+  const [teamRecords, setTeamRecords] = useState<PadelTeamRecord[]>([]);
+  const [teamSchemaReady, setTeamSchemaReady] = useState(true);
 
   const loadData = useCallback(async () => {
     const client = supabase;
     if (!client) return;
-    const [profilesResult, matchesResult, pizzaResult] = await Promise.all([
+    const [profilesResult, matchesResult, pizzaResult, teamsResult] = await Promise.all([
       client.from("profiles").select("*").order("rating", { ascending: false }),
       client
         .from("matches")
@@ -1047,6 +1123,7 @@ function AppShell({ session }: { session: Session | null }) {
         .from("pizza_restaurants")
         .select("id, name, place, created_by, created_at, votes:pizza_votes(restaurant_id, voter_id, location, pizza, dessert, price, bonus_fabio)")
         .order("created_at", { ascending: false }),
+      client.from("padel_teams").select("id, player_a, player_b, name, image_path"),
     ]);
 
     if (profilesResult.error || matchesResult.error) {
@@ -1070,6 +1147,19 @@ function AppShell({ session }: { session: Session | null }) {
       setMatches(normalized);
       setPizzaSchemaReady(!pizzaResult.error);
       if (!pizzaResult.error) setPizzaRestaurants((pizzaResult.data ?? []) as PizzaRestaurantRecord[]);
+      // Se la migrazione delle squadre non è ancora stata eseguita la query
+      // fallisce: il resto dell'app deve continuare a funzionare.
+      setTeamSchemaReady(!teamsResult.error);
+      if (!teamsResult.error) {
+        setTeamRecords(
+          ((teamsResult.data ?? []) as PadelTeamRecord[]).map((record) => ({
+            ...record,
+            image_url: record.image_path
+              ? client.storage.from("avatars").getPublicUrl(record.image_path).data.publicUrl
+              : null,
+          })),
+        );
+      }
       const own = withAvatars.find((profile) => profile.id === session?.user.id);
       setProfileName(own?.display_name ?? "");
       setHandedness(own?.handedness ?? "");
@@ -1086,7 +1176,14 @@ function AppShell({ session }: { session: Session | null }) {
   const sorted = useMemo(() => sortPadelProfiles(profiles), [profiles]);
   const rankedProfiles = useMemo(() => sorted.filter((profile) => profile.matches_played > 0), [sorted]);
   const singleRanks = useMemo(() => padelRanks(rankedProfiles), [rankedProfiles]);
-  const teams = useMemo(() => buildPadelTeams(matches, profiles), [matches, profiles]);
+  const teams = useMemo(
+    () => buildPadelTeams(matches, profiles, teamRecords),
+    [matches, profiles, teamRecords],
+  );
+  const myTeams = useMemo(
+    () => teams.filter((team) => team.players.some((profile) => profile.id === session?.user.id)),
+    [teams, session?.user.id],
+  );
   const teamRanks = useMemo(() => ranksByRating(teams), [teams]);
   const pizzaEntries = useMemo(() => buildPizzaRanking(pizzaRestaurants), [pizzaRestaurants]);
   const currentUser = profiles.find((profile) => profile.id === session?.user.id);
@@ -1179,6 +1276,40 @@ function AppShell({ session }: { session: Session | null }) {
       })
       .eq("id", session.user.id);
     setNotice(error ? error.message : "Profilo aggiornato.");
+    if (!error) await loadData();
+  }
+
+  async function saveTeam(team: PadelTeam, name: string, file?: File) {
+    if (!supabase || !session) return;
+    const [player_a, player_b] = team.id.split("|");
+    let image_path: string | undefined;
+
+    if (file) {
+      const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+      // Le regole dello storage impongono la cartella dell'utente: usiamo
+      // quella di chi carica, il file resta pubblico in lettura.
+      const path = `${session.user.id}/team-${Date.now()}.${extension}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true });
+      if (uploadError) {
+        setNotice(uploadError.message);
+        return;
+      }
+      image_path = path;
+    }
+
+    const { error } = await supabase.from("padel_teams").upsert(
+      {
+        player_a,
+        player_b,
+        name: name.trim() || null,
+        ...(image_path ? { image_path } : {}),
+      },
+      { onConflict: "player_a,player_b" },
+    );
+
+    setNotice(error ? error.message : "Squadra aggiornata.");
     if (!error) await loadData();
   }
 
@@ -1418,16 +1549,30 @@ function AppShell({ session }: { session: Session | null }) {
                 <div className="podium">
                   {teams.slice(0, 3).map((team, index) => (
                     <article key={team.id} className={`podium-card podium-${index + 1} podium-shared`}>
-                      <div className="podium-avatars">
-                        {team.players.map((profile) => (
-                          <Avatar key={profile.id} profile={profile} size="lg" rank={teamRanks[index]} />
-                        ))}
-                      </div>
+                      {team.imageUrl ? (
+                        <TeamAvatars team={team} size="lg" />
+                      ) : (
+                        <div className="podium-avatars">
+                          {team.players.map((profile) => (
+                            <Avatar key={profile.id} profile={profile} size="lg" rank={teamRanks[index]} />
+                          ))}
+                        </div>
+                      )}
                       <h3>
                         <span className="podium-rank">#{teamRanks[index]}</span>
-                        {team.players.map((profile) => profile.display_name).join(", ")}
+                        {teamLabel(team)}
                       </h3>
                       <b>{team.rating} pt</b>
+                      {team.name ? (
+                        <div className="podium-members">
+                          <div className="team-avatars">
+                            {team.players.map((profile) => (
+                              <Avatar key={profile.id} profile={profile} size="sm" />
+                            ))}
+                          </div>
+                          <span>{team.players.map((profile) => profile.display_name).join(" · ")}</span>
+                        </div>
+                      ) : null}
                     </article>
                   ))}
                 </div>
@@ -1659,6 +1804,28 @@ function AppShell({ session }: { session: Session | null }) {
                   <span><b>{currentRank ? currentUser.rating : "N/C"}</b><small>Punti</small></span>
                   <span><b>{currentUser.wins}/{currentUser.matches_played}</b><small>Vittorie</small></span>
                   <span><b>{winRate}%</b><small>Win rate</small></span>
+                </div>
+                <div className="profile-teams">
+                  <h3>Le mie squadre</h3>
+                  {!teamSchemaReady ? (
+                    <p className="demo-profile-note">
+                      Per dare nome e foto alle squadre esegui la migrazione
+                      <code>migration-squadre.sql</code> in Supabase.
+                    </p>
+                  ) : myTeams.length ? (
+                    myTeams.map((team) => (
+                      <TeamEditor
+                        key={team.id}
+                        team={team}
+                        disabled={!supabase}
+                        onSave={(selected, name, file) => saveTeam(selected, name, file)}
+                      />
+                    ))
+                  ) : (
+                    <p className="demo-profile-note">
+                      Le squadre nascono dalle partite: gioca un doppio e comparirà qui.
+                    </p>
+                  )}
                 </div>
               </article>
               <article className="settings-card">
