@@ -438,7 +438,7 @@ form select:focus,
   display: flex;
   height: 76px;
   justify-content: space-between;
-  padding: 0 max(28px, calc((100vw - 1400px) / 2));
+  padding: 0 max(28px, calc((100% - 1400px) / 2 + 28px));
   position: sticky;
   top: 0;
   z-index: 20;
@@ -1224,8 +1224,8 @@ form select:focus,
 }
 
 .rank-number {
-  color: #99a2a9;
-  font-size: 11px;
+  color: var(--ink);
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -1308,7 +1308,7 @@ form select:focus,
   border-radius: 7px;
   display: grid;
   gap: 18px;
-  grid-template-columns: 44px minmax(0, 1fr) 70px;
+  grid-template-columns: 70px minmax(0, 1fr) 70px;
   min-height: 110px;
   padding: 15px 20px;
   position: relative;
@@ -1984,8 +1984,8 @@ button.pizza-ranking-row {
 }
 
 .pizza-position {
-  color: #97a09b;
-  font-size: 10px;
+  color: var(--ink);
+  font-size: 16px;
   font-weight: 1000;
 }
 
@@ -2353,6 +2353,26 @@ button.pizza-ranking-row {
 
 .mobile-nav {
   display: none;
+}
+
+.mobile-nav-icon {
+  align-items: center;
+  display: flex;
+  height: 26px;
+  justify-content: center;
+  width: 26px;
+}
+
+.mobile-nav-icon img {
+  height: 26px;
+  mix-blend-mode: multiply;
+  object-fit: contain;
+  width: 26px;
+}
+
+.mobile-nav-icon .avatar {
+  height: 26px;
+  width: 26px;
 }
 
 @keyframes pulse {
@@ -2845,11 +2865,11 @@ button.pizza-ranking-row {
     border-radius: 8px;
     gap: 10px 12px;
     grid-template-areas:
-      "position name total"
-      ". location pizza"
-      ". dessert price"
-      ". fabio fabio";
-    grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr);
+      "position name name"
+      "position location pizza"
+      "position dessert price"
+      "position fabio total";
+    grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr);
     min-height: 0;
     min-width: 0;
     padding: 16px 14px;
@@ -2863,6 +2883,31 @@ button.pizza-ranking-row {
   .pizza-ranking-row > .pizza-category-score:nth-child(6) { grid-area: price; }
   .pizza-ranking-row > .pizza-category-score:nth-child(7) { grid-area: fabio; }
   .pizza-ranking-row > .pizza-total-score { grid-area: total; }
+
+.pizza-total-score {
+  background: var(--ink);
+  border-radius: 5px;
+  color: var(--white);
+  justify-content: space-between;
+  min-height: 34px;
+  padding: 7px 8px;
+}
+
+.pizza-total-score::before {
+  color: rgba(255, 255, 255, 0.65);
+  content: "TOTALE";
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
+.pizza-total-score b {
+  font-size: 16px;
+}
+
+.pizza-total-score small {
+  color: rgba(255, 255, 255, 0.65);
+}
 
   .pizza-category-score {
     background: rgba(11, 27, 44, 0.045);
