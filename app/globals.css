@@ -1572,6 +1572,37 @@ form select:focus,
   order: 3;
 }
 
+.podium-avatars {
+  display: flex;
+  justify-content: center;
+}
+
+/* Avatar sovrapposti: il primo resta sopra, così il suo trofeo non finisce
+   sotto all'avatar accanto. */
+.podium-avatars .avatar + .avatar {
+  margin-left: -16px;
+}
+
+.podium-avatars .avatar {
+  position: relative;
+  z-index: 1;
+}
+
+.podium-avatars .avatar:first-child {
+  z-index: 2;
+}
+
+.podium-shared .avatar-lg {
+  height: 68px;
+  width: 68px;
+}
+
+.podium-shared .avatar-lg .rank-badge-award {
+  border-width: 2px;
+  height: 30px;
+  width: 30px;
+}
+
 .podium-rank {
   font-weight: 900;
   margin-right: 6px;
@@ -1598,15 +1629,6 @@ form select:focus,
   color: var(--lime);
 }
 
-.podium-card > small {
-  color: var(--muted);
-  font-size: 10px;
-  margin-top: 8px;
-}
-
-.podium-1 > small {
-  color: rgba(255, 255, 255, 0.6);
-}
 
 .ranking-table {
   background: var(--white);
@@ -2837,11 +2859,6 @@ button.pizza-ranking-row {
     font-size: 13px;
   }
 
-  .podium-card > small {
-    line-height: 1.4;
-    text-align: center;
-  }
-
   .profile-grid {
     grid-template-columns: 1fr;
   }
@@ -3175,15 +3192,29 @@ button.pizza-ranking-row {
     text-align: left;
   }
 
+  .podium-avatars {
+    grid-row: 1 / span 2;
+    justify-content: flex-start;
+  }
+
   .podium-card .avatar-lg {
-    grid-row: 1 / span 3;
     height: 60px;
     width: 60px;
   }
 
+  /* Due avatar affiancati non stanno nella colonna da 64px: la allarghiamo
+     e rimpiccioliamo le foto. */
+  .podium-shared {
+    grid-template-columns: 84px minmax(0, 1fr);
+  }
+
+  .podium-shared .avatar-lg {
+    height: 46px;
+    width: 46px;
+  }
+
   .podium-card h3,
-  .podium-card > b,
-  .podium-card > small {
+  .podium-card > b {
     margin: 0;
     text-align: left;
   }

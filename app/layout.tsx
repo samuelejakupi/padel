@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import BuildWatcher from "./build-watcher";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
@@ -30,7 +31,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="it">
-      <body>{children}</body>
+      <head>
+        <meta httpEquiv="Cache-Control" content="no-cache, must-revalidate" />
+      </head>
+      <body>
+        <BuildWatcher />
+        {children}
+      </body>
     </html>
   );
 }

@@ -821,7 +821,17 @@ function AppShell({ session }: { session: Session | null }) {
 
   const sorted = useMemo(() => sortPadelProfiles(profiles), [profiles]);
   const rankedProfiles = useMemo(() => sorted.filter((profile) => profile.matches_played > 0), [sorted]);
-  const podiumRanks = useMemo(() => padelRanks(rankedProfiles), [rankedProfiles]);
+  // I parimerito condividono lo stesso gradino invece di occuparne due.
+  const podiumGroups = useMemo(() => {
+    const ranks = padelRanks(rankedProfiles);
+    const groups: { rank: number; players: Profile[] }[] = [];
+    rankedProfiles.forEach((profile, index) => {
+      const last = groups[groups.length - 1];
+      if (last && last.rank === ranks[index]) last.players.push(profile);
+      else groups.push({ rank: ranks[index], players: [profile] });
+    });
+    return groups.slice(0, 3);
+  }, [rankedProfiles]);
   const pizzaEntries = useMemo(() => buildPizzaRanking(pizzaRestaurants), [pizzaRestaurants]);
   const currentUser = profiles.find((profile) => profile.id === session?.user.id);
   const currentUserCanManagePizza = currentUser ? canManagePizza(currentUser.display_name, session?.user.email) : false;
@@ -1105,15 +1115,26 @@ function AppShell({ session }: { session: Session | null }) {
               <button className="button button-primary" onClick={() => setShowMatch(true)}>＋ Registra partita</button>
             </div>
             <div className="podium">
-              {rankedProfiles.slice(0, 3).map((profile, index) => (
-                <article key={profile.id} className={`podium-card podium-${index + 1}`}>
-                  <Avatar profile={profile} size="lg" rank={podiumRanks[index]} />
+              {podiumGroups.map((group, index) => (
+                <article
+                  key={group.rank}
+                  className={`podium-card podium-${index + 1} ${group.players.length > 1 ? "podium-shared" : ""}`}
+                >
+                  <div className="podium-avatars">
+                    {group.players.map((profile) => (
+                      <Avatar key={profile.id} profile={profile} size="lg" rank={group.rank} />
+                    ))}
+                  </div>
                   <h3>
-                    <span className="podium-rank">#{podiumRanks[index]}</span>
-                    {profile.display_name}
+                    {group.players.map((profile, position) => (
+                      <span key={profile.id}>
+                        {position > 0 ? ", " : ""}
+                        <span className="podium-rank">#{group.rank}</span>
+                        {profile.display_name}
+                      </span>
+                    ))}
                   </h3>
-                  <b>{profile.rating} pt</b>
-                  <small>{profile.wins} vittorie · {profile.matches_played} partite</small>
+                  <b>{group.players[0].rating} pt</b>
                 </article>
               ))}
             </div>
