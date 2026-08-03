@@ -46,6 +46,7 @@ export type MatchPlayer = {
 export type PadelMatch = {
   id: string;
   played_at: string;
+  created_at?: string;
   created_by?: string;
   winner_team: 1 | 2;
   notes?: string | null;

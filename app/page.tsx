@@ -11,7 +11,7 @@ import {
 } from "@/lib/supabase";
 
 type View = "hub" | "padel" | "pizza" | "profile";
-type PadelView = "overview" | "ranking" | "matches";
+type PadelView = "overview" | "ranking" | "matches" | "player";
 type PizzaRankingEntry = {
   name: string;
   place?: string;
@@ -493,7 +493,15 @@ function TeamRankingList({ teams }: { teams: PadelTeam[] }) {
   );
 }
 
-function RankingList({ profiles, expanded = false }: { profiles: Profile[]; expanded?: boolean }) {
+function RankingList({
+  profiles,
+  expanded = false,
+  onSelect,
+}: {
+  profiles: Profile[];
+  expanded?: boolean;
+  onSelect?: (profile: Profile) => void;
+}) {
   const sorted = sortPadelProfiles(profiles);
   const ranks = padelRanks(sorted);
   return (
@@ -502,8 +510,8 @@ function RankingList({ profiles, expanded = false }: { profiles: Profile[]; expa
         const isRanked = profile.matches_played > 0;
         const rank = ranks[index];
         const winRate = profile.matches_played ? Math.round((profile.wins / profile.matches_played) * 100) : 0;
-        return (
-          <div className={`ranking-row ${isRanked ? "" : "unranked"}`} key={profile.id}>
+        const content = (
+          <>
             <span className={`rank-number ${isRanked ? `rank-${rank}` : "rank-nc"}`}>
               {isRanked ? rank : "N/C"}
             </span>
@@ -530,10 +538,124 @@ function RankingList({ profiles, expanded = false }: { profiles: Profile[]; expa
               <b>{isRanked ? profile.rating : "N/C"}</b>
               <small>{isRanked ? "PT" : "0 PARTITE"}</small>
             </span>
+          </>
+        );
+        return onSelect ? (
+          <button
+            type="button"
+            className={`ranking-row ranking-row-link ${isRanked ? "" : "unranked"}`}
+            key={profile.id}
+            onClick={() => onSelect(profile)}
+            aria-label={`Apri la scheda di ${profile.display_name}`}
+          >
+            {content}
+          </button>
+        ) : (
+          <div className={`ranking-row ${isRanked ? "" : "unranked"}`} key={profile.id}>
+            {content}
           </div>
         );
       })}
     </div>
+  );
+}
+
+function EloChart({ profile, matches }: { profile: Profile; matches: PadelMatch[] }) {
+  const personalMatches = [...matches]
+    .filter((match) => match.players.some((player) => player.profile_id === profile.id))
+    .sort((a, b) =>
+      new Date(a.played_at).getTime() - new Date(b.played_at).getTime()
+      || new Date(a.created_at ?? a.played_at).getTime() - new Date(b.created_at ?? b.played_at).getTime()
+      || a.id.localeCompare(b.id),
+    );
+  const deltas = personalMatches.map(
+    (match) => match.players.find((player) => player.profile_id === profile.id)?.rating_delta ?? 0,
+  );
+  const startingRating = profile.rating - deltas.reduce((sum, delta) => sum + delta, 0);
+  const matchPoints = personalMatches.reduce<{ id: string; rating: number; playedAt: string; delta: number }[]>(
+    (timeline, match, index) => [
+      ...timeline,
+      {
+        id: match.id,
+        rating: (timeline[timeline.length - 1]?.rating ?? startingRating) + deltas[index],
+        playedAt: match.played_at,
+        delta: deltas[index],
+      },
+    ],
+    [],
+  );
+  const points = [
+    { id: "start", rating: startingRating, playedAt: personalMatches[0]?.played_at ?? null, delta: 0 },
+    ...matchPoints,
+  ];
+
+  if (!personalMatches.length) {
+    return (
+      <article className="elo-panel elo-panel-empty">
+        <div className="elo-panel-head"><div><p className="eyebrow dark">ANDAMENTO ELO</p><h2>Il grafico parte dalla prima sfida.</h2></div></div>
+        <p>Registra una partita per iniziare a seguire l&apos;andamento del punteggio.</p>
+      </article>
+    );
+  }
+
+  const width = 760;
+  const height = 270;
+  const padding = { top: 28, right: 24, bottom: 42, left: 54 };
+  const ratings = points.map((point) => point.rating);
+  const rawMin = Math.min(...ratings);
+  const rawMax = Math.max(...ratings);
+  const spread = Math.max(30, rawMax - rawMin);
+  const minRating = Math.floor((rawMin - spread * 0.16) / 10) * 10;
+  const maxRating = Math.ceil((rawMax + spread * 0.16) / 10) * 10;
+  const plotWidth = width - padding.left - padding.right;
+  const plotHeight = height - padding.top - padding.bottom;
+  const xAt = (index: number) => padding.left + (index / Math.max(1, points.length - 1)) * plotWidth;
+  const yAt = (rating: number) => padding.top + ((maxRating - rating) / Math.max(1, maxRating - minRating)) * plotHeight;
+  const coordinates = points.map((point, index) => ({ ...point, x: xAt(index), y: yAt(point.rating) }));
+  const line = coordinates.map((point, index) => `${index ? "L" : "M"} ${point.x} ${point.y}`).join(" ");
+  const area = `${line} L ${coordinates[coordinates.length - 1].x} ${height - padding.bottom} L ${coordinates[0].x} ${height - padding.bottom} Z`;
+  const gridValues = Array.from({ length: 4 }, (_, index) =>
+    Math.round(maxRating - (index / 3) * (maxRating - minRating)),
+  );
+  const firstDate = personalMatches[0].played_at;
+  const middleDate = personalMatches[Math.floor((personalMatches.length - 1) / 2)].played_at;
+  const lastDate = personalMatches[personalMatches.length - 1].played_at;
+  const dateLabels = [firstDate, middleDate, lastDate];
+  const formatDate = (date: string) => new Intl.DateTimeFormat("it-IT", { month: "short", year: "2-digit" }).format(new Date(date));
+  const overallDelta = profile.rating - startingRating;
+
+  return (
+    <article className="elo-panel">
+      <div className="elo-panel-head">
+        <div><p className="eyebrow dark">ANDAMENTO ELO</p><h2>La corsa di {profile.display_name}</h2></div>
+        <div className="elo-current"><b>{profile.rating}</b><small>PT ATTUALI</small><span className={overallDelta >= 0 ? "positive" : "negative"}>{overallDelta >= 0 ? "+" : ""}{overallDelta} dal debutto</span></div>
+      </div>
+      <figure className="elo-chart">
+        <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Grafico Elo di ${profile.display_name} su ${personalMatches.length} partite`}>
+          <defs>
+            <linearGradient id={`elo-fill-${profile.id}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--blue)" stopOpacity="0.32" />
+              <stop offset="100%" stopColor="var(--blue)" stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+          {gridValues.map((value) => {
+            const y = yAt(value);
+            return <g key={value}><line className="elo-grid-line" x1={padding.left} x2={width - padding.right} y1={y} y2={y} /><text className="elo-axis-label" x={padding.left - 10} y={y + 4} textAnchor="end">{value}</text></g>;
+          })}
+          <path d={area} fill={`url(#elo-fill-${profile.id})`} />
+          <path className="elo-line" d={line} />
+          {coordinates.slice(1).map((point) => (
+            <circle className="elo-point" key={point.id} cx={point.x} cy={point.y} r="5">
+              <title>{`${new Intl.DateTimeFormat("it-IT").format(new Date(point.playedAt!))}: ${point.rating} punti (${point.delta >= 0 ? "+" : ""}${point.delta})`}</title>
+            </circle>
+          ))}
+          {dateLabels.map((date, index) => (
+            <text className="elo-date-label" key={`${date}-${index}`} x={padding.left + (index / 2) * plotWidth} y={height - 10} textAnchor={index === 0 ? "start" : index === 2 ? "end" : "middle"}>{formatDate(date)}</text>
+          ))}
+        </svg>
+        <figcaption>Ogni punto rappresenta il punteggio dopo una partita. Toccalo per vedere data e variazione Elo.</figcaption>
+      </figure>
+    </article>
   );
 }
 
@@ -546,7 +668,7 @@ function NewMatchModal({
   profiles: Profile[];
   match?: PadelMatch | null;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (action?: "deleted") => void;
 }) {
   const editing = Boolean(match);
   const initialPlayers = match
@@ -590,7 +712,7 @@ function NewMatchModal({
       setConfirmDelete(false);
       return;
     }
-    onSaved();
+    onSaved("deleted");
     setDeleting(false);
   }
 
@@ -878,6 +1000,7 @@ function AppShell({ session }: { session: Session | null }) {
   const [editingMatch, setEditingMatch] = useState<PadelMatch | null>(null);
   const [rankingMode, setRankingMode] = useState<"single" | "team">("single");
   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(Boolean(supabase));
   const [notice, setNotice] = useState("");
   const [profileName, setProfileName] = useState("");
@@ -891,9 +1014,9 @@ function AppShell({ session }: { session: Session | null }) {
       client.from("profiles").select("*").order("rating", { ascending: false }),
       client
         .from("matches")
-        .select("id, played_at, created_by, winner_team, notes, video_url, rating_delta, sets:match_sets(set_number, team1_games, team2_games), players:match_players(profile_id, team, rating_delta, profile:profiles(*))")
+        .select("id, played_at, created_at, created_by, winner_team, notes, video_url, rating_delta, sets:match_sets(set_number, team1_games, team2_games), players:match_players(profile_id, team, rating_delta, profile:profiles(*))")
         .order("played_at", { ascending: false })
-        .limit(50),
+        .order("created_at", { ascending: false }),
       client
         .from("pizza_restaurants")
         .select("id, name, place, created_by, created_at, votes:pizza_votes(restaurant_id, voter_id, location, pizza, dessert, price, bonus_fabio)")
@@ -943,6 +1066,11 @@ function AppShell({ session }: { session: Session | null }) {
   const currentUser = profiles.find((profile) => profile.id === session?.user.id);
   const currentUserCanManagePizza = currentUser ? canManagePizza(currentUser.display_name, session?.user.email) : false;
   const currentRank = currentUser?.matches_played ? rankOf(sorted, currentUser.id) : 0;
+  const selectedPlayer = profiles.find((profile) => profile.id === selectedPlayerId) ?? null;
+  const selectedPlayerRank = selectedPlayer?.matches_played ? rankOf(sorted, selectedPlayer.id) : 0;
+  const selectedPlayerMatches = selectedPlayer
+    ? matches.filter((match) => match.players.some((player) => player.profile_id === selectedPlayer.id))
+    : [];
   // Con i parimerito il giocatore da raggiungere è il primo con punteggio più
   // alto, non semplicemente quello nella riga precedente.
   const nextRankedPlayer = currentUser
@@ -984,13 +1112,15 @@ function AppShell({ session }: { session: Session | null }) {
     );
   }
 
-  async function handleSaved() {
+  async function handleSaved(action?: "deleted") {
     const wasEditing = Boolean(editingMatch);
     setShowMatch(false);
     setEditingMatch(null);
     await loadData();
     setNotice(
-      wasEditing
+      action === "deleted"
+        ? "Partita eliminata. Classifica e statistiche sono state ricalcolate."
+        : wasEditing
         ? "Fatto. Classifica e statistiche sono state ricalcolate."
         : "Partita salvata. La classifica è stata aggiornata.",
     );
@@ -1031,6 +1161,11 @@ function AppShell({ session }: { session: Session | null }) {
     setVotingRestaurant(null);
     await loadData();
     setNotice(message);
+  }
+
+  function openPlayer(profile: Profile) {
+    setSelectedPlayerId(profile.id);
+    setPadelView("player");
   }
 
   return (
@@ -1205,7 +1340,7 @@ function AppShell({ session }: { session: Session | null }) {
                   <div><p className="eyebrow dark">TOP PLAYERS</p><h2>Classifica</h2></div>
                   <span className="season">STAGIONE 2026</span>
                 </div>
-                <RankingList profiles={sorted.slice(0, 6)} />
+                <RankingList profiles={sorted.slice(0, 6)} onSelect={openPlayer} />
                 <button className="button button-dark button-full" onClick={() => setPadelView("ranking")}>Classifica completa</button>
               </aside>
             </section>
@@ -1250,7 +1385,7 @@ function AppShell({ session }: { session: Session | null }) {
                     </article>
                   ))}
                 </div>
-                <RankingList profiles={profiles} expanded />
+                <RankingList profiles={profiles} expanded onSelect={openPlayer} />
               </>
             ) : teams.length ? (
               <>
@@ -1278,6 +1413,64 @@ function AppShell({ session }: { session: Session | null }) {
                 <h2>Nessuna squadra in classifica</h2>
                 <p>Le coppie si formano da sole: registra una partita e compariranno qui.</p>
               </div>
+            )}
+          </section>
+        ) : null}
+
+        {!loading && view === "padel" && padelView === "player" && selectedPlayer ? (
+          <section className="page-section player-detail-page">
+            <div className="section-context">
+              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b><span>/</span><b>{selectedPlayer.display_name.toUpperCase()}</b>
+              <nav aria-label="Navigazione sezione padel"><button onClick={() => setPadelView("overview")}>Panoramica</button><button className="active" onClick={() => setPadelView("ranking")}>Classifica</button><button onClick={() => setPadelView("matches")}>Partite</button></nav>
+            </div>
+            <button className="player-back" type="button" onClick={() => setPadelView("ranking")}>← Torna alla classifica</button>
+
+            <article className="player-detail-hero">
+              <div className="player-detail-identity">
+                <Avatar profile={selectedPlayer} size="xl" rank={selectedPlayerRank || undefined} />
+                <div>
+                  <p className="eyebrow">SCHEDA GIOCATORE</p>
+                  <h1>{selectedPlayer.display_name}</h1>
+                  <div className="player-traits">
+                    {padelTraits(selectedPlayer) ? <span>{padelTraits(selectedPlayer)}</span> : null}
+                    <span>{selectedPlayer.matches_played ? `#${selectedPlayerRank} in classifica` : "Non classificato"}</span>
+                    {selectedPlayer.matches_played ? <span>Serie {selectedPlayer.current_streak > 0 ? `+${selectedPlayer.current_streak}` : selectedPlayer.current_streak}</span> : null}
+                  </div>
+                </div>
+              </div>
+              <div className="player-rating-card">
+                <span>ELO ATTUALE</span>
+                <b>{selectedPlayer.matches_played ? selectedPlayer.rating : "N/C"}</b>
+                <small>{selectedPlayer.matches_played ? `${selectedPlayer.rating - 1000 >= 0 ? "+" : ""}${selectedPlayer.rating - 1000} dalla quota iniziale` : "In attesa del debutto"}</small>
+              </div>
+            </article>
+
+            <div className="player-kpis">
+              <article><span>01</span><b>{selectedPlayer.matches_played}</b><small>Partite</small></article>
+              <article><span>02</span><b>{selectedPlayer.wins}</b><small>Vittorie</small></article>
+              <article><span>03</span><b>{selectedPlayer.losses}</b><small>Sconfitte</small></article>
+              <article><span>04</span><b>{selectedPlayer.matches_played ? Math.round((selectedPlayer.wins / selectedPlayer.matches_played) * 100) : 0}%</b><small>Win rate</small></article>
+            </div>
+
+            <EloChart profile={selectedPlayer} matches={matches} />
+
+            <div className="player-history-head">
+              <div><p className="eyebrow dark">STORICO PERSONALE</p><h2>Le partite di {selectedPlayer.display_name}</h2></div>
+              <span>{selectedPlayerMatches.length} {selectedPlayerMatches.length === 1 ? "risultato" : "risultati"}</span>
+            </div>
+            {selectedPlayerMatches.length ? (
+              <div className="match-list match-list-full player-match-list">
+                {selectedPlayerMatches.map((match) => (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    onEdit={(selected) => setEditingMatch(selected)}
+                    onPlayVideo={(id) => setPlayingVideo(id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="empty-board"><span>00</span><h2>Nessuna partita giocata</h2><p>La scheda si completerà dopo il primo risultato.</p></div>
             )}
           </section>
         ) : null}
@@ -1491,7 +1684,7 @@ function AppShell({ session }: { session: Session | null }) {
           profiles={profiles}
           match={editingMatch}
           onClose={() => { setShowMatch(false); setEditingMatch(null); }}
-          onSaved={() => void handleSaved()}
+          onSaved={(action) => void handleSaved(action)}
         />
       ) : null}
       {playingVideo ? (

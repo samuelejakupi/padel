@@ -37,13 +37,15 @@ test("include configurazione Supabase e pubblicazione Pages", async () => {
   assert.match(page, /"Mattia", "Manu"/);
   assert.match(page, /Partita eliminata/);
   assert.match(page, /match_players\(profile_id, team, rating_delta/);
-  assert.match(page, /MEDIA \|Δ ELO\|/);
   assert.match(page, /sortPadelProfiles/);
+  assert.match(page, /function EloChart/);
+  assert.match(page, /ANDAMENTO ELO/);
+  assert.match(page, /STORICO PERSONALE/);
   assert.match(page, /0 PARTITE/);
   assert.match(page, /Gioca la prima partita per entrare nella classifica/);
   assert.doesNotMatch(page, /signUp\s*\(/);
   assert.match(page, /avatars/);
-  assert.match(page, /PORTEGO DE MA/);
+  assert.match(page, /PORTEGO[\s\S]*DE MÀ/);
   assert.match(page, /Bonus Fabio/);
   assert.doesNotMatch(page, /Pizzium/i);
 });

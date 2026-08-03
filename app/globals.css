@@ -1296,6 +1296,29 @@ form select:focus,
   color: #89949b;
 }
 
+button.ranking-row-link {
+  background: transparent;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  transition: background 160ms ease, padding 160ms ease;
+  width: 100%;
+}
+
+button.ranking-row-link:hover {
+  background: #f7faf7;
+}
+
+button.ranking-row-link:focus-visible {
+  border-radius: 5px;
+  outline: 3px solid rgba(24, 223, 228, 0.35);
+  outline-offset: 2px;
+}
+
 .dashboard-side .button {
   margin-top: 18px;
 }
@@ -1722,6 +1745,256 @@ form select:focus,
 
 .match-list-full .match-card {
   min-height: 124px;
+}
+
+/* Scheda giocatore */
+.player-back {
+  background: transparent;
+  border: 0;
+  color: var(--blue-dark);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.7px;
+  margin: -8px 0 16px;
+  padding: 0;
+  text-transform: uppercase;
+}
+
+.player-detail-hero {
+  align-items: stretch;
+  background: var(--ink);
+  border-radius: 10px;
+  color: var(--white);
+  display: grid;
+  gap: 30px;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  overflow: hidden;
+  padding: 34px;
+}
+
+.player-detail-identity {
+  align-items: center;
+  display: flex;
+  gap: 25px;
+  min-width: 0;
+}
+
+.player-detail-identity .avatar-xl {
+  flex: 0 0 auto;
+}
+
+.player-detail-identity h1 {
+  font-size: clamp(40px, 5vw, 72px);
+  letter-spacing: -4px;
+  line-height: 0.9;
+  margin: 0;
+}
+
+.player-traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 18px;
+}
+
+.player-traits span {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #c8d2d8;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  padding: 7px 9px;
+  text-transform: uppercase;
+}
+
+.player-rating-card {
+  align-items: flex-start;
+  background: var(--lime);
+  border-radius: 7px;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 24px;
+}
+
+.player-rating-card > span {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+}
+
+.player-rating-card b {
+  font-size: 58px;
+  letter-spacing: -4px;
+  line-height: 0.95;
+  margin: 12px 0 8px;
+}
+
+.player-rating-card small {
+  color: var(--ink-soft);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.player-kpis {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 14px 0 24px;
+}
+
+.player-kpis article {
+  background: var(--white);
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  min-height: 112px;
+  padding: 18px 20px;
+}
+
+.player-kpis article > span {
+  color: var(--blue-dark);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.player-kpis b {
+  align-self: end;
+  font-size: 32px;
+  grid-column: 1;
+  letter-spacing: -1.5px;
+}
+
+.player-kpis small {
+  align-self: end;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 900;
+  grid-column: 2;
+  grid-row: 2;
+  letter-spacing: 0.7px;
+  padding-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.elo-panel {
+  background: var(--white);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(16, 29, 43, 0.04);
+  padding: 28px 30px 22px;
+}
+
+.elo-panel-head {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+}
+
+.elo-panel-head h2,
+.player-history-head h2 {
+  font-size: 27px;
+  letter-spacing: -1.1px;
+  margin: 0;
+}
+
+.elo-current {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+}
+
+.elo-current b {
+  font-size: 30px;
+  letter-spacing: -1px;
+}
+
+.elo-current small {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.9px;
+}
+
+.elo-current span {
+  font-size: 10px;
+  font-weight: 900;
+  margin-top: 6px;
+}
+
+.elo-chart {
+  margin: 18px 0 0;
+}
+
+.elo-chart svg {
+  display: block;
+  height: auto;
+  overflow: visible;
+  width: 100%;
+}
+
+.elo-grid-line {
+  stroke: var(--line);
+  stroke-dasharray: 4 5;
+  stroke-width: 1;
+}
+
+.elo-axis-label,
+.elo-date-label {
+  fill: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.elo-line {
+  fill: none;
+  stroke: var(--blue-dark);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+}
+
+.elo-point {
+  cursor: help;
+  fill: var(--white);
+  stroke: var(--blue-dark);
+  stroke-width: 3;
+}
+
+.elo-chart figcaption {
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 6px;
+  text-align: center;
+}
+
+.elo-panel-empty {
+  min-height: 220px;
+}
+
+.elo-panel-empty > p {
+  color: var(--muted);
+  margin: 32px 0 0;
+}
+
+.player-history-head {
+  align-items: flex-end;
+  display: flex;
+  justify-content: space-between;
+  margin: 40px 0 18px;
+}
+
+.player-history-head > span {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.7px;
+  padding: 7px 9px;
+  text-transform: uppercase;
 }
 
 /* Pizzeria ranking */
@@ -2895,6 +3168,41 @@ button.pizza-ranking-row {
     display: none;
   }
 
+  .player-detail-hero {
+    grid-template-columns: 1fr;
+    padding: 28px;
+  }
+
+  .player-rating-card {
+    align-items: center;
+    display: grid;
+    gap: 5px 18px;
+    grid-template-columns: auto 1fr;
+    justify-content: start;
+  }
+
+  .player-rating-card > span,
+  .player-rating-card small {
+    grid-column: 2;
+  }
+
+  .player-rating-card > span {
+    align-self: end;
+  }
+
+  .player-rating-card b {
+    grid-row: 1 / span 2;
+    margin: 0;
+  }
+
+  .player-kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .elo-panel {
+    padding: 24px 18px 18px;
+  }
+
   .podium {
     gap: 8px;
   }
@@ -3280,6 +3588,64 @@ button.pizza-ranking-row {
   .podium-card > b {
     margin: 0;
     text-align: left;
+  }
+
+  .player-detail-hero {
+    gap: 22px;
+    padding: 24px 20px;
+  }
+
+  .player-detail-identity {
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .player-detail-identity .avatar-xl {
+    height: 74px;
+    width: 74px;
+  }
+
+  .player-detail-identity h1 {
+    font-size: 38px;
+    letter-spacing: -2.5px;
+  }
+
+  .player-traits {
+    margin-top: 12px;
+  }
+
+  .player-rating-card b {
+    font-size: 48px;
+  }
+
+  .player-kpis article {
+    min-height: 100px;
+    padding: 15px;
+  }
+
+  .player-kpis b {
+    font-size: 27px;
+  }
+
+  .elo-panel-head,
+  .player-history-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .elo-current {
+    align-items: flex-start;
+  }
+
+  .elo-chart {
+    margin-left: -8px;
+    margin-right: -4px;
+  }
+
+  .elo-chart figcaption {
+    line-height: 1.45;
+    padding: 0 10px;
   }
 
   .pizza-method {
