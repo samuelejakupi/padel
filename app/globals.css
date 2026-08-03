@@ -794,12 +794,14 @@ form select:focus,
   height: 34px;
   object-fit: contain;
   width: 34px;
+  mix-blend-mode: multiply;
 }
 
 .podium-trophy {
   height: 40px;
   margin-bottom: 6px;
   object-fit: contain;
+  mix-blend-mode: multiply;
   width: 40px;
 }
 
@@ -814,6 +816,7 @@ form select:focus,
   right: 14px;
   top: 14px;
   width: 30px;
+  mix-blend-mode: multiply;
 }
 
 .back-arrow {
