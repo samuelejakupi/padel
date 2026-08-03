@@ -208,8 +208,11 @@ button {
 /* Il badge resta il cerchio lime: il multiply va sull'immagine interna, così
    il fondo bianco della GIF si fonde col giallo e non con la foto profilo. */
 .rank-badge-award {
+  border-width: 3px;
+  height: 58px;
   overflow: hidden;
-  padding: 4px;
+  padding: 2px;
+  width: 58px;
 }
 
 .rank-badge-award img {
@@ -3106,6 +3109,11 @@ button.pizza-ranking-row {
   .hero-player .avatar-xl {
     height: 80px;
     width: 80px;
+  }
+
+  .rank-badge-award {
+    height: 40px;
+    width: 40px;
   }
 
   .orbit-one {
