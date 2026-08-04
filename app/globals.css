@@ -2285,6 +2285,88 @@ button.ranking-row-link:focus-visible {
   margin: 0;
 }
 
+/* Bacheca. Il giallo è riservato ai titoli difficili, il rosso ai primati
+   che non si vorrebbero avere. Tutto il resto è un grigio trasparente:
+   i badge stanno su fondo bianco, un bianco pieno sparirebbe. */
+.badge-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+}
+
+.badge {
+  align-items: center;
+  border-radius: 9px;
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.badge-icon {
+  align-items: center;
+  border-radius: 50%;
+  display: flex;
+  flex: 0 0 auto;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.badge-icon svg {
+  height: 21px;
+  width: 21px;
+}
+
+.badge-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.badge-text b {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  line-height: 1.1;
+}
+
+.badge-text span {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge-gold {
+  background: var(--lime);
+  color: var(--ink);
+}
+
+.badge-gold .badge-icon {
+  background: rgba(11, 27, 44, 0.12);
+}
+
+.badge-red {
+  background: rgba(217, 75, 73, 0.12);
+  color: #8f2c2b;
+}
+
+.badge-red .badge-icon {
+  background: rgba(217, 75, 73, 0.16);
+}
+
+.badge-plain {
+  background: rgba(11, 27, 44, 0.055);
+  color: var(--ink);
+}
+
+.badge-plain .badge-icon {
+  background: rgba(11, 27, 44, 0.07);
+}
+
 .elo-panel {
   background: var(--white);
   border-radius: 10px;

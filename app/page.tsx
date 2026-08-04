@@ -485,6 +485,266 @@ function youtubeId(url?: string | null) {
   return match ? match[1] : null;
 }
 
+// ---------------------------------------------------------------------------
+// Trofei e record
+//
+// Due famiglie diverse. I trofei sono soglie personali: li prende chiunque le
+// superi, e quello più alto sostituisce i precedenti (chi ha 15 vittorie non
+// mostra anche 10 e 5). I record sono comparativi: li tiene solo chi guida la
+// classifica di quella statistica, e in caso di parità li tengono in due.
+// Tutto si calcola qui dai dati già caricati: niente da salvare, niente da
+// aggiornare a mano, e le soglie si spostano da sole quando qualcuno cresce.
+// ---------------------------------------------------------------------------
+
+type BadgeTone = "gold" | "red" | "plain";
+type BadgeGlyph = "flame" | "trophy" | "medal" | "chart" | "shield" | "down";
+
+type Badge = {
+  id: string;
+  tone: BadgeTone;
+  glyph: BadgeGlyph;
+  label: string;
+  detail: string;
+};
+
+// Storia di un giocatore in ordine cronologico: esito e Elo dopo ogni partita.
+type PlayerHistory = {
+  results: boolean[];
+  ratings: number[];
+  peak: number;
+  low: number;
+  bestWinStreak: number;
+  bestLoseStreak: number;
+};
+
+function playerHistory(profile: Profile, matches: PadelMatch[]): PlayerHistory {
+  const own = [...matches]
+    .filter((match) => match.players.some((player) => player.profile_id === profile.id))
+    .sort((a, b) =>
+      new Date(a.played_at).getTime() - new Date(b.played_at).getTime()
+      || new Date(a.created_at ?? a.played_at).getTime() - new Date(b.created_at ?? b.played_at).getTime()
+      || a.id.localeCompare(b.id),
+    );
+
+  const results = own.map((match) => {
+    const side = match.players.find((player) => player.profile_id === profile.id)?.team;
+    return match.winner_team === side;
+  });
+
+  // L'Elo attuale è il punto di arrivo: si risale all'indietro sottraendo i
+  // delta, così la serie non dipende da nessuno storico salvato.
+  const deltas = own.map(
+    (match) => match.players.find((player) => player.profile_id === profile.id)?.rating_delta ?? 0,
+  );
+  const ratings: number[] = [];
+  let running = profile.rating;
+  for (let index = deltas.length - 1; index >= 0; index -= 1) {
+    ratings.unshift(running);
+    running -= deltas[index];
+  }
+  ratings.unshift(running);
+
+  let bestWinStreak = 0;
+  let bestLoseStreak = 0;
+  let winRun = 0;
+  let loseRun = 0;
+  for (const won of results) {
+    winRun = won ? winRun + 1 : 0;
+    loseRun = won ? 0 : loseRun + 1;
+    bestWinStreak = Math.max(bestWinStreak, winRun);
+    bestLoseStreak = Math.max(bestLoseStreak, loseRun);
+  }
+
+  return {
+    results,
+    ratings,
+    peak: ratings.length ? Math.max(...ratings) : profile.rating,
+    low: ratings.length ? Math.min(...ratings) : profile.rating,
+    bestWinStreak,
+    bestLoseStreak,
+  };
+}
+
+// Scalino inferiore più vicino: 1287 con passo 25 diventa 1275.
+function stepDown(value: number, step: number) {
+  return Math.floor(value / step) * step;
+}
+
+function playerTrophies(profile: Profile, history: PlayerHistory): Badge[] {
+  const badges: Badge[] = [];
+
+  if (history.peak >= 1250) {
+    const step = stepDown(history.peak, 25);
+    badges.push({
+      id: "elo",
+      tone: "gold",
+      glyph: "chart",
+      label: `${step} ELO`,
+      detail: `Massimo toccato: ${history.peak}`,
+    });
+  } else if (history.peak >= 1125) {
+    badges.push({ id: "elo", tone: "plain", glyph: "chart", label: "1125 ELO", detail: `Massimo toccato: ${history.peak}` });
+  }
+
+  if (profile.matches_played >= 20) {
+    const step = stepDown(profile.matches_played, 5);
+    badges.push({ id: "matches", tone: "gold", glyph: "shield", label: `${step} PARTITE`, detail: `${profile.matches_played} giocate` });
+  } else if (profile.matches_played >= 15) {
+    badges.push({ id: "matches", tone: "plain", glyph: "shield", label: "15 PARTITE", detail: `${profile.matches_played} giocate` });
+  } else if (profile.matches_played >= 10) {
+    badges.push({ id: "matches", tone: "plain", glyph: "shield", label: "10 PARTITE", detail: `${profile.matches_played} giocate` });
+  }
+
+  if (profile.wins >= 15) {
+    const step = stepDown(profile.wins, 5);
+    badges.push({ id: "wins", tone: "gold", glyph: "trophy", label: `${step} VITTORIE`, detail: `${profile.wins} vinte in totale` });
+  } else if (profile.wins >= 10) {
+    badges.push({ id: "wins", tone: "gold", glyph: "trophy", label: "10 VITTORIE", detail: `${profile.wins} vinte in totale` });
+  } else if (profile.wins >= 5) {
+    badges.push({ id: "wins", tone: "plain", glyph: "trophy", label: "5 VITTORIE", detail: `${profile.wins} vinte in totale` });
+  }
+
+  if (history.bestWinStreak >= 5) {
+    badges.push({
+      id: "streak",
+      tone: "gold",
+      glyph: "flame",
+      label: `${history.bestWinStreak} DI FILA`,
+      detail: "Serie di vittorie consecutive",
+    });
+  }
+
+  return badges;
+}
+
+// I record guardano tutti gli altri: si vincono, non si raggiungono.
+function playerRecords(
+  profile: Profile,
+  profiles: Profile[],
+  matches: PadelMatch[],
+  history: PlayerHistory,
+): Badge[] {
+  const badges: Badge[] = [];
+  const others = profiles.filter((other) => other.id !== profile.id);
+  const historyOf = new Map(profiles.map((item) => [item.id, playerHistory(item, matches)]));
+  const eligible = (item: Profile) => item.matches_played >= 5;
+
+  const leads = (value: number, pick: (item: Profile) => number, filter = (_: Profile) => true) =>
+    others.filter(filter).every((other) => pick(other) <= value);
+
+  if (history.bestWinStreak > 0 && leads(history.bestWinStreak, (other) => historyOf.get(other.id)?.bestWinStreak ?? 0)) {
+    badges.push({
+      id: "record-streak",
+      tone: "gold",
+      glyph: "flame",
+      label: "SERIE PIÙ LUNGA",
+      detail: `${history.bestWinStreak} vittorie consecutive`,
+    });
+  }
+
+  if (eligible(profile) && profile.wins > 0 && leads(profile.wins, (other) => (eligible(other) ? other.wins : 0))) {
+    badges.push({ id: "record-wins", tone: "gold", glyph: "medal", label: "PIÙ VITTORIE", detail: `${profile.wins} in totale` });
+  }
+
+  if (history.peak >= 1050 && leads(history.peak, (other) => historyOf.get(other.id)?.peak ?? 0)) {
+    badges.push({ id: "record-elo", tone: "gold", glyph: "chart", label: "ELO PIÙ ALTO", detail: `Picco a ${history.peak}` });
+  }
+
+  if (
+    eligible(profile)
+    && history.bestLoseStreak > 0
+    && leads(history.bestLoseStreak, (other) => (eligible(other) ? historyOf.get(other.id)?.bestLoseStreak ?? 0 : 0))
+  ) {
+    badges.push({
+      id: "record-lose-streak",
+      tone: "red",
+      glyph: "down",
+      label: "PEGGIOR SERIE",
+      detail: `${history.bestLoseStreak} sconfitte consecutive`,
+    });
+  }
+
+  if (eligible(profile) && profile.losses > 0 && leads(profile.losses, (other) => (eligible(other) ? other.losses : 0))) {
+    badges.push({ id: "record-losses", tone: "red", glyph: "down", label: "PIÙ SCONFITTE", detail: `${profile.losses} in totale` });
+  }
+
+  // Qui vince chi sta più in basso, quindi il confronto si rovescia.
+  const lowestOthers = others
+    .map((other) => historyOf.get(other.id)?.low ?? Number.POSITIVE_INFINITY)
+    .filter((value) => Number.isFinite(value));
+  if (history.low <= 999 && lowestOthers.every((value) => value >= history.low)) {
+    badges.push({ id: "record-low", tone: "red", glyph: "down", label: "ELO PIÙ BASSO", detail: `Minimo a ${history.low}` });
+  }
+
+  return badges;
+}
+
+function BadgeGlyphIcon({ name }: { name: BadgeGlyph }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {name === "trophy" ? (
+        <>
+          <path d="M7.4 3.8h9.2v5.1a4.6 4.6 0 0 1-9.2 0z" />
+          <path d="M7.4 5.4H4.9v1.4a3.1 3.1 0 0 0 2.9 3.1M16.6 5.4h2.5v1.4a3.1 3.1 0 0 1-2.9 3.1" />
+          <path d="M12 13.5v3.2M8.6 20.2h6.8l-.7-3.5H9.3z" />
+        </>
+      ) : null}
+      {name === "medal" ? (
+        <>
+          <circle cx="12" cy="14.6" r="5.6" />
+          <path d="m8.6 9.4-2.5-6h11.8l-2.5 6" />
+          <path d="m12 11.9 1.05 2.13 2.35.34-1.7 1.66.4 2.34L12 17.3l-2.1 1.07.4-2.34-1.7-1.66 2.35-.34z" />
+        </>
+      ) : null}
+      {name === "flame" ? (
+        <path d="M12 2.9c3.4 3 5.1 5.5 5.1 7.6 0 1.2-.5 2.2-1.4 2.9.3-1.7-.4-3.2-2-4.6.2 3-1 4.5-2.4 5.7-1 .9-1.6 1.8-1.6 3 0 .6.2 1.2.5 1.7-2.1-.9-3.5-2.9-3.5-5.4 0-2.1 1-3.9 2.4-5.5-.1 1.2.2 2.1.9 2.7.5-3.6 1.4-6.2 2-8.1Z" />
+      ) : null}
+      {name === "chart" ? (
+        <>
+          <path d="M3.4 20.3h17.2" />
+          <path d="m4.6 15.6 4.5-4.6 3.5 3.3 6.6-7" />
+          <path d="M15.4 7.3h3.8v3.8" />
+        </>
+      ) : null}
+      {name === "shield" ? (
+        <path d="M12 3.1 4.9 5.9v5.6c0 4.1 2.9 7.6 7.1 9 4.2-1.4 7.1-4.9 7.1-9V5.9z" />
+      ) : null}
+      {name === "down" ? (
+        <>
+          <path d="M3.4 4.2h17.2" />
+          <path d="m4.6 8.6 4.5 4.6 3.5-3.3 6.6 7" />
+          <path d="M15.4 16.9h3.8v-3.8" />
+        </>
+      ) : null}
+    </svg>
+  );
+}
+
+function BadgeList({ badges }: { badges: Badge[] }) {
+  return (
+    <div className="badge-grid">
+      {badges.map((badge) => (
+        <article className={`badge badge-${badge.tone}`} key={badge.id} title={badge.detail}>
+          <span className="badge-icon"><BadgeGlyphIcon name={badge.glyph} /></span>
+          <div className="badge-text">
+            <b>{badge.label}</b>
+            <span>{badge.detail}</span>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
 // Secondi ⇄ mm:ss. Chi segna uno spezzone legge il tempo sul player di
 // YouTube, non conta i secondi dall'inizio.
 function formatClock(totalSeconds: number) {
@@ -1674,6 +1934,15 @@ function AppShell({ session }: { session: Session | null }) {
   const selectedPlayerPlays = selectedPlayer
     ? plays.filter((play) => play.profile_id === selectedPlayer.id)
     : [];
+  // I record confrontano tutti con tutti: il calcolo va fatto una volta sola.
+  const selectedPlayerBadges = useMemo(() => {
+    if (!selectedPlayer) return [];
+    const history = playerHistory(selectedPlayer, matches);
+    return [
+      ...playerRecords(selectedPlayer, profiles, matches, history),
+      ...playerTrophies(selectedPlayer, history),
+    ];
+  }, [selectedPlayer, profiles, matches]);
   // Con i parimerito il giocatore da raggiungere è il primo con punteggio più
   // alto, non semplicemente quello nella riga precedente.
   const nextRankedPlayer = currentUser
@@ -2111,10 +2380,15 @@ function AppShell({ session }: { session: Session | null }) {
             <section className="player-trophies">
               <div className="player-history-head">
                 <div><p className="eyebrow dark">BACHECA</p><h2>Trofei e record</h2></div>
+                <span>{selectedPlayerBadges.length} {selectedPlayerBadges.length === 1 ? "titolo" : "titoli"}</span>
               </div>
-              <div className="player-trophies-empty">
-                <p>Qui finiranno titoli di stagione, serie record e primati del giocatore.</p>
-              </div>
+              {selectedPlayerBadges.length ? (
+                <BadgeList badges={selectedPlayerBadges} />
+              ) : (
+                <div className="player-trophies-empty">
+                  <p>Ancora nessun titolo: i primi arrivano a 5 vittorie, 10 partite o 1125 di Elo.</p>
+                </div>
+              )}
             </section>
 
             <EloChart profile={selectedPlayer} matches={matches} isSelf={isOwnCard} />
