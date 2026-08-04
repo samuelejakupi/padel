@@ -2330,7 +2330,12 @@ function AppShell({ session }: { session: Session | null }) {
                 <div className="section-head">
                   <div className="section-head-label"><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
                   <div className="court-actions">
-                    <button className="button button-primary" onClick={() => setShowMatch(true)}>＋ Match</button>
+                    <button className="button button-primary cta-new-match" onClick={() => setShowMatch(true)}>
+                      <svg className="cta-plus" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 4.5v15M4.5 12h15" />
+                      </svg>
+                      Match
+                    </button>
                     <button className="button button-dark cta-see-all-top" onClick={() => setPadelView("matches")}>Vedi tutte</button>
                   </div>
                 </div>
@@ -2644,7 +2649,12 @@ function AppShell({ session }: { session: Session | null }) {
               <BlockMark size="lg" />
               <div className="section-hero-head">
                 <div><p className="eyebrow">ARCHIVIO THEBOYZ PADEL</p><h1>Tutte le partite</h1><p>{matches.length} risultati registrati dal gruppo.</p></div>
-                <button className="button button-primary" onClick={() => setShowMatch(true)}>＋ Match</button>
+                <button className="button button-primary cta-new-match" onClick={() => setShowMatch(true)}>
+                      <svg className="cta-plus" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 4.5v15M4.5 12h15" />
+                      </svg>
+                      Match
+                    </button>
               </div>
             </article>
             {matches.length ? (

@@ -126,6 +126,22 @@ button {
   width: 100%;
 }
 
+/* Il "+" e disegnato invece che scritto: il carattere tipografico e sottile
+   e non si puo ingrossare senza cambiare font. */
+.cta-plus {
+  fill: none;
+  flex: 0 0 auto;
+  height: 17px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 3.2;
+  width: 17px;
+}
+
+.cta-new-match {
+  gap: 9px;
+}
+
 .avatar {
   align-items: center;
   background: linear-gradient(145deg, #d8e7ff, #8eb2ee);
@@ -3640,6 +3656,33 @@ button.pizza-ranking-row {
     right: -70px;
     top: -80px;
     width: 360px;
+  }
+
+  /* Stessi angoli morbidi delle card anche sui tasti. */
+  .button {
+    border-radius: 18px;
+  }
+
+  /* Il tasto principale e grande quanto una card: la scritta e l'icona
+     seguono a ruota, altrimenti sembravano perse in mezzo al vuoto. */
+  .cta-new-match {
+    font-size: 17px;
+    gap: 11px;
+    letter-spacing: 1.2px;
+  }
+
+  .cta-new-match .cta-plus {
+    height: 24px;
+    stroke-width: 3.4;
+    width: 24px;
+  }
+
+  /* Sotto i 16px iOS ingrandisce da solo la pagina quando si tocca un
+     campo, e poi non torna indietro: e la vera causa dello zoom. */
+  form input,
+  form select,
+  .teams-form select {
+    font-size: 16px;
   }
 
   /* Angoli piu morbidi su tutte le superfici a card: restano comunque

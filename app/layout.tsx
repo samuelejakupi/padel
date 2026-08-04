@@ -9,6 +9,12 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 // bianco di sistema.
 export const viewport: Viewport = {
   themeColor: "#0b1b2c",
+  // Niente zoom accidentale su mobile: il sito e gia dimensionato per il
+  // telefono e il doppio tap o la pinch finivano solo per sballare il layout.
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export const metadata: Metadata = {
