@@ -2995,14 +2995,12 @@ button.pizza-ranking-row {
   margin-bottom: 22px;
 }
 
-.avatar-picker-upload {
-  cursor: pointer;
-  display: flex;
-  width: 100%;
+.avatar-picker-file {
+  display: none;
 }
 
-.avatar-picker-upload input {
-  display: none;
+.avatar-picker-upload {
+  width: 100%;
 }
 
 .avatar-picker-divider {

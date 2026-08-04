@@ -1513,6 +1513,7 @@ function AppShell({ session }: { session: Session | null }) {
   const [editingMatch, setEditingMatch] = useState<PadelMatch | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const avatarFileRef = useRef<HTMLInputElement>(null);
   const [rankingMode, setRankingMode] = useState<"single" | "team">("single");
   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
@@ -2420,24 +2421,35 @@ function AppShell({ session }: { session: Session | null }) {
               <button className="icon-button" onClick={() => setShowAvatarPicker(false)} aria-label="Chiudi">×</button>
             </div>
 
-            <div className="avatar-picker">
+            <form
+              className="avatar-picker"
+              onSubmit={(event) => { event.preventDefault(); void saveAvatarUrl(); }}
+            >
               <div className="avatar-picker-preview">
                 <Avatar profile={currentUser} size="lg" />
               </div>
 
-              <label className="button button-dark avatar-picker-upload">
+              {/* Il selettore file resta nascosto: dentro un form una <label>
+                  eredita gli stili dei campi e il tasto si sformerebbe. */}
+              <input
+                className="avatar-picker-file"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                ref={avatarFileRef}
+                onChange={(e) => { void uploadAvatar(e.target.files?.[0]); setShowAvatarPicker(false); }}
+              />
+              <button
+                type="button"
+                className="button button-dark avatar-picker-upload"
+                onClick={() => avatarFileRef.current?.click()}
+              >
                 Carica dal dispositivo
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  onChange={(e) => { void uploadAvatar(e.target.files?.[0]); setShowAvatarPicker(false); }}
-                />
-              </label>
+              </button>
 
               <p className="avatar-picker-divider"><span>oppure</span></p>
 
               <label>
-                Indirizzo di un'immagine sul web <span className="optional-label">anche GIF animate</span>
+                Indirizzo di un&apos;immagine sul web <span className="optional-label">anche GIF animate</span>
                 <input
                   value={avatarUrl}
                   onChange={(e) => setAvatarUrl(e.target.value)}
@@ -2461,9 +2473,9 @@ function AppShell({ session }: { session: Session | null }) {
                   </button>
                 ) : null}
                 <button type="button" className="button button-ghost" onClick={() => setShowAvatarPicker(false)}>Annulla</button>
-                <button type="button" className="button button-primary" onClick={() => void saveAvatarUrl()}>Usa questo indirizzo</button>
+                <button className="button button-primary">Usa questo indirizzo</button>
               </div>
-            </div>
+            </form>
           </section>
         </div>
       ) : null}
