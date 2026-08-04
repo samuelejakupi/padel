@@ -832,11 +832,16 @@ function MatchCard({
   onEdit,
   onPlayVideo,
   viewerId,
+  actionLabel,
 }: {
   match: PadelMatch;
   onEdit?: (match: PadelMatch) => void;
   onPlayVideo?: (videoId: string) => void;
   viewerId?: string;
+  // Cosa succede toccando la card: non sempre e "modifica", quindi chi la
+  // usa puo dirlo, altrimenti chi naviga con lo screen reader sentirebbe
+  // annunciata un'azione che non avviene.
+  actionLabel?: string;
 }) {
   // Chi guarda vede sempre la propria squadra a sinistra, a prescindere da
   // come è stata registrata la partita.
@@ -878,7 +883,9 @@ function MatchCard({
       } : undefined}
       role={onEdit ? "button" : undefined}
       tabIndex={onEdit ? 0 : undefined}
-      aria-label={onEdit ? `Modifica la partita del ${new Intl.DateTimeFormat("it-IT").format(new Date(match.played_at))}` : undefined}
+      aria-label={onEdit
+        ? actionLabel ?? `Modifica la partita del ${new Intl.DateTimeFormat("it-IT").format(new Date(match.played_at))}`
+        : undefined}
     >
       {/* Su desktop .match-head e display: contents, quindi .match-date resta
           una cella della card come prima; su mobile diventa una riga vera che
@@ -2499,11 +2506,17 @@ function AppShell({ session }: { session: Session | null }) {
                   // finisce sopra: vedi .fade-stack in globals.css.
                   <div className="fade-stack">
                     <div className="match-list fade-stack-body">
-                      {matches.slice(0, 2).map((match) => (
+                      {matches.slice(0, 2).map((match, index) => (
                         <MatchCard
                           key={match.id}
                           match={match}
-                          onEdit={(selected) => setEditingMatch(selected)}
+                          // Solo la prima card apre la modifica. La seconda e
+                          // mezza coperta dalla sfumatura e dal tasto: toccarla
+                          // porta all'elenco completo, dove si vede per intero.
+                          onEdit={index === 0
+                            ? (selected) => setEditingMatch(selected)
+                            : () => setPadelView("matches")}
+                          actionLabel={index === 0 ? undefined : "Vedi tutte le partite"}
                           onPlayVideo={(id) => setPlayingVideo(id)}
                       viewerId={session?.user.id}
                         />

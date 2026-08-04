@@ -3509,6 +3509,13 @@ button.pizza-ranking-row {
 }
 
 @media (max-width: 780px) {
+  /* Altezza di una card partita. Sta qui e non dentro .match-card perche
+     la usano anche il tasto "+ New Match" e la sfumatura della lista, che
+     non sono suoi discendenti. */
+  :root {
+    --match-card-h: 104px;
+  }
+
   body {
     overflow-x: hidden;
     padding-bottom: calc(88px + env(safe-area-inset-bottom));
@@ -3904,9 +3911,7 @@ button.pizza-ranking-row {
 
   .court-actions .button {
     flex: 1;
-    /* Stessa altezza di una card partita: il valore vive li, qui viene
-       solo ripetuto perche le due regole non condividono un antenato. */
-    min-height: 104px;
+    min-height: var(--match-card-h);
   }
 
   /* Su mobile via l'etichetta e il tasto "Vedi tutte" in alto: resta solo
@@ -3936,19 +3941,24 @@ button.pizza-ranking-row {
   }
 
   .fade-stack-body {
-    mask-image: linear-gradient(
+    --fade-mask: linear-gradient(
       180deg,
       #000 0%,
       #000 58%,
       rgba(0, 0, 0, 0.25) 84%,
       rgba(0, 0, 0, 0) 100%
     );
-    -webkit-mask-image: linear-gradient(
-      180deg,
-      #000 0%,
-      #000 58%,
-      rgba(0, 0, 0, 0.25) 84%,
-      rgba(0, 0, 0, 0) 100%
+    mask-image: var(--fade-mask);
+    -webkit-mask-image: var(--fade-mask);
+  }
+
+  /* Sulle partite la dissolvenza copre esattamente l'ultima card: piena in
+     alto dove comincia, trasparente sul suo bordo inferiore. */
+  .match-list.fade-stack-body {
+    --fade-mask: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0) 0,
+      #000 var(--match-card-h)
     );
   }
 
@@ -3963,10 +3973,10 @@ button.pizza-ranking-row {
     width: 100%;
   }
 
-  /* Spazio in fondo alla lista: e la fascia che sfuma e su cui poggia il
-     tasto, senza coprire la partita sopra. */
+  /* Nessuno spazio in coda: il fondo della lista coincide con il fondo
+     dell'ultima card, e il tasto, ancorato a bottom: 0, ci si allinea. */
   .fade-stack .match-list {
-    padding-bottom: 34px;
+    padding-bottom: 0;
   }
 
   /* Nel ranking restano i primi quattro: il quinto e i successivi sono
@@ -4055,7 +4065,6 @@ button.pizza-ranking-row {
      --match-card-h e condivisa col tasto "+ Match", che deve risultare
      alto quanto una card. */
   .match-card {
-    --match-card-h: 104px;
     align-items: center;
     gap: 10px;
     grid-template-columns: minmax(0, 1fr) auto;
