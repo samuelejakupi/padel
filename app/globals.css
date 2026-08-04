@@ -3755,19 +3755,72 @@ button.pizza-ranking-row {
     font-size: 16px;
   }
 
-  /* Angoli piu morbidi su tutte le superfici a card: restano comunque
-     meno arrotondate della barra del menu (28px), che deve rimanere
-     l'elemento piu tondo della schermata. */
+  /* Angoli: una scala sola per tutto il sito, invece dei sette valori
+     diversi che si erano accumulati (4, 5, 6, 7, 8, 9, 10px).
+       superfici  18px  riquadri, card, pannelli, modali
+       controlli  12px  campi, tasti a segmento, anteprime
+       pastiglie   8px  punteggi, etichette, gettoni
+     Restano tutte meno tonde della barra del menu (34px), che deve
+     rimanere l'elemento piu arrotondato della schermata. */
   .match-card,
   .hero-stat,
   .dashboard-side,
   .hub-card,
+  .hub-profile,
   .podium-card,
   .podium-1,
   .section-hero,
   .compact-empty,
-  .play-card {
+  .play-card,
+  .empty-board,
+  .badge,
+  .ranking-table,
+  .player-detail-hero,
+  .player-rating-card,
+  .player-kpis article,
+  .player-teams-list,
+  .player-teams .demo-profile-note,
+  .player-trophies-empty,
+  .elo-panel,
+  .video-frame,
+  .profile-card,
+  .settings-card,
+  .login-card,
+  .setup-page section,
+  .teams-form fieldset,
+  .sets-form,
+  .pizza-page,
+  .pizza-board,
+  .pizza-method,
+  .pizza-podium-card,
+  .pizza-criterion {
     border-radius: 18px;
+  }
+
+  form input,
+  form select,
+  .teams-form select,
+  .form-message,
+  .notice,
+  .season-menu,
+  .ranking-switch,
+  .match-video-preview,
+  .match-video-empty {
+    border-radius: 12px;
+  }
+
+  .match-score > span,
+  .streak,
+  .player-traits span,
+  .player-history-head > span,
+  .play-card-preview em,
+  .pizza-total-score,
+  .pizza-category-score,
+  .season-menu button,
+  .ranking-switch button,
+  .setup-page code,
+  .brand-logo {
+    border-radius: 8px;
   }
 
   /* Barra in vetro staccata dai bordi, come le tab bar di iOS.
@@ -4104,6 +4157,29 @@ button.pizza-ranking-row {
 
   .dashboard-side .ranking-list {
     margin-bottom: 4px;
+  }
+
+  /* Nella classifica in home l'avatar cresce un po' e la sua colonna cresce
+     con lui, altrimenti lo taglierebbe. Numero e avatar sono allineati alla
+     stessa altezza: il numero e testo, quindi la sua riga di base non
+     coincide da sola col centro del cerchio accanto. */
+  .dashboard-side .ranking-list .ranking-row {
+    align-items: center;
+    grid-template-columns: 30px 44px minmax(0, 1fr) 20px 44px;
+  }
+
+  .dashboard-side .ranking-list .rank-number {
+    align-self: center;
+    display: flex;
+    align-items: center;
+    height: 44px;
+    line-height: 1;
+  }
+
+  .dashboard-side .ranking-list .avatar-sm {
+    align-self: center;
+    height: 44px;
+    width: 44px;
   }
 
   .dashboard-grid {
@@ -4826,8 +4902,10 @@ button.pizza-ranking-row {
     padding: 0;
   }
 
+  /* Foglio che sale dal basso: arrotondato solo in alto, con lo stesso
+     raggio delle superfici. */
   .modal {
-    border-radius: 12px 12px 0 0;
+    border-radius: 18px 18px 0 0;
     max-height: 92dvh;
     padding-bottom: calc(22px + env(safe-area-inset-bottom));
   }
