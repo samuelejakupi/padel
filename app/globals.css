@@ -125,8 +125,14 @@ button {
   color: var(--white);
 }
 
+/* Azione secondaria: leggibile ma senza gridare come il pieno scuro. */
 .button-ghost {
   background: #edf0ec;
+  color: var(--ink);
+}
+
+.button-ghost:hover {
+  background: #e3e8e2;
 }
 
 .button-full {
@@ -1328,14 +1334,19 @@ form select:focus,
 button.ranking-row-link {
   background: transparent;
   border-left: 0;
+  border-radius: 10px;
   border-right: 0;
   border-top: 0;
   color: inherit;
   cursor: pointer;
-  padding: 0;
+  /* Il riquadro dell'hover deve respirare oltre il testo: senza questi
+     10px si fermava esattamente sui caratteri ai due lati. Il margine
+     negativo li riassorbe, cosi le colonne restano dove erano. */
+  margin-inline: -10px;
+  padding: 0 10px;
   text-align: left;
-  transition: background 160ms ease, padding 160ms ease;
-  width: 100%;
+  transition: background 160ms ease;
+  width: calc(100% + 20px);
 }
 
 button.ranking-row-link:hover {
@@ -1343,7 +1354,6 @@ button.ranking-row-link:hover {
 }
 
 button.ranking-row-link:focus-visible {
-  border-radius: 5px;
   outline: 3px solid rgba(24, 223, 228, 0.35);
   outline-offset: 2px;
 }
@@ -4005,9 +4015,18 @@ button.pizza-ranking-row {
     margin-top: 10px;
   }
 
-  /* Nel ranking bastano i primi quattro: per gli altri c'e "Vedi ranking". */
+  /* Nel ranking bastano i primi quattro: per gli altri c'e "Vedi tutto". */
   .dashboard-side .ranking-list .ranking-row:nth-child(n + 5) {
     display: none;
+  }
+
+  /* Le righe nascoste contano ancora come :last-child, quindi la linea di
+     separazione restava sulla quarta e andava a sbattere contro il tasto.
+     Servono entrambi i casi: quarta riga, oppure ultima quando i giocatori
+     in classifica sono meno di quattro. */
+  .dashboard-side .ranking-list .ranking-row:nth-child(4),
+  .dashboard-side .ranking-list .ranking-row:last-child {
+    border-bottom: 0;
   }
 
   .fade-stack .ranking-list {
