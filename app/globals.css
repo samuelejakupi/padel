@@ -4237,12 +4237,19 @@ button.pizza-ranking-row {
   }
 
   .hero-player .avatar-xl {
-    height: 86px;
-    width: 86px;
+    height: 112px;
+    width: 112px;
   }
 
   .hero-position-row {
     gap: 16px;
+  }
+
+  /* L'avatar cresce oltre l'altezza della riga sconfinando in alto e in
+     basso della stessa misura: essendo la riga centrata, il suo asse resta
+     incolonnato con quello del numero e il blocco non si allunga. */
+  .hero-position-row .hero-player {
+    margin-block: -20px;
   }
 
   .orbit-one {
@@ -4734,14 +4741,17 @@ button.pizza-ranking-row {
     letter-spacing: -5px;
   }
 
-  /* Numero a 62px, avatar a 68px: appena piu alto, per compensazione. */
   .hero-player .avatar-xl {
-    height: 68px;
-    width: 68px;
+    height: 100px;
+    width: 100px;
   }
 
   .hero-position-row {
     gap: 12px;
+  }
+
+  .hero-position-row .hero-player {
+    margin-block: -22px;
   }
 
   .rank-badge-award {
