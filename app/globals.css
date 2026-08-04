@@ -647,34 +647,62 @@ form select:focus,
   z-index: 2;
 }
 
-/* Il logo passa in secondo piano: piccolo e in alto, sopra la foto. */
+/* Il logo affianca gli avatar dei membri, in fondo alla colonna di sinistra. */
 .hub-mark {
-  height: 68px;
-  margin-bottom: 22px;
+  flex: 0 0 auto;
+  height: 46px;
   object-fit: contain;
-  position: relative;
-  width: 68px;
-  z-index: 2;
+  width: 46px;
+}
+
+/* Scheda profilo in basso a destra: dati a sinistra, foto a destra. */
+.hub-logo-stage {
+  align-items: flex-end;
+  justify-content: flex-end;
 }
 
 .hub-profile {
+  align-items: center;
   background: transparent;
   border: 0;
-  border-radius: 50%;
   cursor: pointer;
+  display: flex;
+  gap: 20px;
   padding: 0;
   position: relative;
+  text-align: right;
   transition: transform 180ms ease;
   z-index: 2;
 }
 
 .hub-profile:hover {
-  transform: scale(1.04);
+  transform: translateY(-3px);
+}
+
+.hub-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.hub-profile-info b {
+  color: var(--white);
+  font-size: 24px;
+  letter-spacing: -0.8px;
+}
+
+.hub-profile-info span {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 .hub-profile .avatar-xl {
   border: 6px solid rgba(255, 255, 255, 0.16);
   box-shadow: 0 22px 60px rgba(0, 0, 0, 0.4);
+  flex: 0 0 auto;
 }
 
 .logo-glow {
@@ -717,8 +745,8 @@ form select:focus,
   grid-template-columns: 1fr 1fr;
 }
 
-/* Card ridotte all'essenziale: icona nel cerchio e titolo su due righe,
-   entrambi centrati. */
+/* Card ridotte all'essenziale: cerchio con l'icona a sinistra, titolo su due
+   righe a destra. */
 .hub-card {
   align-items: center;
   background: var(--white);
@@ -727,22 +755,22 @@ form select:focus,
   color: var(--ink);
   cursor: pointer;
   display: flex;
-  flex-direction: column;
-  gap: 24px;
+  gap: 28px;
   justify-content: center;
   min-height: 275px;
   overflow: hidden;
   padding: 40px 32px;
   position: relative;
-  text-align: center;
+  text-align: left;
   transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
 .hub-card h3 {
-  font-size: 40px;
+  font-size: 52px;
   font-style: italic;
-  letter-spacing: -2.2px;
-  line-height: 0.92;
+  font-weight: 1000;
+  letter-spacing: -2.8px;
+  line-height: 0.9;
   margin: 0;
   position: relative;
   text-transform: uppercase;
@@ -786,18 +814,18 @@ form select:focus,
   display: flex;
   flex: 0 0 auto;
   font-size: 32px;
-  height: 96px;
+  height: 132px;
   justify-content: center;
   position: relative;
-  width: 96px;
+  width: 132px;
   z-index: 2;
 }
 
 .hub-card-icon img {
-  height: 34px;
-  object-fit: contain;
-  width: 34px;
+  height: 78px;
   mix-blend-mode: multiply;
+  object-fit: contain;
+  width: 78px;
 }
 
 /* Sul podio l'avatar è da 84px: il badge va rimpicciolito di conseguenza. */
@@ -821,55 +849,9 @@ form select:focus,
   mix-blend-mode: multiply;
 }
 
-.icon-credit {
-  color: var(--muted);
-  font-size: 9px;
-  letter-spacing: 0.8px;
-  text-decoration: none;
-  text-transform: uppercase;
-}
-
-.icon-credit:hover {
-  text-decoration: underline;
-}
-
 .pizza-icon {
   background: var(--lime);
   color: var(--ink);
-}
-
-.hub-status {
-  align-items: center;
-  border-top: 1px solid var(--line);
-  display: grid;
-  gap: 12px;
-  grid-template-columns: auto 1fr auto auto;
-  padding: 18px 4px 0;
-}
-
-.status-pulse {
-  background: #37b878;
-  border-radius: 50%;
-  box-shadow: 0 0 0 5px rgba(55, 184, 120, 0.12);
-  height: 7px;
-  width: 7px;
-}
-
-.hub-status p {
-  color: var(--muted);
-  font-size: 10px;
-  margin: 0;
-}
-
-.hub-status p b {
-  color: var(--ink);
-}
-
-.hub-status > span:last-child {
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 1px;
 }
 
 .section-context {
@@ -3087,15 +3069,22 @@ button.pizza-ranking-row {
   }
 
   .hub-mark {
-    height: 52px;
-    margin-bottom: 16px;
-    width: 52px;
+    height: 38px;
+    width: 38px;
+  }
+
+  .hub-logo-stage {
+    justify-content: flex-start;
   }
 
   .hub-profile .avatar-xl {
     border-width: 5px;
-    height: 120px;
-    width: 120px;
+    height: 110px;
+    width: 110px;
+  }
+
+  .hub-profile-info b {
+    font-size: 20px;
   }
 
   .hub-section-title h2 {
@@ -3113,20 +3102,17 @@ button.pizza-ranking-row {
   }
 
   .hub-card-icon {
-    height: 76px;
-    width: 76px;
+    height: 96px;
+    width: 96px;
+  }
+
+  .hub-card-icon img {
+    height: 58px;
+    width: 58px;
   }
 
   .hub-card h3 {
-    font-size: 34px;
-  }
-
-  .hub-status {
-    grid-template-columns: auto 1fr;
-  }
-
-  .hub-status > span:last-child , .icon-credit {
-    display: none;
+    font-size: 38px;
   }
 
   .section-context {

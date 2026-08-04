@@ -1361,6 +1361,8 @@ function AppShell({ session }: { session: Session | null }) {
                 <h1>Le nostre cose.<br /><span>Un posto solo.</span></h1>
                 <p>Classifiche serissime, discussioni inutili e nuove idee. Questo è il nostro spazio.</p>
                 <div className="hub-members">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img className="hub-mark" src={`${basePath}/theBOYZ.png`} alt="TheBoyz" />
                   <div className="mini-avatars">
                     {sorted.slice(0, 5).map((profile) => <Avatar key={profile.id} profile={profile} size="sm" />)}
                   </div>
@@ -1369,13 +1371,16 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
               <div className="hub-logo-stage">
                 <span className="logo-glow" />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img className="hub-mark" src={`${basePath}/theBOYZ.png`} alt="Simbolo TheBoyz" />
                 <button
                   className="hub-profile"
                   onClick={() => setView("profile")}
                   aria-label="Vai al tuo profilo"
                 >
+                  <span className="hub-profile-info">
+                    <b>{currentUser.display_name}</b>
+                    <span>{currentRank ? `#${currentRank} in classifica` : "Non classificato"}</span>
+                    <span>{currentUser.rating} pt · {currentUser.wins}/{currentUser.matches_played} vinte</span>
+                  </span>
                   <Avatar profile={currentUser} size="xl" rank={currentRank || undefined} />
                 </button>
               </div>
@@ -1386,7 +1391,6 @@ function AppShell({ session }: { session: Session | null }) {
                 <p className="eyebrow dark">I NOSTRI SPAZI</p>
                 <h2>Cosa facciamo qui</h2>
               </div>
-              <span>02 SEZIONI</span>
             </div>
 
             <div className="hub-cards">
@@ -1403,12 +1407,6 @@ function AppShell({ session }: { session: Session | null }) {
               </button>
             </div>
 
-            <div className="hub-status">
-              <span className="status-pulse" />
-              <p><b>TheBoyz è online.</b> La prossima sezione la decidiamo noi.</p>
-              <span>TB / 2026</span>
-              <a className="icon-credit" href="https://www.flaticon.com" target="_blank" rel="noopener noreferrer">Icone animate by Flaticon</a>
-            </div>
           </section>
         ) : null}
 
