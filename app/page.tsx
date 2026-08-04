@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import type { Session } from "@supabase/supabase-js";
 import {
   hasSupabaseConfig,
+  type MatchEvent,
   type PadelMatch,
   type PadelSet,
   type Profile,
@@ -917,6 +918,16 @@ function EloChart({ profile, matches }: { profile: Profile; matches: PadelMatch[
   );
 }
 
+// Riassunto leggibile del risultato: è ciò che finisce nello storico, così
+// una riga vecchia resta comprensibile anche se poi cambiano nomi e squadre.
+function matchSummary(profiles: Profile[], playerIds: string[], sets: PadelSet[]) {
+  const name = (id: string) => profiles.find((profile) => profile.id === id)?.display_name ?? "?";
+  const team1 = playerIds.slice(0, 2).map(name).join(" · ");
+  const team2 = playerIds.slice(2, 4).map(name).join(" · ");
+  const score = sets.map((set) => `${set.team1_games}-${set.team2_games}`).join(" ");
+  return `${team1} vs ${team2} · ${score}`;
+}
+
 function NewMatchModal({
   profiles,
   match,
@@ -926,7 +937,7 @@ function NewMatchModal({
   profiles: Profile[];
   match?: PadelMatch | null;
   onClose: () => void;
-  onSaved: (action?: "deleted") => void;
+  onSaved: () => void;
 }) {
   const editing = Boolean(match);
   const initialPlayers = match
@@ -949,30 +960,42 @@ function NewMatchModal({
   );
   const [notes, setNotes] = useState(match?.notes ?? "");
   const [videoUrl, setVideoUrl] = useState(match?.video_url ?? "");
+  const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [events, setEvents] = useState<MatchEvent[]>([]);
+  const [historyReady, setHistoryReady] = useState(true);
 
-  async function removeMatch() {
-    if (!match) return;
-    if (!confirmDelete) {
-      setConfirmDelete(true);
-      return;
-    }
-    if (!supabase) return;
-    setDeleting(true);
-    setError("");
-    const { error: rpcError } = await supabase.rpc("delete_match", { p_match_id: match.id });
-    if (rpcError) {
-      setError(rpcError.message);
-      setDeleting(false);
-      setConfirmDelete(false);
-      return;
-    }
-    onSaved("deleted");
-    setDeleting(false);
-  }
+  // Lo storico si appende alla discendenza, non all'id: una partita modificata
+  // cambia id ogni volta (vedi migration-storico-partite.sql).
+  useEffect(() => {
+    if (!match || !supabase) return;
+    let alive = true;
+    void (async () => {
+      const { data: row, error: lineageError } = await supabase
+        .from("matches")
+        .select("lineage_id")
+        .eq("id", match.id)
+        .maybeSingle();
+      if (lineageError) {
+        if (alive) setHistoryReady(false);
+        return;
+      }
+      const lineage = (row?.lineage_id as string | null) ?? match.id;
+      const { data, error: eventsError } = await supabase
+        .from("match_events")
+        .select("id, lineage_id, kind, author_id, comment, summary, created_at")
+        .eq("lineage_id", lineage)
+        .order("created_at", { ascending: true });
+      if (!alive) return;
+      if (eventsError) {
+        setHistoryReady(false);
+        return;
+      }
+      setEvents((data ?? []) as MatchEvent[]);
+    })();
+    return () => { alive = false; };
+  }, [match]);
 
   function updatePlayer(index: number, id: string) {
     setPlayers((current) => current.map((value, playerIndex) => (playerIndex === index ? id : value)));
@@ -1014,7 +1037,14 @@ function NewMatchModal({
     if (supabase) {
       // Modificare = rimuovere e riregistrare: delete_match e record_match
       // ricalcolano entrambi l'Elo, quindi la classifica resta coerente.
+      let lineage: string | null = null;
       if (match) {
+        const { data: row } = await supabase
+          .from("matches")
+          .select("lineage_id")
+          .eq("id", match.id)
+          .maybeSingle();
+        lineage = (row?.lineage_id as string | null) ?? match.id;
         const { error: deleteError } = await supabase.rpc("delete_match", { p_match_id: match.id });
         if (deleteError) {
           setError(deleteError.message);
@@ -1022,7 +1052,7 @@ function NewMatchModal({
           return;
         }
       }
-      const { error: rpcError } = await supabase.rpc("record_match", {
+      const { data: newId, error: rpcError } = await supabase.rpc("record_match", {
         p_played_at: new Date(`${playedAt}T20:00:00`).toISOString(),
         p_team1: players.slice(0, 2),
         p_team2: players.slice(2, 4),
@@ -1034,6 +1064,24 @@ function NewMatchModal({
         setError(rpcError.message);
         setBusy(false);
         return;
+      }
+
+      // Lo storico è un di più: se la migrazione non è stata eseguita la
+      // partita resta salvata comunque, senza bloccare nulla.
+      const matchId = typeof newId === "string" ? newId : null;
+      if (matchId && historyReady) {
+        if (lineage) {
+          await supabase.rpc("set_match_lineage", { p_match_id: matchId, p_lineage_id: lineage });
+        }
+        const { data: auth } = await supabase.auth.getUser();
+        await supabase.from("match_events").insert({
+          lineage_id: lineage ?? matchId,
+          match_id: matchId,
+          kind: match ? "edited" : "created",
+          author_id: auth.user?.id ?? null,
+          comment: comment.trim() || null,
+          summary: matchSummary(profiles, players, sets),
+        });
       }
     }
     onSaved();
@@ -1095,25 +1143,55 @@ function NewMatchModal({
             Nota facoltativa
             <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Es. Rimonta incredibile al terzo set" />
           </label>
-          {error ? <p className="form-message error">{error}</p> : null}
-          {editing && confirmDelete ? (
-            <p className="form-message error">
-              Eliminando la partita la classifica viene ricalcolata. Premi di nuovo Elimina per confermare.
-            </p>
+          {editing ? (
+            <label>
+              Motivo della correzione <span className="optional-label">facoltativo</span>
+              <input
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Es. Il terzo set era 7-5, non 6-5"
+                maxLength={140}
+              />
+            </label>
           ) : null}
+          {error ? <p className="form-message error">{error}</p> : null}
+
+          {editing ? (
+            <section className="match-history">
+              <h3>Storico del risultato</h3>
+              {!historyReady ? (
+                <p className="demo-profile-note">
+                  Per registrare le correzioni esegui la migrazione
+                  <code>migration-storico-partite.sql</code> in Supabase.
+                </p>
+              ) : events.length ? (
+                <ol className="match-history-list">
+                  {events.map((event) => (
+                    <li key={event.id} className={event.kind === "created" ? "is-first" : ""}>
+                      <div className="match-history-meta">
+                        <b>{event.kind === "created" ? "Registrata" : "Corretta"}</b>
+                        <span>
+                          {new Intl.DateTimeFormat("it-IT", { dateStyle: "short", timeStyle: "short" }).format(new Date(event.created_at))}
+                          {" · "}
+                          {profiles.find((profile) => profile.id === event.author_id)?.display_name ?? "Sconosciuto"}
+                        </span>
+                      </div>
+                      <p className="match-history-score">{event.summary}</p>
+                      {event.comment ? <p className="match-history-comment">{event.comment}</p> : null}
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="demo-profile-note">
+                  Nessuna correzione registrata: lo storico parte dalla prossima modifica.
+                </p>
+              )}
+            </section>
+          ) : null}
+
           <div className="modal-actions">
-            {editing ? (
-              <button
-                type="button"
-                className={`button match-delete-action ${confirmDelete ? "is-confirming" : ""}`}
-                onClick={() => void removeMatch()}
-                disabled={deleting || busy}
-              >
-                {deleting ? "Elimino…" : confirmDelete ? "Confermi?" : "Elimina"}
-              </button>
-            ) : null}
             <button type="button" className="button button-ghost" onClick={onClose}>Annulla</button>
-            <button className="button button-primary" disabled={busy || deleting}>{busy ? "Salvataggio…" : "Salva risultato"}</button>
+            <button className="button button-primary" disabled={busy}>{busy ? "Salvataggio…" : "Salva risultato"}</button>
           </div>
         </form>
       </section>
@@ -1436,16 +1514,14 @@ function AppShell({ session }: { session: Session | null }) {
     );
   }
 
-  async function handleSaved(action?: "deleted") {
+  async function handleSaved() {
     const wasEditing = Boolean(editingMatch);
     setShowMatch(false);
     setEditingMatch(null);
     await loadData();
     setNotice(
-      action === "deleted"
-        ? "Partita eliminata. Classifica e statistiche sono state ricalcolate."
-        : wasEditing
-        ? "Fatto. Classifica e statistiche sono state ricalcolate."
+      wasEditing
+        ? "Correzione salvata. Classifica e statistiche sono state ricalcolate."
         : "Partita salvata. La classifica è stata aggiornata.",
     );
   }

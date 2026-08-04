@@ -43,9 +43,21 @@ export type MatchPlayer = {
   profile: Profile;
 };
 
+export type MatchEvent = {
+  id: string;
+  lineage_id: string;
+  kind: "created" | "edited";
+  author_id: string | null;
+  comment: string | null;
+  summary: string;
+  created_at: string;
+};
+
 export type PadelMatch = {
   id: string;
   played_at: string;
+  // Resta uguale attraverso le modifiche: è la chiave dello storico.
+  lineage_id?: string | null;
   created_at?: string;
   created_by?: string;
   winner_team: 1 | 2;
