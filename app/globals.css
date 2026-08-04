@@ -3641,8 +3641,9 @@ button.pizza-ranking-row {
     padding: 24px 14px 6px;
   }
 
+  /* Stesso passo verticale del resto del sito. */
   .hub-page {
-    gap: 24px;
+    gap: 10px;
   }
 
   .hub-hero {
@@ -4159,21 +4160,29 @@ button.pizza-ranking-row {
     margin-bottom: 4px;
   }
 
-  /* Nella classifica in home l'avatar cresce un po' e la sua colonna cresce
-     con lui, altrimenti lo taglierebbe. Numero e avatar sono allineati alla
-     stessa altezza: il numero e testo, quindi la sua riga di base non
-     coincide da sola col centro del cerchio accanto. */
+  /* Numero e avatar formano una coppia: stessa altezza, incolonnati sulla
+     stessa linea. Il numero e alto 40px e l'avatar 44, cioe un filo di piu:
+     un cerchio a parita di altezza sembra piu piccolo di una cifra, e quei
+     4px servono a pareggiare l'impressione, non a farlo davvero piu grande. */
   .dashboard-side .ranking-list .ranking-row {
     align-items: center;
-    grid-template-columns: 30px 44px minmax(0, 1fr) 20px 44px;
+    gap: 10px;
+    grid-template-columns: 34px 44px minmax(0, 1fr) 20px 44px;
   }
 
   .dashboard-side .ranking-list .rank-number {
-    align-self: center;
-    display: flex;
     align-items: center;
+    display: flex;
+    font-size: 40px;
     height: 44px;
+    letter-spacing: -2px;
     line-height: 1;
+  }
+
+  /* Chi non ha ancora giocato mostra "N/C": a 40px sfonderebbe la colonna. */
+  .dashboard-side .ranking-list .rank-nc {
+    font-size: 12px;
+    letter-spacing: 0;
   }
 
   .dashboard-side .ranking-list .avatar-sm {
@@ -4183,6 +4192,15 @@ button.pizza-ranking-row {
   }
 
   .dashboard-grid {
+    gap: 10px;
+  }
+
+  /* Anche gli elenchi delle altre pagine seguono il passo di 10px, invece
+     dei 12/14/16 sparsi che si erano accumulati. */
+  .plays-grid,
+  .player-kpis,
+  .match-history-list,
+  .podium-1 + .podium-card {
     gap: 10px;
   }
 
@@ -4438,7 +4456,7 @@ button.pizza-ranking-row {
   }
 
   .podium {
-    gap: 8px;
+    gap: 10px;
   }
 
   .podium-card {
