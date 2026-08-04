@@ -1441,7 +1441,7 @@ function AppShell({ session }: { session: Session | null }) {
                 <p className="eyebrow dark">THEBOYZ PADEL CLUB</p>
                 <h1>Ciao, {currentUser.display_name}.<br /><span>Pronto a difendere la posizione?</span></h1>
               </div>
-              <button className="button button-primary add-match" onClick={() => setShowMatch(true)}><span>＋</span> Registra partita</button>
+              <button className="button button-primary add-match" onClick={() => setShowMatch(true)}><span>＋</span> Match</button>
             </section>
 
             <section className="dashboard-grid">
@@ -1510,25 +1510,25 @@ function AppShell({ session }: { session: Session | null }) {
               <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b><nav aria-label="Navigazione sezione padel"><button onClick={() => setPadelView("overview")}>Court</button><button onClick={() => setPadelView("matches")}>Partite</button><button className="active" onClick={() => setPadelView("ranking")}>Classifica</button></nav>
             </div>
             <button className="player-back" type="button" onClick={() => setPadelView("overview")}>← Torna al court</button>
-            <div className="page-title">
-              <div><p className="eyebrow dark">THEBOYZ PADEL · STAGIONE 2026</p><h1>La classifica del gruppo</h1><p>Il ranking si aggiorna automaticamente dopo ogni risultato.</p></div>
-              <div className="ranking-switch" role="group" aria-label="Tipo di classifica">
-                <button
-                  className={rankingMode === "single" ? "active" : ""}
-                  onClick={() => setRankingMode("single")}
-                >
-                  Singolo
-                </button>
-                <button
-                  className={rankingMode === "team" ? "active" : ""}
-                  onClick={() => setRankingMode("team")}
-                >
-                  Squadra
-                </button>
+            <article className="section-hero">
+              <div className="section-hero-head">
+                <div><p className="eyebrow">THEBOYZ PADEL · STAGIONE 2026</p><h1>La classifica del gruppo</h1><p>Il ranking si aggiorna automaticamente dopo ogni risultato.</p></div>
+                <div className="ranking-switch" role="group" aria-label="Tipo di classifica">
+                  <button
+                    className={rankingMode === "single" ? "active" : ""}
+                    onClick={() => setRankingMode("single")}
+                  >
+                    Singolo
+                  </button>
+                  <button
+                    className={rankingMode === "team" ? "active" : ""}
+                    onClick={() => setRankingMode("team")}
+                  >
+                    Squadra
+                  </button>
+                </div>
               </div>
-            </div>
-            {rankingMode === "single" ? (
-              <>
+              {rankingMode === "single" ? (
                 <div className="podium">
                   {rankedProfiles.slice(0, 3).map((profile, index) => (
                     <article key={profile.id} className={`podium-card podium-${index + 1}`}>
@@ -1543,10 +1543,7 @@ function AppShell({ session }: { session: Session | null }) {
                     </article>
                   ))}
                 </div>
-                <RankingList profiles={profiles} expanded onSelect={openPlayer} />
-              </>
-            ) : teams.length ? (
-              <>
+              ) : teams.length ? (
                 <div className="podium">
                   {teams.slice(0, 3).map((team, index) => (
                     <article key={team.id} className={`podium-card podium-${index + 1} podium-shared`}>
@@ -1577,13 +1574,17 @@ function AppShell({ session }: { session: Session | null }) {
                     </article>
                   ))}
                 </div>
-                <TeamRankingList teams={teams} />
-              </>
+              ) : null}
+            </article>
+            {rankingMode === "single" ? (
+              <RankingList profiles={profiles} expanded onSelect={openPlayer} />
+            ) : teams.length ? (
+              <TeamRankingList teams={teams} />
             ) : (
               <div className="empty-board">
                 <span>00</span>
                 <h2>Nessuna squadra in classifica</h2>
-                <p>Le coppie si formano da sole: registra una partita e compariranno qui.</p>
+                <p>Le coppie si formano da sole: registra un match e compariranno qui.</p>
               </div>
             )}
           </section>
@@ -1653,10 +1654,12 @@ function AppShell({ session }: { session: Session | null }) {
               <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b><nav aria-label="Navigazione sezione padel"><button onClick={() => setPadelView("overview")}>Court</button><button className="active" onClick={() => setPadelView("matches")}>Partite</button><button onClick={() => setPadelView("ranking")}>Classifica</button></nav>
             </div>
             <button className="player-back" type="button" onClick={() => setPadelView("overview")}>← Torna al court</button>
-            <div className="page-title">
-              <div><p className="eyebrow dark">ARCHIVIO THEBOYZ PADEL</p><h1>Tutte le partite</h1><p>{matches.length} risultati registrati dal gruppo.</p></div>
-              <button className="button button-primary" onClick={() => setShowMatch(true)}>＋ Registra partita</button>
-            </div>
+            <article className="section-hero">
+              <div className="section-hero-head">
+                <div><p className="eyebrow">ARCHIVIO THEBOYZ PADEL</p><h1>Tutte le partite</h1><p>{matches.length} risultati registrati dal gruppo.</p></div>
+                <button className="button button-primary" onClick={() => setShowMatch(true)}>＋ Match</button>
+              </div>
+            </article>
             {matches.length ? (
               <div className="match-list match-list-full">
                 {matches.map((match) => (
