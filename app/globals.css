@@ -3161,9 +3161,10 @@ button.pizza-ranking-row {
       inset 0 1px 0 rgba(255, 255, 255, 0.85);
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    height: 60px;
+    height: 72px;
     left: 12px;
     overflow: hidden;
+    padding: 0 4px;
     position: fixed;
     right: 12px;
     -webkit-backdrop-filter: blur(26px) saturate(185%);
@@ -3194,15 +3195,26 @@ button.pizza-ranking-row {
     align-items: center;
     background: transparent;
     border: 0;
-    border-radius: 21px;
+    border-radius: 18px;
     color: rgba(11, 27, 44, 0.5);
     display: flex;
-    height: 42px;
+    flex-direction: column;
+    gap: 3px;
+    height: 56px;
     justify-content: center;
-    justify-self: center;
+    justify-self: stretch;
     position: relative;
     transition: color 200ms ease;
-    width: 46px;
+    width: 100%;
+  }
+
+  .mobile-nav-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1px;
+    line-height: 1;
+    position: relative;
+    z-index: 1;
   }
 
   /* Pastiglia di vetro che scivola sotto la voce attiva. */
@@ -3227,10 +3239,6 @@ button.pizza-ranking-row {
 
   .mobile-nav button.active {
     color: var(--ink);
-  }
-
-  .mobile-nav button:active {
-    transform: scale(0.92);
   }
 
   .mobile-nav .mobile-nav-icon {
@@ -3911,6 +3919,19 @@ button.pizza-ranking-row {
 
   .modal-actions .button {
     flex: 1;
+  }
+}
+
+/* Su touch il :hover non esiste davvero: resta "appiccicato" dopo il tocco e
+   l'elemento rimane ingrandito. Lo zoom vale solo dove c'è un puntatore. */
+@media (hover: none) {
+  .button:hover,
+  .hub-profile:hover,
+  .hub-card:hover,
+  .match-card-link:hover,
+  .match-video-preview:hover {
+    box-shadow: none;
+    transform: none;
   }
 }
 

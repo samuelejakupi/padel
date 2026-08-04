@@ -2046,8 +2046,9 @@ function AppShell({ session }: { session: Session | null }) {
       {/* In home la barra non serve: le sezioni si scelgono dalle card. */}
       {view !== "hub" ? (
       <nav className="mobile-nav" aria-label="Navigazione mobile">
-        <button onClick={() => setView("hub")} aria-label="Home">
+        <button onClick={() => setView("hub")}>
           <span className="mobile-nav-icon"><NavGlyph name="home" /></span>
+          <span className="mobile-nav-label">Home</span>
         </button>
         {([
           ["overview", "court", "Court"],
@@ -2058,17 +2059,17 @@ function AppShell({ session }: { session: Session | null }) {
             key={target}
             className={view === "padel" && padelView === target ? "active" : ""}
             onClick={() => { setView("padel"); setPadelView(target); }}
-            aria-label={label}
           >
             <span className="mobile-nav-icon"><NavGlyph name={glyph} /></span>
+            <span className="mobile-nav-label">{label}</span>
           </button>
         ))}
         <button
           className={view === "profile" ? "active" : ""}
           onClick={() => setView("profile")}
-          aria-label="Profilo"
         >
           <span className="mobile-nav-icon"><Avatar profile={currentUser} size="sm" /></span>
+          <span className="mobile-nav-label">Profilo</span>
         </button>
       </nav>
       ) : null}
