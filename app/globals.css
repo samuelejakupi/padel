@@ -3696,47 +3696,25 @@ button.pizza-ranking-row {
     --nav-inset: 7px;
     --nav-item-height: 54px;
     align-items: center;
-    /* Oltre alla sfocatura, un pizzico di luminosita e di saturazione: e
-       quello che fa sembrare il vetro illuminato invece che smerigliato. */
-    backdrop-filter: blur(30px) saturate(210%) brightness(108%) contrast(104%);
-    /* Stesso materiale della pastiglia, in scala piu grande: luce che entra
-       da un angolo, ritorno di luce sull'angolo opposto e fondo volutamente
-       poco coprente, altrimenti la pastiglia sopra non avrebbe niente da
-       rifrangere. Il bordo e trasparente e lascia vedere l'ultimo strato,
-       che occupa anche la cornice: e quello a dare lo spessore del vetro. */
-    background:
-      radial-gradient(
-        130% 190% at 10% -10%,
-        rgba(255, 255, 255, 0.6) 0%,
-        rgba(255, 255, 255, 0.16) 36%,
-        rgba(255, 255, 255, 0) 68%
-      ) padding-box,
-      radial-gradient(
-        110% 170% at 90% 110%,
-        rgba(255, 255, 255, 0.45) 0%,
-        rgba(255, 255, 255, 0.08) 44%,
-        rgba(255, 255, 255, 0) 74%
-      ) padding-box,
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.24) 0%,
-        rgba(255, 255, 255, 0.1) 100%
-      ) padding-box,
-      linear-gradient(
-        150deg,
-        rgba(255, 255, 255, 1) 0%,
-        rgba(255, 255, 255, 0.22) 26%,
-        rgba(255, 255, 255, 0.14) 60%,
-        rgba(255, 255, 255, 0.96) 100%
-      ) border-box;
-    border: 1.5px solid transparent;
+    /* Il materiale di Apple non e lucido: e quasi solo sfocatura, con la
+       saturazione spinta perche i colori che passano da dietro restino
+       vivi. I gradienti bianchi sovrapposti che c'erano prima davano
+       l'effetto plastica; qui resta un velo unico appena accennato. */
+    backdrop-filter: blur(40px) saturate(180%);
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.2) 0%,
+      rgba(255, 255, 255, 0.12) 100%
+    );
+    /* Filo di contorno sottilissimo, non un bordo disegnato. */
+    border: 0.5px solid rgba(255, 255, 255, 0.5);
     border-radius: 34px;
     bottom: calc(11px + env(safe-area-inset-bottom));
     box-shadow:
-      0 18px 40px rgba(11, 27, 44, 0.2),
-      0 4px 12px rgba(11, 27, 44, 0.1),
-      inset 0 0 24px rgba(255, 255, 255, 0.4),
-      inset 0 -9px 18px -11px rgba(11, 27, 44, 0.24);
+      0 0 0 0.5px rgba(11, 27, 44, 0.05),
+      0 10px 30px rgba(11, 27, 44, 0.14),
+      0 2px 6px rgba(11, 27, 44, 0.06),
+      inset 0 0.5px 0 rgba(255, 255, 255, 0.7);
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     left: 11px;
@@ -3744,7 +3722,7 @@ button.pizza-ranking-row {
     padding: var(--nav-inset);
     position: fixed;
     right: 11px;
-    -webkit-backdrop-filter: blur(30px) saturate(210%) brightness(108%) contrast(104%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
     z-index: 50;
   }
 
@@ -3818,7 +3796,7 @@ button.pizza-ranking-row {
   /* Se il browser non sfoca, meglio un fondo pieno che una barra slavata. */
   @supports not (backdrop-filter: blur(1px)) {
     .mobile-nav {
-      background: rgba(255, 255, 255, 0.94) padding-box;
+      background: rgba(255, 255, 255, 0.94);
       border-color: rgba(255, 255, 255, 0.8);
     }
 
