@@ -1877,27 +1877,28 @@ button.ranking-row-link:focus-visible {
   opacity: 1;
 }
 
-/* Nome e Salva sulla stessa riga. */
+/* Tutto su una riga: nome breve, dati, Salva. */
 .team-editor-row {
+  align-items: center;
   display: flex;
-  gap: 10px;
+  gap: 12px;
 }
 
 .team-editor-row input {
-  flex: 1 1 auto;
+  flex: 0 1 220px;
+  margin: 0;
+  min-height: 42px;
   min-width: 0;
 }
 
-.team-editor-fields input {
-  margin: 0;
-  min-height: 42px;
-}
-
-.team-editor-fields small {
+.team-editor-row small {
   color: var(--muted);
-  display: block;
+  flex: 1 1 auto;
   font-size: 10px;
-  margin-top: 5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .team-editor .button {
