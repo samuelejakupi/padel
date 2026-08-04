@@ -2531,7 +2531,7 @@ function AppShell({ session }: { session: Session | null }) {
 
               <aside className="dashboard-side">
                 <div className="side-head">
-                  <div><p className="eyebrow dark">TOP PLAYERS</p><h2>Ranking</h2></div>
+                  <div><h2>Classifica Elo</h2></div>
                   <SeasonPicker
                     value={season}
                     options={[currentYear, ...archivedSeasons.filter((year) => year !== currentYear)]}

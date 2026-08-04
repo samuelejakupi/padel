@@ -4543,10 +4543,6 @@ button.pizza-ranking-row {
     width: calc(100vw - 24px);
   }
 
-  .season {
-    display: none;
-  }
-
   .hub-card h3 {
     font-size: 40px;
     font-weight: 1000;
