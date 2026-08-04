@@ -1429,19 +1429,12 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "overview" ? (
           <>
             <div className="section-context">
-              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b>
-              <nav aria-label="Navigazione sezione padel">
-                <button className="active" onClick={() => setPadelView("overview")}>Court</button>
-                <button onClick={() => setPadelView("matches")}>Partite</button>
-                <button onClick={() => setPadelView("ranking")}>Classifica</button>
-              </nav>
+              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL COURT</b>
             </div>
             <section className="welcome-row">
               <div>
-                <p className="eyebrow dark">THEBOYZ PADEL CLUB</p>
                 <h1>Ciao, {currentUser.display_name}.<br /><span>Pronto a difendere la posizione?</span></h1>
               </div>
-              <button className="button button-primary add-match" onClick={() => setShowMatch(true)}><span>＋</span> Match</button>
             </section>
 
             <section className="dashboard-grid">
@@ -1474,11 +1467,10 @@ function AppShell({ session }: { session: Session | null }) {
 
                 <div className="section-head">
                   <div><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
-                  <button className="text-link" onClick={() => setPadelView("matches")}>Vedi tutte →</button>
                 </div>
                 {matches.length ? (
                   <div className="match-list">
-                    {matches.slice(0, 3).map((match) => (
+                    {matches.slice(0, 2).map((match) => (
                       <MatchCard
                         key={match.id}
                         match={match}
@@ -1490,6 +1482,10 @@ function AppShell({ session }: { session: Session | null }) {
                 ) : (
                   <div className="compact-empty"><span>00</span><p>Nessuna partita registrata. La prima scriverà la storia.</p></div>
                 )}
+                <div className="court-actions">
+                  <button className="button button-dark" onClick={() => setPadelView("matches")}>Vedi tutte</button>
+                  <button className="button button-primary" onClick={() => setShowMatch(true)}>＋ Match</button>
+                </div>
               </div>
 
               <aside className="dashboard-side">
@@ -1497,7 +1493,7 @@ function AppShell({ session }: { session: Session | null }) {
                   <div><p className="eyebrow dark">TOP PLAYERS</p><h2>Classifica</h2></div>
                   <span className="season">STAGIONE 2026</span>
                 </div>
-                <RankingList profiles={sorted.slice(0, 6)} onSelect={openPlayer} />
+                <RankingList profiles={sorted} onSelect={openPlayer} />
                 <button className="button button-dark button-full" onClick={() => setPadelView("ranking")}>Classifica completa</button>
               </aside>
             </section>

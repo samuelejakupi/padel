@@ -1044,11 +1044,29 @@ form select:focus,
   margin-right: 7px;
 }
 
+/* Le due colonne si allungano insieme, così la classifica finisce alla
+   stessa quota delle card partita invece di fermarsi a metà. */
 .dashboard-grid {
-  align-items: start;
+  align-items: stretch;
   display: grid;
   gap: 36px;
   grid-template-columns: minmax(0, 1.55fr) minmax(330px, 0.7fr);
+}
+
+.dashboard-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.court-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 18px;
+}
+
+.court-actions .button {
+  flex: 1;
 }
 
 .hero-stat {
@@ -1209,6 +1227,8 @@ form select:focus,
   background: var(--white);
   border-radius: 9px;
   box-shadow: 0 8px 30px rgba(16, 29, 43, 0.04);
+  display: flex;
+  flex-direction: column;
   padding: 26px;
 }
 
@@ -1325,8 +1345,14 @@ button.ranking-row-link:focus-visible {
   outline-offset: 2px;
 }
 
+/* auto spinge il tasto in fondo: la colonna resta allineata anche quando i
+   giocatori in classifica sono pochi. */
 .dashboard-side .button {
-  margin-top: 18px;
+  margin-top: auto;
+}
+
+.dashboard-side .ranking-list {
+  margin-bottom: 18px;
 }
 
 /* Match cards */
