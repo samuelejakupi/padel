@@ -451,7 +451,19 @@ function MatchCard({
   });
 
   return (
-    <article className="match-card">
+    <article
+      className={`match-card${onEdit ? " match-card-link" : ""}`}
+      onClick={onEdit ? () => onEdit(match) : undefined}
+      onKeyDown={onEdit ? (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onEdit(match);
+        }
+      } : undefined}
+      role={onEdit ? "button" : undefined}
+      tabIndex={onEdit ? 0 : undefined}
+      aria-label={onEdit ? `Modifica la partita del ${new Intl.DateTimeFormat("it-IT").format(new Date(match.played_at))}` : undefined}
+    >
       <div className="match-date">
         <b>{new Intl.DateTimeFormat("it-IT", { day: "2-digit" }).format(new Date(match.played_at))}</b>
         <span>{new Intl.DateTimeFormat("it-IT", { month: "short" }).format(new Date(match.played_at)).replace(".", "")}</span>
@@ -483,7 +495,9 @@ function MatchCard({
         {videoId ? (
           <button
             className="match-video-preview"
-            onClick={() => onPlayVideo?.(videoId)}
+            // La card intera apre la modifica: qui fermiamo la propagazione,
+            // altrimenti il video farebbe partire anche quella.
+            onClick={(event) => { event.stopPropagation(); onPlayVideo?.(videoId); }}
             aria-label="Guarda il video della partita"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -492,15 +506,6 @@ function MatchCard({
           </button>
         ) : null}
       </div>
-      {onEdit ? (
-        <button
-          className="match-menu-button"
-          onClick={() => onEdit(match)}
-          aria-label={`Modifica la partita del ${new Intl.DateTimeFormat("it-IT").format(new Date(match.played_at))}`}
-        >
-          <span aria-hidden="true">···</span>
-        </button>
-      ) : null}
     </article>
   );
 }

@@ -115,7 +115,7 @@ button {
 }
 
 .button:hover {
-  transform: translateY(-2px);
+  transform: scale(1.03);
 }
 
 .button:disabled {
@@ -684,7 +684,7 @@ form select:focus,
 
 .hub-profile:hover {
   box-shadow: var(--shadow);
-  transform: translateY(-3px);
+  transform: scale(1.015);
 }
 
 .hub-profile-info {
@@ -765,7 +765,7 @@ form select:focus,
 
 .hub-card:hover {
   box-shadow: var(--shadow);
-  transform: translateY(-4px);
+  transform: scale(1.02);
 }
 
 /* Entrambe gialle: così multiply assorbe il fondo bianco delle GIF senza
@@ -1313,20 +1313,28 @@ button.ranking-row-link:focus-visible {
 .match-card {
   align-items: center;
   background: var(--white);
-  border-left: 3px solid transparent;
+  border: 0;
   border-radius: 7px;
+  color: inherit;
   display: grid;
+  font: inherit;
   gap: 18px;
   grid-template-columns: 70px minmax(0, 1fr) 70px;
   min-height: 110px;
   padding: 15px 20px;
   position: relative;
-  transition: border-color 150ms ease, transform 150ms ease;
+  text-align: left;
+  transition: box-shadow 150ms ease, transform 150ms ease;
+  width: 100%;
 }
 
-.match-card:hover {
-  border-left-color: var(--blue);
-  transform: translateX(2px);
+.match-card-link {
+  cursor: pointer;
+}
+
+.match-card-link:hover {
+  box-shadow: var(--shadow);
+  transform: scale(1.01);
 }
 
 .match-date {
@@ -1477,28 +1485,6 @@ button.ranking-row-link:focus-visible {
   inset: 0;
   justify-content: center;
   position: absolute;
-}
-
-.match-menu-button {
-  background: transparent;
-  border: 0;
-  border-radius: 50%;
-  color: #9aa3a9;
-  cursor: pointer;
-  font-size: 15px;
-  height: 26px;
-  line-height: 1;
-  padding: 0;
-  position: absolute;
-  right: 8px;
-  top: 6px;
-  transition: background 150ms ease, color 150ms ease;
-  width: 26px;
-}
-
-.match-menu-button:hover {
-  background: var(--paper);
-  color: var(--ink);
 }
 
 .match-delete-action {
@@ -3309,15 +3295,7 @@ button.pizza-ranking-row {
   .match-card {
     gap: 10px;
     grid-template-columns: 34px minmax(0, 1fr);
-    padding: 18px 38px 14px 12px;
-  }
-
-  .match-menu-button {
-    border: 1px solid var(--line);
-    height: 25px;
-    right: 8px;
-    top: 8px;
-    width: 25px;
+    padding: 18px 14px 14px 12px;
   }
 
   /* Su mobile la card perde la terza colonna: l'anteprima video scivola
