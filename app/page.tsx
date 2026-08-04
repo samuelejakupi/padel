@@ -328,16 +328,13 @@ function NavGlyph({ name }: { name: GlyphName }) {
       focusable="false"
     >
       {name === "home" ? (
-        <>
-          <path d="M3.4 11 11 4.6a1.55 1.55 0 0 1 2 0l7.6 6.4" />
-          <path d="M5.4 9.9V19a1.7 1.7 0 0 0 1.7 1.7h9.8a1.7 1.7 0 0 0 1.7-1.7V9.9" />
-        </>
+        <path d="M12 3.7a1.6 1.6 0 0 0-1 .35L3.7 10.4a1.6 1.6 0 0 0-.6 1.25V19a1.7 1.7 0 0 0 1.7 1.7h14.4a1.7 1.7 0 0 0 1.7-1.7v-7.35a1.6 1.6 0 0 0-.6-1.25L13 4.05a1.6 1.6 0 0 0-1-.35Z" />
       ) : null}
       {/* Trancio di pizza: crosta in alto, punta in basso. */}
       {name === "pizza" ? (
         <>
           <path d="M4.2 6.9c4.8-2.9 10.8-2.9 15.6 0l-6.4 12.9a1.6 1.6 0 0 1-2.8 0Z" />
-          <path d="M6.2 10c3.6-1.9 8-1.9 11.6 0" />
+          <path d="M6.6 10.2c3.4-1.7 7.4-1.7 10.8 0" />
           <g fill="currentColor" stroke="none">
             <circle cx="11.8" cy="12.6" r="1" />
             <circle cx="9.7" cy="15.3" r="0.85" />
@@ -357,7 +354,9 @@ function NavGlyph({ name }: { name: GlyphName }) {
       {name === "racket" ? (
         <>
           <path d="M9.6 16.2C7 15 5.3 12.4 5.3 9.4 5.3 5.7 8.3 2.7 12 2.7s6.7 3 6.7 6.7c0 3-1.7 5.6-4.3 6.8Z" />
-          <path d="M10.4 16.2h3.2v3.1a1.6 1.6 0 0 1-3.2 0Z" />
+          {/* Manico aperto in alto: il tratto orizzontale sarebbe doppiato
+              sul bordo inferiore del piatto. */}
+          <path d="M10.4 16.2v3.1a1.6 1.6 0 0 0 3.2 0v-3.1" />
           <g fill="currentColor" stroke="none">
             <circle cx="12" cy="7.4" r="0.95" />
             <circle cx="9.3" cy="10.3" r="0.95" />

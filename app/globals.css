@@ -3154,7 +3154,7 @@ button.pizza-ranking-row {
     background: transparent;
     border: 0;
     border-radius: 18px;
-    color: rgba(11, 27, 44, 0.5);
+    color: var(--ink);
     display: flex;
     flex-direction: column;
     gap: 3px;
@@ -3162,8 +3162,12 @@ button.pizza-ranking-row {
     justify-content: center;
     justify-self: stretch;
     position: relative;
-    transition: color 200ms ease;
     width: 100%;
+  }
+
+  .mobile-nav-icon,
+  .mobile-nav-label {
+    transition: opacity 200ms ease;
   }
 
   .mobile-nav-label {
@@ -3195,8 +3199,12 @@ button.pizza-ranking-row {
     transform: scale(1);
   }
 
-  .mobile-nav button.active {
-    color: var(--ink);
+  /* L'opacità va applicata al gruppo, non al colore del tratto: altrimenti
+     ogni incrocio di tracciati si somma e si vede più scuro. Così l'icona
+     viene prima disegnata piena e poi sbiadita tutta insieme. */
+  .mobile-nav button:not(.active) .mobile-nav-icon,
+  .mobile-nav button:not(.active) .mobile-nav-label {
+    opacity: 0.45;
   }
 
   .mobile-nav .mobile-nav-icon {
