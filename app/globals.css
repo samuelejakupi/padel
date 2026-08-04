@@ -3065,6 +3065,14 @@ button.pizza-ranking-row {
     width: 84px;
   }
 
+  /* Il badge non segue la foto rimpicciolita: va ridotto a parte, altrimenti
+     resta a 58px su un avatar da 84. */
+  .hub-profile .rank-badge-award {
+    border-width: 2px;
+    height: 30px;
+    width: 30px;
+  }
+
   .hub-profile-info b {
     font-size: 22px;
   }
