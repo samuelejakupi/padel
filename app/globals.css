@@ -3496,7 +3496,7 @@ button.pizza-ranking-row {
 @media (max-width: 780px) {
   body {
     overflow-x: hidden;
-    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
   }
 
   /* In home la barra inferiore non c'è: senza questo resterebbe una fascia
@@ -3642,27 +3642,43 @@ button.pizza-ranking-row {
     width: 360px;
   }
 
-  /* Barra fluttuante in vetro: il contenuto scorre sotto e si intravede
-     sfocato, come la tab bar di iOS. */
+  /* Angoli piu morbidi su tutte le superfici a card: restano comunque
+     meno arrotondate della barra del menu (28px), che deve rimanere
+     l'elemento piu tondo della schermata. */
+  .match-card,
+  .hero-stat,
+  .dashboard-side,
+  .hub-card,
+  .podium-card,
+  .podium-1,
+  .section-hero,
+  .compact-empty,
+  .play-card {
+    border-radius: 18px;
+  }
+
+  /* Barra in vetro appoggiata al bordo del telefono: niente margini
+     laterali, angoli arrotondati solo in alto e area sicura inclusa nel
+     padding, cosi sotto resta pieno fino al bordo dello schermo. */
   .mobile-nav {
     align-items: center;
     backdrop-filter: blur(26px) saturate(185%);
     background: rgba(255, 255, 255, 0.55);
-    border: 1px solid rgba(255, 255, 255, 0.65);
-    border-radius: 30px;
-    bottom: calc(10px + env(safe-area-inset-bottom));
+    border: 0;
+    border-radius: 28px 28px 0 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.65);
+    bottom: 0;
     box-shadow:
-      0 12px 32px rgba(11, 27, 44, 0.18),
-      0 2px 8px rgba(11, 27, 44, 0.08),
+      0 -6px 28px rgba(11, 27, 44, 0.16),
+      0 -1px 6px rgba(11, 27, 44, 0.06),
       inset 0 1px 0 rgba(255, 255, 255, 0.85);
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    height: 72px;
-    left: 12px;
+    left: 0;
     overflow: hidden;
-    padding: 0 4px;
+    padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
     position: fixed;
-    right: 12px;
+    right: 0;
     -webkit-backdrop-filter: blur(26px) saturate(185%);
     z-index: 50;
   }
@@ -3687,16 +3703,18 @@ button.pizza-ranking-row {
     }
   }
 
+  /* Capsula piena: cosi la curvatura della pastiglia va d'accordo con
+     quella della barra invece di sembrare uno spigolo dentro un arco. */
   .mobile-nav button {
     align-items: center;
     background: transparent;
     border: 0;
-    border-radius: 18px;
+    border-radius: 999px;
     color: var(--ink);
     display: flex;
     flex-direction: column;
     gap: 3px;
-    height: 56px;
+    height: 54px;
     justify-content: center;
     justify-self: stretch;
     position: relative;
@@ -3779,6 +3797,9 @@ button.pizza-ranking-row {
 
   .court-actions .button {
     flex: 1;
+    /* Stessa altezza di una card partita: il valore vive li, qui viene
+       solo ripetuto perche le due regole non condividono un antenato. */
+    min-height: 104px;
   }
 
   /* Su mobile via l'etichetta e il tasto "Vedi tutte" in alto: resta solo
@@ -3875,15 +3896,18 @@ button.pizza-ranking-row {
   }
 
   /* Card partita su mobile: intestazione (data + campo) e sotto una sola
-     riga con squadra, punteggio, avversari e anteprima video. */
+     riga con squadra, punteggio, avversari e anteprima video.
+     --match-card-h e condivisa col tasto "+ Match", che deve risultare
+     alto quanto una card. */
   .match-card {
+    --match-card-h: 104px;
     align-items: center;
     gap: 10px;
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "head head"
       "main video";
-    min-height: 0;
+    min-height: var(--match-card-h);
     padding: 12px 14px 14px;
   }
 
@@ -4007,7 +4031,7 @@ button.pizza-ranking-row {
   .ranking-table .ranking-row {
     background: var(--white);
     border: 0;
-    border-radius: 8px;
+    border-radius: 18px;
     box-shadow: 0 5px 18px rgba(16, 29, 43, 0.04);
     grid-template-columns: 30px 42px minmax(0, 1fr) auto;
     margin-bottom: 10px;
@@ -4171,7 +4195,7 @@ button.pizza-ranking-row {
   .pizza-ranking-row {
     background: #f4f5f1;
     border: 0;
-    border-radius: 8px;
+    border-radius: 18px;
     gap: 10px 12px;
     grid-template-areas:
       "position name name"
@@ -4253,7 +4277,7 @@ button.pizza-ranking-row {
   }
 
   .modal {
-    border-radius: 8px;
+    border-radius: 18px;
     max-height: calc(100dvh - 24px);
     padding: 24px 18px;
   }
@@ -4297,7 +4321,7 @@ button.pizza-ranking-row {
   }
 
   .notice {
-    bottom: calc(82px + env(safe-area-inset-bottom));
+    bottom: calc(78px + env(safe-area-inset-bottom));
     width: calc(100vw - 24px);
   }
 
