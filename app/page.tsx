@@ -1431,7 +1431,7 @@ function AppShell({ session }: { session: Session | null }) {
             <div className="section-context">
               <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b>
               <nav aria-label="Navigazione sezione padel">
-                <button className="active" onClick={() => setPadelView("overview")}>Panoramica</button>
+                <button className="active" onClick={() => setPadelView("overview")}>Court</button>
                 <button onClick={() => setPadelView("matches")}>Partite</button>
                 <button onClick={() => setPadelView("ranking")}>Classifica</button>
               </nav>
@@ -1507,8 +1507,9 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "ranking" ? (
           <section className="page-section">
             <div className="section-context">
-              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b><nav aria-label="Navigazione sezione padel"><button onClick={() => setPadelView("overview")}>Panoramica</button><button onClick={() => setPadelView("matches")}>Partite</button><button className="active" onClick={() => setPadelView("ranking")}>Classifica</button></nav>
+              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b><nav aria-label="Navigazione sezione padel"><button onClick={() => setPadelView("overview")}>Court</button><button onClick={() => setPadelView("matches")}>Partite</button><button className="active" onClick={() => setPadelView("ranking")}>Classifica</button></nav>
             </div>
+            <button className="player-back" type="button" onClick={() => setPadelView("overview")}>← Torna al court</button>
             <div className="page-title">
               <div><p className="eyebrow dark">THEBOYZ PADEL · STAGIONE 2026</p><h1>La classifica del gruppo</h1><p>Il ranking si aggiorna automaticamente dopo ogni risultato.</p></div>
               <div className="ranking-switch" role="group" aria-label="Tipo di classifica">
@@ -1592,9 +1593,9 @@ function AppShell({ session }: { session: Session | null }) {
           <section className="page-section player-detail-page">
             <div className="section-context">
               <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b><span>/</span><b>{selectedPlayer.display_name.toUpperCase()}</b>
-              <nav aria-label="Navigazione sezione padel"><button onClick={() => setPadelView("overview")}>Panoramica</button><button className="active" onClick={() => setPadelView("ranking")}>Classifica</button><button onClick={() => setPadelView("matches")}>Partite</button></nav>
+              <nav aria-label="Navigazione sezione padel"><button onClick={() => setPadelView("overview")}>Court</button><button className="active" onClick={() => setPadelView("ranking")}>Classifica</button><button onClick={() => setPadelView("matches")}>Partite</button></nav>
             </div>
-            <button className="player-back" type="button" onClick={() => setPadelView("ranking")}>← Torna alla classifica</button>
+            <button className="player-back" type="button" onClick={() => setPadelView("overview")}>← Torna al court</button>
 
             <article className="player-detail-hero">
               <div className="player-detail-identity">
@@ -1649,8 +1650,9 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "matches" ? (
           <section className="page-section">
             <div className="section-context">
-              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b><nav aria-label="Navigazione sezione padel"><button onClick={() => setPadelView("overview")}>Panoramica</button><button className="active" onClick={() => setPadelView("matches")}>Partite</button><button onClick={() => setPadelView("ranking")}>Classifica</button></nav>
+              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b><nav aria-label="Navigazione sezione padel"><button onClick={() => setPadelView("overview")}>Court</button><button className="active" onClick={() => setPadelView("matches")}>Partite</button><button onClick={() => setPadelView("ranking")}>Classifica</button></nav>
             </div>
+            <button className="player-back" type="button" onClick={() => setPadelView("overview")}>← Torna al court</button>
             <div className="page-title">
               <div><p className="eyebrow dark">ARCHIVIO THEBOYZ PADEL</p><h1>Tutte le partite</h1><p>{matches.length} risultati registrati dal gruppo.</p></div>
               <button className="button button-primary" onClick={() => setShowMatch(true)}>＋ Registra partita</button>
