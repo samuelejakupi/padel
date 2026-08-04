@@ -19,6 +19,9 @@
 }
 
 html {
+  /* Colore verso cui sfuma il contenuto in fondo allo schermo: deve
+     coincidere col fondo pagina, che in home diventa scuro. */
+  --scroll-edge: var(--paper);
   background: var(--paper);
   scroll-behavior: smooth;
   /* Riserva sempre lo spazio della scrollbar: senza questo le pagine corte,
@@ -31,6 +34,10 @@ html {
 html.theme-dark,
 html.theme-dark body {
   background: var(--ink);
+}
+
+html.theme-dark {
+  --scroll-edge: var(--ink);
 }
 
 body {
@@ -3709,6 +3716,30 @@ button.pizza-ranking-row {
      le curve restano parallele fra loro e con l'angolo dello schermo
      invece di incrociarsi. Lo stacco dal bordo evita anche che l'angolo
      tondo dell'iPhone tagli la pastiglia delle voci laterali. */
+  /* Scroll edge effect: il contenuto sfuma verso il fondo mentre scorre
+     sotto la barra, invece di sparirci dietro di netto. E la dissolvenza
+     che iOS usa davvero, e tiene leggibili le voci del menu su qualunque
+     cosa passi sotto. Sta fra il contenuto e la barra. */
+  .app-shell::after {
+    /* Prima la versione a due fermate: se color-mix non e supportato il
+       browser scarta la riga sotto e resta comunque una dissolvenza. */
+    background: linear-gradient(to top, var(--scroll-edge) 0%, transparent 100%);
+    background: linear-gradient(
+      to top,
+      var(--scroll-edge) 0%,
+      color-mix(in srgb, var(--scroll-edge) 60%, transparent) 48%,
+      transparent 100%
+    );
+    bottom: 0;
+    content: "";
+    height: calc(100px + env(safe-area-inset-bottom));
+    left: 0;
+    pointer-events: none;
+    position: fixed;
+    right: 0;
+    z-index: 45;
+  }
+
   .mobile-nav {
     --nav-inset: 7px;
     --nav-item-height: 54px;
@@ -3932,62 +3963,22 @@ button.pizza-ranking-row {
     margin: 10px 0;
   }
 
-  /* Lista che sfuma in basso col tasto appoggiato sopra la sfumatura.
-     La sfumatura e una maschera, non un velo colorato: cosi funziona su
-     qualunque fondo senza doverne indovinare il colore. */
-  .fade-stack {
-    display: block;
-    position: relative;
-  }
-
-  .fade-stack-body {
-    --fade-mask: linear-gradient(
-      180deg,
-      #000 0%,
-      #000 58%,
-      rgba(0, 0, 0, 0.25) 84%,
-      rgba(0, 0, 0, 0) 100%
-    );
-    mask-image: var(--fade-mask);
-    -webkit-mask-image: var(--fade-mask);
-  }
-
-  /* Sulle partite la dissolvenza copre esattamente l'ultima card: piena in
-     alto dove comincia, trasparente sul suo bordo inferiore. */
-  .match-list.fade-stack-body {
-    --fade-mask: linear-gradient(
-      to top,
-      rgba(0, 0, 0, 0) 0,
-      #000 var(--match-card-h)
-    );
-  }
-
-  /* Il tasto scavalca la parte sfumata invece di stare sotto la lista. */
-  .fade-stack .cta-see-all-bottom {
-    bottom: 0;
+  /* Le liste si vedono per intero: la dissolvenza a meta pagina non e il
+     modo in cui iOS tronca un elenco. La dissolvenza c'e, ma e lo
+     "scroll edge effect" in fondo allo schermo (piu sotto), e il
+     "vedi tutto" resta un tasto pieno sotto la lista. */
+  .cta-see-all-bottom {
     display: inline-flex;
-    left: 0;
-    margin-top: 0;
-    position: absolute;
-    right: 0;
-    width: 100%;
+    margin-top: 10px;
   }
 
-  /* Nessuno spazio in coda: il fondo della lista coincide con il fondo
-     dell'ultima card, e il tasto, ancorato a bottom: 0, ci si allinea. */
-  .fade-stack .match-list {
-    padding-bottom: 0;
-  }
-
-  /* Nel ranking restano i primi quattro: il quinto e i successivi sono
-     proprio quelli che la sfumatura renderebbe illeggibili. */
+  /* Nel ranking bastano i primi quattro: per gli altri c'e "Vedi ranking". */
   .dashboard-side .ranking-list .ranking-row:nth-child(n + 5) {
     display: none;
   }
 
   .fade-stack .ranking-list {
     margin-bottom: 0;
-    padding-bottom: 30px;
   }
 
   .dashboard-grid {
