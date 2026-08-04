@@ -310,6 +310,49 @@ function Avatar({
   );
 }
 
+type GlyphName = "home" | "court" | "ranking" | "racket";
+
+// Icone della barra mobile disegnate a mano in SVG: ereditano currentColor,
+// restano nitide su ogni schermo e non dipendono da una CDN esterna.
+function NavGlyph({ name }: { name: GlyphName }) {
+  return (
+    <svg
+      className="nav-glyph"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {name === "home" ? (
+        <path d="M3.6 10.4 12 3.6l8.4 6.8V19a1.6 1.6 0 0 1-1.6 1.6H5.2A1.6 1.6 0 0 1 3.6 19v-8.6Z" />
+      ) : null}
+      {name === "court" ? (
+        <>
+          <rect x="3" y="4.2" width="18" height="15.6" rx="1.8" />
+          <path d="M3 12h18M6.8 7.8h10.4M6.8 16.2h10.4M12 7.8v8.4" />
+        </>
+      ) : null}
+      {name === "ranking" ? (
+        <>
+          <path d="m12 2.6 1.4 2.85 3.14.46-2.27 2.21.54 3.13L12 9.77l-2.81 1.48.54-3.13-2.27-2.21 3.14-.46z" />
+          <path d="M9.6 13.4h4.8v7.2H9.6zM3.4 16h6.2v4.6H3.4zM14.4 14.9h6.2v5.7h-6.2z" />
+        </>
+      ) : null}
+      {name === "racket" ? (
+        <>
+          <ellipse cx="14.6" cy="9.4" rx="5" ry="6" transform="rotate(45 14.6 9.4)" />
+          <path d="m10.9 13.1-5.3 5.3" />
+          <path d="M4.6 17.4 6.7 19.5l-1.4 1.4a1.5 1.5 0 0 1-2.1-2.1z" />
+        </>
+      ) : null}
+    </svg>
+  );
+}
+
 function Brand() {
   return (
     <div className="brand" aria-label="TheBoyz">
@@ -1999,22 +2042,29 @@ function AppShell({ session }: { session: Session | null }) {
       {/* In home la barra non serve: le sezioni si scelgono dalle card. */}
       {view !== "hub" ? (
       <nav className="mobile-nav" aria-label="Navigazione mobile">
+        <button onClick={() => setView("hub")} aria-label="Home">
+          <span className="mobile-nav-icon"><NavGlyph name="home" /></span>
+        </button>
         {([
-          ["overview", "https://cdn-icons-gif.flaticon.com/18830/18830433.gif", "Court"],
-          ["ranking", "https://cdn-icons-gif.flaticon.com/18830/18830460.gif", "Ranking"],
-          ["matches", "https://cdn-icons-gif.flaticon.com/18830/18830435.gif", "Matches"],
-        ] as [PadelView, string, string][]).map(([target, icon, label]) => (
+          ["overview", "court", "Court"],
+          ["ranking", "ranking", "Ranking"],
+          ["matches", "racket", "Matches"],
+        ] as [PadelView, GlyphName, string][]).map(([target, glyph, label]) => (
           <button
             key={target}
             className={view === "padel" && padelView === target ? "active" : ""}
             onClick={() => { setView("padel"); setPadelView(target); }}
+            aria-label={label}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <span className="mobile-nav-icon"><img src={icon} alt="" /></span>{label}
+            <span className="mobile-nav-icon"><NavGlyph name={glyph} /></span>
           </button>
         ))}
-        <button className={view === "profile" ? "active" : ""} onClick={() => setView("profile")}>
-          <span className="mobile-nav-icon"><Avatar profile={currentUser} size="sm" /></span>Profilo
+        <button
+          className={view === "profile" ? "active" : ""}
+          onClick={() => setView("profile")}
+          aria-label="Profilo"
+        >
+          <span className="mobile-nav-icon"><Avatar profile={currentUser} size="sm" /></span>
         </button>
       </nav>
       ) : null}

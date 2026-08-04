@@ -2922,11 +2922,9 @@ button.pizza-ranking-row {
   width: 30px;
 }
 
-.mobile-nav-icon img {
-  height: 26px;
-  mix-blend-mode: multiply;
-  object-fit: contain;
-  width: 26px;
+.nav-glyph {
+  height: 24px;
+  width: 24px;
 }
 
 .mobile-nav-icon .avatar {
@@ -3004,7 +3002,14 @@ button.pizza-ranking-row {
 @media (max-width: 780px) {
   body {
     overflow-x: hidden;
-    padding-bottom: calc(70px + env(safe-area-inset-bottom));
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+
+  /* Su mobile la barra in basso basta a orientarsi: briciole di navigazione
+     e tasto di ritorno diventano rumore. */
+  .section-context,
+  .player-back {
+    display: none;
   }
 
   /* In home la barra inferiore non c'è: senza questo resterebbe una fascia
@@ -3039,8 +3044,8 @@ button.pizza-ranking-row {
   }
 
   .topbar {
-  display: none;
-}
+    display: none;
+  }
 
   .brand-logo {
     height: 38px;
@@ -3146,31 +3151,25 @@ button.pizza-ranking-row {
     border-top: 1px solid var(--line);
     bottom: 0;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    height: calc(70px + env(safe-area-inset-bottom));
+    grid-template-columns: repeat(5, 1fr);
+    height: calc(64px + env(safe-area-inset-bottom));
     left: 0;
+    padding-bottom: env(safe-area-inset-bottom);
     position: fixed;
     right: 0;
     z-index: 50;
   }
 
+  /* Solo icone: il colore è il blu scuro del sito, la voce attiva passa
+     all'azzurro del brand. */
   .mobile-nav button {
     align-items: center;
     background: transparent;
     border: 0;
-    color: var(--muted);
+    color: var(--ink);
     display: flex;
-    flex-direction: column;
-    font-size: 10px;
-    font-weight: 800;
-    gap: 3px;
     height: 100%;
     justify-content: center;
-    text-transform: uppercase;
-  }
-
-  .mobile-nav button span {
-    font-size: 22px;
   }
 
   .mobile-nav button.active {
