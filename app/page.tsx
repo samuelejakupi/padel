@@ -312,24 +312,48 @@ function Avatar({
 
 type GlyphName = "home" | "court" | "ranking" | "racket";
 
-// Le icone scelte su Flaticon (Uicons). L'SVG del sito richiede un token a
-// scadenza, il PNG no: lo usiamo come maschera CSS così il glifo prende il
-// colore del testo e resta coerente con lo stato attivo della barra.
-const NAV_ICONS: Record<GlyphName, string> = {
-  home: "https://cdn-icons-png.flaticon.com/512/9243/9243857.png",
-  court: "https://cdn-icons-png.flaticon.com/512/16304/16304471.png",
-  ranking: "https://cdn-icons-png.flaticon.com/512/13085/13085586.png",
-  racket: "https://cdn-icons-png.flaticon.com/512/3914/3914939.png",
-};
-
+// Glifi in stile SF Symbols: tratto uniforme, estremi arrotondati, nessun
+// riempimento. Ereditano currentColor, così seguono lo stato della barra.
 function NavGlyph({ name }: { name: GlyphName }) {
-  const mask = `url(${NAV_ICONS[name]})`;
   return (
-    <span
+    <svg
       className="nav-glyph"
-      style={{ maskImage: mask, WebkitMaskImage: mask }}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden="true"
-    />
+      focusable="false"
+    >
+      {name === "home" ? (
+        <>
+          <path d="M3.4 11 11 4.6a1.55 1.55 0 0 1 2 0l7.6 6.4" />
+          <path d="M5.4 9.9V19a1.7 1.7 0 0 0 1.7 1.7h9.8a1.7 1.7 0 0 0 1.7-1.7V9.9" />
+        </>
+      ) : null}
+      {name === "court" ? (
+        <>
+          <rect x="3.2" y="4.6" width="17.6" height="14.8" rx="3" />
+          <path d="M3.2 12h17.6M7.4 8.3h9.2M7.4 15.7h9.2M12 8.3v7.4" />
+        </>
+      ) : null}
+      {name === "ranking" ? (
+        <>
+          <rect x="3.1" y="13.5" width="5.6" height="7.1" rx="1.5" />
+          <rect x="9.2" y="9.3" width="5.6" height="11.3" rx="1.5" />
+          <rect x="15.3" y="11.7" width="5.6" height="8.9" rx="1.5" />
+        </>
+      ) : null}
+      {name === "racket" ? (
+        <>
+          <ellipse cx="14.3" cy="9.7" rx="4.9" ry="5.9" transform="rotate(45 14.3 9.7)" />
+          <path d="m10.6 13.4-4.4 4.4" />
+          <path d="M5.1 16.7 7.3 18.9l-1.5 1.5a1.55 1.55 0 1 1-2.2-2.2z" />
+        </>
+      ) : null}
+    </svg>
   );
 }
 

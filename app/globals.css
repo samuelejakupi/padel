@@ -2923,16 +2923,9 @@ button.pizza-ranking-row {
 }
 
 .nav-glyph {
-  background-color: currentColor;
   display: block;
   height: 23px;
-  mask-position: center;
-  mask-repeat: no-repeat;
-  mask-size: contain;
   width: 23px;
-  -webkit-mask-position: center;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-size: contain;
 }
 
 .mobile-nav-icon .avatar {
@@ -3010,7 +3003,7 @@ button.pizza-ranking-row {
 @media (max-width: 780px) {
   body {
     overflow-x: hidden;
-    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
   }
 
   /* Su mobile la barra in basso basta a orientarsi: briciole di navigazione
@@ -3153,35 +3146,101 @@ button.pizza-ranking-row {
     flex-wrap: wrap;
   }
 
+  /* Barra fluttuante in vetro: il contenuto scorre sotto e si intravede
+     sfocato, come la tab bar di iOS. */
   .mobile-nav {
     align-items: center;
-    background: var(--white);
-    border-top: 1px solid var(--line);
-    bottom: 0;
+    backdrop-filter: blur(26px) saturate(185%);
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    border-radius: 30px;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    box-shadow:
+      0 12px 32px rgba(11, 27, 44, 0.18),
+      0 2px 8px rgba(11, 27, 44, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.85);
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    height: calc(64px + env(safe-area-inset-bottom));
-    left: 0;
-    padding-bottom: env(safe-area-inset-bottom);
+    height: 60px;
+    left: 12px;
+    overflow: hidden;
     position: fixed;
-    right: 0;
+    right: 12px;
+    -webkit-backdrop-filter: blur(26px) saturate(185%);
     z-index: 50;
   }
 
-  /* Solo icone: il colore è il blu scuro del sito, la voce attiva passa
-     all'azzurro del brand. */
+  /* Riflesso morbido sul bordo superiore: è ciò che dà l'idea del vetro. */
+  .mobile-nav::after {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.6) 0%,
+      rgba(255, 255, 255, 0) 55%
+    );
+    content: "";
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+  }
+
+  /* Se il browser non sfoca, meglio un fondo pieno che una barra slavata. */
+  @supports not (backdrop-filter: blur(1px)) {
+    .mobile-nav {
+      background: rgba(255, 255, 255, 0.94);
+    }
+  }
+
   .mobile-nav button {
     align-items: center;
     background: transparent;
     border: 0;
-    color: var(--ink);
+    border-radius: 21px;
+    color: rgba(11, 27, 44, 0.5);
     display: flex;
-    height: 100%;
+    height: 42px;
     justify-content: center;
+    justify-self: center;
+    position: relative;
+    transition: color 200ms ease;
+    width: 46px;
+  }
+
+  /* Pastiglia di vetro che scivola sotto la voce attiva. */
+  .mobile-nav button::before {
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: inherit;
+    box-shadow:
+      0 3px 10px rgba(11, 27, 44, 0.16),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    content: "";
+    inset: 0;
+    opacity: 0;
+    position: absolute;
+    transform: scale(0.72);
+    transition: opacity 220ms ease, transform 260ms cubic-bezier(0.3, 1.4, 0.5, 1);
+  }
+
+  .mobile-nav button.active::before {
+    opacity: 1;
+    transform: scale(1);
   }
 
   .mobile-nav button.active {
-    color: var(--blue);
+    color: var(--ink);
+  }
+
+  .mobile-nav button:active {
+    transform: scale(0.92);
+  }
+
+  .mobile-nav .mobile-nav-icon {
+    position: relative;
+    z-index: 1;
+  }
+
+  .mobile-nav .avatar {
+    height: 26px;
+    width: 26px;
   }
 
   .page-title {
