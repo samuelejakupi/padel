@@ -1018,7 +1018,6 @@ form select:focus,
   color: var(--muted);
 }
 
-.welcome-row,
 .page-title {
   align-items: flex-end;
   display: flex;
@@ -1026,17 +1025,11 @@ form select:focus,
   margin-bottom: 38px;
 }
 
-.welcome-row h1,
 .page-title h1 {
   font-size: clamp(33px, 3.5vw, 52px);
   letter-spacing: -2.6px;
   line-height: 0.99;
   margin: 0;
-}
-
-.welcome-row h1 span {
-  color: #7d8892;
-  font-weight: 400;
 }
 
 .add-match span {
@@ -1060,13 +1053,21 @@ form select:focus,
 
 .court-actions {
   display: flex;
+  flex: 0 0 auto;
   gap: 10px;
-  margin-top: auto;
-  padding-top: 18px;
 }
 
-.court-actions .button {
-  flex: 1;
+/* Il saluto vive dentro il riquadro scuro, sopra la posizione in classifica. */
+.hero-greeting {
+  font-size: clamp(28px, 2.6vw, 40px);
+  letter-spacing: -1.8px;
+  line-height: 1;
+  margin: 0 0 26px;
+}
+
+.hero-greeting span {
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 400;
 }
 
 .hero-stat {
@@ -3248,7 +3249,6 @@ button.pizza-ranking-row {
     color: var(--blue);
   }
 
-  .welcome-row,
   .page-title {
     align-items: start;
     flex-direction: column;
@@ -3256,14 +3256,23 @@ button.pizza-ranking-row {
     margin-bottom: 28px;
   }
 
-  .welcome-row h1,
   .page-title h1 {
     font-size: 35px;
   }
 
-  .welcome-row .button,
   .page-title .button {
     width: 100%;
+  }
+
+  /* Titolo e tasti su due righe: affiancati non ci starebbero. */
+  .section-head {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .court-actions .button {
+    flex: 1;
   }
 
   .section-hero {
@@ -3700,7 +3709,6 @@ button.pizza-ranking-row {
     flex-wrap: wrap;
   }
 
-  .welcome-row h1,
   .page-title h1 {
     font-size: 31px;
     letter-spacing: -1.8px;

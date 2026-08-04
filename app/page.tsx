@@ -1431,16 +1431,14 @@ function AppShell({ session }: { session: Session | null }) {
             <div className="section-context">
               <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL COURT</b>
             </div>
-            <section className="welcome-row">
-              <div>
-                <h1>Ciao, {currentUser.display_name}.<br /><span>Pronto a difendere la posizione?</span></h1>
-              </div>
-            </section>
-
             <section className="dashboard-grid">
               <div className="dashboard-main">
                 <article className="hero-stat">
                   <div className="hero-stat-copy">
+                    <h1 className="hero-greeting">
+                      Ciao, {currentUser.display_name}.<br />
+                      <span>Pronto a difendere la posizione?</span>
+                    </h1>
                     <p className="eyebrow">LA TUA POSIZIONE</p>
                     <div className="position">{currentRank ? <><span>#</span>{currentRank}</> : "N/C"}</div>
                     <p>
@@ -1467,6 +1465,10 @@ function AppShell({ session }: { session: Session | null }) {
 
                 <div className="section-head">
                   <div><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
+                  <div className="court-actions">
+                    <button className="button button-dark" onClick={() => setPadelView("matches")}>Vedi tutte</button>
+                    <button className="button button-primary" onClick={() => setShowMatch(true)}>＋ Match</button>
+                  </div>
                 </div>
                 {matches.length ? (
                   <div className="match-list">
@@ -1482,10 +1484,6 @@ function AppShell({ session }: { session: Session | null }) {
                 ) : (
                   <div className="compact-empty"><span>00</span><p>Nessuna partita registrata. La prima scriverà la storia.</p></div>
                 )}
-                <div className="court-actions">
-                  <button className="button button-dark" onClick={() => setPadelView("matches")}>Vedi tutte</button>
-                  <button className="button button-primary" onClick={() => setShowMatch(true)}>＋ Match</button>
-                </div>
               </div>
 
               <aside className="dashboard-side">
