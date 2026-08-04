@@ -655,21 +655,19 @@ function TeamEditor({
           onChange={(event) => void pickImage(event.target.files?.[0])}
         />
       </label>
-      <div className="team-editor-fields">
-        <div className="team-editor-row">
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder={team.players.map((profile) => profile.display_name).join(" · ")}
-            maxLength={40}
-            disabled={disabled || busy}
-            aria-label="Nome della squadra"
-          />
-          <button className="button button-dark" disabled={disabled || busy}>
-            {busy ? "Salvo…" : "Salva"}
-          </button>
-        </div>
+      <div className="team-editor-row">
+        <input
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder={team.players.map((profile) => profile.display_name).join(" · ")}
+          maxLength={40}
+          disabled={disabled || busy}
+          aria-label="Nome della squadra"
+        />
         <small>{team.matches_played} partite · {team.rating} pt</small>
+        <button className="button button-dark" disabled={disabled || busy}>
+          {busy ? "Salvo…" : "Salva"}
+        </button>
       </div>
     </form>
   );
