@@ -2976,6 +2976,31 @@ button.pizza-ranking-row {
     padding-bottom: 0;
   }
 
+  /* Sfumatura verticale che parte e finisce esattamente sul colore di html:
+     così il passaggio verso le aree di sistema di iOS è invisibile. */
+  .app-shell-hub {
+    background: linear-gradient(
+      180deg,
+      var(--ink) 0%,
+      #0f3243 40%,
+      #0d2838 70%,
+      var(--ink) 100%
+    );
+  }
+
+  /* La griglia si spegne prima dei due bordi, per non tagliarsi di netto
+     né sotto la Dynamic Island né sopra la barra inferiore. */
+  .app-shell-hub::before {
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgba(0, 0, 0, 0.45) 10%,
+      black 24%,
+      rgba(0, 0, 0, 0.25) 60%,
+      transparent 78%
+    );
+  }
+
   .topbar {
   display: none;
 }
