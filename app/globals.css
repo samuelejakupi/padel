@@ -827,7 +827,7 @@ form select:focus,
    i contenuti dei blocchi vanno alzati di un livello. */
 .hero-stat > *:not(.block-mark):not(.hero-kpis),
 .section-hero > *:not(.block-mark),
-.player-detail-hero > *:not(.block-mark):not(.player-edit-button),
+.player-detail-hero > *:not(.block-mark),
 .pizza-page > *:not(.block-mark) {
   position: relative;
   z-index: 1;
@@ -2145,25 +2145,28 @@ button.ranking-row-link:focus-visible {
   flex: 0 0 auto;
 }
 
-/* Matita nell'angolo del blocco scuro: apre la modale dei dati. */
+/* Accanto all'occhiello "il tuo profilo": è lì che lo si cerca. */
+.eyebrow-with-action {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
 .player-edit-button {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.14);
   border: 0;
-  border-radius: 50%;
+  border-radius: 20px;
   color: var(--white);
   cursor: pointer;
-  font-size: 14px;
-  height: 34px;
-  position: absolute;
-  right: 22px;
-  top: 22px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  padding: 6px 12px;
   transition: background 150ms ease;
-  width: 34px;
-  z-index: 2;
 }
 
 .player-edit-button:hover {
-  background: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .player-detail-identity h1 {

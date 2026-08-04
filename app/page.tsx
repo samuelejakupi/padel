@@ -2063,7 +2063,19 @@ function AppShell({ session }: { session: Session | null }) {
                   ) : null}
                 </div>
                 <div>
-                  <p className="eyebrow">{isOwnCard ? "IL TUO PROFILO" : "SCHEDA GIOCATORE"}</p>
+                  <p className="eyebrow eyebrow-with-action">
+                    {isOwnCard ? "IL TUO PROFILO" : "SCHEDA GIOCATORE"}
+                    {isOwnCard ? (
+                      <button
+                        className="player-edit-button"
+                        type="button"
+                        onClick={() => setShowProfileEdit(true)}
+                        title="Modifica i dati del profilo"
+                      >
+                        <span aria-hidden="true">✎</span> Modifica
+                      </button>
+                    ) : null}
+                  </p>
                   <h1>{selectedPlayer.display_name}</h1>
                   <div className="player-traits">
                     {padelTraits(selectedPlayer) ? <span>{padelTraits(selectedPlayer)}</span> : null}
@@ -2078,17 +2090,6 @@ function AppShell({ session }: { session: Session | null }) {
                 <b>{selectedPlayer.matches_played ? selectedPlayer.rating : "N/C"}</b>
                 <small>{selectedPlayer.matches_played ? `${selectedPlayer.rating - 1000 >= 0 ? "+" : ""}${selectedPlayer.rating - 1000} dalla quota iniziale` : "In attesa del debutto"}</small>
               </div>
-              {isOwnCard ? (
-                <button
-                  className="player-edit-button"
-                  type="button"
-                  onClick={() => setShowProfileEdit(true)}
-                  aria-label="Modifica i dati del profilo"
-                  title="Modifica i dati del profilo"
-                >
-                  <span aria-hidden="true">✎</span>
-                </button>
-              ) : null}
             </article>
 
             <div className="player-kpis">
