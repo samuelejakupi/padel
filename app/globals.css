@@ -505,29 +505,33 @@ form select:focus,
 }
 
 /* Il blocco nome+ranking è centrato come coppia, quindi il nome resterebbe
-   sopra la linea del menu: lo si abbassa fino a farcelo coincidere. Il
-   ranking scende di conseguenza. */
+   sopra la linea del menu: lo si abbassa fino a farcelo coincidere. */
 .profile-chip > span {
   display: flex;
   flex-direction: column;
   position: relative;
-  top: 8px;
+  top: 7px;
 }
 
-/* Stesso trattamento delle voci del menu, così il nome ci si allinea
-   invece di sembrare un'etichetta a parte. */
+/* Il nome si comporta come una voce di menu: grigio finché non sei nel
+   profilo, poi scuro come la voce selezionata. */
 .profile-chip b {
-  color: var(--ink);
+  color: #6e7a85;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 1px;
   text-transform: uppercase;
+  transition: color 150ms ease;
+}
+
+.profile-chip.active b {
+  color: var(--ink);
 }
 
 .profile-chip small {
   color: var(--muted);
   font-size: 10px;
-  margin-top: 6px;
+  margin-top: 2px;
   text-transform: uppercase;
 }
 
