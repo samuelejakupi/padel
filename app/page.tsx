@@ -1554,12 +1554,6 @@ function AppShell({ session }: { session: Session | null }) {
           >
             Pizza
           </button>
-          <button
-            className={view === "profile" ? "active" : ""}
-            onClick={() => setView("profile")}
-          >
-            Profilo
-          </button>
         </nav>
         <button className="profile-chip" onClick={() => setView("profile")}>
           <span><b>{currentUser.display_name}</b><small>Padel {currentRank ? `#${currentRank}` : "N/C"}</small></span>
