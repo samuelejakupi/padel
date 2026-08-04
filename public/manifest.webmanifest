@@ -1,0 +1,23 @@
+{
+  "name": "TheBoyz · Group HQ",
+  "short_name": "TheBoyz",
+  "description": "Padel, Pizza Ranking e tutte le nostre cose.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b1b2c",
+  "theme_color": "#0b1b2c",
+  "icons": [
+    {
+      "src": "./apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "./theBOYZ.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

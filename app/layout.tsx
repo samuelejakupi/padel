@@ -1,8 +1,15 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import BuildWatcher from "./build-watcher";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
+// Colora la barra di stato su iOS e Android con il blu del sito invece del
+// bianco di sistema.
+export const viewport: Viewport = {
+  themeColor: "#0b1b2c",
+};
 
 export const metadata: Metadata = {
   title: "TheBoyz · Group HQ",
@@ -21,6 +28,16 @@ export const metadata: Metadata = {
     title: "TheBoyz · Group HQ",
     description: "Padel, Pizzeria Ranking e tutte le nostre cose.",
     images: siteUrl ? ["/og-theboyz.png"] : undefined,
+  },
+  manifest: `${basePath}/manifest.webmanifest`,
+  appleWebApp: {
+    capable: true,
+    title: "TheBoyz",
+    statusBarStyle: "black",
+  },
+  icons: {
+    icon: `${basePath}/theBOYZ.png`,
+    apple: `${basePath}/apple-touch-icon.png`,
   },
 };
 
