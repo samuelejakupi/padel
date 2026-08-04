@@ -2112,6 +2112,10 @@ function AppShell({ session }: { session: Session | null }) {
 
   // Porta la pastiglia sopra una voce. Con animate = false ci arriva secca,
   // e quello che serve al primo disegno e mentre si trascina.
+  // Dove si trova adesso la pastiglia: serve come punto di partenza
+  // dell'animazione, perche il valore letto dallo stile e gia quello finale.
+  const navPillLeft = useRef(0);
+
   const placePill = useCallback((index: number, animate: boolean) => {
     const nav = navRef.current;
     const pill = navPillRef.current;
@@ -2123,15 +2127,42 @@ function AppShell({ session }: { session: Session | null }) {
     }
     const navBox = nav.getBoundingClientRect();
     const buttonBox = button.getBoundingClientRect();
-    pill.style.transition = animate ? "" : "none";
+    const from = navPillLeft.current;
+    const to = buttonBox.left - navBox.left;
+    const wasHidden = pill.style.opacity !== "1";
+
+    // La posizione finale viene scritta subito: l'animazione qui sotto la
+    // sovrascrive solo mentre e in corso, cosi alla fine non c'e nessuno
+    // scatto di assestamento.
+    pill.style.transition = "none";
     pill.style.opacity = "1";
     pill.style.width = `${buttonBox.width}px`;
-    pill.style.transform = `translateX(${buttonBox.left - navBox.left}px)`;
-    if (!animate) {
-      // Forza il ricalcolo prima di riattivare la transizione, altrimenti il
-      // browser accorpa le due modifiche e anima anche questo salto.
-      void pill.offsetWidth;
-    }
+    pill.style.transform = `translateX(${to}px)`;
+    navPillLeft.current = to;
+
+    const distance = Math.abs(to - from);
+    const reduceMotion = typeof window !== "undefined"
+      && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!animate || wasHidden || distance < 1 || reduceMotion || !pill.animate) return;
+
+    // Piu e lungo il salto, piu la pastiglia si allunga nel senso della
+    // corsa e si schiaccia in altezza: e la deformazione che da l'idea
+    // della goccia che si sposta invece del rettangolo che trasla.
+    const steps = distance / Math.max(buttonBox.width, 1);
+    const stretch = 1 + Math.min(0.3, steps * 0.13);
+    const squash = 1 - Math.min(0.14, steps * 0.06);
+
+    pill.animate(
+      [
+        { transform: `translateX(${from}px) scale(1, 1)` },
+        { transform: `translateX(${(from + to) / 2}px) scale(${stretch}, ${squash})`, offset: 0.45 },
+        { transform: `translateX(${to}px) scale(1, 1)` },
+      ],
+      {
+        duration: 340 + Math.min(140, steps * 45),
+        easing: "cubic-bezier(0.32, 0.9, 0.28, 1)",
+      },
+    );
   }, []);
 
   // Segue il dito, restando dentro i due estremi della barra.
@@ -2148,10 +2179,12 @@ function AppShell({ session }: { session: Session | null }) {
     pill.style.transition = "none";
     pill.style.opacity = "1";
     pill.style.width = `${firstBox.width}px`;
-    pill.style.transform = `translateX(${Math.min(
+    const clamped = Math.min(
       lastBox.left - navBox.left,
       Math.max(firstBox.left - navBox.left, left),
-    )}px)`;
+    );
+    pill.style.transform = `translateX(${clamped}px)`;
+    navPillLeft.current = clamped;
   }, []);
 
   const nearestNavIndex = useCallback((clientX: number) => {
