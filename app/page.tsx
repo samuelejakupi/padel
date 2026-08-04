@@ -2204,6 +2204,10 @@ function AppShell({ session }: { session: Session | null }) {
 
   // Riallinea la pastiglia quando cambia la voce attiva o le misure della
   // barra: qui si tocca solo lo stile, nessuno stato da aggiornare.
+  // currentUser e loading sono fra le dipendenze di proposito: la barra
+  // viene creata solo quando il profilo e pronto, e senza di loro questo
+  // effetto non ripartirebbe al suo arrivo, lasciando la pastiglia
+  // invisibile fino al primo cambio di sezione.
   useEffect(() => {
     placePill(navActiveIndex, true);
     const realign = () => placePill(navActiveIndex, false);
@@ -2213,7 +2217,7 @@ function AppShell({ session }: { session: Session | null }) {
       window.removeEventListener("resize", realign);
       window.removeEventListener("orientationchange", realign);
     };
-  }, [navActiveIndex, placePill]);
+  }, [navActiveIndex, placePill, currentUser, loading]);
   const heroGreeting = useMemo(() => {
     const pool = heroGreetingPool(currentRank, isLastRanked, hasNarrowLead);
     const line = (pool[Math.floor(greetingSeed * pool.length)] ?? pool[0] ?? "")
