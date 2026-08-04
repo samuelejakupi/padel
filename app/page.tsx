@@ -1835,11 +1835,11 @@ function AppShell({ session }: { session: Session | null }) {
       await client.rpc("archive_padel_season", { p_season: year });
     }
 
-    const [profilesResult, matchesResult, pizzaResult, teamsResult, seasonsResult, playsResult] = await Promise.all([
+    const [profilesResult, matchesResult, pizzaResult, teamsResult, seasonsResult, playsResult, courtsResult] = await Promise.all([
       client.from("profiles").select("*").order("rating", { ascending: false }),
       client
         .from("matches")
-        .select("id, played_at, created_at, created_by, winner_team, notes, video_url, court, rating_delta, sets:match_sets(set_number, team1_games, team2_games), players:match_players(profile_id, team, rating_delta, profile:profiles(*))")
+        .select("id, played_at, created_at, created_by, winner_team, notes, video_url, rating_delta, sets:match_sets(set_number, team1_games, team2_games), players:match_players(profile_id, team, rating_delta, profile:profiles(*))")
         .order("played_at", { ascending: false })
         .order("created_at", { ascending: false }),
       client
@@ -1856,6 +1856,10 @@ function AppShell({ session }: { session: Session | null }) {
         .from("player_plays")
         .select("id, profile_id, match_id, title, video_url, start_seconds, duration_seconds, created_by, created_at")
         .order("created_at", { ascending: false }),
+      // Il campo da gioco sta in una query a parte: se la migrazione non e
+      // stata eseguita questa fallisce da sola, senza portarsi dietro il
+      // caricamento delle partite.
+      client.from("matches").select("id, court"),
     ]);
 
     if (profilesResult.error || matchesResult.error) {
@@ -1872,8 +1876,15 @@ function AppShell({ session }: { session: Session | null }) {
           : null,
       })) as Profile[];
       const profileMap = new Map(withAvatars.map((profile) => [profile.id, profile]));
+      // Vuota finche la migrazione del campo da gioco non e stata eseguita.
+      const courtMap = new Map(
+        courtsResult.error
+          ? []
+          : ((courtsResult.data ?? []) as { id: string; court: string | null }[]).map((row) => [row.id, row.court]),
+      );
       const normalized = (matchesResult.data ?? []).map((match) => ({
         ...match,
+        court: courtMap.get(match.id) ?? null,
         players: (match.players ?? []).map((player) => ({
           ...player,
           profile: profileMap.get(player.profile_id) ?? player.profile,
