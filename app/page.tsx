@@ -1327,24 +1327,27 @@ function AppShell({ session }: { session: Session | null }) {
 
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <button className="brand-home" onClick={() => setView("hub")} aria-label="Vai alla home TheBoyz">
-          <Brand />
-        </button>
-        <nav className="desktop-nav" aria-label="Navigazione principale">
-          {([
-            ["hub", "TheBoyz"],
-            ["padel", "Padel"],
-            ["pizza", "Pizze"],
-          ] as [View, string][]).map(([target, label]) => (
-            <button key={target} className={view === target ? "active" : ""} onClick={() => { setView(target); if (target === "padel") setPadelView("overview"); }}>{label}</button>
-          ))}
-        </nav>
-        <button className="profile-chip" onClick={() => setView("profile")}>
-          <span><b>{currentUser.display_name}</b><small>Padel {currentRank ? `#${currentRank}` : "N/C"}</small></span>
-          <Avatar profile={currentUser} size="sm" />
-        </button>
-      </header>
+      {/* In home il menu non serve: logo e profilo vivono già nella pagina. */}
+      {view !== "hub" ? (
+        <header className="topbar">
+          <button className="brand-home" onClick={() => setView("hub")} aria-label="Vai alla home TheBoyz">
+            <Brand />
+          </button>
+          <nav className="desktop-nav" aria-label="Navigazione principale">
+            {([
+              ["hub", "TheBoyz"],
+              ["padel", "Padel"],
+              ["pizza", "Pizze"],
+            ] as [View, string][]).map(([target, label]) => (
+              <button key={target} className={view === target ? "active" : ""} onClick={() => { setView(target); if (target === "padel") setPadelView("overview"); }}>{label}</button>
+            ))}
+          </nav>
+          <button className="profile-chip" onClick={() => setView("profile")}>
+            <span><b>{currentUser.display_name}</b><small>Padel {currentRank ? `#${currentRank}` : "N/C"}</small></span>
+            <Avatar profile={currentUser} size="sm" />
+          </button>
+        </header>
+      ) : null}
 
       {notice ? <button className="notice" onClick={() => setNotice("")}>{notice}<span>×</span></button> : null}
 
@@ -1369,22 +1372,24 @@ function AppShell({ session }: { session: Session | null }) {
                   <span><b>{profiles.length}</b> membri attivi</span>
                 </div>
               </div>
-              <div className="hub-logo-stage">
-                <span className="logo-glow" />
-                <button
-                  className="hub-profile"
-                  onClick={() => setView("profile")}
-                  aria-label="Vai al tuo profilo"
-                >
-                  <span className="hub-profile-info">
-                    <b>{currentUser.display_name}</b>
-                    <span>{currentRank ? `#${currentRank} in classifica` : "Non classificato"}</span>
-                    <span>{currentUser.rating} pt · {currentUser.wins}/{currentUser.matches_played} vinte</span>
-                  </span>
-                  <Avatar profile={currentUser} size="xl" rank={currentRank || undefined} />
-                </button>
-              </div>
             </div>
+
+            <button
+              className="hub-profile"
+              onClick={() => setView("profile")}
+              aria-label="Vai al tuo profilo"
+            >
+              <span className="hub-profile-info">
+                <small>IL TUO PROFILO</small>
+                <b>{currentUser.display_name}</b>
+                <span>
+                  {currentRank ? `#${currentRank} in classifica` : "Non classificato"}
+                  {" · "}
+                  {currentUser.rating} pt · {currentUser.wins}/{currentUser.matches_played} vinte
+                </span>
+              </span>
+              <Avatar profile={currentUser} size="xl" rank={currentRank || undefined} />
+            </button>
 
             <div className="hub-section-title">
               <div>

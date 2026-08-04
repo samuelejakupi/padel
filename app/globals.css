@@ -570,8 +570,7 @@ form select:focus,
   border-radius: 10px;
   color: var(--white);
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
-  min-height: 430px;
+  min-height: 0;
   overflow: hidden;
   padding: 56px 64px;
   position: relative;
@@ -638,15 +637,6 @@ form select:focus,
   color: var(--lime);
 }
 
-.hub-logo-stage {
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  position: relative;
-  z-index: 2;
-}
-
 /* Il logo affianca gli avatar dei membri, in fondo alla colonna di sinistra. */
 .hub-mark {
   flex: 0 0 auto;
@@ -655,44 +645,49 @@ form select:focus,
   width: 46px;
 }
 
-/* Scheda profilo in basso a destra: dati a sinistra, foto a destra. */
-.hub-logo-stage {
-  align-items: flex-end;
-  justify-content: flex-end;
-}
-
+/* Scheda profilo autonoma, fuori dal riquadro scuro. */
 .hub-profile {
   align-items: center;
-  background: transparent;
+  background: var(--white);
   border: 0;
+  border-radius: 10px;
   cursor: pointer;
   display: flex;
-  gap: 20px;
-  padding: 0;
-  position: relative;
-  text-align: right;
-  transition: transform 180ms ease;
-  z-index: 2;
+  gap: 24px;
+  justify-content: space-between;
+  padding: 24px 32px;
+  text-align: left;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+  width: 100%;
 }
 
 .hub-profile:hover {
+  box-shadow: var(--shadow);
   transform: translateY(-3px);
 }
 
 .hub-profile-info {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hub-profile-info small {
+  color: var(--blue-dark);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 2px;
 }
 
 .hub-profile-info b {
-  color: var(--white);
-  font-size: 24px;
-  letter-spacing: -0.8px;
+  color: var(--ink);
+  font-size: 30px;
+  letter-spacing: -1.2px;
 }
 
-.hub-profile-info span {
-  color: rgba(255, 255, 255, 0.6);
+.hub-profile-info > span {
+  color: var(--muted);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.5px;
@@ -700,19 +695,13 @@ form select:focus,
 }
 
 .hub-profile .avatar-xl {
-  border: 6px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.4);
+  border: 5px solid var(--paper);
+  box-shadow: 0 16px 40px rgba(16, 29, 43, 0.16);
   flex: 0 0 auto;
+  height: 116px;
+  width: 116px;
 }
 
-.logo-glow {
-  background: rgba(24, 223, 228, 0.2);
-  border-radius: 50%;
-  filter: blur(55px);
-  height: 240px;
-  position: absolute;
-  width: 240px;
-}
 
 .hub-section-title {
   align-items: end;
@@ -2944,12 +2933,10 @@ button.pizza-ranking-row {
 
 @media (max-width: 1050px) {
   .hub-hero {
-    grid-template-columns: 1.2fr 0.8fr;
     padding: 46px;
   }
 
   .hub-card {
-    grid-template-columns: 52px 1fr auto;
     padding: 26px;
   }
 
@@ -3040,9 +3027,6 @@ button.pizza-ranking-row {
   }
 
   .hub-hero {
-    gap: 28px;
-    grid-template-columns: 1fr;
-    min-height: 0;
     padding: 32px 22px;
   }
 
@@ -3064,27 +3048,24 @@ button.pizza-ranking-row {
     margin-top: 24px;
   }
 
-  .hub-logo-stage {
-    margin-top: 0;
-  }
-
   .hub-mark {
     height: 38px;
     width: 38px;
   }
 
-  .hub-logo-stage {
-    justify-content: flex-start;
+  .hub-profile {
+    gap: 16px;
+    padding: 20px;
   }
 
   .hub-profile .avatar-xl {
-    border-width: 5px;
-    height: 110px;
-    width: 110px;
+    border-width: 4px;
+    height: 84px;
+    width: 84px;
   }
 
   .hub-profile-info b {
-    font-size: 20px;
+    font-size: 22px;
   }
 
   .hub-section-title h2 {
