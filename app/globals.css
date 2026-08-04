@@ -126,20 +126,11 @@ button {
   width: 100%;
 }
 
-/* Il "+" e disegnato invece che scritto: il carattere tipografico e sottile
-   e non si puo ingrossare senza cambiare font. */
-.cta-plus {
-  fill: none;
-  flex: 0 0 auto;
-  height: 17px;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-width: 3.2;
-  width: 17px;
-}
-
+/* Il "+" fa parte della scritta: corsivo e nero come il resto, cosi i due
+   restano appaiati da soli senza doverli allineare a mano. */
 .cta-new-match {
-  gap: 9px;
+  font-style: italic;
+  font-weight: 900;
 }
 
 .avatar {
@@ -3668,19 +3659,8 @@ button.pizza-ranking-row {
   /* Il tasto principale e grande quanto una card: la scritta e l'icona
      seguono a ruota, altrimenti sembravano perse in mezzo al vuoto. */
   .cta-new-match {
-    font-size: 25px;
-    gap: 12px;
-    letter-spacing: 1.2px;
-  }
-
-  /* 0.94em e la misura che pareggia l'altezza visiva del "+" con quella
-     delle maiuscole: il tratto occupa circa il 77% del suo riquadro, le
-     maiuscole circa il 72% del font-size. Restando in em i due restano
-     appaiati anche se un domani si cambia il corpo del testo. */
-  .cta-new-match .cta-plus {
-    height: 0.94em;
-    stroke-width: 3.4;
-    width: 0.94em;
+    font-size: 24px;
+    letter-spacing: 0.6px;
   }
 
   /* Sotto i 16px iOS ingrandisce da solo la pagina quando si tocca un
