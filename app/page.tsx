@@ -1326,7 +1326,7 @@ function AppShell({ session }: { session: Session | null }) {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${view === "hub" ? "app-shell-hub" : ""}`}>
       {/* In home il menu non serve: logo e profilo vivono già nella pagina. */}
       {view !== "hub" ? (
         <header className="topbar">
@@ -1360,9 +1360,8 @@ function AppShell({ session }: { session: Session | null }) {
           <section className="hub-page">
             <div className="hub-hero">
               <div className="hub-hero-copy">
-                <p className="eyebrow">THEBOYZ · GROUP HQ</p>
                 <h1>Le nostre cose.<br /><span>Un posto solo.</span></h1>
-                <p>Classifiche serissime, discussioni inutili e nuove idee. Questo è il nostro spazio.</p>
+                <p>Classifiche serissime e discussioni inutili.</p>
                 <div className="hub-members">
                   <div className="mini-avatars">
                     {sorted.slice(0, 5).map((profile) => <Avatar key={profile.id} profile={profile} size="sm" />)}
@@ -1390,13 +1389,6 @@ function AppShell({ session }: { session: Session | null }) {
               </span>
               <Avatar profile={currentUser} size="xl" rank={currentRank || undefined} />
             </button>
-
-            <div className="hub-section-title">
-              <div>
-                <p className="eyebrow dark">I NOSTRI SPAZI</p>
-                <h2>Cosa facciamo qui</h2>
-              </div>
-            </div>
 
             <div className="hub-cards">
               <button className="hub-card hub-card-padel" onClick={() => { setView("padel"); setPadelView("overview"); }}>

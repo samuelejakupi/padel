@@ -562,17 +562,19 @@ form select:focus,
   gap: 34px;
 }
 
-.hub-hero {
+/* In home lo scuro non è più un riquadro: riveste l'intera pagina. */
+.app-shell-hub {
   background:
     linear-gradient(100deg, rgba(9, 24, 39, 0.98) 0 52%, rgba(13, 47, 62, 0.96)),
     var(--ink);
-  border: 1px solid rgba(24, 223, 228, 0.18);
-  border-radius: 10px;
+  min-height: 100vh;
+}
+
+.hub-hero {
   color: var(--white);
   display: grid;
-  min-height: 0;
   overflow: hidden;
-  padding: 56px 64px;
+  padding: 26px 0 40px;
   position: relative;
 }
 
@@ -640,14 +642,14 @@ form select:focus,
 /* Marchio grande nell'angolo in basso a destra del riquadro scuro: sborda
    oltre il bordo, che overflow:hidden ritaglia. */
 .hub-mark {
-  bottom: -46px;
-  height: 300px;
+  bottom: -30px;
+  height: 400px;
   object-fit: contain;
   pointer-events: none;
   position: absolute;
-  right: -34px;
+  right: -30px;
   transform: rotate(-9deg);
-  width: 300px;
+  width: 400px;
   z-index: 1;
 }
 
@@ -709,31 +711,6 @@ form select:focus,
 }
 
 
-.hub-section-title {
-  align-items: end;
-  display: flex;
-  justify-content: space-between;
-}
-
-.hub-section-title h2 {
-  font-size: 32px;
-  letter-spacing: -1.5px;
-  margin: 0;
-}
-
-.hub-section-title .eyebrow {
-  margin-bottom: 6px;
-}
-
-.hub-section-title > span {
-  border: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 1.4px;
-  padding: 8px 10px;
-}
-
 .hub-cards {
   display: grid;
   gap: 22px;
@@ -754,7 +731,9 @@ form select:focus,
   justify-content: center;
   min-height: 275px;
   overflow: hidden;
-  padding: 40px 32px;
+  /* Compensazione ottica: il gruppo icona+titolo va spostato a sinistra,
+     altrimenti a centratura geometrica sembra spostato a destra. */
+  padding: 40px 41px 40px 23px;
   position: relative;
   text-align: left;
   transition: transform 180ms ease, box-shadow 180ms ease;
@@ -2912,12 +2891,8 @@ button.pizza-ranking-row {
 }
 
 @media (max-width: 1050px) {
-  .hub-hero {
-    padding: 46px;
-  }
-
   .hub-card {
-    padding: 26px;
+    padding: 26px 35px 26px 17px;
   }
 
   .dashboard-grid {
@@ -3007,7 +2982,7 @@ button.pizza-ranking-row {
   }
 
   .hub-hero {
-    padding: 32px 22px;
+    padding: 8px 0 28px;
   }
 
   .hub-hero-copy {
@@ -3057,10 +3032,6 @@ button.pizza-ranking-row {
     font-size: 22px;
   }
 
-  .hub-section-title h2 {
-    font-size: 26px;
-  }
-
   .hub-cards {
     grid-template-columns: 1fr;
   }
@@ -3068,7 +3039,7 @@ button.pizza-ranking-row {
   .hub-card {
     gap: 18px;
     min-height: 200px;
-    padding: 30px 20px;
+    padding: 30px 29px 30px 11px;
   }
 
   .hub-card-icon {
@@ -3573,7 +3544,6 @@ button.pizza-ranking-row {
     width: calc(100vw - 24px);
   }
 
-  .hub-section-title > span,
   .season {
     display: none;
   }
