@@ -1845,6 +1845,8 @@ function AppShell({ session }: { session: Session | null }) {
         ) : null}
       </main>
 
+      {/* In home la barra non serve: le sezioni si scelgono dalle card. */}
+      {view !== "hub" ? (
       <nav className="mobile-nav" aria-label="Navigazione mobile">
 {([
 ["hub", basePath + "/theBOYZ.png", "TheBoyz"],
@@ -1858,6 +1860,7 @@ function AppShell({ session }: { session: Session | null }) {
 ))}
 <button className={view === "profile" ? "active" : ""} onClick={() => setView("profile")}><span className="mobile-nav-icon"><Avatar profile={currentUser} size="sm" /></span>Profilo</button>
 </nav>
+      ) : null}
 
       {showMatch || editingMatch ? (
         <NewMatchModal

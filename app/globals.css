@@ -2970,6 +2970,12 @@ button.pizza-ranking-row {
     padding-bottom: calc(70px + env(safe-area-inset-bottom));
   }
 
+  /* In home la barra inferiore non c'è: senza questo resterebbe una fascia
+     vuota in fondo alla pagina. */
+  html.theme-dark body {
+    padding-bottom: 0;
+  }
+
   .topbar {
   display: none;
 }
