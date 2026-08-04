@@ -423,14 +423,13 @@ function NavGlyph({ name }: { name: GlyphName }) {
 // Schermata di attesa: fondo blu sfumato e logo al centro. La usano sia
 // l'avvio dell'app sia il caricamento dei dati, cosi il passaggio da una
 // all'altra non si vede.
-function LoadingScreen({ label = "Carichiamo i dati…" }: { label?: string }) {
+function LoadingScreen() {
   return (
-    <main className="splash" role="status" aria-live="polite">
+    <main className="splash" role="status" aria-label="Caricamento in corso">
       <div className="splash-mark">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`${basePath}/theBOYZ.png`} alt="TheBoyz" />
+        <img src={`${basePath}/theboyz-mark.png`} alt="TheBoyz" width={108} height={108} />
       </div>
-      <p>{label}</p>
     </main>
   );
 }
@@ -439,7 +438,7 @@ function Brand() {
   return (
     <div className="brand" aria-label="TheBoyz">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img className="brand-logo" src={`${basePath}/theBOYZ.png`} alt="TheBoyz" />
+      <img className="brand-logo" src={`${basePath}/theboyz-mark.png`} alt="TheBoyz" width={46} height={46} />
     </div>
   );
 }
@@ -450,7 +449,7 @@ function BlockMark({ size = "md" }: { size?: "md" | "lg" }) {
     // eslint-disable-next-line @next/next/no-img-element
     <img
       className={`block-mark${size === "lg" ? " block-mark-lg" : ""}`}
-      src={`${basePath}/theBOYZ.png`}
+      src={`${basePath}/theboyz-mark.png`}
       alt=""
       aria-hidden="true"
     />
@@ -2204,7 +2203,7 @@ function AppShell({ session }: { session: Session | null }) {
         <header className="topbar"><Brand /></header>
         <main className="content">
           {loading ? (
-            <LoadingScreen label="Carichiamo i dati reali…" />
+            <LoadingScreen />
           ) : (
             <div className="empty-state">
               <p className="eyebrow dark">
@@ -2390,7 +2389,7 @@ function AppShell({ session }: { session: Session | null }) {
 
       <main className="content">
         {loading ? (
-          <LoadingScreen label="Prepariamo il campo…" />
+          <LoadingScreen />
         ) : null}
 
         {!loading && view === "padel" && padelView === "overview" ? (
@@ -3135,7 +3134,7 @@ export default function Home() {
   }, []);
 
   if (checking) {
-    return <LoadingScreen label="Prepariamo il campo…" />;
+    return <LoadingScreen />;
   }
   if (!hasSupabaseConfig) {
     return <SetupScreen />;
