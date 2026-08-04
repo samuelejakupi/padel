@@ -945,31 +945,6 @@ form select:focus,
   color: var(--ink);
 }
 
-.section-context nav {
-  display: flex;
-  gap: 6px;
-  margin-left: auto;
-}
-
-.section-context nav button {
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: 3px;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.8px;
-  padding: 7px 10px;
-  text-transform: uppercase;
-}
-
-.section-context nav button.active {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--white);
-}
-
 .compact-empty {
   align-items: center;
   background: var(--white);
@@ -1912,8 +1887,10 @@ button.ranking-row-link:focus-visible {
   padding: 34px;
 }
 
+/* flex-start porta il comando all'altezza dell'occhiello, cioè nell'angolo
+   in alto a destra del riquadro. */
 .section-hero-head {
-  align-items: flex-end;
+  align-items: flex-start;
   display: flex;
   gap: 24px;
   justify-content: space-between;
@@ -1946,9 +1923,11 @@ button.ranking-row-link:focus-visible {
   color: var(--ink);
 }
 
-/* Dentro il blocco scuro il podio non porta il proprio sfondo chiaro. */
+/* Dentro il blocco scuro il podio occupa tutta la larghezza disponibile
+   invece di restare centrato entro i 920px. */
 .section-hero .podium {
-  margin: 30px auto 0;
+  margin: 30px 0 0;
+  max-width: none;
 }
 
 .section-hero .podium-card {
@@ -3197,19 +3176,7 @@ button.pizza-ranking-row {
   }
 
   .section-context {
-    align-items: flex-start;
     flex-wrap: wrap;
-  }
-
-  .section-context nav {
-    margin-left: 0;
-    order: 2;
-    width: 100%;
-  }
-
-  .section-context nav button {
-    flex: 1;
-    min-height: 38px;
   }
 
   .mobile-nav {

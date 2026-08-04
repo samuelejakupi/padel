@@ -1501,7 +1501,7 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "ranking" ? (
           <section className="page-section">
             <div className="section-context">
-              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b><nav aria-label="Navigazione sezione padel"><button onClick={() => setPadelView("overview")}>Court</button><button onClick={() => setPadelView("matches")}>Partite</button><button className="active" onClick={() => setPadelView("ranking")}>Classifica</button></nav>
+              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><button onClick={() => setPadelView("overview")}>PADEL COURT</button><span>/</span><b>RANKING</b>
             </div>
             <button className="player-back" type="button" onClick={() => setPadelView("overview")}>← Torna al court</button>
             <article className="section-hero">
@@ -1587,8 +1587,7 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "player" && selectedPlayer ? (
           <section className="page-section player-detail-page">
             <div className="section-context">
-              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b><span>/</span><b>{selectedPlayer.display_name.toUpperCase()}</b>
-              <nav aria-label="Navigazione sezione padel"><button onClick={() => setPadelView("overview")}>Court</button><button className="active" onClick={() => setPadelView("ranking")}>Classifica</button><button onClick={() => setPadelView("matches")}>Partite</button></nav>
+              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><button onClick={() => setPadelView("overview")}>PADEL COURT</button><span>/</span><b>{selectedPlayer.display_name.toUpperCase()}</b>
             </div>
             <button className="player-back" type="button" onClick={() => setPadelView("overview")}>← Torna al court</button>
 
@@ -1645,7 +1644,7 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "matches" ? (
           <section className="page-section">
             <div className="section-context">
-              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL</b><nav aria-label="Navigazione sezione padel"><button onClick={() => setPadelView("overview")}>Court</button><button className="active" onClick={() => setPadelView("matches")}>Partite</button><button onClick={() => setPadelView("ranking")}>Classifica</button></nav>
+              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><button onClick={() => setPadelView("overview")}>PADEL COURT</button><span>/</span><b>MATCHES</b>
             </div>
             <button className="player-back" type="button" onClick={() => setPadelView("overview")}>← Torna al court</button>
             <article className="section-hero">
