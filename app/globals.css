@@ -2972,12 +2972,57 @@ button.pizza-ranking-row {
 }
 
 .profile-photo:hover .photo-button,
-.photo-button:focus-within {
+.photo-button:focus-visible {
   opacity: 1;
+}
+
+/* Su touch non esiste l'hover: la scritta resta leggibile ma discreta. */
+@media (hover: none) {
+  .photo-button {
+    opacity: 1;
+    background: rgba(11, 27, 44, 0.42);
+  }
 }
 
 .photo-button input {
   display: none;
+}
+
+/* Scelta della foto: da file oppure da indirizzo web. */
+.avatar-picker-preview {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+
+.avatar-picker-upload {
+  cursor: pointer;
+  display: flex;
+  width: 100%;
+}
+
+.avatar-picker-upload input {
+  display: none;
+}
+
+.avatar-picker-divider {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: 10px;
+  font-weight: 900;
+  gap: 12px;
+  letter-spacing: 1px;
+  margin: 20px 0;
+  text-transform: uppercase;
+}
+
+.avatar-picker-divider::before,
+.avatar-picker-divider::after {
+  background: var(--line);
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
 }
 
 .profile-card h2 {

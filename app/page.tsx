@@ -1512,6 +1512,7 @@ function AppShell({ session }: { session: Session | null }) {
   const [pizzaSchemaReady, setPizzaSchemaReady] = useState(true);
   const [editingMatch, setEditingMatch] = useState<PadelMatch | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [rankingMode, setRankingMode] = useState<"single" | "team">("single");
   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
@@ -1744,26 +1745,36 @@ function AppShell({ session }: { session: Session | null }) {
     event.preventDefault();
     if (!supabase || !session || !profileName.trim()) return;
 
-    const cleanAvatarUrl = avatarUrl.trim();
-    if (cleanAvatarUrl && !/^https:\/\//i.test(cleanAvatarUrl)) {
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        display_name: profileName.trim(),
+        handedness: handedness || null,
+        court_side: courtSide || null,
+      })
+      .eq("id", session.user.id);
+    setNotice(error ? error.message : "Profilo aggiornato.");
+    if (!error) await loadData();
+  }
+
+  // La foto da indirizzo web finisce nella stessa colonna del percorso nello
+  // storage: chi legge distingue i due casi dal prefisso http (vedi loadData).
+  async function saveAvatarUrl() {
+    if (!supabase || !session) return;
+    const clean = avatarUrl.trim();
+    if (clean && !/^https:\/\//i.test(clean)) {
       setNotice("L'indirizzo dell'immagine deve iniziare con https://");
       return;
     }
-
-    const patch: Record<string, string | null> = {
-      display_name: profileName.trim(),
-      handedness: handedness || null,
-      court_side: courtSide || null,
-    };
-    // Il campo si tocca solo se l'utente ci ha messo mano: altrimenti una foto
-    // caricata da file verrebbe sovrascritta a ogni salvataggio.
-    if (cleanAvatarUrl !== (avatarUrlInitial ?? "")) {
-      patch.avatar_path = cleanAvatarUrl || null;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ avatar_path: clean || null })
+      .eq("id", session.user.id);
+    setNotice(error ? error.message : clean ? "Foto profilo aggiornata." : "Foto profilo rimossa.");
+    if (!error) {
+      setShowAvatarPicker(false);
+      await loadData();
     }
-
-    const { error } = await supabase.from("profiles").update(patch).eq("id", session.user.id);
-    setNotice(error ? error.message : "Profilo aggiornato.");
-    if (!error) await loadData();
   }
 
   async function removePlay(play: PlayerPlay) {
@@ -2054,10 +2065,9 @@ function AppShell({ session }: { session: Session | null }) {
                 <div className="profile-photo">
                   <Avatar profile={selectedPlayer} size="xl" rank={selectedPlayerRank || undefined} />
                   {isOwnCard && supabase ? (
-                    <label className="photo-button">
+                    <button className="photo-button" type="button" onClick={() => setShowAvatarPicker(true)}>
                       Cambia foto
-                      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => void uploadAvatar(e.target.files?.[0])} />
-                    </label>
+                    </button>
                   ) : null}
                 </div>
                 <div>
@@ -2399,6 +2409,64 @@ function AppShell({ session }: { session: Session | null }) {
           onSaved={() => void handleSaved()}
         />
       ) : null}
+      {showAvatarPicker ? (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setShowAvatarPicker(false)}>
+          <section className="modal" role="dialog" aria-modal="true" aria-labelledby="avatar-picker-title">
+            <div className="modal-head">
+              <div>
+                <p className="eyebrow dark">FOTO PROFILO</p>
+                <h2 id="avatar-picker-title">Cambia la tua foto</h2>
+              </div>
+              <button className="icon-button" onClick={() => setShowAvatarPicker(false)} aria-label="Chiudi">×</button>
+            </div>
+
+            <div className="avatar-picker">
+              <div className="avatar-picker-preview">
+                <Avatar profile={currentUser} size="lg" />
+              </div>
+
+              <label className="button button-dark avatar-picker-upload">
+                Carica dal dispositivo
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={(e) => { void uploadAvatar(e.target.files?.[0]); setShowAvatarPicker(false); }}
+                />
+              </label>
+
+              <p className="avatar-picker-divider"><span>oppure</span></p>
+
+              <label>
+                Indirizzo di un'immagine sul web <span className="optional-label">anche GIF animate</span>
+                <input
+                  value={avatarUrl}
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                  placeholder="https://…/animazione.gif"
+                  inputMode="url"
+                />
+              </label>
+              <p className="field-hint">
+                Deve essere il collegamento diretto all&apos;immagine, quello che finisce in .gif, .png o .jpg —
+                non la pagina che la contiene. Su Giphy o Tenor si ottiene con &quot;copia indirizzo immagine&quot;.
+              </p>
+
+              <div className="modal-actions">
+                {avatarUrlInitial ? (
+                  <button
+                    type="button"
+                    className="signout-button"
+                    onClick={() => { setAvatarUrl(""); void saveAvatarUrl(); }}
+                  >
+                    Togli l&apos;immagine dal web
+                  </button>
+                ) : null}
+                <button type="button" className="button button-ghost" onClick={() => setShowAvatarPicker(false)}>Annulla</button>
+                <button type="button" className="button button-primary" onClick={() => void saveAvatarUrl()}>Usa questo indirizzo</button>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : null}
       {showProfileEdit ? (
         <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setShowProfileEdit(false)}>
           <section className="modal" role="dialog" aria-modal="true" aria-labelledby="profile-edit-title">
@@ -2427,17 +2495,6 @@ function AppShell({ session }: { session: Session | null }) {
                   <option value="sinistra">Sinistra</option>
                 </select>
               </label>
-              <label>
-                Foto da indirizzo web <span className="optional-label">anche GIF animate</span>
-                <input
-                  value={avatarUrl}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                  placeholder="https://…/animazione.gif"
-                  inputMode="url"
-                  disabled={!supabase}
-                />
-              </label>
-              <p className="field-hint">Lascia vuoto per usare la foto caricata dal telefono.</p>
               <label>Email<input value={session?.user.email ?? ""} disabled /></label>
               {supabase ? null : <p className="demo-profile-note">Il profilo diventa modificabile dopo il collegamento a Supabase.</p>}
               <div className="modal-actions">
