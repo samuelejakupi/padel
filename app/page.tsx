@@ -143,30 +143,39 @@ function sortPadelProfiles(profiles: Profile[]) {
 
 // Saluti della home: una frase a caso a ogni caricamento, scelta in base a
 // come sta andando chi guarda. {nome} viene sostituito col display_name.
+// Il saluto sta sempre in cima ed e indipendente dalla frase: si pesca da
+// qui, mescolando quello col nome e quello scherzoso.
+const heroSalutes = [
+  "Ciao {nome},",
+  "Ciao GOAT,",
+] as const;
+
+// Le frasi sotto la barra. Sono gia senza saluto e con l'iniziale
+// maiuscola: cosi non c'e niente da ritagliare o correggere a video.
 const heroGreetings = {
   first: [
-    "Ciao {nome}, bella giornata per stare al top!",
-    "Ciao GOAT, quanto brucia agli altri?",
+    "Bella giornata per stare al top!",
+    "Quanto brucia agli altri?",
     "Fino a un mese fa non ti voleva nemmeno tua madre e ora guardati!",
   ],
   second: [
-    "Ciao {nome}, manca poco alla vetta.",
+    "Manca poco alla vetta.",
     "Non mollare, ci sei quasi!",
   ],
   third: [
-    "Ciao {nome}, comunque a podio, non male!",
+    "Comunque a podio, non male!",
     "Allora? Scaliamo o scendiamo?",
   ],
   fourth: [
     "Ti giuro che siamo arrivati, il podio è lì davanti.",
-    "Ciao {nome}, ancora uno sforzo dai!",
+    "Ancora uno sforzo dai!",
   ],
   rest: [
-    "Ciao {nome}, quanto fa freddo qua giù?",
+    "Quanto fa freddo qua giù?",
     "Per Natale ci siamo a podio?",
   ],
   last: [
-    "Ciao {nome}, mai pensato di darti all'ippica?",
+    "Mai pensato di darti all'ippica?",
     "Sei proprio un gancio!",
   ],
   narrowLead: [
@@ -2096,6 +2105,9 @@ function AppShell({ session }: { session: Session | null }) {
   // mentre si naviga tra le sezioni. AppShell esiste solo dopo il login,
   // quindi l'HTML statico non contiene nessuna frase da reidratare.
   const [greetingSeed] = useState(() => Math.random());
+  // Saluto e frase si pescano indipendentemente: con un solo numero casuale
+  // le due scelte sarebbero rimaste sempre appaiate.
+  const [saluteSeed] = useState(() => Math.random());
 
   // Profilo e scheda giocatore sono la stessa pagina: la propria è solo la
   // scheda di sé stessi, con in più i campi modificabili. Memoizzata perche
@@ -2250,13 +2262,12 @@ function AppShell({ session }: { session: Session | null }) {
   }, [navActiveIndex, placePill, currentUser, loading]);
   const heroGreeting = useMemo(() => {
     const pool = heroGreetingPool(currentRank, isLastRanked, hasNarrowLead);
-    const line = (pool[Math.floor(greetingSeed * pool.length)] ?? pool[0] ?? "")
-      .replace("{nome}", currentUser?.display_name ?? "");
-    // "Ciao Dani, ..." va spezzato per tenere il saluto in evidenza e il
-    // resto in chiaro, come prima. Le frasi senza saluto restano intere.
-    const opening = line.match(/^(Ciao[^,]*,)\s*(.*)$/);
-    return opening ? { lead: opening[1], rest: opening[2] } : { lead: "", rest: line };
-  }, [currentRank, isLastRanked, hasNarrowLead, currentUser?.display_name, greetingSeed]);
+    const salute = heroSalutes[Math.floor(saluteSeed * heroSalutes.length)] ?? heroSalutes[0];
+    return {
+      lead: salute.replace("{nome}", currentUser?.display_name ?? ""),
+      rest: pool[Math.floor(greetingSeed * pool.length)] ?? pool[0] ?? "",
+    };
+  }, [currentRank, isLastRanked, hasNarrowLead, currentUser?.display_name, greetingSeed, saluteSeed]);
   const winRate = currentUser?.matches_played
     ? Math.round((currentUser.wins / currentUser.matches_played) * 100)
     : 0;
@@ -2478,12 +2489,8 @@ function AppShell({ session }: { session: Session | null }) {
                 >
                   <BlockMark size="lg" />
                   <div className="hero-stat-copy">
-                    {/* In alto solo il saluto. Le frasi che non ne hanno uno
-                        proprio ricevono quello neutro, cosi il blocco non
-                        resta senza intestazione. */}
-                    <h1 className="hero-greeting">
-                      {heroGreeting.lead || `Ciao, ${currentUser.display_name}.`}
-                    </h1>
+                    {/* In alto il saluto, pescato a parte dalla frase. */}
+                    <h1 className="hero-greeting">{heroGreeting.lead}</h1>
                     <p className="eyebrow">LA TUA POSIZIONE</p>
                     {/* Numero e avatar sulla stessa riga: cosi restano
                         incolonnati fra loro invece che ognuno per conto suo. */}
