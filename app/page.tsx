@@ -2065,6 +2065,108 @@ function AppShell({ session }: { session: Session | null }) {
   // mentre si naviga tra le sezioni. AppShell esiste solo dopo il login,
   // quindi l'HTML statico non contiene nessuna frase da reidratare.
   const [greetingSeed] = useState(() => Math.random());
+
+  // Profilo e scheda giocatore sono la stessa pagina: la propria è solo la
+  // scheda di sé stessi, con in più i campi modificabili. Memoizzata perche
+  // finisce fra le voci della barra mobile, che altrimenti verrebbero
+  // ricostruite a ogni render.
+  const openOwnCard = useCallback(() => {
+    if (!currentUser) return;
+    setSelectedPlayerId(currentUser.id);
+    setPadelView("player");
+    setView("padel");
+  }, [currentUser]);
+
+  // --- Barra di navigazione mobile -----------------------------------------
+  // La pastiglia viene spostata scrivendo direttamente sullo stile: passando
+  // da uno stato React ogni movimento del dito farebbe ridisegnare tutta la
+  // schermata, e il trascinamento risulterebbe a scatti.
+  const navRef = useRef<HTMLElement | null>(null);
+  const navPillRef = useRef<HTMLSpanElement | null>(null);
+  const navButtonsRef = useRef<(HTMLButtonElement | null)[]>([]);
+  const navDragging = useRef(false);
+
+  const navItems = useMemo(() => ([
+    { key: "overview", glyph: "home", label: "Home", active: view === "padel" && padelView === "overview", select: () => { setView("padel"); setPadelView("overview"); } },
+    { key: "matches", glyph: "racket", label: "Matches", active: view === "padel" && padelView === "matches", select: () => { setView("padel"); setPadelView("matches"); } },
+    { key: "ranking", glyph: "ranking", label: "Ranking", active: view === "padel" && padelView === "ranking", select: () => { setView("padel"); setPadelView("ranking"); } },
+    { key: "pizza", glyph: "pizza", label: "Pizza", active: view === "pizza", select: () => setView("pizza") },
+    { key: "profile", glyph: "", label: "Profilo", active: isOwnCard, select: openOwnCard },
+  ]), [view, padelView, isOwnCard, openOwnCard]);
+
+  const navActiveIndex = navItems.findIndex((item) => item.active);
+
+  // Porta la pastiglia sopra una voce. Con animate = false ci arriva secca,
+  // e quello che serve al primo disegno e mentre si trascina.
+  const placePill = useCallback((index: number, animate: boolean) => {
+    const nav = navRef.current;
+    const pill = navPillRef.current;
+    if (!nav || !pill) return;
+    const button = navButtonsRef.current[index];
+    if (!button) {
+      pill.style.opacity = "0";
+      return;
+    }
+    const navBox = nav.getBoundingClientRect();
+    const buttonBox = button.getBoundingClientRect();
+    pill.style.transition = animate ? "" : "none";
+    pill.style.opacity = "1";
+    pill.style.width = `${buttonBox.width}px`;
+    pill.style.transform = `translateX(${buttonBox.left - navBox.left}px)`;
+    if (!animate) {
+      // Forza il ricalcolo prima di riattivare la transizione, altrimenti il
+      // browser accorpa le due modifiche e anima anche questo salto.
+      void pill.offsetWidth;
+    }
+  }, []);
+
+  // Segue il dito, restando dentro i due estremi della barra.
+  const movePillTo = useCallback((clientX: number) => {
+    const nav = navRef.current;
+    const pill = navPillRef.current;
+    const first = navButtonsRef.current[0];
+    const last = navButtonsRef.current[navButtonsRef.current.length - 1];
+    if (!nav || !pill || !first || !last) return;
+    const navBox = nav.getBoundingClientRect();
+    const firstBox = first.getBoundingClientRect();
+    const lastBox = last.getBoundingClientRect();
+    const left = clientX - navBox.left - firstBox.width / 2;
+    pill.style.transition = "none";
+    pill.style.opacity = "1";
+    pill.style.width = `${firstBox.width}px`;
+    pill.style.transform = `translateX(${Math.min(
+      lastBox.left - navBox.left,
+      Math.max(firstBox.left - navBox.left, left),
+    )}px)`;
+  }, []);
+
+  const nearestNavIndex = useCallback((clientX: number) => {
+    let best = 0;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    navButtonsRef.current.forEach((button, index) => {
+      if (!button) return;
+      const box = button.getBoundingClientRect();
+      const distance = Math.abs(clientX - (box.left + box.width / 2));
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = index;
+      }
+    });
+    return best;
+  }, []);
+
+  // Riallinea la pastiglia quando cambia la voce attiva o le misure della
+  // barra: qui si tocca solo lo stile, nessuno stato da aggiornare.
+  useEffect(() => {
+    placePill(navActiveIndex, true);
+    const realign = () => placePill(navActiveIndex, false);
+    window.addEventListener("resize", realign);
+    window.addEventListener("orientationchange", realign);
+    return () => {
+      window.removeEventListener("resize", realign);
+      window.removeEventListener("orientationchange", realign);
+    };
+  }, [navActiveIndex, placePill]);
   const heroGreeting = useMemo(() => {
     const pool = heroGreetingPool(currentRank, isLastRanked, hasNarrowLead);
     const line = (pool[Math.floor(greetingSeed * pool.length)] ?? pool[0] ?? "")
@@ -2229,13 +2331,7 @@ function AppShell({ session }: { session: Session | null }) {
     setPadelView("overview");
   }
 
-  // Profilo e scheda giocatore sono la stessa pagina: la propria è solo la
-  // scheda di sé stessi, con in più i campi modificabili.
-  function openOwnCard() {
-    if (!currentUser) return;
-    openPlayer(currentUser);
-    setView("padel");
-  }
+
 
   return (
     <div className="app-shell">
@@ -2784,32 +2880,48 @@ function AppShell({ session }: { session: Session | null }) {
 
       </main>
 
-      <nav className="mobile-nav" aria-label="Navigazione mobile">
-        {([
-          ["overview", "home", "Home"],
-          ["matches", "racket", "Matches"],
-          ["ranking", "ranking", "Ranking"],
-        ] as [PadelView, GlyphName, string][]).map(([target, glyph, label]) => (
+      <nav
+        className="mobile-nav"
+        aria-label="Navigazione mobile"
+        ref={navRef}
+        onPointerDown={(event) => {
+          navDragging.current = true;
+          event.currentTarget.setPointerCapture(event.pointerId);
+          movePillTo(event.clientX);
+        }}
+        onPointerMove={(event) => {
+          if (navDragging.current) movePillTo(event.clientX);
+        }}
+        onPointerUp={(event) => {
+          if (!navDragging.current) return;
+          navDragging.current = false;
+          const index = nearestNavIndex(event.clientX);
+          placePill(index, true);
+          navItems[index]?.select();
+        }}
+        onPointerCancel={() => {
+          navDragging.current = false;
+          placePill(navActiveIndex, true);
+        }}
+      >
+        {/* Pastiglia unica che scivola: prima ogni voce aveva la sua e il
+            passaggio era una dissolvenza, non uno spostamento. */}
+        <span className="mobile-nav-pill" ref={navPillRef} aria-hidden="true" />
+        {navItems.map((item, index) => (
           <button
-            key={target}
-            className={view === "padel" && padelView === target ? "active" : ""}
-            onClick={() => { setView("padel"); setPadelView(target); }}
+            key={item.key}
+            ref={(element) => { navButtonsRef.current[index] = element; }}
+            className={item.active ? "active" : ""}
+            onClick={item.select}
           >
-            <span className="mobile-nav-icon"><NavGlyph name={glyph} /></span>
-            <span className="mobile-nav-label">{label}</span>
+            <span className="mobile-nav-icon">
+              {item.key === "profile"
+                ? <Avatar profile={currentUser} size="sm" />
+                : <NavGlyph name={item.glyph as GlyphName} />}
+            </span>
+            <span className="mobile-nav-label">{item.label}</span>
           </button>
         ))}
-        <button
-          className={view === "pizza" ? "active" : ""}
-          onClick={() => setView("pizza")}
-        >
-          <span className="mobile-nav-icon"><NavGlyph name="pizza" /></span>
-          <span className="mobile-nav-label">Pizza</span>
-        </button>
-        <button className={isOwnCard ? "active" : ""} onClick={openOwnCard}>
-          <span className="mobile-nav-icon"><Avatar profile={currentUser} size="sm" /></span>
-          <span className="mobile-nav-label">Profilo</span>
-        </button>
       </nav>
 
       {showMatch || editingMatch ? (

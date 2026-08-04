@@ -56,6 +56,16 @@ export default function RootLayout({
     <html lang="it">
       <head>
         <meta httpEquiv="Cache-Control" content="no-cache, must-revalidate" />
+        {/* Inter da Google Fonts. Caricato via link e non con next/font
+            perche in export statico next/font scarica il file a build time:
+            se la rete della pipeline non risponde, salta tutta la build.
+            Cosi invece il peggio che puo capitare e il fallback di sistema. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap"
+          rel="stylesheet"
+        />
       </head>
       <body>
         <BuildWatcher />
