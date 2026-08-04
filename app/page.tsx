@@ -1420,6 +1420,13 @@ function NewMatchModal({
         await supabase.rpc("set_match_court", { p_match_id: matchId, p_court: court.trim() || null });
       }
 
+      // record_match calcola il delta sui rating del momento, non su quelli
+      // che i giocatori avevano alla data della partita: senza questo
+      // ricalcolo, correggere una partita vecchia cambia i punti assegnati.
+      // Anche questa e opzionale: se la migrazione manca, resta il
+      // comportamento di prima.
+      await supabase.rpc("recalculate_padel_ratings");
+
       if (matchId && historyReady) {
         if (lineage) {
           await supabase.rpc("set_match_lineage", { p_match_id: matchId, p_lineage_id: lineage });
