@@ -56,6 +56,17 @@ export default function RootLayout({
     <html lang="it">
       <head>
         <meta httpEquiv="Cache-Control" content="no-cache, must-revalidate" />
+        {/* Recupero da cache mista. iOS puo conservare l'HTML di un deploy
+            vecchio: quell'HTML chiama file JavaScript che non esistono piu e
+            la pagina muore prima che React parta, quindi il controllo di
+            versione dentro l'app non fa in tempo a intervenire. Questo pezzo
+            e inline nell'head, gira subito, e se un file non si carica
+            ricarica una volta sola scavalcando la cache. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var K="theboyz-recover";function r(){try{if(sessionStorage.getItem(K))return;sessionStorage.setItem(K,"1")}catch(e){}var u=new URL(location.href);u.searchParams.set("r",Date.now().toString(36));location.replace(u.toString())}window.addEventListener("error",function(e){var t=e.target;if(t&&(t.tagName==="SCRIPT"||t.tagName==="LINK"))r()},true);window.addEventListener("load",function(){try{sessionStorage.removeItem(K)}catch(e){}})})();`,
+          }}
+        />
         {/* Inter da Google Fonts. Caricato via link e non con next/font
             perche in export statico next/font scarica il file a build time:
             se la rete della pipeline non risponde, salta tutta la build.
