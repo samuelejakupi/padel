@@ -828,7 +828,7 @@ form select:focus,
 .hero-stat > *:not(.block-mark):not(.hero-kpis),
 .section-hero > *:not(.block-mark),
 .player-detail-hero > *:not(.block-mark),
-.pizza-hero > *:not(.block-mark) {
+.pizza-page > *:not(.block-mark) {
   position: relative;
   z-index: 1;
 }
@@ -849,6 +849,13 @@ form select:focus,
   user-select: none;
   width: 380px;
   z-index: 0;
+}
+
+.block-mark-lg {
+  height: 540px;
+  right: -90px;
+  top: -110px;
+  width: 540px;
 }
 
 .compact-empty {
@@ -971,6 +978,16 @@ form select:focus,
   overflow: hidden;
   padding: 42px;
   position: relative;
+}
+
+.hero-stat-link {
+  cursor: pointer;
+  transition: box-shadow 180ms ease, transform 180ms ease;
+}
+
+.hero-stat-link:hover {
+  box-shadow: var(--shadow);
+  transform: scale(1.006);
 }
 
 .hero-stat-copy {
@@ -1909,7 +1926,8 @@ button.ranking-row-link:focus-visible {
   min-width: 0;
 }
 
-.player-detail-identity .avatar-xl {
+.player-detail-identity .avatar-xl,
+.player-detail-identity .profile-photo {
   flex: 0 0 auto;
 }
 
@@ -2126,15 +2144,61 @@ button.ranking-row-link:focus-visible {
   text-transform: uppercase;
 }
 
+/* Squadre: stanno fra l'andamento Elo e lo storico partite. */
+.player-teams-list {
+  background: var(--white);
+  border-radius: 9px;
+  padding: 24px 26px 14px;
+}
+
+.player-team-row {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 12px 0;
+}
+
+.player-team-row:last-child {
+  border-bottom: 0;
+}
+
+.player-team-row b {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-team-row > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.player-teams .demo-profile-note {
+  background: var(--white);
+  border-radius: 9px;
+  margin: 0;
+  padding: 24px 26px;
+}
+
+/* La scheda dati chiude la propria pagina, non è più in griglia. */
+.player-detail-page .settings-card {
+  margin-top: 40px;
+  max-width: 620px;
+}
+
 /* Pizzeria ranking */
 .pizza-page {
-  background:
-    radial-gradient(circle at 88% 10%, rgba(24, 223, 228, 0.14), transparent 25%),
-    var(--ink);
+  background: var(--ink);
   border-radius: 10px;
   color: var(--white);
   overflow: hidden;
   padding: 38px 48px 42px;
+  position: relative;
 }
 
 .pizza-hero {
@@ -2142,7 +2206,6 @@ button.ranking-row-link:focus-visible {
   display: grid;
   gap: 40px;
   grid-template-columns: 1fr 260px;
-  overflow: hidden;
   min-height: 350px;
   position: relative;
 }
@@ -3120,6 +3183,13 @@ button.pizza-ranking-row {
     width: 260px;
   }
 
+  .block-mark-lg {
+    height: 360px;
+    right: -70px;
+    top: -80px;
+    width: 360px;
+  }
+
   /* Barra fluttuante in vetro: il contenuto scorre sotto e si intravede
      sfocato, come la tab bar di iOS. */
   .mobile-nav {
@@ -3908,6 +3978,7 @@ button.pizza-ranking-row {
    l'elemento rimane ingrandito. Lo zoom vale solo dove c'è un puntatore. */
 @media (hover: none) {
   .button:hover,
+  .hero-stat-link:hover,
   .hub-profile:hover,
   .hub-card:hover,
   .match-card-link:hover,

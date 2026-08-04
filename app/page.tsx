@@ -10,7 +10,7 @@ import {
   supabase,
 } from "@/lib/supabase";
 
-type View = "padel" | "pizza" | "profile";
+type View = "padel" | "pizza";
 type PadelView = "overview" | "ranking" | "matches" | "player";
 type PizzaRankingEntry = {
   name: string;
@@ -379,10 +379,15 @@ function Brand() {
 }
 
 // Marchio in filigrana dentro i blocchi scuri: decorativo, mai cliccabile.
-function BlockMark() {
+function BlockMark({ size = "md" }: { size?: "md" | "lg" }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img className="block-mark" src={`${basePath}/theBOYZ.png`} alt="" aria-hidden="true" />
+    <img
+      className={`block-mark${size === "lg" ? " block-mark-lg" : ""}`}
+      src={`${basePath}/theBOYZ.png`}
+      alt=""
+      aria-hidden="true"
+    />
   );
 }
 
@@ -1375,9 +1380,9 @@ function AppShell({ session }: { session: Session | null }) {
     () => buildPadelTeams(matches, profiles, teamRecords),
     [matches, profiles, teamRecords],
   );
-  const myTeams = useMemo(
-    () => teams.filter((team) => team.players.some((profile) => profile.id === session?.user.id)),
-    [teams, session?.user.id],
+  const playerTeams = useMemo(
+    () => teams.filter((team) => team.players.some((profile) => profile.id === selectedPlayerId)),
+    [teams, selectedPlayerId],
   );
   const teamRanks = useMemo(() => ranksByRating(teams), [teams]);
   const pizzaEntries = useMemo(() => buildPizzaRanking(pizzaRestaurants), [pizzaRestaurants]);
@@ -1385,6 +1390,7 @@ function AppShell({ session }: { session: Session | null }) {
   const currentUserCanManagePizza = currentUser ? canManagePizza(currentUser.display_name, session?.user.email) : false;
   const currentRank = currentUser?.matches_played ? rankOf(sorted, currentUser.id) : 0;
   const selectedPlayer = profiles.find((profile) => profile.id === selectedPlayerId) ?? null;
+  const isOwnCard = view === "padel" && padelView === "player" && selectedPlayerId === session?.user.id;
   const selectedPlayerRank = selectedPlayer?.matches_played ? rankOf(sorted, selectedPlayer.id) : 0;
   const selectedPlayerMatches = selectedPlayer
     ? matches.filter((match) => match.players.some((player) => player.profile_id === selectedPlayer.id))
@@ -1526,6 +1532,14 @@ function AppShell({ session }: { session: Session | null }) {
     setPadelView("overview");
   }
 
+  // Profilo e scheda giocatore sono la stessa pagina: la propria è solo la
+  // scheda di sé stessi, con in più i campi modificabili.
+  function openOwnCard() {
+    if (!currentUser) return;
+    openPlayer(currentUser);
+    setView("padel");
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -1556,8 +1570,8 @@ function AppShell({ session }: { session: Session | null }) {
           </button>
         </nav>
         <button
-          className={`profile-chip ${view === "profile" ? "active" : ""}`}
-          onClick={() => setView("profile")}
+          className={`profile-chip ${isOwnCard ? "active" : ""}`}
+          onClick={openOwnCard}
         >
           <span><b>{currentUser.display_name}</b><small>Padel {currentRank ? `#${currentRank}` : "N/C"}</small></span>
           <Avatar profile={currentUser} size="sm" />
@@ -1575,8 +1589,20 @@ function AppShell({ session }: { session: Session | null }) {
           <>
             <section className="dashboard-grid">
               <div className="dashboard-main">
-                <article className="hero-stat">
-                  <BlockMark />
+                <article
+                  className="hero-stat hero-stat-link"
+                  onClick={openOwnCard}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openOwnCard();
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Apri la tua scheda"
+                >
+                  <BlockMark size="lg" />
                   <div className="hero-stat-copy">
                     <h1 className="hero-greeting">
                       Ciao, {currentUser.display_name}.<br />
@@ -1647,7 +1673,7 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "ranking" ? (
           <section className="page-section">
             <article className="section-hero">
-              <BlockMark />
+              <BlockMark size="lg" />
               <div className="section-hero-head">
                 <div><p className="eyebrow">THEBOYZ PADEL · STAGIONE 2026</p><h1>Il ranking del gruppo</h1><p>Il ranking si aggiorna automaticamente dopo ogni risultato.</p></div>
                 <div className="ranking-switch" role="group" aria-label="Tipo di ranking">
@@ -1732,14 +1758,23 @@ function AppShell({ session }: { session: Session | null }) {
             <article className="player-detail-hero">
               <BlockMark />
               <div className="player-detail-identity">
-                <Avatar profile={selectedPlayer} size="xl" rank={selectedPlayerRank || undefined} />
+                <div className="profile-photo">
+                  <Avatar profile={selectedPlayer} size="xl" rank={selectedPlayerRank || undefined} />
+                  {isOwnCard && supabase ? (
+                    <label className="photo-button">
+                      Cambia foto
+                      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => void uploadAvatar(e.target.files?.[0])} />
+                    </label>
+                  ) : null}
+                </div>
                 <div>
-                  <p className="eyebrow">SCHEDA GIOCATORE</p>
+                  <p className="eyebrow">{isOwnCard ? "IL TUO PROFILO" : "SCHEDA GIOCATORE"}</p>
                   <h1>{selectedPlayer.display_name}</h1>
                   <div className="player-traits">
                     {padelTraits(selectedPlayer) ? <span>{padelTraits(selectedPlayer)}</span> : null}
                     <span>{selectedPlayer.matches_played ? `#${selectedPlayerRank} in classifica` : "Non classificato"}</span>
                     {selectedPlayer.matches_played ? <span>Serie {selectedPlayer.current_streak > 0 ? `+${selectedPlayer.current_streak}` : selectedPlayer.current_streak}</span> : null}
+                    <span>In campo dal {new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(new Date(selectedPlayer.created_at ?? "2026-01-01"))}</span>
                   </div>
                 </div>
               </div>
@@ -1758,6 +1793,42 @@ function AppShell({ session }: { session: Session | null }) {
             </div>
 
             <EloChart profile={selectedPlayer} matches={matches} />
+
+            <div className="player-teams">
+              <div className="player-history-head">
+                <div><p className="eyebrow dark">DOPPI</p><h2>{isOwnCard ? "Le mie squadre" : `Le squadre di ${selectedPlayer.display_name}`}</h2></div>
+                <span>{playerTeams.length} {playerTeams.length === 1 ? "squadra" : "squadre"}</span>
+              </div>
+              {!teamSchemaReady && isOwnCard ? (
+                <p className="demo-profile-note">
+                  Per dare nome e foto alle squadre esegui la migrazione
+                  <code>migration-squadre.sql</code> in Supabase.
+                </p>
+              ) : playerTeams.length ? (
+                <div className="player-teams-list">
+                  {playerTeams.map((team) => (
+                    isOwnCard && teamSchemaReady ? (
+                      <TeamEditor
+                        key={team.id}
+                        team={team}
+                        disabled={!supabase}
+                        onSave={(selected, name, file) => saveTeam(selected, name, file)}
+                      />
+                    ) : (
+                      <div key={team.id} className="player-team-row">
+                        <TeamAvatars team={team} />
+                        <b>{teamLabel(team)}</b>
+                        <span>{team.rating} pt · {team.wins}/{team.matches_played} vinte</span>
+                      </div>
+                    )
+                  ))}
+                </div>
+              ) : (
+                <p className="demo-profile-note">
+                  Le squadre nascono dalle partite: gioca un doppio e comparirà qui.
+                </p>
+              )}
+            </div>
 
             <div className="player-history-head">
               <div><p className="eyebrow dark">STORICO PERSONALE</p><h2>Le partite di {selectedPlayer.display_name}</h2></div>
@@ -1778,6 +1849,34 @@ function AppShell({ session }: { session: Session | null }) {
             ) : (
               <div className="empty-board"><span>00</span><h2>Nessuna partita giocata</h2><p>La scheda si completerà dopo il primo risultato.</p></div>
             )}
+
+            {isOwnCard ? (
+              <article className="settings-card">
+                <h2>Dati del profilo</h2>
+                <form onSubmit={updateProfile}>
+                  <label>Nome in classifica<input value={profileName || currentUser.display_name} onChange={(e) => setProfileName(e.target.value)} disabled={!supabase} /></label>
+                  <label>
+                    Mano della racchetta
+                    <select value={handedness} onChange={(e) => setHandedness(e.target.value)} disabled={!supabase}>
+                      <option value="">Non indicata</option>
+                      <option value="destro">Destro</option>
+                      <option value="mancino">Mancino</option>
+                    </select>
+                  </label>
+                  <label>
+                    Lato del campo
+                    <select value={courtSide} onChange={(e) => setCourtSide(e.target.value)} disabled={!supabase}>
+                      <option value="">Non indicato</option>
+                      <option value="destra">Destra</option>
+                      <option value="sinistra">Sinistra</option>
+                    </select>
+                  </label>
+                  <label>Email<input value={session?.user.email ?? ""} disabled /></label>
+                  <button className="button button-primary" disabled={!supabase}>Salva modifiche</button>
+                </form>
+                {supabase ? <button className="signout-button" onClick={() => void supabase?.auth.signOut()}>Esci dal club</button> : <p className="demo-profile-note">Il profilo diventa modificabile dopo il collegamento a Supabase.</p>}
+              </article>
+            ) : null}
           </section>
         ) : null}
 
@@ -1810,8 +1909,8 @@ function AppShell({ session }: { session: Session | null }) {
 
         {!loading && view === "pizza" ? (
           <><section className="pizza-page">
+            <BlockMark size="lg" />
             <div className="pizza-hero">
-              <BlockMark />
               <div>
                 <p className="eyebrow">CLASSIFICA UFFICIALMENTE NON UFFICIALE</p>
                 <h1>Pizzeria<br /><span>Ranking.</span></h1>
@@ -1915,83 +2014,6 @@ function AppShell({ session }: { session: Session | null }) {
           </section></>
         ) : null}
 
-        {!loading && view === "profile" ? (
-          <section className="page-section profile-page">
-            <div className="page-title">
-              <div><p className="eyebrow dark">IL MIO SPAZIO THEBOYZ</p><h1>Profilo del gruppo</h1><p>Aggiorna la foto e il nome visibile agli amici.</p></div>
-            </div>
-            <div className="profile-grid">
-              <article className="profile-card">
-                <div className="profile-photo">
-                  <Avatar profile={currentUser} size="xl" rank={currentRank || undefined} />
-                  {supabase ? (
-                    <label className="photo-button">
-                      Cambia foto
-                      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => void uploadAvatar(e.target.files?.[0])} />
-                    </label>
-                  ) : null}
-                </div>
-                <h2>
-                  {currentRank ? <span className="profile-rank">#{currentRank}</span> : null}
-                  {currentUser.display_name}
-                </h2>
-                <p>In campo dal {new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(new Date(currentUser.created_at ?? "2026-01-01"))}</p>
-                <div className="profile-stats">
-                  <span><b>{currentRank ? currentUser.rating : "N/C"}</b><small>Punti</small></span>
-                  <span><b>{currentUser.wins}/{currentUser.matches_played}</b><small>Vittorie</small></span>
-                  <span><b>{winRate}%</b><small>Win rate</small></span>
-                </div>
-                <div className="profile-teams">
-                  <h3>Le mie squadre</h3>
-                  {!teamSchemaReady ? (
-                    <p className="demo-profile-note">
-                      Per dare nome e foto alle squadre esegui la migrazione
-                      <code>migration-squadre.sql</code> in Supabase.
-                    </p>
-                  ) : myTeams.length ? (
-                    myTeams.map((team) => (
-                      <TeamEditor
-                        key={team.id}
-                        team={team}
-                        disabled={!supabase}
-                        onSave={(selected, name, file) => saveTeam(selected, name, file)}
-                      />
-                    ))
-                  ) : (
-                    <p className="demo-profile-note">
-                      Le squadre nascono dalle partite: gioca un doppio e comparirà qui.
-                    </p>
-                  )}
-                </div>
-              </article>
-              <article className="settings-card">
-                <h2>Dati del profilo</h2>
-                <form onSubmit={updateProfile}>
-                  <label>Nome in classifica<input value={profileName || currentUser.display_name} onChange={(e) => setProfileName(e.target.value)} disabled={!supabase} /></label>
-                  <label>
-                    Mano della racchetta
-                    <select value={handedness} onChange={(e) => setHandedness(e.target.value)} disabled={!supabase}>
-                      <option value="">Non indicata</option>
-                      <option value="destro">Destro</option>
-                      <option value="mancino">Mancino</option>
-                    </select>
-                  </label>
-                  <label>
-                    Lato del campo
-                    <select value={courtSide} onChange={(e) => setCourtSide(e.target.value)} disabled={!supabase}>
-                      <option value="">Non indicato</option>
-                      <option value="destra">Destra</option>
-                      <option value="sinistra">Sinistra</option>
-                    </select>
-                  </label>
-                  <label>Email<input value={session?.user.email ?? ""} disabled /></label>
-                  <button className="button button-primary" disabled={!supabase}>Salva modifiche</button>
-                </form>
-                {supabase ? <button className="signout-button" onClick={() => void supabase?.auth.signOut()}>Esci dal club</button> : <p className="demo-profile-note">Il profilo diventa modificabile dopo il collegamento a Supabase.</p>}
-              </article>
-            </div>
-          </section>
-        ) : null}
       </main>
 
       <nav className="mobile-nav" aria-label="Navigazione mobile">
@@ -2016,10 +2038,7 @@ function AppShell({ session }: { session: Session | null }) {
           <span className="mobile-nav-icon"><NavGlyph name="pizza" /></span>
           <span className="mobile-nav-label">Pizza</span>
         </button>
-        <button
-          className={view === "profile" ? "active" : ""}
-          onClick={() => setView("profile")}
-        >
+        <button className={isOwnCard ? "active" : ""} onClick={openOwnCard}>
           <span className="mobile-nav-icon"><Avatar profile={currentUser} size="sm" /></span>
           <span className="mobile-nav-label">Profilo</span>
         </button>
