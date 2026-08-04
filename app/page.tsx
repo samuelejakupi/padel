@@ -173,7 +173,7 @@ const heroGreetings = {
     "Sei un intenditore di ippica, musetto davanti, bravo!",
   ],
   unranked: [
-    "Pronto a difendere la posizione?",
+    "Il ranking si attiva dopo il primo risultato.",
   ],
 } as const;
 
@@ -2478,9 +2478,11 @@ function AppShell({ session }: { session: Session | null }) {
                 >
                   <BlockMark size="lg" />
                   <div className="hero-stat-copy">
+                    {/* In alto solo il saluto. Le frasi che non ne hanno uno
+                        proprio ricevono quello neutro, cosi il blocco non
+                        resta senza intestazione. */}
                     <h1 className="hero-greeting">
-                      {heroGreeting.lead ? <>{heroGreeting.lead}<br /></> : null}
-                      <span>{heroGreeting.rest}</span>
+                      {heroGreeting.lead || `Ciao, ${currentUser.display_name}.`}
                     </h1>
                     <p className="eyebrow">LA TUA POSIZIONE</p>
                     {/* Numero e avatar sulla stessa riga: cosi restano
@@ -2499,7 +2501,7 @@ function AppShell({ session }: { session: Session | null }) {
                           : <>Sei a <b>{pointsToNext} punti</b> dal prossimo posto.</>}
                     </p>
                     <div className="progress-track"><span style={{ width: `${currentRank ? Math.min(92, 48 + winRate / 2) : 0}%` }} /></div>
-                    <small>{currentRank ? `Continua così: ${currentUser.current_streak > 0 ? `${currentUser.current_streak} vittorie consecutive` : "la prossima è quella buona"}.` : "Il ranking si attiva dopo il primo risultato."}</small>
+                    <small>{heroGreeting.rest}</small>
                   </div>
                   <div className="hero-kpis">
                     <span><b>{currentRank ? currentUser.rating : "N/C"}</b><small>ELO PT</small></span>
