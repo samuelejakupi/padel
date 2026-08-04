@@ -305,8 +305,7 @@ function Brand() {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img className="brand-logo" src={`${basePath}/theBOYZ.png`} alt="" />
       <span>
-        <b>THEBOYZ</b>
-        <small>GROUP HQ</small>
+        <b>HQ</b>
       </span>
     </div>
   );
@@ -408,13 +407,24 @@ function MatchCard({
   match,
   onEdit,
   onPlayVideo,
+  viewerId,
 }: {
   match: PadelMatch;
   onEdit?: (match: PadelMatch) => void;
   onPlayVideo?: (videoId: string) => void;
+  viewerId?: string;
 }) {
-  const team1 = match.players.filter((player) => player.team === 1);
-  const team2 = match.players.filter((player) => player.team === 2);
+  // Chi guarda vede sempre la propria squadra a sinistra, a prescindere da
+  // come è stata registrata la partita.
+  const viewerTeam = viewerId
+    ? match.players.find((player) => player.profile_id === viewerId)?.team
+    : undefined;
+  const flipped = viewerTeam === 2;
+  const leftSide = flipped ? 2 : 1;
+  const rightSide = flipped ? 1 : 2;
+
+  const team1 = match.players.filter((player) => player.team === leftSide);
+  const team2 = match.players.filter((player) => player.team === rightSide);
   const videoId = youtubeId(match.video_url);
   const formatTeam = (players: typeof team1) => players.map((player, index) => {
     const delta = player.rating_delta ?? 0;
@@ -436,26 +446,26 @@ function MatchCard({
         <span>{new Intl.DateTimeFormat("it-IT", { month: "short" }).format(new Date(match.played_at)).replace(".", "")}</span>
       </div>
       <div className="match-main">
-        <div className={`match-team ${match.winner_team === 1 ? "winner" : ""}`}>
+        <div className={`match-team ${match.winner_team === leftSide ? "winner" : ""}`}>
           <div className="mini-avatars">{team1.map((player) => <Avatar key={player.profile_id} profile={player.profile} size="sm" />)}</div>
           <span>{formatTeam(team1)}</span>
-          {match.winner_team === 1 ? <em>VITTORIA</em> : null}
+          {match.winner_team === leftSide ? <em>VITTORIA</em> : null}
         </div>
         <div className="match-score">
           {match.sets
             .sort((a, b) => a.set_number - b.set_number)
             .map((set) => (
               <span key={set.set_number}>
-                <b>{set.team1_games}</b>
+                <b>{flipped ? set.team2_games : set.team1_games}</b>
                 <i>—</i>
-                <b>{set.team2_games}</b>
+                <b>{flipped ? set.team1_games : set.team2_games}</b>
               </span>
             ))}
         </div>
-        <div className={`match-team team-right ${match.winner_team === 2 ? "winner" : ""}`}>
+        <div className={`match-team team-right ${match.winner_team === rightSide ? "winner" : ""}`}>
           <div className="mini-avatars">{team2.map((player) => <Avatar key={player.profile_id} profile={player.profile} size="sm" />)}</div>
           <span>{formatTeam(team2)}</span>
-          {match.winner_team === 2 ? <em>VITTORIA</em> : null}
+          {match.winner_team === rightSide ? <em>VITTORIA</em> : null}
         </div>
       </div>
       <div className="match-video">
@@ -1342,13 +1352,30 @@ function AppShell({ session }: { session: Session | null }) {
             <Brand />
           </button>
           <nav className="desktop-nav" aria-label="Navigazione principale">
-            {([
-              ["hub", "TheBoyz"],
-              ["padel", "Padel"],
-              ["pizza", "Pizze"],
-            ] as [View, string][]).map(([target, label]) => (
-              <button key={target} className={view === target ? "active" : ""} onClick={() => { setView(target); if (target === "padel") setPadelView("overview"); }}>{label}</button>
-            ))}
+            <button
+              className={view === "padel" && padelView === "overview" ? "active" : ""}
+              onClick={() => { setView("padel"); setPadelView("overview"); }}
+            >
+              Court
+            </button>
+            <button
+              className={view === "padel" && padelView === "ranking" ? "active" : ""}
+              onClick={() => { setView("padel"); setPadelView("ranking"); }}
+            >
+              Ranking
+            </button>
+            <button
+              className={view === "padel" && padelView === "matches" ? "active" : ""}
+              onClick={() => { setView("padel"); setPadelView("matches"); }}
+            >
+              Matches
+            </button>
+            <button
+              className={view === "profile" ? "active" : ""}
+              onClick={() => setView("profile")}
+            >
+              Profilo
+            </button>
           </nav>
           <button className="profile-chip" onClick={() => setView("profile")}>
             <span><b>{currentUser.display_name}</b><small>Padel {currentRank ? `#${currentRank}` : "N/C"}</small></span>
@@ -1455,8 +1482,8 @@ function AppShell({ session }: { session: Session | null }) {
                 <div className="section-head">
                   <div><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
                   <div className="court-actions">
-                    <button className="button button-dark" onClick={() => setPadelView("matches")}>Vedi tutte</button>
                     <button className="button button-primary" onClick={() => setShowMatch(true)}>＋ Match</button>
+                    <button className="button button-dark" onClick={() => setPadelView("matches")}>Vedi tutte</button>
                   </div>
                 </div>
                 {matches.length ? (
@@ -1467,6 +1494,7 @@ function AppShell({ session }: { session: Session | null }) {
                         match={match}
                         onEdit={(selected) => setEditingMatch(selected)}
                         onPlayVideo={(id) => setPlayingVideo(id)}
+                    viewerId={session?.user.id}
                       />
                     ))}
                   </div>
@@ -1477,11 +1505,11 @@ function AppShell({ session }: { session: Session | null }) {
 
               <aside className="dashboard-side">
                 <div className="side-head">
-                  <div><p className="eyebrow dark">TOP PLAYERS</p><h2>Classifica</h2></div>
+                  <div><p className="eyebrow dark">TOP PLAYERS</p><h2>Ranking</h2></div>
                   <span className="season">STAGIONE 2026</span>
                 </div>
                 <RankingList profiles={sorted} onSelect={openPlayer} />
-                <button className="button button-dark button-full" onClick={() => setPadelView("ranking")}>Classifica completa</button>
+                <button className="button button-dark button-full" onClick={() => setPadelView("ranking")}>Ranking completo</button>
               </aside>
             </section>
           </>
@@ -1495,8 +1523,8 @@ function AppShell({ session }: { session: Session | null }) {
             <button className="player-back" type="button" onClick={() => setPadelView("overview")}>← Torna al court</button>
             <article className="section-hero">
               <div className="section-hero-head">
-                <div><p className="eyebrow">THEBOYZ PADEL · STAGIONE 2026</p><h1>La classifica del gruppo</h1><p>Il ranking si aggiorna automaticamente dopo ogni risultato.</p></div>
-                <div className="ranking-switch" role="group" aria-label="Tipo di classifica">
+                <div><p className="eyebrow">THEBOYZ PADEL · STAGIONE 2026</p><h1>Il ranking del gruppo</h1><p>Il ranking si aggiorna automaticamente dopo ogni risultato.</p></div>
+                <div className="ranking-switch" role="group" aria-label="Tipo di ranking">
                   <button
                     className={rankingMode === "single" ? "active" : ""}
                     onClick={() => setRankingMode("single")}
@@ -1621,6 +1649,7 @@ function AppShell({ session }: { session: Session | null }) {
                     match={match}
                     onEdit={(selected) => setEditingMatch(selected)}
                     onPlayVideo={(id) => setPlayingVideo(id)}
+                    viewerId={session?.user.id}
                   />
                 ))}
               </div>
@@ -1650,6 +1679,7 @@ function AppShell({ session }: { session: Session | null }) {
                     match={match}
                     onEdit={(selected) => setEditingMatch(selected)}
                     onPlayVideo={(id) => setPlayingVideo(id)}
+                    viewerId={session?.user.id}
                   />
                 ))}
               </div>
@@ -1848,18 +1878,24 @@ function AppShell({ session }: { session: Session | null }) {
       {/* In home la barra non serve: le sezioni si scelgono dalle card. */}
       {view !== "hub" ? (
       <nav className="mobile-nav" aria-label="Navigazione mobile">
-{([
-["hub", basePath + "/theBOYZ.png", "TheBoyz"],
-["padel", "https://cdn-icons-gif.flaticon.com/6451/6451035.gif", "Padel"],
-["pizza", "https://cdn-icons-gif.flaticon.com/15240/15240280.gif", "Pizze"],
-] as [View, string, string][]).map(([target, icon, label]) => (
-<button key={target} className={view === target ? "active" : ""} onClick={() => { setView(target); if (target === "padel") setPadelView("overview"); }}>
-{/* eslint-disable-next-line @next/next/no-img-element */}
-<span className="mobile-nav-icon"><img src={icon} alt="" /></span>{label}
-</button>
-))}
-<button className={view === "profile" ? "active" : ""} onClick={() => setView("profile")}><span className="mobile-nav-icon"><Avatar profile={currentUser} size="sm" /></span>Profilo</button>
-</nav>
+        {([
+          ["overview", "https://cdn-icons-gif.flaticon.com/6451/6451035.gif", "Court"],
+          ["ranking", "https://cdn-icons-gif.flaticon.com/18830/18830460.gif", "Ranking"],
+          ["matches", "https://cdn-icons-gif.flaticon.com/15240/15240280.gif", "Matches"],
+        ] as [PadelView, string, string][]).map(([target, icon, label]) => (
+          <button
+            key={target}
+            className={view === "padel" && padelView === target ? "active" : ""}
+            onClick={() => { setView("padel"); setPadelView(target); }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <span className="mobile-nav-icon"><img src={icon} alt="" /></span>{label}
+          </button>
+        ))}
+        <button className={view === "profile" ? "active" : ""} onClick={() => setView("profile")}>
+          <span className="mobile-nav-icon"><Avatar profile={currentUser} size="sm" /></span>Profilo
+        </button>
+      </nav>
       ) : null}
 
       {showMatch || editingMatch ? (

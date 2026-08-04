@@ -932,6 +932,14 @@ form select:focus,
   gap: 10px;
 }
 
+/* I due tasti occupano lo stesso spazio: senza questo "＋ Match" resterebbe
+   più stretto perché il testo è più corto. */
+.court-actions .button {
+  flex: 1 0 auto;
+  justify-content: center;
+  min-width: 148px;
+}
+
 /* Il saluto vive dentro il riquadro scuro, sopra la posizione in classifica. */
 .hero-greeting {
   font-size: clamp(28px, 2.6vw, 40px);
@@ -1050,7 +1058,7 @@ form select:focus,
 
 .hero-kpis {
   align-items: center;
-  background: rgba(7, 37, 104, 0.42);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
   bottom: 0;
   display: flex;
   grid-column: 1 / -1;
