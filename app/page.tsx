@@ -314,10 +314,7 @@ function Brand() {
   return (
     <div className="brand" aria-label="TheBoyz">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img className="brand-logo" src={`${basePath}/theBOYZ.png`} alt="" />
-      <span>
-        <b>HQ</b>
-      </span>
+      <img className="brand-logo" src={`${basePath}/theBOYZ.png`} alt="TheBoyz" />
     </div>
   );
 }

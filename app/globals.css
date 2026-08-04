@@ -56,7 +56,6 @@ button {
   align-items: center;
   display: flex;
   gap: 10px;
-  min-width: 172px;
 }
 
 .brand-logo {
@@ -64,26 +63,6 @@ button {
   height: 46px;
   object-fit: cover;
   width: 46px;
-}
-
-.brand > span:last-child {
-  display: flex;
-  flex-direction: column;
-  line-height: 0.9;
-}
-
-.brand b {
-  font-size: 16px;
-  font-style: italic;
-  font-weight: 900;
-  letter-spacing: -0.8px;
-}
-
-.brand small {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 2.5px;
-  margin-top: 5px;
 }
 
 .eyebrow {
@@ -3063,17 +3042,9 @@ button.pizza-ranking-row {
   display: none;
 }
 
-  .topbar .brand {
-    min-width: 0;
-  }
-
   .brand-logo {
     height: 38px;
     width: 38px;
-  }
-
-  .brand > span:last-child {
-    display: none;
   }
 
   .desktop-nav,
