@@ -26,6 +26,13 @@ html {
   scrollbar-gutter: stable;
 }
 
+/* In home il fondo di html/body diventa scuro: è quello che iOS usa per
+   l'area di sistema in alto e per l'effetto di rimbalzo allo scroll. */
+html.theme-dark,
+html.theme-dark body {
+  background: var(--ink);
+}
+
 body {
   margin: 0;
   background: var(--paper);

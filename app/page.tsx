@@ -1173,6 +1173,14 @@ function AppShell({ session }: { session: Session | null }) {
     return () => window.clearTimeout(timer);
   }, [loadData]);
 
+  // iOS colora l'area sotto la Dynamic Island con lo sfondo di <html>, non con
+  // theme-color: in home va scurito anche quello, altrimenti resta bianca.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle("theme-dark", view === "hub");
+    return () => root.classList.remove("theme-dark");
+  }, [view]);
+
   const sorted = useMemo(() => sortPadelProfiles(profiles), [profiles]);
   const rankedProfiles = useMemo(() => sorted.filter((profile) => profile.matches_played > 0), [sorted]);
   const singleRanks = useMemo(() => padelRanks(rankedProfiles), [rankedProfiles]);
