@@ -2099,6 +2099,7 @@ function AppShell({ session }: { session: Session | null }) {
   const navPillRef = useRef<HTMLSpanElement | null>(null);
   const navButtonsRef = useRef<(HTMLButtonElement | null)[]>([]);
   const navDragging = useRef(false);
+  const navPointerStart = useRef<number | null>(null);
 
   const navItems = useMemo(() => ([
     { key: "overview", glyph: "home", label: "Home", active: view === "padel" && padelView === "overview", select: () => { setView("padel"); setPadelView("overview"); } },
@@ -2926,21 +2927,30 @@ function AppShell({ session }: { session: Session | null }) {
         aria-label="Navigazione mobile"
         ref={navRef}
         onPointerDown={(event) => {
-          navDragging.current = true;
+          navPointerStart.current = event.clientX;
+          navDragging.current = false;
           event.currentTarget.setPointerCapture(event.pointerId);
-          movePillTo(event.clientX);
         }}
         onPointerMove={(event) => {
-          if (navDragging.current) movePillTo(event.clientX);
+          if (navPointerStart.current === null) return;
+          // Finche il dito non si muove davvero la pastiglia resta dov'e:
+          // se la portassimo subito sotto al tocco, un tocco secco su una
+          // voce lontana le lascerebbe da percorrere solo pochi pixel e
+          // lo scorrimento non si vedrebbe.
+          if (!navDragging.current && Math.abs(event.clientX - navPointerStart.current) < 8) return;
+          navDragging.current = true;
+          movePillTo(event.clientX);
         }}
         onPointerUp={(event) => {
-          if (!navDragging.current) return;
+          if (navPointerStart.current === null) return;
+          const index = nearestNavIndex(navDragging.current ? event.clientX : navPointerStart.current);
+          navPointerStart.current = null;
           navDragging.current = false;
-          const index = nearestNavIndex(event.clientX);
           placePill(index, true);
           navItems[index]?.select();
         }}
         onPointerCancel={() => {
+          navPointerStart.current = null;
           navDragging.current = false;
           placePill(navActiveIndex, true);
         }}
