@@ -2495,8 +2495,10 @@ function AppShell({ session }: { session: Session | null }) {
                   </div>
                 </div>
                 {matches.length ? (
-                  <>
-                    <div className="match-list">
+                  // Su mobile la lista sfuma verso il basso e il tasto ci
+                  // finisce sopra: vedi .fade-stack in globals.css.
+                  <div className="fade-stack">
+                    <div className="match-list fade-stack-body">
                       {matches.slice(0, 2).map((match) => (
                         <MatchCard
                           key={match.id}
@@ -2508,7 +2510,7 @@ function AppShell({ session }: { session: Session | null }) {
                       ))}
                     </div>
                     <button className="button button-dark button-full cta-see-all-bottom" onClick={() => setPadelView("matches")}>Vedi tutte</button>
-                  </>
+                  </div>
                 ) : (
                   <div className="compact-empty"><span>00</span><p>Nessuna partita registrata. La prima scriverà la storia.</p></div>
                 )}
@@ -2523,8 +2525,12 @@ function AppShell({ session }: { session: Session | null }) {
                     onChange={setSeason}
                   />
                 </div>
-                <RankingList profiles={seasonProfiles} onSelect={openPlayer} />
-                <button className="button button-dark button-full" onClick={() => setPadelView("ranking")}>Ranking completo</button>
+                <div className="fade-stack">
+                  <div className="fade-stack-body">
+                    <RankingList profiles={seasonProfiles} onSelect={openPlayer} />
+                  </div>
+                  <button className="button button-dark button-full cta-see-all-bottom" onClick={() => setPadelView("ranking")}>Vedi ranking</button>
+                </div>
               </aside>
             </section>
           </>

@@ -966,6 +966,12 @@ form select:focus,
   display: none;
 }
 
+/* Su desktop il contenitore e trasparente: nessuna sfumatura, nessuna
+   sovrapposizione. Tutto il comportamento vive nel breakpoint mobile. */
+.fade-stack {
+  display: contents;
+}
+
 /* Il saluto vive dentro il riquadro scuro, sopra la posizione in classifica. */
 .hero-greeting {
   font-size: clamp(28px, 2.6vw, 40px);
@@ -3921,9 +3927,57 @@ button.pizza-ranking-row {
     margin: 10px 0;
   }
 
-  .cta-see-all-bottom {
+  /* Lista che sfuma in basso col tasto appoggiato sopra la sfumatura.
+     La sfumatura e una maschera, non un velo colorato: cosi funziona su
+     qualunque fondo senza doverne indovinare il colore. */
+  .fade-stack {
+    display: block;
+    position: relative;
+  }
+
+  .fade-stack-body {
+    mask-image: linear-gradient(
+      180deg,
+      #000 0%,
+      #000 58%,
+      rgba(0, 0, 0, 0.25) 84%,
+      rgba(0, 0, 0, 0) 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      180deg,
+      #000 0%,
+      #000 58%,
+      rgba(0, 0, 0, 0.25) 84%,
+      rgba(0, 0, 0, 0) 100%
+    );
+  }
+
+  /* Il tasto scavalca la parte sfumata invece di stare sotto la lista. */
+  .fade-stack .cta-see-all-bottom {
+    bottom: 0;
     display: inline-flex;
-    margin-top: 10px;
+    left: 0;
+    margin-top: 0;
+    position: absolute;
+    right: 0;
+    width: 100%;
+  }
+
+  /* Spazio in fondo alla lista: e la fascia che sfuma e su cui poggia il
+     tasto, senza coprire la partita sopra. */
+  .fade-stack .match-list {
+    padding-bottom: 34px;
+  }
+
+  /* Nel ranking restano i primi quattro: il quinto e i successivi sono
+     proprio quelli che la sfumatura renderebbe illeggibili. */
+  .dashboard-side .ranking-list .ranking-row:nth-child(n + 5) {
+    display: none;
+  }
+
+  .fade-stack .ranking-list {
+    margin-bottom: 0;
+    padding-bottom: 30px;
   }
 
   .dashboard-grid {
