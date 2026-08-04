@@ -772,7 +772,7 @@ form select:focus,
 }
 
 .hub-card::after {
-  border: 1px solid rgba(24, 223, 228, 0.24);
+  border: 1px solid rgba(11, 27, 44, 0.16);
   border-radius: 50%;
   content: "";
   height: 230px;
@@ -782,13 +782,12 @@ form select:focus,
   width: 230px;
 }
 
-.hub-card-padel {
-  background: var(--blue);
-}
-
+/* Entrambe gialle: così multiply assorbe il fondo bianco delle GIF senza
+   bisogno del cerchio dietro l'icona. */
+.hub-card-padel,
 .hub-card-pizza {
-  background: var(--ink);
-  color: var(--white);
+  background: var(--lime);
+  color: var(--ink);
 }
 
 /* Senza cerchio dietro: l'icona si fonde direttamente col colore della card. */
@@ -805,22 +804,9 @@ form select:focus,
 
 .hub-card-icon img {
   height: 112px;
+  mix-blend-mode: multiply;
   object-fit: contain;
   width: 112px;
-}
-
-/* Card azzurra: multiply assorbe il fondo bianco della GIF e scurisce
-   l'icona, che resta leggibile. */
-.hub-card-padel .hub-card-icon img {
-  mix-blend-mode: multiply;
-}
-
-/* Card blu scuro: multiply schiaccerebbe tutto a nero. Invertendo l'immagine
-   il fondo bianco diventa nero e screen lo fa sparire, lasciando visibile
-   il disegno. */
-.hub-card-pizza .hub-card-icon img {
-  filter: invert(1);
-  mix-blend-mode: screen;
 }
 
 /* Sul podio l'avatar è da 84px: il badge va rimpicciolito di conseguenza. */
