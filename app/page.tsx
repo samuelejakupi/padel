@@ -2111,6 +2111,18 @@ function AppShell({ session }: { session: Session | null }) {
 
   const navActiveIndex = navItems.findIndex((item) => item.active);
 
+  // Toccare la voce su cui si e gia riporta in cima, come nelle app di
+  // sistema. Lo scorrimento e morbido perche html ha scroll-behavior.
+  const selectNavItem = useCallback((index: number) => {
+    const item = navItems[index];
+    if (!item) return;
+    if (item.active) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    item.select();
+  }, [navItems]);
+
   // Porta la pastiglia sopra una voce. Con animate = false ci arriva secca,
   // e quello che serve al primo disegno e mentre si trascina.
   // Dove si trova adesso la pastiglia: serve come punto di partenza
@@ -2947,7 +2959,7 @@ function AppShell({ session }: { session: Session | null }) {
           navPointerStart.current = null;
           navDragging.current = false;
           placePill(index, true);
-          navItems[index]?.select();
+          selectNavItem(index);
         }}
         onPointerCancel={() => {
           navPointerStart.current = null;
@@ -2963,7 +2975,7 @@ function AppShell({ session }: { session: Session | null }) {
             key={item.key}
             ref={(element) => { navButtonsRef.current[index] = element; }}
             className={item.active ? "active" : ""}
-            onClick={item.select}
+            onClick={() => selectNavItem(index)}
           >
             <span className="mobile-nav-icon">
               {item.key === "profile"

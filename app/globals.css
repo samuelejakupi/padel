@@ -3705,13 +3705,14 @@ button.pizza-ranking-row {
        vivi. I gradienti bianchi sovrapposti che c'erano prima davano
        l'effetto plastica; qui resta un velo unico appena accennato. */
     backdrop-filter: blur(40px) saturate(180%);
-    /* Velo appena freddo invece che bianco puro: sopra le zone piatte da
-       comunque l'idea di un materiale, senza sporcare i colori che
-       passano da dietro. */
+    /* Velo appena freddo invece che bianco puro. Piu coprente di quanto
+       vorrebbe il vetro, ma sotto la barra passano anche i blocchi scuri
+       e le foto: con un velo leggero le icone diventavano illeggibili.
+       Fra estetica e leggibilita vince la leggibilita. */
     background: linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.24) 0%,
-      rgba(236, 243, 250, 0.14) 100%
+      rgba(255, 255, 255, 0.66) 0%,
+      rgba(236, 243, 250, 0.54) 100%
     );
     /* Filo di contorno sottilissimo, non un bordo disegnato. */
     border: 0.5px solid rgba(255, 255, 255, 0.5);
