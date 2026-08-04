@@ -135,6 +135,17 @@ button {
   background: #e3e8e2;
 }
 
+/* Come una card: serve dove il tasto sta sul fondo pagina, che ha lo
+   stesso colore del grigio secondario e lo farebbe sparire. */
+.button-card {
+  background: var(--white);
+  color: var(--ink);
+}
+
+.button-card:hover {
+  background: #f7faf7;
+}
+
 .button-full {
   width: 100%;
 }
@@ -4768,6 +4779,9 @@ button.pizza-ranking-row {
 
 /* Su touch il :hover non esiste davvero: resta "appiccicato" dopo il tocco e
    l'elemento rimane ingrandito. Lo zoom vale solo dove c'è un puntatore. */
+/* Sui dispositivi a tocco il browser lascia acceso lo stato :hover finche
+   non si tocca da un'altra parte: senza questo, alzato il dito, la riga o
+   il tasto restavano evidenziati come se fossero ancora selezionati. */
 @media (hover: none) {
   .button:hover,
   .hero-stat-link:hover,
@@ -4778,6 +4792,24 @@ button.pizza-ranking-row {
   .play-card:hover {
     box-shadow: none;
     transform: none;
+  }
+
+  button.ranking-row-link:hover,
+  .season-menu button:hover,
+  .player-edit-button:hover {
+    background: transparent;
+  }
+
+  .button-primary:hover {
+    background: var(--blue);
+  }
+
+  .button-ghost:hover {
+    background: #edf0ec;
+  }
+
+  .button-card:hover {
+    background: var(--white);
   }
 }
 

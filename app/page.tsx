@@ -2498,7 +2498,7 @@ function AppShell({ session }: { session: Session | null }) {
                   <div className="section-head-label"><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
                   <div className="court-actions">
                     <button className="button button-primary cta-new-match" onClick={() => setShowMatch(true)}>+ New Match</button>
-                    <button className="button button-ghost cta-see-all-top" aria-label="Vedi tutte le partite" onClick={() => setPadelView("matches")}>Vedi tutto</button>
+                    <button className="button button-card cta-see-all-top" aria-label="Vedi tutte le partite" onClick={() => setPadelView("matches")}>Vedi tutto</button>
                   </div>
                 </div>
                 {matches.length ? (
@@ -2522,7 +2522,7 @@ function AppShell({ session }: { session: Session | null }) {
                         />
                       ))}
                     </div>
-                    <button className="button button-ghost button-full cta-see-all-bottom" aria-label="Vedi tutte le partite" onClick={() => setPadelView("matches")}>Vedi tutto</button>
+                    <button className="button button-card button-full cta-see-all-bottom" aria-label="Vedi tutte le partite" onClick={() => setPadelView("matches")}>Vedi tutto</button>
                   </div>
                 ) : (
                   <div className="compact-empty"><span>00</span><p>Nessuna partita registrata. La prima scriverà la storia.</p></div>
