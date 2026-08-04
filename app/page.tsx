@@ -817,9 +817,15 @@ function MatchCard({
       tabIndex={onEdit ? 0 : undefined}
       aria-label={onEdit ? `Modifica la partita del ${new Intl.DateTimeFormat("it-IT").format(new Date(match.played_at))}` : undefined}
     >
-      <div className="match-date">
-        <b>{new Intl.DateTimeFormat("it-IT", { day: "2-digit" }).format(new Date(match.played_at))}</b>
-        <span>{new Intl.DateTimeFormat("it-IT", { month: "short" }).format(new Date(match.played_at)).replace(".", "")}</span>
+      {/* Su desktop .match-head e display: contents, quindi .match-date resta
+          una cella della card come prima; su mobile diventa una riga vera che
+          tiene insieme data e campo. */}
+      <div className="match-head">
+        <div className="match-date">
+          <b>{new Intl.DateTimeFormat("it-IT", { day: "2-digit" }).format(new Date(match.played_at))}</b>
+          <span>{new Intl.DateTimeFormat("it-IT", { month: "short" }).format(new Date(match.played_at)).replace(".", "")}</span>
+        </div>
+        {match.court ? <p className="match-court" title={match.court}>{match.court}</p> : <p className="match-court" aria-hidden="true" />}
       </div>
       <div className="match-main">
         <div className={`match-team ${match.winner_team === leftSide ? "winner" : ""}`}>
@@ -857,7 +863,13 @@ function MatchCard({
             <img src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`} alt="" />
             <b aria-hidden="true">▶</b>
           </button>
-        ) : null}
+        ) : (
+          // Segnaposto sbarrato: senza, le card con e senza video avevano
+          // larghezze diverse e la fila non tornava allineata.
+          <span className="match-video-empty" role="img" aria-label="Nessun video per questa partita">
+            <b aria-hidden="true">▶</b>
+          </span>
+        )}
       </div>
     </article>
   );
@@ -1242,6 +1254,7 @@ function NewMatchModal({
   );
   const [notes, setNotes] = useState(match?.notes ?? "");
   const [videoUrl, setVideoUrl] = useState(match?.video_url ?? "");
+  const [court, setCourt] = useState(match?.court ?? "");
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -1351,6 +1364,13 @@ function NewMatchModal({
       // Lo storico è un di più: se la migrazione non è stata eseguita la
       // partita resta salvata comunque, senza bloccare nulla.
       const matchId = typeof newId === "string" ? newId : null;
+
+      // Come lo storico, anche il campo da gioco e opzionale: se la
+      // migrazione non e stata eseguita la partita resta comunque salvata.
+      if (matchId) {
+        await supabase.rpc("set_match_court", { p_match_id: matchId, p_court: court.trim() || null });
+      }
+
       if (matchId && historyReady) {
         if (lineage) {
           await supabase.rpc("set_match_lineage", { p_match_id: matchId, p_lineage_id: lineage });
@@ -1412,6 +1432,15 @@ function NewMatchModal({
               </div>
             ))}
           </div>
+          <label>
+            Campo <span className="optional-label">facoltativo</span>
+            <input
+              value={court}
+              onChange={(e) => setCourt(e.target.value)}
+              placeholder="Es. Padel Club Verona · Campo 3"
+              maxLength={60}
+            />
+          </label>
           <label>
             Video YouTube <span className="optional-label">facoltativo</span>
             <input
@@ -1810,7 +1839,7 @@ function AppShell({ session }: { session: Session | null }) {
       client.from("profiles").select("*").order("rating", { ascending: false }),
       client
         .from("matches")
-        .select("id, played_at, created_at, created_by, winner_team, notes, video_url, rating_delta, sets:match_sets(set_number, team1_games, team2_games), players:match_players(profile_id, team, rating_delta, profile:profiles(*))")
+        .select("id, played_at, created_at, created_by, winner_team, notes, video_url, court, rating_delta, sets:match_sets(set_number, team1_games, team2_games), players:match_players(profile_id, team, rating_delta, profile:profiles(*))")
         .order("played_at", { ascending: false })
         .order("created_at", { ascending: false }),
       client
@@ -2201,9 +2230,9 @@ function AppShell({ session }: { session: Session | null }) {
                     <Avatar profile={currentUser} size="xl" rank={currentRank || undefined} />
                   </div>
                   <div className="hero-kpis">
-                    <span><b>{currentRank ? currentUser.rating : "N/C"}</b><small>PUNTI</small></span>
+                    <span><b>{currentRank ? currentUser.rating : "N/C"}</b><small>ELO PT</small></span>
                     <span><b>{winRate}%</b><small>WIN RATE</small></span>
-                    <span><b>{currentUser.current_streak > 0 ? currentUser.current_streak : 0}</b><small>STRISCIA</small></span>
+                    <span><b>{currentUser.current_streak > 0 ? currentUser.current_streak : 0}</b><small>WIN STREAK</small></span>
                   </div>
                 </article>
 

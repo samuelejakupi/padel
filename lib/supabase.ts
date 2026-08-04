@@ -75,6 +75,8 @@ export type PadelMatch = {
   winner_team: 1 | 2;
   notes?: string | null;
   video_url?: string | null;
+  // Etichetta libera: nome del campo o del circolo dove si e giocato.
+  court?: string | null;
   sets: PadelSet[];
   players: MatchPlayer[];
   rating_delta?: number;
