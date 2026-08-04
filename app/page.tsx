@@ -2110,8 +2110,8 @@ function AppShell({ session }: { session: Session | null }) {
 
   const navItems = useMemo(() => ([
     { key: "overview", glyph: "home", label: "Home", active: view === "padel" && padelView === "overview", select: () => { setView("padel"); setPadelView("overview"); } },
-    { key: "matches", glyph: "racket", label: "Matches", active: view === "padel" && padelView === "matches", select: () => { setView("padel"); setPadelView("matches"); } },
-    { key: "ranking", glyph: "ranking", label: "Ranking", active: view === "padel" && padelView === "ranking", select: () => { setView("padel"); setPadelView("ranking"); } },
+    { key: "matches", glyph: "racket", label: "Match", active: view === "padel" && padelView === "matches", select: () => { setView("padel"); setPadelView("matches"); } },
+    { key: "ranking", glyph: "ranking", label: "Rank", active: view === "padel" && padelView === "ranking", select: () => { setView("padel"); setPadelView("ranking"); } },
     { key: "pizza", glyph: "pizza", label: "Pizza", active: view === "pizza", select: () => setView("pizza") },
     { key: "profile", glyph: "", label: "Profilo", active: isOwnCard, select: openOwnCard },
   ]), [view, padelView, isOwnCard, openOwnCard]);
@@ -2502,17 +2502,16 @@ function AppShell({ session }: { session: Session | null }) {
                   </div>
                 </div>
                 {matches.length ? (
-                  // Su mobile la lista sfuma verso il basso e il tasto ci
-                  // finisce sopra: vedi .fade-stack in globals.css.
-                  <div className="fade-stack">
-                    <div className="match-list fade-stack-body">
+                  // Su mobile le due partite e il tasto stanno in un unico
+                  // riquadro, come la classifica: vedi .match-panel.
+                  <div className="match-panel">
+                    <div className="match-list">
                       {matches.slice(0, 2).map((match, index) => (
                         <MatchCard
                           key={match.id}
                           match={match}
-                          // Solo la prima card apre la modifica. La seconda e
-                          // mezza coperta dalla sfumatura e dal tasto: toccarla
-                          // porta all'elenco completo, dove si vede per intero.
+                          // Solo la prima riga apre la modifica: la seconda
+                          // porta all'elenco completo.
                           onEdit={index === 0
                             ? (selected) => setEditingMatch(selected)
                             : () => setPadelView("matches")}
@@ -2522,7 +2521,7 @@ function AppShell({ session }: { session: Session | null }) {
                         />
                       ))}
                     </div>
-                    <button className="button button-card button-full cta-see-all-bottom" aria-label="Vedi tutte le partite" onClick={() => setPadelView("matches")}>Vedi tutto</button>
+                    <button className="button button-ghost button-full cta-see-all-bottom" aria-label="Vedi tutte le partite" onClick={() => setPadelView("matches")}>Vedi tutto</button>
                   </div>
                 ) : (
                   <div className="compact-empty"><span>00</span><p>Nessuna partita registrata. La prima scriverà la storia.</p></div>
@@ -2538,12 +2537,8 @@ function AppShell({ session }: { session: Session | null }) {
                     onChange={setSeason}
                   />
                 </div>
-                <div className="fade-stack">
-                  <div className="fade-stack-body">
-                    <RankingList profiles={seasonProfiles} onSelect={openPlayer} />
-                  </div>
-                  <button className="button button-ghost button-full" aria-label="Vedi il ranking completo" onClick={() => setPadelView("ranking")}>Vedi tutto</button>
-                </div>
+                <RankingList profiles={seasonProfiles} onSelect={openPlayer} />
+                <button className="button button-ghost button-full" aria-label="Vedi il ranking completo" onClick={() => setPadelView("ranking")}>Vedi tutto</button>
               </aside>
             </section>
           </>

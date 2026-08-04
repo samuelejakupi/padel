@@ -1023,9 +1023,9 @@ form select:focus,
   display: none;
 }
 
-/* Su desktop il contenitore e trasparente: nessuna sfumatura, nessuna
-   sovrapposizione. Tutto il comportamento vive nel breakpoint mobile. */
-.fade-stack {
+/* Su desktop questi contenitori non esistono come box: i figli restano
+   dove erano. Tutto il comportamento vive nel breakpoint mobile. */
+.match-panel {
   display: contents;
 }
 
@@ -4026,6 +4026,47 @@ button.pizza-ranking-row {
     margin-top: 10px;
   }
 
+  /* Le ultime partite in un riquadro unico, come la classifica: righe
+     separate da una linea invece di card staccate, e il tasto dentro. */
+  .match-panel {
+    background: var(--white);
+    border-radius: 18px;
+    display: block;
+    overflow: hidden;
+    padding: 0 14px 14px;
+  }
+
+  .match-panel .match-list {
+    gap: 0;
+  }
+
+  /* La card perde fondo, ombra e angoli: dentro al riquadro e una riga. */
+  .match-panel .match-card {
+    background: transparent;
+    border-bottom: 1px solid #edf0ed;
+    border-radius: 0;
+    box-shadow: none;
+    /* Il fondo dell'hover arriva ai bordi del riquadro invece di fermarsi
+       sul testo, come nelle righe della classifica. */
+    margin-inline: -14px;
+    padding: 12px 14px 14px;
+    width: calc(100% + 28px);
+  }
+
+  .match-panel .match-card:last-child {
+    border-bottom: 0;
+  }
+
+  .match-panel .match-card-link:hover {
+    background: #f7faf7;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .match-panel .cta-see-all-bottom {
+    margin-top: 4px;
+  }
+
   /* Nel ranking bastano i primi quattro: per gli altri c'e "Vedi tutto". */
   .dashboard-side .ranking-list .ranking-row:nth-child(n + 5) {
     display: none;
@@ -4040,8 +4081,8 @@ button.pizza-ranking-row {
     border-bottom: 0;
   }
 
-  .fade-stack .ranking-list {
-    margin-bottom: 0;
+  .dashboard-side .ranking-list {
+    margin-bottom: 4px;
   }
 
   .dashboard-grid {
@@ -4791,6 +4832,7 @@ button.pizza-ranking-row {
   }
 
   button.ranking-row-link:hover,
+  .match-panel .match-card-link:hover,
   .season-menu button:hover,
   .player-edit-button:hover {
     background: transparent;
