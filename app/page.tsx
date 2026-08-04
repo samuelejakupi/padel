@@ -379,6 +379,14 @@ function Brand() {
   );
 }
 
+// Marchio in filigrana dentro i blocchi scuri: decorativo, mai cliccabile.
+function BlockMark() {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img className="block-mark" src={`${basePath}/theBOYZ.png`} alt="" aria-hidden="true" />
+  );
+}
+
 function LoginScreen() {
   const [username, setUsername] = useState<(typeof groupUsers)[number]>("Samu");
   const [password, setPassword] = useState("");
@@ -1513,7 +1521,7 @@ function AppShell({ session }: { session: Session | null }) {
     setPadelView("player");
   }
 
-  // Il Court fa da home: un solo punto di ritorno per logo, menu e briciole.
+  // Il Court fa da home.
   function goHome() {
     setView("padel");
     setPadelView("overview");
@@ -1522,9 +1530,6 @@ function AppShell({ session }: { session: Session | null }) {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <button className="brand-home" onClick={goHome} aria-label="Vai alla home TheBoyz">
-          <Brand />
-        </button>
         <nav className="desktop-nav" aria-label="Navigazione principale">
           <button
             className={view === "padel" && padelView === "overview" ? "active" : ""}
@@ -1572,12 +1577,10 @@ function AppShell({ session }: { session: Session | null }) {
 
         {!loading && view === "padel" && padelView === "overview" ? (
           <>
-            <div className="section-context">
-              <b>PADEL COURT</b>
-            </div>
             <section className="dashboard-grid">
               <div className="dashboard-main">
                 <article className="hero-stat">
+                  <BlockMark />
                   <div className="hero-stat-copy">
                     <h1 className="hero-greeting">
                       Ciao, {currentUser.display_name}.<br />
@@ -1596,8 +1599,6 @@ function AppShell({ session }: { session: Session | null }) {
                     <small>{currentRank ? `Continua così: ${currentUser.current_streak > 0 ? `${currentUser.current_streak} vittorie consecutive` : "la prossima è quella buona"}.` : "Il ranking si attiva dopo il primo risultato."}</small>
                   </div>
                   <div className="hero-player">
-                    <div className="orbit orbit-one" />
-                    <div className="orbit orbit-two" />
                     <Avatar profile={currentUser} size="xl" rank={currentRank || undefined} />
                   </div>
                   <div className="hero-kpis">
@@ -1649,11 +1650,8 @@ function AppShell({ session }: { session: Session | null }) {
 
         {!loading && view === "padel" && padelView === "ranking" ? (
           <section className="page-section">
-            <div className="section-context">
-              <button onClick={goHome}>PADEL COURT</button><span>/</span><b>RANKING</b>
-            </div>
-            <button className="player-back" type="button" onClick={() => setPadelView("overview")}>← Torna al court</button>
             <article className="section-hero">
+              <BlockMark />
               <div className="section-hero-head">
                 <div><p className="eyebrow">THEBOYZ PADEL · STAGIONE 2026</p><h1>Il ranking del gruppo</h1><p>Il ranking si aggiorna automaticamente dopo ogni risultato.</p></div>
                 <div className="ranking-switch" role="group" aria-label="Tipo di ranking">
@@ -1735,12 +1733,8 @@ function AppShell({ session }: { session: Session | null }) {
 
         {!loading && view === "padel" && padelView === "player" && selectedPlayer ? (
           <section className="page-section player-detail-page">
-            <div className="section-context">
-              <button onClick={goHome}>PADEL COURT</button><span>/</span><b>{selectedPlayer.display_name.toUpperCase()}</b>
-            </div>
-            <button className="player-back" type="button" onClick={() => setPadelView("overview")}>← Torna al court</button>
-
             <article className="player-detail-hero">
+              <BlockMark />
               <div className="player-detail-identity">
                 <Avatar profile={selectedPlayer} size="xl" rank={selectedPlayerRank || undefined} />
                 <div>
@@ -1793,11 +1787,8 @@ function AppShell({ session }: { session: Session | null }) {
 
         {!loading && view === "padel" && padelView === "matches" ? (
           <section className="page-section">
-            <div className="section-context">
-              <button onClick={goHome}>PADEL COURT</button><span>/</span><b>MATCHES</b>
-            </div>
-            <button className="player-back" type="button" onClick={() => setPadelView("overview")}>← Torna al court</button>
             <article className="section-hero">
+              <BlockMark />
               <div className="section-hero-head">
                 <div><p className="eyebrow">ARCHIVIO THEBOYZ PADEL</p><h1>Tutte le partite</h1><p>{matches.length} risultati registrati dal gruppo.</p></div>
                 <button className="button button-primary" onClick={() => setShowMatch(true)}>＋ Match</button>
@@ -1822,9 +1813,9 @@ function AppShell({ session }: { session: Session | null }) {
         ) : null}
 
         {!loading && view === "pizza" ? (
-          <><div className="section-context"><button onClick={goHome}>PADEL COURT</button><span>/</span><b>PIZZERIA RANKING</b></div><section className="pizza-page">
-            
+          <><section className="pizza-page">
             <div className="pizza-hero">
+              <BlockMark />
               <div>
                 <p className="eyebrow">CLASSIFICA UFFICIALMENTE NON UFFICIALE</p>
                 <h1>Pizzeria<br /><span>Ranking.</span></h1>
@@ -1929,7 +1920,7 @@ function AppShell({ session }: { session: Session | null }) {
         ) : null}
 
         {!loading && view === "profile" ? (
-          <section className="page-section profile-page"><div className="section-context"><button onClick={goHome}>PADEL COURT</button><span>/</span><b>PROFILO</b></div>
+          <section className="page-section profile-page">
             <div className="page-title">
               <div><p className="eyebrow dark">IL MIO SPAZIO THEBOYZ</p><h1>Profilo del gruppo</h1><p>Aggiorna la foto e il nome visibile agli amici.</p></div>
             </div>

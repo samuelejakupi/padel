@@ -805,33 +805,34 @@ form select:focus,
   mix-blend-mode: multiply;
 }
 
-.section-context {
-  align-items: center;
-  color: var(--muted);
-  display: flex;
-  font-size: 10px;
-  font-weight: 900;
-  gap: 8px;
-  letter-spacing: 1.2px;
-  margin-bottom: 24px;
-  /* Altezza fissa: nel padel la riga è alzata dai tasti di sezione, altrove
-     c'è solo testo. Senza questo le due sezioni partono a quote diverse. */
-  min-height: 32px;
+/* Marchio in filigrana dentro i blocchi scuri: grande, ruotato, appoggiato
+   all'angolo in basso a destra. Sta sotto ai contenuti, che hanno z-index. */
+/* Il marchio è posizionato, quindi da solo coprirebbe il testo statico:
+   i contenuti dei blocchi vanno alzati di un livello. */
+.hero-stat > *:not(.block-mark):not(.hero-kpis),
+.section-hero > *:not(.block-mark),
+.player-detail-hero > *:not(.block-mark),
+.pizza-hero > *:not(.block-mark) {
+  position: relative;
+  z-index: 1;
 }
 
-.section-context > button {
-  background: transparent;
-  border: 0;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: inherit;
-  font-weight: inherit;
-  letter-spacing: inherit;
-  padding: 0;
+.hero-kpis {
+  z-index: 1;
 }
 
-.section-context > b {
-  color: var(--ink);
+.block-mark {
+  bottom: -70px;
+  height: 380px;
+  object-fit: contain;
+  opacity: 0.07;
+  pointer-events: none;
+  position: absolute;
+  right: -60px;
+  transform: rotate(-9deg);
+  user-select: none;
+  width: 380px;
+  z-index: 0;
 }
 
 .compact-empty {
@@ -956,17 +957,6 @@ form select:focus,
   position: relative;
 }
 
-.hero-stat::before {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 50%;
-  content: "";
-  height: 380px;
-  position: absolute;
-  right: 28px;
-  top: -75px;
-  width: 380px;
-}
-
 .hero-stat-copy {
   position: relative;
   z-index: 2;
@@ -1027,22 +1017,6 @@ form select:focus,
 .hero-player .avatar {
   border: 8px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 22px 50px rgba(16, 29, 43, 0.3);
-}
-
-.orbit {
-  border: 1px dashed rgba(201, 255, 54, 0.43);
-  border-radius: 50%;
-  position: absolute;
-}
-
-.orbit-one {
-  height: 205px;
-  width: 205px;
-}
-
-.orbit-two {
-  height: 260px;
-  width: 260px;
 }
 
 .hero-kpis {
@@ -1809,20 +1783,6 @@ button.ranking-row-link:focus-visible {
   min-height: 124px;
 }
 
-/* Scheda giocatore */
-.player-back {
-  background: transparent;
-  border: 0;
-  color: var(--blue-dark);
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.7px;
-  margin: -8px 0 16px;
-  padding: 0;
-  text-transform: uppercase;
-}
-
 /* Intestazione scura condivisa da Classifica e Partite, stessa famiglia
    visiva della scheda giocatore. */
 .section-hero {
@@ -1832,6 +1792,7 @@ button.ranking-row-link:focus-visible {
   margin-bottom: 28px;
   overflow: hidden;
   padding: 34px;
+  position: relative;
 }
 
 /* flex-start porta il comando all'altezza dell'occhiello, cioè nell'angolo
@@ -1922,6 +1883,7 @@ button.ranking-row-link:focus-visible {
   grid-template-columns: minmax(0, 1fr) 230px;
   overflow: hidden;
   padding: 34px;
+  position: relative;
 }
 
 .player-detail-identity {
@@ -2164,19 +2126,9 @@ button.ranking-row-link:focus-visible {
   display: grid;
   gap: 40px;
   grid-template-columns: 1fr 260px;
+  overflow: hidden;
   min-height: 350px;
   position: relative;
-}
-
-.pizza-hero::before {
-  border: 1px solid rgba(24, 223, 228, 0.16);
-  border-radius: 50%;
-  content: "";
-  height: 520px;
-  position: absolute;
-  right: -120px;
-  top: -170px;
-  width: 520px;
 }
 
 .pizza-hero h1 {
@@ -3016,13 +2968,6 @@ button.pizza-ranking-row {
     padding-bottom: calc(84px + env(safe-area-inset-bottom));
   }
 
-  /* Su mobile la barra in basso basta a orientarsi: briciole di navigazione
-     e tasto di ritorno diventano rumore. */
-  .section-context,
-  .player-back {
-    display: none;
-  }
-
   /* In home la barra inferiore non c'è: senza questo resterebbe una fascia
      vuota in fondo alla pagina. */
   html.theme-dark body {
@@ -3152,8 +3097,11 @@ button.pizza-ranking-row {
     font-weight: 1000;
   }
 
-  .section-context {
-    flex-wrap: wrap;
+  .block-mark {
+    bottom: -50px;
+    height: 260px;
+    right: -50px;
+    width: 260px;
   }
 
   /* Barra fluttuante in vetro: il contenuto scorre sotto e si intravede
