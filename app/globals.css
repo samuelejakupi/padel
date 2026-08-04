@@ -453,7 +453,7 @@ form select:focus,
 .desktop-nav {
   align-self: stretch;
   display: flex;
-  gap: 38px;
+  gap: 32px;
 }
 
 .desktop-nav button {

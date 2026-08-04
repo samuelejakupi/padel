@@ -10,7 +10,7 @@ import {
   supabase,
 } from "@/lib/supabase";
 
-type View = "hub" | "padel" | "pizza" | "profile";
+type View = "padel" | "pizza" | "profile";
 type PadelView = "overview" | "ranking" | "matches" | "player";
 type PizzaRankingEntry = {
   name: string;
@@ -310,7 +310,7 @@ function Avatar({
   );
 }
 
-type GlyphName = "home" | "court" | "ranking" | "racket";
+type GlyphName = "home" | "ranking" | "racket" | "pizza";
 
 // Glifi in stile SF Symbols: tratto uniforme, estremi arrotondati, nessun
 // riempimento. Ereditano currentColor, così seguono lo stato della barra.
@@ -333,24 +333,37 @@ function NavGlyph({ name }: { name: GlyphName }) {
           <path d="M5.4 9.9V19a1.7 1.7 0 0 0 1.7 1.7h9.8a1.7 1.7 0 0 0 1.7-1.7V9.9" />
         </>
       ) : null}
-      {name === "court" ? (
+      {/* Trancio di pizza: crosta in alto, punta in basso. */}
+      {name === "pizza" ? (
         <>
-          <rect x="3.2" y="4.6" width="17.6" height="14.8" rx="3" />
-          <path d="M3.2 12h17.6M7.4 8.3h9.2M7.4 15.7h9.2M12 8.3v7.4" />
+          <path d="M4.2 6.9c4.8-2.9 10.8-2.9 15.6 0l-6.4 12.9a1.6 1.6 0 0 1-2.8 0Z" />
+          <path d="M6.2 10c3.6-1.9 8-1.9 11.6 0" />
+          <g fill="currentColor" stroke="none">
+            <circle cx="11.8" cy="12.6" r="1" />
+            <circle cx="9.7" cy="15.3" r="0.85" />
+            <circle cx="13.7" cy="15.1" r="0.85" />
+          </g>
         </>
       ) : null}
+      {/* Podio: il gradino centrale è il più alto. */}
       {name === "ranking" ? (
         <>
-          <rect x="3.1" y="13.5" width="5.6" height="7.1" rx="1.5" />
-          <rect x="9.2" y="9.3" width="5.6" height="11.3" rx="1.5" />
-          <rect x="15.3" y="11.7" width="5.6" height="8.9" rx="1.5" />
+          <rect x="9.1" y="8.6" width="5.8" height="12" rx="1.6" />
+          <rect x="2.8" y="13.2" width="6.3" height="7.4" rx="1.6" />
+          <rect x="14.9" y="11.2" width="6.3" height="9.4" rx="1.6" />
         </>
       ) : null}
+      {/* Racchetta da padel: piatto pieno e forato, manico corto. */}
       {name === "racket" ? (
         <>
-          <ellipse cx="14.3" cy="9.7" rx="4.9" ry="5.9" transform="rotate(45 14.3 9.7)" />
-          <path d="m10.6 13.4-4.4 4.4" />
-          <path d="M5.1 16.7 7.3 18.9l-1.5 1.5a1.55 1.55 0 1 1-2.2-2.2z" />
+          <path d="M9.6 16.2C7 15 5.3 12.4 5.3 9.4 5.3 5.7 8.3 2.7 12 2.7s6.7 3 6.7 6.7c0 3-1.7 5.6-4.3 6.8Z" />
+          <path d="M10.4 16.2h3.2v3.1a1.6 1.6 0 0 1-3.2 0Z" />
+          <g fill="currentColor" stroke="none">
+            <circle cx="12" cy="7.4" r="0.95" />
+            <circle cx="9.3" cy="10.3" r="0.95" />
+            <circle cx="14.7" cy="10.3" r="0.95" />
+            <circle cx="12" cy="12.8" r="0.95" />
+          </g>
         </>
       ) : null}
     </svg>
@@ -1221,7 +1234,8 @@ function PizzaVoteModal({
 }
 
 function AppShell({ session }: { session: Session | null }) {
-  const [view, setView] = useState<View>("hub");
+  // Il Court è la home: si entra direttamente lì.
+  const [view, setView] = useState<View>("padel");
   const [padelView, setPadelView] = useState<PadelView>("overview");
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [matches, setMatches] = useState<PadelMatch[]>([]);
@@ -1320,14 +1334,6 @@ function AppShell({ session }: { session: Session | null }) {
     const timer = window.setTimeout(() => void loadData(), 0);
     return () => window.clearTimeout(timer);
   }, [loadData]);
-
-  // iOS colora l'area sotto la Dynamic Island con lo sfondo di <html>, non con
-  // theme-color: in home va scurito anche quello, altrimenti resta bianca.
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle("theme-dark", view === "hub");
-    return () => root.classList.remove("theme-dark");
-  }, [view]);
 
   const sorted = useMemo(() => sortPadelProfiles(profiles), [profiles]);
   const rankedProfiles = useMemo(() => sorted.filter((profile) => profile.matches_played > 0), [sorted]);
@@ -1507,46 +1513,55 @@ function AppShell({ session }: { session: Session | null }) {
     setPadelView("player");
   }
 
+  // Il Court fa da home: un solo punto di ritorno per logo, menu e briciole.
+  function goHome() {
+    setView("padel");
+    setPadelView("overview");
+  }
+
   return (
-    <div className={`app-shell ${view === "hub" ? "app-shell-hub" : ""}`}>
-      {/* In home il menu non serve: logo e profilo vivono già nella pagina. */}
-      {view !== "hub" ? (
-        <header className="topbar">
-          <button className="brand-home" onClick={() => setView("hub")} aria-label="Vai alla home TheBoyz">
-            <Brand />
+    <div className="app-shell">
+      <header className="topbar">
+        <button className="brand-home" onClick={goHome} aria-label="Vai alla home TheBoyz">
+          <Brand />
+        </button>
+        <nav className="desktop-nav" aria-label="Navigazione principale">
+          <button
+            className={view === "padel" && padelView === "overview" ? "active" : ""}
+            onClick={goHome}
+          >
+            Home
           </button>
-          <nav className="desktop-nav" aria-label="Navigazione principale">
-            <button
-              className={view === "padel" && padelView === "overview" ? "active" : ""}
-              onClick={() => { setView("padel"); setPadelView("overview"); }}
-            >
-              Court
-            </button>
-            <button
-              className={view === "padel" && padelView === "ranking" ? "active" : ""}
-              onClick={() => { setView("padel"); setPadelView("ranking"); }}
-            >
-              Ranking
-            </button>
-            <button
-              className={view === "padel" && padelView === "matches" ? "active" : ""}
-              onClick={() => { setView("padel"); setPadelView("matches"); }}
-            >
-              Matches
-            </button>
-            <button
-              className={view === "profile" ? "active" : ""}
-              onClick={() => setView("profile")}
-            >
-              Profilo
-            </button>
-          </nav>
-          <button className="profile-chip" onClick={() => setView("profile")}>
-            <span><b>{currentUser.display_name}</b><small>Padel {currentRank ? `#${currentRank}` : "N/C"}</small></span>
-            <Avatar profile={currentUser} size="sm" />
+          <button
+            className={view === "padel" && padelView === "matches" ? "active" : ""}
+            onClick={() => { setView("padel"); setPadelView("matches"); }}
+          >
+            Matches
           </button>
-        </header>
-      ) : null}
+          <button
+            className={view === "padel" && padelView === "ranking" ? "active" : ""}
+            onClick={() => { setView("padel"); setPadelView("ranking"); }}
+          >
+            Ranking
+          </button>
+          <button
+            className={view === "pizza" ? "active" : ""}
+            onClick={() => setView("pizza")}
+          >
+            Pizza
+          </button>
+          <button
+            className={view === "profile" ? "active" : ""}
+            onClick={() => setView("profile")}
+          >
+            Profilo
+          </button>
+        </nav>
+        <button className="profile-chip" onClick={() => setView("profile")}>
+          <span><b>{currentUser.display_name}</b><small>Padel {currentRank ? `#${currentRank}` : "N/C"}</small></span>
+          <Avatar profile={currentUser} size="sm" />
+        </button>
+      </header>
 
       {notice ? <button className="notice" onClick={() => setNotice("")}>{notice}<span>×</span></button> : null}
 
@@ -1555,61 +1570,10 @@ function AppShell({ session }: { session: Session | null }) {
           <div className="loading-state"><span>●</span><p>Prepariamo il campo…</p></div>
         ) : null}
 
-        {!loading && view === "hub" ? (
-          <section className="hub-page">
-            <div className="hub-hero">
-              <div className="hub-hero-copy">
-                <h1>Le nostre cose.<br /><span>Un posto solo.</span></h1>
-                <p>Classifiche serissime e discussioni inutili.</p>
-                <div className="hub-members">
-                  <div className="mini-avatars">
-                    {sorted.slice(0, 5).map((profile) => <Avatar key={profile.id} profile={profile} size="sm" />)}
-                  </div>
-                  <span><b>{profiles.length}</b> membri attivi</span>
-                </div>
-              </div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="hub-mark" src={`${basePath}/theBOYZ.png`} alt="" aria-hidden="true" />
-            </div>
-
-            <button
-              className="hub-profile"
-              onClick={() => setView("profile")}
-              aria-label="Vai al tuo profilo"
-            >
-              <span className="hub-profile-info">
-                <small>IL TUO PROFILO</small>
-                <b>{currentUser.display_name}</b>
-                <span>
-                  {currentRank ? `#${currentRank} in classifica` : "Non classificato"}
-                  {" · "}
-                  {currentUser.rating} pt · {currentUser.wins}/{currentUser.matches_played} vinte
-                </span>
-              </span>
-              <Avatar profile={currentUser} size="xl" rank={currentRank || undefined} />
-            </button>
-
-            <div className="hub-cards">
-              <button className="hub-card hub-card-padel" onClick={() => { setView("padel"); setPadelView("overview"); }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <div className="hub-card-icon" aria-hidden="true"><img src="https://cdn-icons-gif.flaticon.com/6451/6451035.gif" alt="" /></div>
-                <h3>Padel<br />Court</h3>
-              </button>
-
-              <button className="hub-card hub-card-pizza" onClick={() => setView("pizza")}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <div className="hub-card-icon pizza-icon" aria-hidden="true"><img src="https://cdn-icons-gif.flaticon.com/15240/15240280.gif" alt="" /></div>
-                <h3>Pizza<br />Ranking</h3>
-              </button>
-            </div>
-
-          </section>
-        ) : null}
-
         {!loading && view === "padel" && padelView === "overview" ? (
           <>
             <div className="section-context">
-              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PADEL COURT</b>
+              <b>PADEL COURT</b>
             </div>
             <section className="dashboard-grid">
               <div className="dashboard-main">
@@ -1686,7 +1650,7 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "ranking" ? (
           <section className="page-section">
             <div className="section-context">
-              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><button onClick={() => setPadelView("overview")}>PADEL COURT</button><span>/</span><b>RANKING</b>
+              <button onClick={goHome}>PADEL COURT</button><span>/</span><b>RANKING</b>
             </div>
             <button className="player-back" type="button" onClick={() => setPadelView("overview")}>← Torna al court</button>
             <article className="section-hero">
@@ -1772,7 +1736,7 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "player" && selectedPlayer ? (
           <section className="page-section player-detail-page">
             <div className="section-context">
-              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><button onClick={() => setPadelView("overview")}>PADEL COURT</button><span>/</span><b>{selectedPlayer.display_name.toUpperCase()}</b>
+              <button onClick={goHome}>PADEL COURT</button><span>/</span><b>{selectedPlayer.display_name.toUpperCase()}</b>
             </div>
             <button className="player-back" type="button" onClick={() => setPadelView("overview")}>← Torna al court</button>
 
@@ -1830,7 +1794,7 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "matches" ? (
           <section className="page-section">
             <div className="section-context">
-              <button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><button onClick={() => setPadelView("overview")}>PADEL COURT</button><span>/</span><b>MATCHES</b>
+              <button onClick={goHome}>PADEL COURT</button><span>/</span><b>MATCHES</b>
             </div>
             <button className="player-back" type="button" onClick={() => setPadelView("overview")}>← Torna al court</button>
             <article className="section-hero">
@@ -1858,7 +1822,7 @@ function AppShell({ session }: { session: Session | null }) {
         ) : null}
 
         {!loading && view === "pizza" ? (
-          <><div className="section-context"><button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PIZZERIA RANKING</b></div><section className="pizza-page">
+          <><div className="section-context"><button onClick={goHome}>PADEL COURT</button><span>/</span><b>PIZZERIA RANKING</b></div><section className="pizza-page">
             
             <div className="pizza-hero">
               <div>
@@ -1965,7 +1929,7 @@ function AppShell({ session }: { session: Session | null }) {
         ) : null}
 
         {!loading && view === "profile" ? (
-          <section className="page-section profile-page"><div className="section-context"><button onClick={() => setView("hub")}>THEBOYZ</button><span>/</span><b>PROFILO</b></div>
+          <section className="page-section profile-page"><div className="section-context"><button onClick={goHome}>PADEL COURT</button><span>/</span><b>PROFILO</b></div>
             <div className="page-title">
               <div><p className="eyebrow dark">IL MIO SPAZIO THEBOYZ</p><h1>Profilo del gruppo</h1><p>Aggiorna la foto e il nome visibile agli amici.</p></div>
             </div>
@@ -2043,17 +2007,11 @@ function AppShell({ session }: { session: Session | null }) {
         ) : null}
       </main>
 
-      {/* In home la barra non serve: le sezioni si scelgono dalle card. */}
-      {view !== "hub" ? (
       <nav className="mobile-nav" aria-label="Navigazione mobile">
-        <button onClick={() => setView("hub")}>
-          <span className="mobile-nav-icon"><NavGlyph name="home" /></span>
-          <span className="mobile-nav-label">Home</span>
-        </button>
         {([
-          ["overview", "court", "Court"],
-          ["ranking", "ranking", "Ranking"],
+          ["overview", "home", "Home"],
           ["matches", "racket", "Matches"],
+          ["ranking", "ranking", "Ranking"],
         ] as [PadelView, GlyphName, string][]).map(([target, glyph, label]) => (
           <button
             key={target}
@@ -2065,6 +2023,13 @@ function AppShell({ session }: { session: Session | null }) {
           </button>
         ))}
         <button
+          className={view === "pizza" ? "active" : ""}
+          onClick={() => setView("pizza")}
+        >
+          <span className="mobile-nav-icon"><NavGlyph name="pizza" /></span>
+          <span className="mobile-nav-label">Pizza</span>
+        </button>
+        <button
           className={view === "profile" ? "active" : ""}
           onClick={() => setView("profile")}
         >
@@ -2072,7 +2037,6 @@ function AppShell({ session }: { session: Session | null }) {
           <span className="mobile-nav-label">Profilo</span>
         </button>
       </nav>
-      ) : null}
 
       {showMatch || editingMatch ? (
         <NewMatchModal
