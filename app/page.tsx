@@ -838,7 +838,7 @@ function RankingList({
   );
 }
 
-function EloChart({ profile, matches }: { profile: Profile; matches: PadelMatch[] }) {
+function EloChart({ profile, matches, isSelf }: { profile: Profile; matches: PadelMatch[]; isSelf?: boolean }) {
   const personalMatches = [...matches]
     .filter((match) => match.players.some((player) => player.profile_id === profile.id))
     .sort((a, b) =>
@@ -905,7 +905,7 @@ function EloChart({ profile, matches }: { profile: Profile; matches: PadelMatch[
   return (
     <article className="elo-panel">
       <div className="elo-panel-head">
-        <div><p className="eyebrow dark">ANDAMENTO ELO</p><h2>La corsa di {profile.display_name}</h2></div>
+        <div><p className="eyebrow dark">ANDAMENTO ELO</p><h2>{isSelf ? "La mia corsa" : `La corsa di ${profile.display_name}`}</h2></div>
         <div className="elo-current"><b>{profile.rating}</b><small>PT ATTUALI</small><span className={overallDelta >= 0 ? "positive" : "negative"}>{overallDelta >= 0 ? "+" : ""}{overallDelta} dal debutto</span></div>
       </div>
       <figure className="elo-chart">
@@ -2102,11 +2102,11 @@ function AppShell({ session }: { session: Session | null }) {
                 <div><p className="eyebrow dark">BACHECA</p><h2>Trofei e record</h2></div>
               </div>
               <div className="player-trophies-empty">
-                <p>Qui finiranno titoli di stagione, serie record e primati del gruppo.</p>
+                <p>Qui finiranno titoli di stagione, serie record e primati del giocatore.</p>
               </div>
             </section>
 
-            <EloChart profile={selectedPlayer} matches={matches} />
+            <EloChart profile={selectedPlayer} matches={matches} isSelf={isOwnCard} />
 
             <div className="player-teams">
               <div className="player-history-head">
@@ -2145,7 +2145,7 @@ function AppShell({ session }: { session: Session | null }) {
             </div>
 
             <div className="player-history-head">
-              <div><p className="eyebrow dark">STORICO PERSONALE</p><h2>Le partite di {selectedPlayer.display_name}</h2></div>
+              <div><p className="eyebrow dark">STORICO PERSONALE</p><h2>{isOwnCard ? "Le mie partite" : `Le partite di ${selectedPlayer.display_name}`}</h2></div>
               <span>{selectedPlayerMatches.length} {selectedPlayerMatches.length === 1 ? "risultato" : "risultati"}</span>
             </div>
             {selectedPlayerMatches.length ? (
@@ -2166,7 +2166,7 @@ function AppShell({ session }: { session: Session | null }) {
 
             <section className="player-plays">
               <div className="player-history-head">
-                <div><p className="eyebrow dark">SPEZZONI</p><h2>Le plays di {selectedPlayer.display_name}</h2></div>
+                <div><p className="eyebrow dark">SPEZZONI</p><h2>{isOwnCard ? "Le mie plays" : `Le plays di ${selectedPlayer.display_name}`}</h2></div>
                 {isOwnCard && playsSchemaReady ? (
                   <button className="button button-primary" onClick={() => setShowPlayCreate(true)}>＋ Play</button>
                 ) : (
