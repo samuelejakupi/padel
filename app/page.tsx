@@ -141,6 +141,55 @@ function sortPadelProfiles(profiles: Profile[]) {
   });
 }
 
+// Saluti della home: una frase a caso a ogni caricamento, scelta in base a
+// come sta andando chi guarda. {nome} viene sostituito col display_name.
+const heroGreetings = {
+  first: [
+    "Ciao {nome}, bella giornata per stare al top!",
+    "Ciao GOAT, quanto brucia agli altri?",
+    "Fino a un mese fa non ti voleva nemmeno tua madre e ora guardati!",
+  ],
+  second: [
+    "Ciao {nome}, manca poco alla vetta.",
+    "Non mollare, ci sei quasi!",
+  ],
+  third: [
+    "Ciao {nome}, comunque a podio, non male!",
+    "Allora? Scaliamo o scendiamo?",
+  ],
+  fourth: [
+    "Ti giuro che siamo arrivati, il podio è lì davanti.",
+    "Ciao {nome}, ancora uno sforzo dai!",
+  ],
+  rest: [
+    "Ciao {nome}, quanto fa freddo qua giù?",
+    "Per Natale ci siamo a podio?",
+  ],
+  last: [
+    "Ciao {nome}, mai pensato di darti all'ippica?",
+    "Sei proprio un gancio!",
+  ],
+  narrowLead: [
+    "Sei un intenditore di ippica, musetto davanti, bravo!",
+  ],
+  unranked: [
+    "Pronto a difendere la posizione?",
+  ],
+} as const;
+
+// I casi speciali vincono sulla posizione: prima il vantaggio risicato, poi
+// l'ultimo posto, e solo dopo la classifica.
+function heroGreetingPool(rank: number, isLast: boolean, hasNarrowLead: boolean) {
+  if (rank === 0) return heroGreetings.unranked;
+  if (hasNarrowLead) return heroGreetings.narrowLead;
+  if (isLast) return heroGreetings.last;
+  if (rank === 1) return heroGreetings.first;
+  if (rank === 2) return heroGreetings.second;
+  if (rank === 3) return heroGreetings.third;
+  if (rank === 4) return heroGreetings.fourth;
+  return heroGreetings.rest;
+}
+
 // Parimerito: a punteggio uguale la posizione è la stessa, e quella successiva
 // riparte contando anche gli ex aequo (1, 1, 3) come nelle classifiche sportive.
 function padelRanks(sorted: Profile[]) {
@@ -1994,6 +2043,30 @@ function AppShell({ session }: { session: Session | null }) {
   const pointsToNext = nextRankedPlayer && currentUser
     ? Math.max(0, nextRankedPlayer.rating - currentUser.rating)
     : 0;
+  // Ultimo posto e vantaggio risicato guardano solo chi ha gia giocato:
+  // rankedProfiles (piu sopra) contiene gia i soli profili in classifica.
+  const isLastRanked = Boolean(
+    currentUser && rankedProfiles.length > 1 && rankedProfiles[rankedProfiles.length - 1]?.id === currentUser.id,
+  );
+  const chaserPlayer = currentUser
+    ? rankedProfiles.find((profile) => profile.rating < currentUser.rating) ?? null
+    : null;
+  const leadOverChaser = chaserPlayer && currentUser ? currentUser.rating - chaserPlayer.rating : 0;
+  const hasNarrowLead = leadOverChaser >= 1 && leadOverChaser <= 5;
+  // Il numero casuale si estrae una volta sola all'apertura della schermata
+  // (initializer pigro di useState), cosi la frase non cambia a ogni render
+  // mentre si naviga tra le sezioni. AppShell esiste solo dopo il login,
+  // quindi l'HTML statico non contiene nessuna frase da reidratare.
+  const [greetingSeed] = useState(() => Math.random());
+  const heroGreeting = useMemo(() => {
+    const pool = heroGreetingPool(currentRank, isLastRanked, hasNarrowLead);
+    const line = (pool[Math.floor(greetingSeed * pool.length)] ?? pool[0] ?? "")
+      .replace("{nome}", currentUser?.display_name ?? "");
+    // "Ciao Dani, ..." va spezzato per tenere il saluto in evidenza e il
+    // resto in chiaro, come prima. Le frasi senza saluto restano intere.
+    const opening = line.match(/^(Ciao[^,]*,)\s*(.*)$/);
+    return opening ? { lead: opening[1], rest: opening[2] } : { lead: "", rest: line };
+  }, [currentRank, isLastRanked, hasNarrowLead, currentUser?.display_name, greetingSeed]);
   const winRate = currentUser?.matches_played
     ? Math.round((currentUser.wins / currentUser.matches_played) * 100)
     : 0;
@@ -2222,8 +2295,8 @@ function AppShell({ session }: { session: Session | null }) {
                   <BlockMark size="lg" />
                   <div className="hero-stat-copy">
                     <h1 className="hero-greeting">
-                      Ciao, {currentUser.display_name}.<br />
-                      <span>Pronto a difendere la posizione?</span>
+                      {heroGreeting.lead ? <>{heroGreeting.lead}<br /></> : null}
+                      <span>{heroGreeting.rest}</span>
                     </h1>
                     <p className="eyebrow">LA TUA POSIZIONE</p>
                     <div className="position">{currentRank ? <><span>#</span>{currentRank}</> : "N/C"}</div>
