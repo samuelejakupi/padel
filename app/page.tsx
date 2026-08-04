@@ -2483,7 +2483,14 @@ function AppShell({ session }: { session: Session | null }) {
                       <span>{heroGreeting.rest}</span>
                     </h1>
                     <p className="eyebrow">LA TUA POSIZIONE</p>
-                    <div className="position">{currentRank ? <><span>#</span>{currentRank}</> : "N/C"}</div>
+                    {/* Numero e avatar sulla stessa riga: cosi restano
+                        incolonnati fra loro invece che ognuno per conto suo. */}
+                    <div className="hero-position-row">
+                      <div className="position">{currentRank ? <><span>#</span>{currentRank}</> : "N/C"}</div>
+                      <div className="hero-player">
+                        <Avatar profile={currentUser} size="xl" rank={currentRank || undefined} />
+                      </div>
+                    </div>
                     <p>
                       {currentRank === 0
                         ? "Gioca la prima partita per entrare nella classifica."
@@ -2493,9 +2500,6 @@ function AppShell({ session }: { session: Session | null }) {
                     </p>
                     <div className="progress-track"><span style={{ width: `${currentRank ? Math.min(92, 48 + winRate / 2) : 0}%` }} /></div>
                     <small>{currentRank ? `Continua così: ${currentUser.current_streak > 0 ? `${currentUser.current_streak} vittorie consecutive` : "la prossima è quella buona"}.` : "Il ranking si attiva dopo il primo risultato."}</small>
-                  </div>
-                  <div className="hero-player">
-                    <Avatar profile={currentUser} size="xl" rank={currentRank || undefined} />
                   </div>
                   <div className="hero-kpis">
                     <span><b>{currentRank ? currentUser.rating : "N/C"}</b><small>ELO PT</small></span>

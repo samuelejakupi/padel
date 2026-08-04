@@ -1055,11 +1055,21 @@ form select:focus,
   border-radius: 9px;
   color: var(--white);
   display: grid;
-  grid-template-columns: minmax(250px, 1fr) 220px;
+  grid-template-columns: minmax(0, 1fr);
   min-height: 300px;
   overflow: hidden;
   padding: 42px;
   position: relative;
+}
+
+/* Posizione e avatar sulla stessa riga, allineati al centro fra loro.
+   L'avatar e un filo piu alto della cifra: a parita di altezza un cerchio
+   si legge piu piccolo, e quel margine serve solo a pareggiare l'occhio. */
+.hero-position-row {
+  align-items: center;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
 }
 
 .hero-stat-link {
@@ -1124,9 +1134,15 @@ form select:focus,
 .hero-player {
   align-items: center;
   display: flex;
+  flex: 0 0 auto;
   justify-content: center;
   position: relative;
   z-index: 2;
+}
+
+.hero-player .avatar-xl {
+  height: 108px;
+  width: 108px;
 }
 
 .hero-player .avatar {
@@ -1356,13 +1372,21 @@ button.ranking-row-link {
   border-top: 0;
   color: inherit;
   cursor: pointer;
-  /* Il riquadro dell'hover deve respirare oltre il testo: senza questi
-     10px si fermava esattamente sui caratteri ai due lati. Il margine
-     negativo li riassorbe, cosi le colonne restano dove erano. */
-  margin-inline: -10px;
-  padding: 0 10px;
+  padding: 0;
   text-align: left;
   transition: background 160ms ease;
+  width: 100%;
+}
+
+/* Il riquadro dell'hover deve respirare oltre il testo: senza questi 10px
+   si fermava esattamente sui caratteri ai due lati. Il margine negativo li
+   riassorbe, cosi le colonne restano dove erano. Vale solo per l'elenco
+   compatto: nella tabella della pagina Rank ogni riga e gia una card con i
+   suoi margini, e li il margine negativo la faceva sbordare fino ai lati
+   dello schermo. */
+.ranking-list button.ranking-row-link {
+  margin-inline: -10px;
+  padding: 0 10px;
   width: calc(100% + 20px);
 }
 
@@ -4160,37 +4184,6 @@ button.pizza-ranking-row {
     margin-bottom: 4px;
   }
 
-  /* Numero e avatar formano una coppia: stessa altezza, incolonnati sulla
-     stessa linea. Il numero e alto 40px e l'avatar 44, cioe un filo di piu:
-     un cerchio a parita di altezza sembra piu piccolo di una cifra, e quei
-     4px servono a pareggiare l'impressione, non a farlo davvero piu grande. */
-  .dashboard-side .ranking-list .ranking-row {
-    align-items: center;
-    gap: 10px;
-    grid-template-columns: 34px 44px minmax(0, 1fr) 20px 44px;
-  }
-
-  .dashboard-side .ranking-list .rank-number {
-    align-items: center;
-    display: flex;
-    font-size: 40px;
-    height: 44px;
-    letter-spacing: -2px;
-    line-height: 1;
-  }
-
-  /* Chi non ha ancora giocato mostra "N/C": a 40px sfonderebbe la colonna. */
-  .dashboard-side .ranking-list .rank-nc {
-    font-size: 12px;
-    letter-spacing: 0;
-  }
-
-  .dashboard-side .ranking-list .avatar-sm {
-    align-self: center;
-    height: 44px;
-    width: 44px;
-  }
-
   .dashboard-grid {
     gap: 10px;
   }
@@ -4234,8 +4227,8 @@ button.pizza-ranking-row {
   /* La barra dei KPI e in position: absolute in fondo alla card: senza
      riservarle spazio col padding, il testo sopra le finiva addosso. */
   .hero-stat {
-    grid-template-columns: 1fr 140px;
-    min-height: 350px;
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
     padding: 30px 25px 84px;
   }
 
@@ -4244,8 +4237,12 @@ button.pizza-ranking-row {
   }
 
   .hero-player .avatar-xl {
-    height: 105px;
-    width: 105px;
+    height: 86px;
+    width: 86px;
+  }
+
+  .hero-position-row {
+    gap: 16px;
   }
 
   .orbit-one {
@@ -4723,8 +4720,8 @@ button.pizza-ranking-row {
 
   .hero-stat {
     gap: 10px;
-    grid-template-columns: minmax(0, 1fr) 92px;
-    min-height: 335px;
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
     padding: 24px 18px 78px;
   }
 
@@ -4737,9 +4734,14 @@ button.pizza-ranking-row {
     letter-spacing: -5px;
   }
 
+  /* Numero a 62px, avatar a 68px: appena piu alto, per compensazione. */
   .hero-player .avatar-xl {
-    height: 80px;
-    width: 80px;
+    height: 68px;
+    width: 68px;
+  }
+
+  .hero-position-row {
+    gap: 12px;
   }
 
   .rank-badge-award {
