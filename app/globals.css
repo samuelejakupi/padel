@@ -1120,24 +1120,78 @@ form select:focus,
   margin: 0 0 15px;
 }
 
+.season-picker {
+  position: relative;
+}
+
 /* Selettore stagione: nessun riquadro, sembra testo finché non ci passi
    sopra. */
 .season {
-  appearance: none;
+  align-items: center;
   background: transparent;
   border: 0;
   color: var(--muted);
   cursor: pointer;
+  display: flex;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  gap: 5px;
+  letter-spacing: 1px;
+  padding: 5px 0;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.season:hover,
+.season[aria-expanded="true"] {
+  color: var(--ink);
+}
+
+.season i {
+  font-size: 9px;
+  font-style: normal;
+}
+
+.season-menu {
+  background: var(--white);
+  border-radius: 7px;
+  box-shadow: 0 14px 40px rgba(16, 29, 43, 0.18);
+  list-style: none;
+  margin: 6px 0 0;
+  min-width: 150px;
+  overflow: hidden;
+  padding: 5px;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 30;
+}
+
+.season-menu button {
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: var(--ink);
+  cursor: pointer;
+  display: block;
   font-family: inherit;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 1px;
-  padding: 5px 0;
+  padding: 9px 10px;
+  text-align: left;
   text-transform: uppercase;
+  width: 100%;
 }
 
-.season:hover {
-  color: var(--ink);
+.season-menu button:hover {
+  background: var(--paper);
+}
+
+.season-menu button.active {
+  background: var(--ink);
+  color: var(--white);
 }
 
 .ranking-row {

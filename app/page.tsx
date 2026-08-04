@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import {
   hasSupabaseConfig,
@@ -576,6 +576,69 @@ function TeamEditor({
         {busy ? "Salvo…" : "Salva"}
       </button>
     </form>
+  );
+}
+
+// Menu costruito a mano: il <select> nativo non permette di intervenire né
+// sull'evidenziazione né sull'aspetto della lista.
+function SeasonPicker({
+  value,
+  options,
+  onChange,
+}: {
+  value: number;
+  options: number[];
+  onChange: (season: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const holder = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOutside = (event: MouseEvent) => {
+      if (holder.current && !holder.current.contains(event.target as Node)) setOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  return (
+    <div className="season-picker" ref={holder}>
+      <button
+        type="button"
+        className="season"
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+      >
+        Stagione {value}
+        <i aria-hidden="true">▾</i>
+      </button>
+      {open ? (
+        <ul className="season-menu" role="listbox">
+          {options.map((year) => (
+            <li key={year}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={year === value}
+                className={year === value ? "active" : ""}
+                onClick={() => { onChange(year); setOpen(false); }}
+              >
+                Stagione {year}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }
 
@@ -1558,17 +1621,11 @@ function AppShell({ session }: { session: Session | null }) {
               <aside className="dashboard-side">
                 <div className="side-head">
                   <div><p className="eyebrow dark">TOP PLAYERS</p><h2>Ranking</h2></div>
-                  <select
-                    className="season"
+                  <SeasonPicker
                     value={season}
-                    onChange={(event) => setSeason(Number(event.target.value))}
-                    aria-label="Stagione"
-                  >
-                    <option value={currentYear}>Stagione {currentYear}</option>
-                    {archivedSeasons.map((year) => (
-                      <option key={year} value={year}>Stagione {year}</option>
-                    ))}
-                  </select>
+                    options={[currentYear, ...archivedSeasons.filter((year) => year !== currentYear)]}
+                    onChange={setSeason}
+                  />
                 </div>
                 <RankingList profiles={seasonProfiles} onSelect={openPlayer} />
                 <button className="button button-dark button-full" onClick={() => setPadelView("ranking")}>Ranking completo</button>
