@@ -953,6 +953,12 @@ form select:focus,
   min-width: 148px;
 }
 
+/* Duplicato del bottone "Vedi tutte", mostrato solo su mobile sotto la
+   match-list (vedi breakpoint 780px). */
+.cta-see-all-bottom {
+  display: none;
+}
+
 /* Il saluto vive dentro il riquadro scuro, sopra la posizione in classifica. */
 .hero-greeting {
   font-size: clamp(28px, 2.6vw, 40px);
@@ -1369,12 +1375,26 @@ button.ranking-row-link:focus-visible {
   position: relative;
 }
 
-.match-team > span {
+.match-team-players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 0;
+  min-width: 0;
+}
+
+.match-team-player {
   font-size: 10px;
   font-weight: 800;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Separatore tra i due compagni di squadra sulla stessa riga (desktop). */
+.match-team-player:not(:last-child)::after {
+  color: var(--muted);
+  content: " · ";
+  font-weight: 400;
 }
 
 .match-team em {
@@ -1438,7 +1458,7 @@ button.ranking-row-link:focus-visible {
 
 /* Il contenitore di destra è in rtl per invertire avatar e nome: senza questo
    i frammenti del delta verrebbero disposti al contrario. */
-.match-team > span {
+.match-team-players {
   direction: ltr;
 }
 
@@ -3718,6 +3738,21 @@ button.pizza-ranking-row {
     flex: 1;
   }
 
+  /* Su mobile via l'etichetta e il tasto "Vedi tutte" in alto: resta solo
+     "+ Match" a tutta larghezza. "Vedi tutte" ricompare sotto la match-list. */
+  .section-head-label {
+    display: none;
+  }
+
+  .cta-see-all-top {
+    display: none;
+  }
+
+  .cta-see-all-bottom {
+    display: inline-flex;
+    margin-top: 4px;
+  }
+
   .section-hero {
     padding: 24px 20px;
   }
@@ -3779,25 +3814,30 @@ button.pizza-ranking-row {
   }
 
   .match-card {
-    gap: 10px;
-    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 8px 10px;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "date main main"
+      ".    .    video";
     padding: 18px 14px 14px 12px;
   }
 
-  /* Su mobile la card perde la terza colonna: l'anteprima video scivola
-     sotto ai nomi invece di sparire. */
-  .match-video {
-    grid-column: 2;
-    justify-content: flex-start;
-  }
-
   .match-date {
+    grid-area: date;
     min-height: 76px;
   }
 
   .match-main {
+    grid-area: main;
     gap: 7px;
     grid-template-columns: 1fr auto 1fr;
+  }
+
+  /* L'anteprima video sta nella sua cella dedicata, sempre in fondo a
+     destra: niente più sovrapposizioni con i nomi. */
+  .match-video {
+    grid-area: video;
+    justify-content: flex-end;
   }
 
   .match-team {
@@ -3810,9 +3850,23 @@ button.pizza-ranking-row {
     align-items: end;
   }
 
-  .match-team > span {
+  /* I due compagni di squadra, uno sopra l'altro invece che in linea. */
+  .match-team-players {
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .match-team-player {
     font-size: 10px;
     max-width: 92px;
+  }
+
+  .match-team-player::after {
+    content: none;
+  }
+
+  .team-right .match-team-players {
+    align-items: flex-end;
   }
 
   .match-team em {
@@ -4207,7 +4261,11 @@ button.pizza-ranking-row {
 
   .match-card {
     grid-template-columns: 1fr;
-    padding: 14px 38px 16px 14px;
+    grid-template-areas:
+      "date"
+      "main"
+      "video";
+    padding: 14px 14px 16px;
   }
 
   .match-date {
@@ -4228,7 +4286,7 @@ button.pizza-ranking-row {
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   }
 
-  .match-team > span {
+  .match-team-player {
     line-height: 1.35;
     max-width: 100%;
     white-space: normal;

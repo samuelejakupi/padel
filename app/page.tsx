@@ -787,18 +787,21 @@ function MatchCard({
   const team1 = match.players.filter((player) => player.team === leftSide);
   const team2 = match.players.filter((player) => player.team === rightSide);
   const videoId = youtubeId(match.video_url);
-  const formatTeam = (players: typeof team1) => players.map((player, index) => {
-    const delta = player.rating_delta ?? 0;
-    return (
-      <span key={player.profile_id}>
-        {index > 0 ? " · " : ""}
-        {player.profile.display_name}{" "}
-        <b className={`elo-delta ${delta >= 0 ? "up" : "down"}`}>
-          {delta > 0 ? "+" : ""}{delta}
-        </b>
-      </span>
-    );
-  });
+  const formatTeam = (players: typeof team1) => (
+    <span className="match-team-players">
+      {players.map((player) => {
+        const delta = player.rating_delta ?? 0;
+        return (
+          <span key={player.profile_id} className="match-team-player">
+            {player.profile.display_name}{" "}
+            <b className={`elo-delta ${delta >= 0 ? "up" : "down"}`}>
+              {delta > 0 ? "+" : ""}{delta}
+            </b>
+          </span>
+        );
+      })}
+    </span>
+  );
 
   return (
     <article
@@ -821,7 +824,7 @@ function MatchCard({
       <div className="match-main">
         <div className={`match-team ${match.winner_team === leftSide ? "winner" : ""}`}>
           <div className="mini-avatars">{team1.map((player) => <Avatar key={player.profile_id} profile={player.profile} size="sm" />)}</div>
-          <span>{formatTeam(team1)}</span>
+          {formatTeam(team1)}
           {match.winner_team === leftSide ? <em>VITTORIA</em> : null}
         </div>
         <div className="match-score">
@@ -837,7 +840,7 @@ function MatchCard({
         </div>
         <div className={`match-team team-right ${match.winner_team === rightSide ? "winner" : ""}`}>
           <div className="mini-avatars">{team2.map((player) => <Avatar key={player.profile_id} profile={player.profile} size="sm" />)}</div>
-          <span>{formatTeam(team2)}</span>
+          {formatTeam(team2)}
           {match.winner_team === rightSide ? <em>VITTORIA</em> : null}
         </div>
       </div>
@@ -2205,24 +2208,27 @@ function AppShell({ session }: { session: Session | null }) {
                 </article>
 
                 <div className="section-head">
-                  <div><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
+                  <div className="section-head-label"><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
                   <div className="court-actions">
                     <button className="button button-primary" onClick={() => setShowMatch(true)}>＋ Match</button>
-                    <button className="button button-dark" onClick={() => setPadelView("matches")}>Vedi tutte</button>
+                    <button className="button button-dark cta-see-all-top" onClick={() => setPadelView("matches")}>Vedi tutte</button>
                   </div>
                 </div>
                 {matches.length ? (
-                  <div className="match-list">
-                    {matches.slice(0, 2).map((match) => (
-                      <MatchCard
-                        key={match.id}
-                        match={match}
-                        onEdit={(selected) => setEditingMatch(selected)}
-                        onPlayVideo={(id) => setPlayingVideo(id)}
-                    viewerId={session?.user.id}
-                      />
-                    ))}
-                  </div>
+                  <>
+                    <div className="match-list">
+                      {matches.slice(0, 2).map((match) => (
+                        <MatchCard
+                          key={match.id}
+                          match={match}
+                          onEdit={(selected) => setEditingMatch(selected)}
+                          onPlayVideo={(id) => setPlayingVideo(id)}
+                      viewerId={session?.user.id}
+                        />
+                      ))}
+                    </div>
+                    <button className="button button-dark button-full cta-see-all-bottom" onClick={() => setPadelView("matches")}>Vedi tutte</button>
+                  </>
                 ) : (
                   <div className="compact-empty"><span>00</span><p>Nessuna partita registrata. La prima scriverà la storia.</p></div>
                 )}
