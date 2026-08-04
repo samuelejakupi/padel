@@ -2005,7 +2005,6 @@ function AppShell({ session }: { session: Session | null }) {
 
   const sorted = useMemo(() => sortPadelProfiles(profiles), [profiles]);
   const rankedProfiles = useMemo(() => sorted.filter((profile) => profile.matches_played > 0), [sorted]);
-  const singleRanks = useMemo(() => padelRanks(rankedProfiles), [rankedProfiles]);
   const currentYear = new Date().getFullYear();
   const archivedSeasons = useMemo(
     () => [...new Set(seasonRows.map((row) => row.season))].sort((a, b) => b - a),
@@ -2032,6 +2031,17 @@ function AppShell({ session }: { session: Session | null }) {
       })
       .filter(Boolean) as Profile[];
   }, [season, currentYear, seasonRows, profiles]);
+
+  // Classifica della stagione scelta: la pagina del ranking usa queste, non
+  // quelle correnti, altrimenti il selettore di stagione non cambierebbe
+  // nulla di quello che si vede.
+  const seasonSorted = useMemo(() => sortPadelProfiles(seasonProfiles), [seasonProfiles]);
+  const seasonRanked = useMemo(
+    () => seasonSorted.filter((profile) => profile.matches_played > 0),
+    [seasonSorted],
+  );
+  const seasonRanks = useMemo(() => padelRanks(seasonRanked), [seasonRanked]);
+
   const teams = useMemo(
     () => buildPadelTeams(matches, profiles, teamRecords),
     [matches, profiles, teamRecords],
@@ -2535,11 +2545,6 @@ function AppShell({ session }: { session: Session | null }) {
               <aside className="dashboard-side">
                 <div className="side-head">
                   <div><h2>Classifica Elo</h2></div>
-                  <SeasonPicker
-                    value={season}
-                    options={[currentYear, ...archivedSeasons.filter((year) => year !== currentYear)]}
-                    onChange={setSeason}
-                  />
                 </div>
                 <RankingList profiles={seasonProfiles} onSelect={openPlayer} />
                 <button className="button button-ghost button-full" aria-label="Vedi il ranking completo" onClick={() => setPadelView("ranking")}>Vedi tutto</button>
@@ -2553,7 +2558,17 @@ function AppShell({ session }: { session: Session | null }) {
             <article className="section-hero">
               <BlockMark size="lg" />
               <div className="section-hero-head">
-                <div><p className="eyebrow">THEBOYZ PADEL · STAGIONE 2026</p><h1>Il ranking del gruppo</h1><p>Il ranking si aggiorna automaticamente dopo ogni risultato.</p></div>
+                <div>
+                  <p className="eyebrow">THEBOYZ PADEL</p>
+                  <h1>Il ranking del gruppo</h1>
+                  <p>Il ranking si aggiorna automaticamente dopo ogni risultato.</p>
+                  {/* La stagione si sceglie qui, non piu in home. */}
+                  <SeasonPicker
+                    value={season}
+                    options={[currentYear, ...archivedSeasons.filter((year) => year !== currentYear)]}
+                    onChange={setSeason}
+                  />
+                </div>
                 <div className="ranking-switch" role="group" aria-label="Tipo di ranking">
                   <button
                     className={rankingMode === "single" ? "active" : ""}
@@ -2571,13 +2586,13 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
               {rankingMode === "single" ? (
                 <div className="podium">
-                  {rankedProfiles.slice(0, 3).map((profile, index) => (
+                  {seasonRanked.slice(0, 3).map((profile, index) => (
                     <article key={profile.id} className={`podium-card podium-${index + 1}`}>
                       <div className="podium-avatars">
-                        <Avatar profile={profile} size="lg" rank={singleRanks[index]} />
+                        <Avatar profile={profile} size="lg" rank={seasonRanks[index]} />
                       </div>
                       <h3>
-                        <span className="podium-rank">#{singleRanks[index]}</span>
+                        <span className="podium-rank">#{seasonRanks[index]}</span>
                         {profile.display_name}
                       </h3>
                       <b>{profile.rating} pt</b>
@@ -2618,7 +2633,7 @@ function AppShell({ session }: { session: Session | null }) {
               ) : null}
             </article>
             {rankingMode === "single" ? (
-              <RankingList profiles={profiles} expanded onSelect={openPlayer} />
+              <RankingList profiles={seasonProfiles} expanded onSelect={openPlayer} />
             ) : teams.length ? (
               <TeamRankingList teams={teams} />
             ) : (

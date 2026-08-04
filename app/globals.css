@@ -4044,13 +4044,17 @@ button.pizza-ranking-row {
 
   .match-panel-head {
     display: block;
-    padding: 16px 0 12px;
+    padding: 15px 0 10px;
   }
 
-  .match-panel-head h2 {
-    font-size: 24px;
-    letter-spacing: -1px;
+  /* Titoli dei riquadri: piccoli e maiuscoli, cosi fanno da etichetta e
+     non competono con i numeri e i nomi che stanno sotto. */
+  .match-panel-head h2,
+  .dashboard-side .side-head h2 {
+    font-size: 12px;
+    letter-spacing: 1.4px;
     margin: 0;
+    text-transform: uppercase;
   }
 
   .match-panel .match-list {
@@ -4241,15 +4245,17 @@ button.pizza-ranking-row {
     justify-content: flex-end;
   }
 
+  /* L'anteprima riempie l'altezza della riga invece di galleggiarci in
+     mezzo: la riga e alta quanto avatar piu i due nomi sotto. */
   .match-video-preview {
-    height: 40px;
-    width: 58px;
+    height: 64px;
+    width: 94px;
   }
 
   .match-video-empty {
     display: flex;
-    height: 40px;
-    width: 58px;
+    height: 64px;
+    width: 94px;
   }
 
   /* Avatar sopra, nomi sotto, tutto centrato in colonna. */
@@ -4694,12 +4700,12 @@ button.pizza-ranking-row {
 
   .match-video-preview,
   .match-video-empty {
-    height: 36px;
-    width: 50px;
+    height: 56px;
+    width: 82px;
   }
 
   .match-video-empty::after {
-    width: 20px;
+    width: 24px;
   }
 
   .podium {
