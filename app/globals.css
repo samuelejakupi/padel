@@ -642,14 +642,14 @@ form select:focus,
 /* Marchio grande nell'angolo in basso a destra del riquadro scuro: sborda
    oltre il bordo, che overflow:hidden ritaglia. */
 .hub-mark {
-  bottom: -30px;
-  height: 400px;
+  bottom: -60px;
+  height: 700px;
   object-fit: contain;
   pointer-events: none;
   position: absolute;
-  right: -30px;
+  right: -60px;
   transform: rotate(-9deg);
-  width: 400px;
+  width: 700px;
   z-index: 1;
 }
 
@@ -732,8 +732,9 @@ form select:focus,
   min-height: 275px;
   overflow: hidden;
   /* Compensazione ottica: il gruppo icona+titolo va spostato a sinistra,
-     altrimenti a centratura geometrica sembra spostato a destra. */
-  padding: 40px 41px 40px 23px;
+     altrimenti a centratura geometrica sembra spostato a destra.
+     Lo scarto è metà della differenza fra i due padding: qui 20px. */
+  padding: 40px 52px 40px 12px;
   position: relative;
   text-align: left;
   transition: transform 180ms ease, box-shadow 180ms ease;
@@ -2892,7 +2893,12 @@ button.pizza-ranking-row {
 
 @media (max-width: 1050px) {
   .hub-card {
-    padding: 26px 35px 26px 17px;
+    padding: 26px 44px 26px 8px;
+  }
+
+  .hub-mark {
+    height: 460px;
+    width: 460px;
   }
 
   .dashboard-grid {
@@ -3039,7 +3045,7 @@ button.pizza-ranking-row {
   .hub-card {
     gap: 18px;
     min-height: 200px;
-    padding: 30px 29px 30px 11px;
+    padding: 30px 42px 30px 6px;
   }
 
   .hub-card-icon {
