@@ -3553,8 +3553,12 @@ button.pizza-ranking-row {
     display: none;
   }
 
+  /* Lo spazio per la barra lo mette gia il padding di body: aggiungerne
+     altro qui lasciava una fascia vuota dietro al vetro, che cosi non
+     aveva nulla da sfocare. Con questo il contenuto scorre davvero
+     sotto la barra. */
   .content {
-    padding: 24px 14px 36px;
+    padding: 24px 14px 6px;
   }
 
   .hub-page {
@@ -3701,10 +3705,13 @@ button.pizza-ranking-row {
        vivi. I gradienti bianchi sovrapposti che c'erano prima davano
        l'effetto plastica; qui resta un velo unico appena accennato. */
     backdrop-filter: blur(40px) saturate(180%);
+    /* Velo appena freddo invece che bianco puro: sopra le zone piatte da
+       comunque l'idea di un materiale, senza sporcare i colori che
+       passano da dietro. */
     background: linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.2) 0%,
-      rgba(255, 255, 255, 0.12) 100%
+      rgba(255, 255, 255, 0.24) 0%,
+      rgba(236, 243, 250, 0.14) 100%
     );
     /* Filo di contorno sottilissimo, non un bordo disegnato. */
     border: 0.5px solid rgba(255, 255, 255, 0.5);
