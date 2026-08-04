@@ -138,6 +138,39 @@ button {
 .cta-new-match {
   font-style: italic;
   font-weight: 900;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Bagliore che attraversa l'azzurro ogni tanto. Sta sopra al testo di
+   proposito: e una luce che passa sul tasto, non una decorazione dietro.
+   Volutamente sobrio e con una pausa lunga fra un passaggio e l'altro:
+   un lampeggio continuo distrarrebbe dal resto della pagina. */
+.cta-new-match::after {
+  background: linear-gradient(
+    104deg,
+    rgba(255, 255, 255, 0) 38%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0) 62%
+  );
+  animation: cta-sheen 5s ease-in-out infinite;
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  transform: translateX(-130%);
+}
+
+@keyframes cta-sheen {
+  0% {
+    transform: translateX(-130%);
+  }
+  /* La luce attraversa nella prima parte del ciclo, poi resta ferma fuori
+     campo: e quella sosta a dare il respiro fra un bagliore e l'altro. */
+  45%,
+  100% {
+    transform: translateX(130%);
+  }
 }
 
 .avatar {
@@ -4737,5 +4770,10 @@ button.pizza-ranking-row {
 
   .splash-mark {
     animation: none;
+  }
+
+  .cta-new-match::after {
+    animation: none;
+    opacity: 0;
   }
 }
