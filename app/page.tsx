@@ -2505,6 +2505,10 @@ function AppShell({ session }: { session: Session | null }) {
                   // Su mobile le due partite e il tasto stanno in un unico
                   // riquadro, come la classifica: vedi .match-panel.
                   <div className="match-panel">
+                    {/* Titolo interno al riquadro, come "Classifica Elo".
+                        Su desktop resta nascosto: li il titolo di sezione
+                        c'e gia sopra, fuori dal riquadro. */}
+                    <div className="match-panel-head"><h2>Ultime partite</h2></div>
                     <div className="match-list">
                       {matches.slice(0, 2).map((match, index) => (
                         <MatchCard

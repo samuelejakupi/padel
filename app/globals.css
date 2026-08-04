@@ -1029,6 +1029,12 @@ form select:focus,
   display: contents;
 }
 
+/* Il titolo dentro al riquadro serve solo su mobile: su desktop la
+   sezione ha gia la sua intestazione sopra. */
+.match-panel-head {
+  display: none;
+}
+
 /* Il saluto vive dentro il riquadro scuro, sopra la posizione in classifica. */
 .hero-greeting {
   font-size: clamp(28px, 2.6vw, 40px);
@@ -4034,6 +4040,17 @@ button.pizza-ranking-row {
     display: block;
     overflow: hidden;
     padding: 0 14px 14px;
+  }
+
+  .match-panel-head {
+    display: block;
+    padding: 16px 0 12px;
+  }
+
+  .match-panel-head h2 {
+    font-size: 24px;
+    letter-spacing: -1px;
+    margin: 0;
   }
 
   .match-panel .match-list {
