@@ -2240,7 +2240,7 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "matches" ? (
           <section className="page-section">
             <article className="section-hero">
-              <BlockMark />
+              <BlockMark size="lg" />
               <div className="section-hero-head">
                 <div><p className="eyebrow">ARCHIVIO THEBOYZ PADEL</p><h1>Tutte le partite</h1><p>{matches.length} risultati registrati dal gruppo.</p></div>
                 <button className="button button-primary" onClick={() => setShowMatch(true)}>＋ Match</button>
