@@ -3385,37 +3385,48 @@ button.pizza-ranking-row {
   margin-top: 24px;
 }
 
-.loading-state,
+/* Schermata di attesa: occupa tutto lo schermo, anche quando compare
+   dentro il layout dell'app al posto del contenuto. */
 .splash {
   align-items: center;
+  background:
+    radial-gradient(circle at 50% 32%, rgba(24, 223, 228, 0.16), transparent 55%),
+    linear-gradient(165deg, #0a1a2a 0%, #0d3441 55%, #08131f 100%);
   display: flex;
   flex-direction: column;
+  inset: 0;
   justify-content: center;
-  min-height: 60vh;
+  min-height: 100dvh;
+  position: fixed;
+  z-index: 90;
 }
 
-.loading-state span,
-.splash-ball {
-  animation: pulse 1s infinite alternate;
-  color: var(--blue);
-  font-size: 50px;
+.splash-mark {
+  animation: splash-breathe 2.4s ease-in-out infinite;
+  height: 108px;
+  width: 108px;
 }
 
-.loading-state p,
+.splash-mark img {
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
 .splash p {
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.62);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 1px;
+  letter-spacing: 1.4px;
+  margin-top: 26px;
   text-transform: uppercase;
 }
 
-.splash {
-  min-height: 100vh;
-}
-
-.splash .brand {
-  margin-bottom: 50px;
+/* Un respiro lento invece del pallino che lampeggia: si nota meno ed e
+   meno fastidioso quando il caricamento dura poco. */
+@keyframes splash-breathe {
+  0%, 100% { opacity: 0.72; transform: scale(0.96); }
+  50% { opacity: 1; transform: scale(1); }
 }
 
 .mobile-nav {
@@ -4663,8 +4674,7 @@ button.pizza-ranking-row {
     transition: none !important;
   }
 
-  .loading-state span,
-  .splash-ball {
+  .splash-mark {
     animation: none;
   }
 }

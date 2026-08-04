@@ -420,6 +420,21 @@ function NavGlyph({ name }: { name: GlyphName }) {
   );
 }
 
+// Schermata di attesa: fondo blu sfumato e logo al centro. La usano sia
+// l'avvio dell'app sia il caricamento dei dati, cosi il passaggio da una
+// all'altra non si vede.
+function LoadingScreen({ label = "Carichiamo i dati…" }: { label?: string }) {
+  return (
+    <main className="splash" role="status" aria-live="polite">
+      <div className="splash-mark">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={`${basePath}/theBOYZ.png`} alt="TheBoyz" />
+      </div>
+      <p>{label}</p>
+    </main>
+  );
+}
+
 function Brand() {
   return (
     <div className="brand" aria-label="TheBoyz">
@@ -2189,7 +2204,7 @@ function AppShell({ session }: { session: Session | null }) {
         <header className="topbar"><Brand /></header>
         <main className="content">
           {loading ? (
-            <div className="loading-state"><span>●</span><p>Carichiamo i dati reali…</p></div>
+            <LoadingScreen label="Carichiamo i dati reali…" />
           ) : (
             <div className="empty-state">
               <p className="eyebrow dark">
@@ -2375,7 +2390,7 @@ function AppShell({ session }: { session: Session | null }) {
 
       <main className="content">
         {loading ? (
-          <div className="loading-state"><span>●</span><p>Prepariamo il campo…</p></div>
+          <LoadingScreen label="Prepariamo il campo…" />
         ) : null}
 
         {!loading && view === "padel" && padelView === "overview" ? (
@@ -3120,7 +3135,7 @@ export default function Home() {
   }, []);
 
   if (checking) {
-    return <main className="splash"><Brand /><span className="splash-ball">●</span><p>Prepariamo il campo…</p></main>;
+    return <LoadingScreen label="Prepariamo il campo…" />;
   }
   if (!hasSupabaseConfig) {
     return <SetupScreen />;
