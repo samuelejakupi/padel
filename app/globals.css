@@ -761,25 +761,12 @@ form select:focus,
   letter-spacing: -2.8px;
   line-height: 0.9;
   margin: 0;
-  position: relative;
   text-transform: uppercase;
-  z-index: 2;
 }
 
 .hub-card:hover {
   box-shadow: var(--shadow);
   transform: translateY(-4px);
-}
-
-.hub-card::after {
-  border: 1px solid rgba(11, 27, 44, 0.16);
-  border-radius: 50%;
-  content: "";
-  height: 230px;
-  position: absolute;
-  right: -90px;
-  top: -95px;
-  width: 230px;
 }
 
 /* Entrambe gialle: così multiply assorbe il fondo bianco delle GIF senza
@@ -790,16 +777,16 @@ form select:focus,
   color: var(--ink);
 }
 
-/* Senza cerchio dietro: l'icona si fonde direttamente col colore della card. */
+/* Niente position/z-index qui: creerebbero un contesto di sovrapposizione
+   isolato e multiply si fonderebbe col nulla invece che col giallo della card,
+   lasciando visibile il rettangolo bianco della GIF. */
 .hub-card-icon {
   align-items: center;
   display: flex;
   flex: 0 0 auto;
   height: 132px;
   justify-content: center;
-  position: relative;
   width: 132px;
-  z-index: 2;
 }
 
 .hub-card-icon img {
