@@ -2923,8 +2923,16 @@ button.pizza-ranking-row {
 }
 
 .nav-glyph {
-  height: 24px;
-  width: 24px;
+  background-color: currentColor;
+  display: block;
+  height: 23px;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  width: 23px;
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
 }
 
 .mobile-nav-icon .avatar {
