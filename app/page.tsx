@@ -2000,9 +2000,9 @@ function AppShell({ session }: { session: Session | null }) {
       {view !== "hub" ? (
       <nav className="mobile-nav" aria-label="Navigazione mobile">
         {([
-          ["overview", "https://cdn-icons-gif.flaticon.com/6451/6451035.gif", "Court"],
+          ["overview", "https://cdn-icons-gif.flaticon.com/18830/18830433.gif", "Court"],
           ["ranking", "https://cdn-icons-gif.flaticon.com/18830/18830460.gif", "Ranking"],
-          ["matches", "https://cdn-icons-gif.flaticon.com/15240/15240280.gif", "Matches"],
+          ["matches", "https://cdn-icons-gif.flaticon.com/18830/18830435.gif", "Matches"],
         ] as [PadelView, string, string][]).map(([target, icon, label]) => (
           <button
             key={target}
