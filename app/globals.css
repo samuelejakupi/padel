@@ -3698,25 +3698,45 @@ button.pizza-ranking-row {
     align-items: center;
     /* Oltre alla sfocatura, un pizzico di luminosita e di saturazione: e
        quello che fa sembrare il vetro illuminato invece che smerigliato. */
-    backdrop-filter: blur(34px) saturate(190%) brightness(104%);
-    /* Volutamente poco coprente: se la barra e quasi bianca, la pastiglia
-       sopra non ha niente da rifrangere e sembra solo un rettangolo chiaro
-       su fondo chiaro. */
+    backdrop-filter: blur(30px) saturate(210%) brightness(108%) contrast(104%);
+    /* Stesso materiale della pastiglia, in scala piu grande: luce che entra
+       da un angolo, ritorno di luce sull'angolo opposto e fondo volutamente
+       poco coprente, altrimenti la pastiglia sopra non avrebbe niente da
+       rifrangere. Il bordo e trasparente e lascia vedere l'ultimo strato,
+       che occupa anche la cornice: e quello a dare lo spessore del vetro. */
     background:
+      radial-gradient(
+        130% 190% at 10% -10%,
+        rgba(255, 255, 255, 0.6) 0%,
+        rgba(255, 255, 255, 0.16) 36%,
+        rgba(255, 255, 255, 0) 68%
+      ) padding-box,
+      radial-gradient(
+        110% 170% at 90% 110%,
+        rgba(255, 255, 255, 0.45) 0%,
+        rgba(255, 255, 255, 0.08) 44%,
+        rgba(255, 255, 255, 0) 74%
+      ) padding-box,
       linear-gradient(
-        160deg,
-        rgba(255, 255, 255, 0.46) 0%,
-        rgba(255, 255, 255, 0.2) 45%,
-        rgba(255, 255, 255, 0.34) 100%
-      );
-    border: 1px solid rgba(255, 255, 255, 0.5);
+        180deg,
+        rgba(255, 255, 255, 0.24) 0%,
+        rgba(255, 255, 255, 0.1) 100%
+      ) padding-box,
+      linear-gradient(
+        150deg,
+        rgba(255, 255, 255, 1) 0%,
+        rgba(255, 255, 255, 0.22) 26%,
+        rgba(255, 255, 255, 0.14) 60%,
+        rgba(255, 255, 255, 0.96) 100%
+      ) border-box;
+    border: 1.5px solid transparent;
     border-radius: 34px;
     bottom: calc(11px + env(safe-area-inset-bottom));
     box-shadow:
       0 18px 40px rgba(11, 27, 44, 0.2),
       0 4px 12px rgba(11, 27, 44, 0.1),
-      inset 0 1px 0 rgba(255, 255, 255, 0.95),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.4);
+      inset 0 0 24px rgba(255, 255, 255, 0.4),
+      inset 0 -9px 18px -11px rgba(11, 27, 44, 0.24);
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     left: 11px;
@@ -3724,7 +3744,7 @@ button.pizza-ranking-row {
     padding: var(--nav-inset);
     position: fixed;
     right: 11px;
-    -webkit-backdrop-filter: blur(34px) saturate(190%) brightness(104%);
+    -webkit-backdrop-filter: blur(30px) saturate(210%) brightness(108%) contrast(104%);
     z-index: 50;
   }
 
@@ -3795,23 +3815,16 @@ button.pizza-ranking-row {
 
 
 
-  /* Riflesso morbido sul bordo superiore: è ciò che dà l'idea del vetro. */
-  .mobile-nav::after {
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.6) 0%,
-      rgba(255, 255, 255, 0) 55%
-    );
-    content: "";
-    inset: 0;
-    pointer-events: none;
-    position: absolute;
-  }
-
   /* Se il browser non sfoca, meglio un fondo pieno che una barra slavata. */
   @supports not (backdrop-filter: blur(1px)) {
     .mobile-nav {
-      background: rgba(255, 255, 255, 0.94);
+      background: rgba(255, 255, 255, 0.94) padding-box;
+      border-color: rgba(255, 255, 255, 0.8);
+    }
+
+    .mobile-nav-pill {
+      background: rgba(255, 255, 255, 0.98) padding-box;
+      border-color: rgba(255, 255, 255, 0.9);
     }
   }
 
