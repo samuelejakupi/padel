@@ -1370,8 +1370,14 @@ function AppShell({ session }: { session: Session | null }) {
               <div className="hub-logo-stage">
                 <span className="logo-glow" />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`${basePath}/theboyz-logo.png`} alt="Simbolo TheBoyz" />
-                <small>EST. BY THE GROUP</small>
+                <img className="hub-mark" src={`${basePath}/theBOYZ.png`} alt="Simbolo TheBoyz" />
+                <button
+                  className="hub-profile"
+                  onClick={() => setView("profile")}
+                  aria-label="Vai al tuo profilo"
+                >
+                  <Avatar profile={currentUser} size="xl" rank={currentRank || undefined} />
+                </button>
               </div>
             </div>
 
@@ -1385,35 +1391,15 @@ function AppShell({ session }: { session: Session | null }) {
 
             <div className="hub-cards">
               <button className="hub-card hub-card-padel" onClick={() => { setView("padel"); setPadelView("overview"); }}>
-                <span className="hub-card-index">01</span>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <div className="hub-card-icon" aria-hidden="true"><img src="https://cdn-icons-gif.flaticon.com/6451/6451035.gif" alt="" /></div>
-                <div className="hub-card-copy">
-                  <p>SEZIONE ATTIVA</p>
-                  <h3>Padel</h3>
-                  <span>Partite, risultati e rivalità del gruppo.</span>
-                </div>
-                <div className="hub-card-meta">
-                  <span><b>{matches.length}</b> partite</span>
-                  <span><b>{profiles.length}</b> giocatori</span>
-                </div>
-                <span className="hub-card-arrow">↗</span>
+                <h3>Padel<br />Court</h3>
               </button>
 
               <button className="hub-card hub-card-pizza" onClick={() => setView("pizza")}>
-                <span className="hub-card-index">02</span>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <div className="hub-card-icon pizza-icon" aria-hidden="true"><img src="https://cdn-icons-gif.flaticon.com/15240/15240280.gif" alt="" /></div>
-                <div className="hub-card-copy">
-                  <p>PROSSIMAMENTE</p>
-                  <h3>Pizzeria<br />Ranking</h3>
-                  <span>La classifica ufficialmente non ufficiale.</span>
-                </div>
-                <div className="hub-card-meta">
-                  <span>Spazio pronto</span>
-                  <span>Classifica vuota</span>
-                </div>
-                <span className="hub-card-arrow">↗</span>
+                <h3>Pizza<br />Ranking</h3>
               </button>
             </div>
 
