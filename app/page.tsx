@@ -143,12 +143,22 @@ function sortPadelProfiles(profiles: Profile[]) {
 
 // Saluti della home: una frase a caso a ogni caricamento, scelta in base a
 // come sta andando chi guarda. {nome} viene sostituito col display_name.
-// Il saluto sta sempre in cima ed e indipendente dalla frase: si pesca da
-// qui, mescolando quello col nome e quello scherzoso.
-const heroSalutes = [
-  "Ciao {nome},",
-  "Ciao GOAT,",
-] as const;
+// Il saluto sta sempre in cima ed e indipendente dalla frase. La forma e
+// sempre "Ciao <qualcuno>," senza virgola dopo "Ciao" e senza punto finale:
+// la frase sotto ne e la continuazione.
+const heroSalutes = {
+  // "GOAT" spetta solo a chi comanda, "Gancio" solo a chi chiude.
+  first: ["Ciao {nome},", "Ciao GOAT,"],
+  last: ["Ciao {nome},", "Ciao Gancio,"],
+  any: ["Ciao {nome},"],
+} as const;
+
+function heroSalutePool(rank: number, isLast: boolean) {
+  if (rank === 0) return heroSalutes.any;
+  if (isLast) return heroSalutes.last;
+  if (rank === 1) return heroSalutes.first;
+  return heroSalutes.any;
+}
 
 // Le frasi sotto la barra. Sono gia senza saluto e con l'iniziale
 // maiuscola: cosi non c'e niente da ritagliare o correggere a video.
@@ -2262,7 +2272,8 @@ function AppShell({ session }: { session: Session | null }) {
   }, [navActiveIndex, placePill, currentUser, loading]);
   const heroGreeting = useMemo(() => {
     const pool = heroGreetingPool(currentRank, isLastRanked, hasNarrowLead);
-    const salute = heroSalutes[Math.floor(saluteSeed * heroSalutes.length)] ?? heroSalutes[0];
+    const salutes = heroSalutePool(currentRank, isLastRanked);
+    const salute = salutes[Math.floor(saluteSeed * salutes.length)] ?? salutes[0];
     return {
       lead: salute.replace("{nome}", currentUser?.display_name ?? ""),
       rest: pool[Math.floor(greetingSeed * pool.length)] ?? pool[0] ?? "",
