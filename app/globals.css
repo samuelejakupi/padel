@@ -637,12 +637,18 @@ form select:focus,
   color: var(--lime);
 }
 
-/* Il logo affianca gli avatar dei membri, in fondo alla colonna di sinistra. */
+/* Marchio grande nell'angolo in basso a destra del riquadro scuro: sborda
+   oltre il bordo, che overflow:hidden ritaglia. */
 .hub-mark {
-  flex: 0 0 auto;
-  height: 46px;
+  bottom: -46px;
+  height: 300px;
   object-fit: contain;
-  width: 46px;
+  pointer-events: none;
+  position: absolute;
+  right: -34px;
+  transform: rotate(-9deg);
+  width: 300px;
+  z-index: 1;
 }
 
 /* Scheda profilo autonoma, fuori dal riquadro scuro. */
@@ -3022,9 +3028,10 @@ button.pizza-ranking-row {
     margin-top: 24px;
   }
 
+  /* Su mobile il riquadro è troppo stretto: il marchio finirebbe sotto al
+     testo invece di restare un fondale. */
   .hub-mark {
-    height: 38px;
-    width: 38px;
+    display: none;
   }
 
   .hub-profile {

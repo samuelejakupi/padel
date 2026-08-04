@@ -1364,14 +1364,14 @@ function AppShell({ session }: { session: Session | null }) {
                 <h1>Le nostre cose.<br /><span>Un posto solo.</span></h1>
                 <p>Classifiche serissime, discussioni inutili e nuove idee. Questo è il nostro spazio.</p>
                 <div className="hub-members">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img className="hub-mark" src={`${basePath}/theBOYZ.png`} alt="TheBoyz" />
                   <div className="mini-avatars">
                     {sorted.slice(0, 5).map((profile) => <Avatar key={profile.id} profile={profile} size="sm" />)}
                   </div>
                   <span><b>{profiles.length}</b> membri attivi</span>
                 </div>
               </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="hub-mark" src={`${basePath}/theBOYZ.png`} alt="" aria-hidden="true" />
             </div>
 
             <button
