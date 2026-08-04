@@ -35,7 +35,10 @@ test("include configurazione Supabase e pubblicazione Pages", async () => {
   assert.match(workflow, /deploy-pages/);
   assert.match(page, /signInWithPassword/);
   assert.match(page, /"Mattia", "Manu"/);
-  assert.match(page, /Partita eliminata/);
+  // L'eliminazione manuale della partita non esiste piu come azione a se:
+  // delete_match resta usata solo dentro la modifica (rimuovi + riregistra),
+  // quindi qui controlliamo la chiamata RPC e non il vecchio messaggio.
+  assert.match(page, /rpc\("delete_match", \{ p_match_id/);
   assert.match(page, /match_players\(profile_id, team, rating_delta/);
   assert.match(page, /sortPadelProfiles/);
   assert.match(page, /function EloChart/);
