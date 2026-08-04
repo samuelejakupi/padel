@@ -827,7 +827,7 @@ form select:focus,
    i contenuti dei blocchi vanno alzati di un livello. */
 .hero-stat > *:not(.block-mark):not(.hero-kpis),
 .section-hero > *:not(.block-mark),
-.player-detail-hero > *:not(.block-mark),
+.player-detail-hero > *:not(.block-mark):not(.player-edit-button),
 .pizza-page > *:not(.block-mark) {
   position: relative;
   z-index: 1;
@@ -1706,7 +1706,7 @@ button.ranking-row-link:focus-visible {
   align-items: center;
   display: grid;
   gap: 12px;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   margin-bottom: 12px;
 }
 
@@ -1721,14 +1721,39 @@ button.ranking-row-link:focus-visible {
   display: none;
 }
 
-.team-editor-photo > span {
-  color: var(--muted);
-  display: block;
-  font-size: 9px;
-  font-weight: 900;
-  margin-top: 4px;
-  text-align: center;
-  text-transform: uppercase;
+/* Nessuna etichetta: l'avatar si ingrigisce al passaggio (o al tocco) e
+   quello basta a dire che è modificabile. */
+.team-editor-photo::after {
+  background: rgba(11, 27, 44, 0.55);
+  border-radius: 50%;
+  content: "✎";
+  color: var(--white);
+  align-items: center;
+  display: flex;
+  font-size: 14px;
+  inset: 0;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  transition: opacity 150ms ease;
+}
+
+.team-editor-photo:hover::after,
+.team-editor-photo:focus-within::after,
+.team-editor-photo:active::after {
+  opacity: 1;
+}
+
+/* Nome e Salva sulla stessa riga. */
+.team-editor-row {
+  display: flex;
+  gap: 10px;
+}
+
+.team-editor-row input {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .team-editor-fields input {
@@ -1744,6 +1769,7 @@ button.ranking-row-link:focus-visible {
 }
 
 .team-editor .button {
+  flex: 0 0 auto;
   min-height: 42px;
   padding: 0 16px;
 }
@@ -1987,6 +2013,27 @@ button.ranking-row-link:focus-visible {
   flex: 0 0 auto;
 }
 
+/* Matita nell'angolo del blocco scuro: apre la modale dei dati. */
+.player-edit-button {
+  background: rgba(255, 255, 255, 0.12);
+  border: 0;
+  border-radius: 50%;
+  color: var(--white);
+  cursor: pointer;
+  font-size: 14px;
+  height: 34px;
+  position: absolute;
+  right: 22px;
+  top: 22px;
+  transition: background 150ms ease;
+  width: 34px;
+  z-index: 2;
+}
+
+.player-edit-button:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
 .player-detail-identity h1 {
   font-size: clamp(40px, 5vw, 72px);
   letter-spacing: -4px;
@@ -2050,37 +2097,55 @@ button.ranking-row-link:focus-visible {
 }
 
 .player-kpis article {
+  align-items: baseline;
   background: var(--white);
   border-radius: 8px;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  min-height: 112px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  justify-content: space-between;
+  min-height: 96px;
   padding: 18px 20px;
 }
 
-.player-kpis article > span {
-  color: var(--blue-dark);
-  font-size: 10px;
-  font-weight: 900;
-}
-
 .player-kpis b {
-  align-self: end;
+  align-self: flex-end;
   font-size: 32px;
-  grid-column: 1;
   letter-spacing: -1.5px;
+  margin-top: auto;
 }
 
 .player-kpis small {
-  align-self: end;
+  align-self: flex-end;
   color: var(--muted);
   font-size: 9px;
   font-weight: 900;
-  grid-column: 2;
-  grid-row: 2;
   letter-spacing: 0.7px;
   padding-bottom: 4px;
   text-transform: uppercase;
+}
+
+/* Bacheca: per ora un contenitore vuoto, i contenuti arrivano dopo. */
+.player-trophies {
+  margin-bottom: 26px;
+}
+
+.player-trophies .player-history-head {
+  margin: 30px 0 16px;
+}
+
+.player-trophies-empty {
+  background: var(--white);
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 30px;
+  text-align: center;
+}
+
+.player-trophies-empty p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0;
 }
 
 .elo-panel {
@@ -2241,11 +2306,6 @@ button.ranking-row-link:focus-visible {
   padding: 24px 26px;
 }
 
-/* La scheda dati chiude la propria pagina, non è più in griglia. */
-.player-detail-page .settings-card {
-  margin-top: 40px;
-  max-width: 620px;
-}
 
 /* Pizzeria ranking */
 .pizza-page {
@@ -2608,6 +2668,12 @@ button.pizza-ranking-row {
   font-size: 11px;
 }
 
+.field-hint {
+  color: var(--muted);
+  font-size: 11px;
+  margin: -10px 0 16px;
+}
+
 .pizza-vote-hint {
   margin: 12px 0 0;
 }
@@ -2826,6 +2892,11 @@ button.pizza-ranking-row {
 .settings-card form {
   border-bottom: 1px solid var(--line);
   padding-bottom: 28px;
+}
+
+.modal-actions .signout-button {
+  margin-right: auto;
+  margin-top: 0;
 }
 
 .signout-button {

@@ -626,7 +626,7 @@ function TeamEditor({
 
   return (
     <form className="team-editor" onSubmit={submit}>
-      <label className="team-editor-photo">
+      <label className="team-editor-photo" title="Cambia la foto della squadra">
         <TeamAvatars team={team} />
         <input
           type="file"
@@ -634,22 +634,23 @@ function TeamEditor({
           disabled={disabled || busy}
           onChange={(event) => void pickImage(event.target.files?.[0])}
         />
-        <span>Foto</span>
       </label>
       <div className="team-editor-fields">
-        <input
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder={team.players.map((profile) => profile.display_name).join(" · ")}
-          maxLength={40}
-          disabled={disabled || busy}
-          aria-label="Nome della squadra"
-        />
+        <div className="team-editor-row">
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder={team.players.map((profile) => profile.display_name).join(" · ")}
+            maxLength={40}
+            disabled={disabled || busy}
+            aria-label="Nome della squadra"
+          />
+          <button className="button button-dark" disabled={disabled || busy}>
+            {busy ? "Salvo…" : "Salva"}
+          </button>
+        </div>
         <small>{team.matches_played} partite · {team.rating} pt</small>
       </div>
-      <button className="button button-dark" disabled={disabled || busy}>
-        {busy ? "Salvo…" : "Salva"}
-      </button>
     </form>
   );
 }
@@ -1335,6 +1336,7 @@ function AppShell({ session }: { session: Session | null }) {
   const [votingRestaurant, setVotingRestaurant] = useState<PizzaRestaurantRecord | null>(null);
   const [pizzaSchemaReady, setPizzaSchemaReady] = useState(true);
   const [editingMatch, setEditingMatch] = useState<PadelMatch | null>(null);
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [rankingMode, setRankingMode] = useState<"single" | "team">("single");
   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
@@ -1343,6 +1345,8 @@ function AppShell({ session }: { session: Session | null }) {
   const [profileName, setProfileName] = useState("");
   const [handedness, setHandedness] = useState("");
   const [courtSide, setCourtSide] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarUrlInitial, setAvatarUrlInitial] = useState("");
   const [teamRecords, setTeamRecords] = useState<PadelTeamRecord[]>([]);
   const [teamSchemaReady, setTeamSchemaReady] = useState(true);
   const [seasonRows, setSeasonRows] = useState<SeasonStanding[]>([]);
@@ -1382,8 +1386,12 @@ function AppShell({ session }: { session: Session | null }) {
     } else {
       const withAvatars = (profilesResult.data ?? []).map((profile) => ({
         ...profile,
+        // avatar_path ospita due cose: il percorso nello storage oppure, se
+        // comincia con http, un indirizzo esterno già pronto (utile per le GIF).
         avatar_url: profile.avatar_path
-          ? client.storage.from("avatars").getPublicUrl(profile.avatar_path).data.publicUrl
+          ? /^https?:\/\//i.test(profile.avatar_path)
+            ? profile.avatar_path
+            : client.storage.from("avatars").getPublicUrl(profile.avatar_path).data.publicUrl
           : null,
       })) as Profile[];
       const profileMap = new Map(withAvatars.map((profile) => [profile.id, profile]));
@@ -1416,6 +1424,9 @@ function AppShell({ session }: { session: Session | null }) {
       setProfileName(own?.display_name ?? "");
       setHandedness(own?.handedness ?? "");
       setCourtSide(own?.court_side ?? "");
+      const ownExternal = /^https?:\/\//i.test(own?.avatar_path ?? "") ? own?.avatar_path ?? "" : "";
+      setAvatarUrl(ownExternal);
+      setAvatarUrlInitial(ownExternal);
     }
     setLoading(false);
   }, [session?.user.id]);
@@ -1544,14 +1555,25 @@ function AppShell({ session }: { session: Session | null }) {
   async function updateProfile(event: FormEvent) {
     event.preventDefault();
     if (!supabase || !session || !profileName.trim()) return;
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        display_name: profileName.trim(),
-        handedness: handedness || null,
-        court_side: courtSide || null,
-      })
-      .eq("id", session.user.id);
+
+    const cleanAvatarUrl = avatarUrl.trim();
+    if (cleanAvatarUrl && !/^https:\/\//i.test(cleanAvatarUrl)) {
+      setNotice("L'indirizzo dell'immagine deve iniziare con https://");
+      return;
+    }
+
+    const patch: Record<string, string | null> = {
+      display_name: profileName.trim(),
+      handedness: handedness || null,
+      court_side: courtSide || null,
+    };
+    // Il campo si tocca solo se l'utente ci ha messo mano: altrimenti una foto
+    // caricata da file verrebbe sovrascritta a ogni salvataggio.
+    if (cleanAvatarUrl !== (avatarUrlInitial ?? "")) {
+      patch.avatar_path = cleanAvatarUrl || null;
+    }
+
+    const { error } = await supabase.from("profiles").update(patch).eq("id", session.user.id);
     setNotice(error ? error.message : "Profilo aggiornato.");
     if (!error) await loadData();
   }
@@ -1859,14 +1881,34 @@ function AppShell({ session }: { session: Session | null }) {
                 <b>{selectedPlayer.matches_played ? selectedPlayer.rating : "N/C"}</b>
                 <small>{selectedPlayer.matches_played ? `${selectedPlayer.rating - 1000 >= 0 ? "+" : ""}${selectedPlayer.rating - 1000} dalla quota iniziale` : "In attesa del debutto"}</small>
               </div>
+              {isOwnCard ? (
+                <button
+                  className="player-edit-button"
+                  type="button"
+                  onClick={() => setShowProfileEdit(true)}
+                  aria-label="Modifica i dati del profilo"
+                  title="Modifica i dati del profilo"
+                >
+                  <span aria-hidden="true">✎</span>
+                </button>
+              ) : null}
             </article>
 
             <div className="player-kpis">
-              <article><span>01</span><b>{selectedPlayer.matches_played}</b><small>Partite</small></article>
-              <article><span>02</span><b>{selectedPlayer.wins}</b><small>Vittorie</small></article>
-              <article><span>03</span><b>{selectedPlayer.losses}</b><small>Sconfitte</small></article>
-              <article><span>04</span><b>{selectedPlayer.matches_played ? Math.round((selectedPlayer.wins / selectedPlayer.matches_played) * 100) : 0}%</b><small>Win rate</small></article>
+              <article><b>{selectedPlayer.matches_played}</b><small>Partite</small></article>
+              <article><b>{selectedPlayer.wins}</b><small>Vittorie</small></article>
+              <article><b>{selectedPlayer.losses}</b><small>Sconfitte</small></article>
+              <article><b>{selectedPlayer.matches_played ? Math.round((selectedPlayer.wins / selectedPlayer.matches_played) * 100) : 0}%</b><small>Win rate</small></article>
             </div>
+
+            <section className="player-trophies">
+              <div className="player-history-head">
+                <div><p className="eyebrow dark">BACHECA</p><h2>Trofei e record</h2></div>
+              </div>
+              <div className="player-trophies-empty">
+                <p>Qui finiranno titoli di stagione, serie record e primati del gruppo.</p>
+              </div>
+            </section>
 
             <EloChart profile={selectedPlayer} matches={matches} />
 
@@ -1926,33 +1968,6 @@ function AppShell({ session }: { session: Session | null }) {
               <div className="empty-board"><span>00</span><h2>Nessuna partita giocata</h2><p>La scheda si completerà dopo il primo risultato.</p></div>
             )}
 
-            {isOwnCard ? (
-              <article className="settings-card">
-                <h2>Dati del profilo</h2>
-                <form onSubmit={updateProfile}>
-                  <label>Nome in classifica<input value={profileName || currentUser.display_name} onChange={(e) => setProfileName(e.target.value)} disabled={!supabase} /></label>
-                  <label>
-                    Mano della racchetta
-                    <select value={handedness} onChange={(e) => setHandedness(e.target.value)} disabled={!supabase}>
-                      <option value="">Non indicata</option>
-                      <option value="destro">Destro</option>
-                      <option value="mancino">Mancino</option>
-                    </select>
-                  </label>
-                  <label>
-                    Lato del campo
-                    <select value={courtSide} onChange={(e) => setCourtSide(e.target.value)} disabled={!supabase}>
-                      <option value="">Non indicato</option>
-                      <option value="destra">Destra</option>
-                      <option value="sinistra">Sinistra</option>
-                    </select>
-                  </label>
-                  <label>Email<input value={session?.user.email ?? ""} disabled /></label>
-                  <button className="button button-primary" disabled={!supabase}>Salva modifiche</button>
-                </form>
-                {supabase ? <button className="signout-button" onClick={() => void supabase?.auth.signOut()}>Esci dal club</button> : <p className="demo-profile-note">Il profilo diventa modificabile dopo il collegamento a Supabase.</p>}
-              </article>
-            ) : null}
           </section>
         ) : null}
 
@@ -2125,8 +2140,60 @@ function AppShell({ session }: { session: Session | null }) {
           profiles={profiles}
           match={editingMatch}
           onClose={() => { setShowMatch(false); setEditingMatch(null); }}
-          onSaved={(action) => void handleSaved(action)}
+          onSaved={() => void handleSaved()}
         />
+      ) : null}
+      {showProfileEdit ? (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setShowProfileEdit(false)}>
+          <section className="modal" role="dialog" aria-modal="true" aria-labelledby="profile-edit-title">
+            <div className="modal-head">
+              <div>
+                <p className="eyebrow dark">IL TUO PROFILO</p>
+                <h2 id="profile-edit-title">Dati del profilo</h2>
+              </div>
+              <button className="icon-button" onClick={() => setShowProfileEdit(false)} aria-label="Chiudi">×</button>
+            </div>
+            <form onSubmit={(event) => { void updateProfile(event); setShowProfileEdit(false); }}>
+              <label>Nome in classifica<input value={profileName || currentUser.display_name} onChange={(e) => setProfileName(e.target.value)} disabled={!supabase} /></label>
+              <label>
+                Mano della racchetta
+                <select value={handedness} onChange={(e) => setHandedness(e.target.value)} disabled={!supabase}>
+                  <option value="">Non indicata</option>
+                  <option value="destro">Destro</option>
+                  <option value="mancino">Mancino</option>
+                </select>
+              </label>
+              <label>
+                Lato del campo
+                <select value={courtSide} onChange={(e) => setCourtSide(e.target.value)} disabled={!supabase}>
+                  <option value="">Non indicato</option>
+                  <option value="destra">Destra</option>
+                  <option value="sinistra">Sinistra</option>
+                </select>
+              </label>
+              <label>
+                Foto da indirizzo web <span className="optional-label">anche GIF animate</span>
+                <input
+                  value={avatarUrl}
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                  placeholder="https://…/animazione.gif"
+                  inputMode="url"
+                  disabled={!supabase}
+                />
+              </label>
+              <p className="field-hint">Lascia vuoto per usare la foto caricata dal telefono.</p>
+              <label>Email<input value={session?.user.email ?? ""} disabled /></label>
+              {supabase ? null : <p className="demo-profile-note">Il profilo diventa modificabile dopo il collegamento a Supabase.</p>}
+              <div className="modal-actions">
+                {supabase ? (
+                  <button type="button" className="signout-button" onClick={() => void supabase?.auth.signOut()}>Esci dal club</button>
+                ) : null}
+                <button type="button" className="button button-ghost" onClick={() => setShowProfileEdit(false)}>Annulla</button>
+                <button className="button button-primary" disabled={!supabase}>Salva modifiche</button>
+              </div>
+            </form>
+          </section>
+        </div>
       ) : null}
       {playingVideo ? (
         <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setPlayingVideo(null)}>
