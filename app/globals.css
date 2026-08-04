@@ -129,6 +129,9 @@ button {
 .avatar {
   align-items: center;
   background: linear-gradient(145deg, #d8e7ff, #8eb2ee);
+  /* Il fondo si ferma al bordo: sull'anello semitrasparente dell'hero
+     altrimenti traspariva l'azzurro e sembrava un alone. */
+  background-clip: padding-box;
   border: 2px solid var(--white);
   border-radius: 50%;
   display: inline-flex;
@@ -147,6 +150,13 @@ button {
   object-fit: cover;
   overflow: hidden;
   width: 100%;
+}
+
+/* Il contenitore non può ritagliare (overflow: visible serve al badge del
+   trofeo), e Safari ignora il border-radius su un <img> con object-fit:
+   cover — gli angoli della foto spuntavano. clip-path ritaglia sempre. */
+.avatar > img {
+  clip-path: circle(50%);
 }
 
 .avatar > span {
