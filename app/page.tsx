@@ -153,6 +153,17 @@ function padelRanks(sorted: Profile[]) {
   });
 }
 
+type SeasonStanding = {
+  season: number;
+  profile_id: string;
+  position: number;
+  rating: number;
+  matches_played: number;
+  wins: number;
+  losses: number;
+  current_streak: number;
+};
+
 type PadelTeamRecord = {
   id: string;
   player_a: string;
@@ -1118,11 +1129,20 @@ function AppShell({ session }: { session: Session | null }) {
   const [courtSide, setCourtSide] = useState("");
   const [teamRecords, setTeamRecords] = useState<PadelTeamRecord[]>([]);
   const [teamSchemaReady, setTeamSchemaReady] = useState(true);
+  const [seasonRows, setSeasonRows] = useState<SeasonStanding[]>([]);
+  const [season, setSeason] = useState(new Date().getFullYear());
 
   const loadData = useCallback(async () => {
     const client = supabase;
     if (!client) return;
-    const [profilesResult, matchesResult, pizzaResult, teamsResult] = await Promise.all([
+    // Sigilla le stagioni concluse non ancora archiviate. La funzione è
+    // idempotente: se non c'è nulla da fare esce subito.
+    const thisYear = new Date().getFullYear();
+    for (let year = thisYear - 1; year >= thisYear - 5; year -= 1) {
+      await client.rpc("archive_padel_season", { p_season: year });
+    }
+
+    const [profilesResult, matchesResult, pizzaResult, teamsResult, seasonsResult] = await Promise.all([
       client.from("profiles").select("*").order("rating", { ascending: false }),
       client
         .from("matches")
@@ -1134,6 +1154,11 @@ function AppShell({ session }: { session: Session | null }) {
         .select("id, name, place, created_by, created_at, votes:pizza_votes(restaurant_id, voter_id, location, pizza, dessert, price, bonus_fabio)")
         .order("created_at", { ascending: false }),
       client.from("padel_teams").select("id, player_a, player_b, name, image_path"),
+      client
+        .from("padel_season_standings")
+        .select("season, profile_id, position, rating, matches_played, wins, losses, current_streak")
+        .order("season", { ascending: false })
+        .order("position", { ascending: true }),
     ]);
 
     if (profilesResult.error || matchesResult.error) {
@@ -1159,6 +1184,7 @@ function AppShell({ session }: { session: Session | null }) {
       if (!pizzaResult.error) setPizzaRestaurants((pizzaResult.data ?? []) as PizzaRestaurantRecord[]);
       // Se la migrazione delle squadre non è ancora stata eseguita la query
       // fallisce: il resto dell'app deve continuare a funzionare.
+      if (!seasonsResult.error) setSeasonRows((seasonsResult.data ?? []) as SeasonStanding[]);
       setTeamSchemaReady(!teamsResult.error);
       if (!teamsResult.error) {
         setTeamRecords(
@@ -1194,6 +1220,32 @@ function AppShell({ session }: { session: Session | null }) {
   const sorted = useMemo(() => sortPadelProfiles(profiles), [profiles]);
   const rankedProfiles = useMemo(() => sorted.filter((profile) => profile.matches_played > 0), [sorted]);
   const singleRanks = useMemo(() => padelRanks(rankedProfiles), [rankedProfiles]);
+  const currentYear = new Date().getFullYear();
+  const archivedSeasons = useMemo(
+    () => [...new Set(seasonRows.map((row) => row.season))].sort((a, b) => b - a),
+    [seasonRows],
+  );
+  // Stagione corrente: dati vivi. Stagione passata: la fotografia archiviata,
+  // riagganciata ai profili solo per nome e foto.
+  const seasonProfiles = useMemo(() => {
+    if (season === currentYear) return profiles;
+    const byId = new Map(profiles.map((profile) => [profile.id, profile]));
+    return seasonRows
+      .filter((row) => row.season === season)
+      .map((row) => {
+        const base = byId.get(row.profile_id);
+        if (!base) return null;
+        return {
+          ...base,
+          rating: row.rating,
+          matches_played: row.matches_played,
+          wins: row.wins,
+          losses: row.losses,
+          current_streak: row.current_streak,
+        };
+      })
+      .filter(Boolean) as Profile[];
+  }, [season, currentYear, seasonRows, profiles]);
   const teams = useMemo(
     () => buildPadelTeams(matches, profiles, teamRecords),
     [matches, profiles, teamRecords],
@@ -1506,9 +1558,19 @@ function AppShell({ session }: { session: Session | null }) {
               <aside className="dashboard-side">
                 <div className="side-head">
                   <div><p className="eyebrow dark">TOP PLAYERS</p><h2>Ranking</h2></div>
-                  <span className="season">STAGIONE 2026</span>
+                  <select
+                    className="season"
+                    value={season}
+                    onChange={(event) => setSeason(Number(event.target.value))}
+                    aria-label="Stagione"
+                  >
+                    <option value={currentYear}>Stagione {currentYear}</option>
+                    {archivedSeasons.map((year) => (
+                      <option key={year} value={year}>Stagione {year}</option>
+                    ))}
+                  </select>
                 </div>
-                <RankingList profiles={sorted} onSelect={openPlayer} />
+                <RankingList profiles={seasonProfiles} onSelect={openPlayer} />
                 <button className="button button-dark button-full" onClick={() => setPadelView("ranking")}>Ranking completo</button>
               </aside>
             </section>

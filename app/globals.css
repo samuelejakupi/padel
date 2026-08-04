@@ -1120,14 +1120,24 @@ form select:focus,
   margin: 0 0 15px;
 }
 
+/* Selettore stagione: nessun riquadro, sembra testo finché non ci passi
+   sopra. */
 .season {
-  border: 1px solid var(--line);
-  border-radius: 3px;
+  appearance: none;
+  background: transparent;
+  border: 0;
   color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 1px;
-  padding: 5px 7px;
+  padding: 5px 0;
+  text-transform: uppercase;
+}
+
+.season:hover {
+  color: var(--ink);
 }
 
 .ranking-row {
