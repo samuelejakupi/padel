@@ -7,6 +7,7 @@ import {
   type MatchEvent,
   type PadelMatch,
   type PadelSet,
+  type PlayerPlay,
   type Profile,
   supabase,
 } from "@/lib/supabase";
@@ -482,6 +483,25 @@ function youtubeId(url?: string | null) {
     /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/,
   );
   return match ? match[1] : null;
+}
+
+// Secondi ⇄ mm:ss. Chi segna uno spezzone legge il tempo sul player di
+// YouTube, non conta i secondi dall'inizio.
+function formatClock(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function parseClock(value: string) {
+  const clean = value.trim();
+  if (!clean) return null;
+  const parts = clean.split(":").map((part) => Number(part));
+  if (parts.some((part) => !Number.isFinite(part) || part < 0)) return null;
+  if (parts.length === 1) return Math.floor(parts[0]);
+  if (parts.length === 2) return Math.floor(parts[0]) * 60 + Math.floor(parts[1]);
+  if (parts.length === 3) return Math.floor(parts[0]) * 3600 + Math.floor(parts[1]) * 60 + Math.floor(parts[2]);
+  return null;
 }
 
 function MatchCard({
@@ -1200,6 +1220,163 @@ function NewMatchModal({
   );
 }
 
+function PlayCreateModal({
+  profileId,
+  matches,
+  onClose,
+  onSaved,
+}: {
+  profileId: string;
+  matches: PadelMatch[];
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  // Le partite già registrate con un video sono la scorciatoia più comoda:
+  // il link ce l'hai già, resta solo da dire il minuto.
+  const withVideo = matches.filter((match) => youtubeId(match.video_url));
+  const [matchId, setMatchId] = useState(withVideo[0]?.id ?? "");
+  const [videoUrl, setVideoUrl] = useState(withVideo[0]?.video_url ?? "");
+  const [start, setStart] = useState("");
+  const [duration, setDuration] = useState("8");
+  const [title, setTitle] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  function pickMatch(id: string) {
+    setMatchId(id);
+    const chosen = withVideo.find((match) => match.id === id);
+    if (chosen?.video_url) setVideoUrl(chosen.video_url);
+  }
+
+  const startSeconds = parseClock(start);
+  const previewId = youtubeId(videoUrl);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setError("");
+    if (!previewId) {
+      setError("Serve un indirizzo YouTube valido.");
+      return;
+    }
+    if (startSeconds === null) {
+      setError("Indica il minuto di partenza come mm:ss, per esempio 3:12.");
+      return;
+    }
+    if (!supabase) return;
+
+    setBusy(true);
+    const { error: insertError } = await supabase.from("player_plays").insert({
+      profile_id: profileId,
+      match_id: matchId || null,
+      title: title.trim() || null,
+      video_url: videoUrl.trim(),
+      start_seconds: startSeconds,
+      duration_seconds: Number(duration),
+      created_by: profileId,
+    });
+    if (insertError) {
+      setError(insertError.message);
+      setBusy(false);
+      return;
+    }
+    await onSaved();
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section className="modal" role="dialog" aria-modal="true" aria-labelledby="play-create-title">
+        <div className="modal-head">
+          <div>
+            <p className="eyebrow dark">NUOVO SPEZZONE</p>
+            <h2 id="play-create-title">Segna una play</h2>
+          </div>
+          <button className="icon-button" onClick={onClose} aria-label="Chiudi">×</button>
+        </div>
+        <form onSubmit={submit}>
+          {withVideo.length ? (
+            <label>
+              Partita <span className="optional-label">facoltativa</span>
+              <select value={matchId} onChange={(event) => pickMatch(event.target.value)}>
+                <option value="">Video sciolto, non legato a una partita</option>
+                {withVideo.map((match) => (
+                  <option key={match.id} value={match.id}>
+                    {new Intl.DateTimeFormat("it-IT", { dateStyle: "medium" }).format(new Date(match.played_at))}
+                    {" · "}
+                    {match.players.map((player) => player.profile.display_name).join(", ")}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <label>
+            Video YouTube
+            <input
+              value={videoUrl}
+              onChange={(event) => setVideoUrl(event.target.value)}
+              placeholder="https://youtu.be/..."
+              inputMode="url"
+              required
+            />
+          </label>
+          <div className="play-time-row">
+            <label>
+              Minuto di partenza
+              <input
+                value={start}
+                onChange={(event) => setStart(event.target.value)}
+                placeholder="3:12"
+                inputMode="numeric"
+                required
+              />
+            </label>
+            <label>
+              Durata
+              <select value={duration} onChange={(event) => setDuration(event.target.value)}>
+                <option value="5">5 secondi</option>
+                <option value="8">8 secondi</option>
+                <option value="10">10 secondi</option>
+                <option value="15">15 secondi</option>
+              </select>
+            </label>
+          </div>
+          <p className="field-hint">
+            Il minuto è quello che leggi sul player di YouTube. Scrivilo come mm:ss.
+          </p>
+          <label>
+            Titolo <span className="optional-label">facoltativo</span>
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Es. Smash da fondo campo"
+              maxLength={80}
+            />
+          </label>
+
+          {previewId && startSeconds !== null ? (
+            <div className="play-preview">
+              <div className="video-frame">
+                <iframe
+                  src={`https://www.youtube.com/embed/${previewId}?start=${startSeconds}&end=${startSeconds + Number(duration)}`}
+                  title="Anteprima dello spezzone"
+                  allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+              <small>Anteprima da {formatClock(startSeconds)} a {formatClock(startSeconds + Number(duration))}</small>
+            </div>
+          ) : null}
+
+          {error ? <p className="form-message error">{error}</p> : null}
+          <div className="modal-actions">
+            <button type="button" className="button button-ghost" onClick={onClose}>Annulla</button>
+            <button className="button button-primary" disabled={busy}>{busy ? "Salvataggio…" : "Salva la play"}</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
+}
+
 function PizzaCreateModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => Promise<void> }) {
   const [name, setName] = useState("");
   const [place, setPlace] = useState("");
@@ -1349,6 +1526,10 @@ function AppShell({ session }: { session: Session | null }) {
   const [avatarUrlInitial, setAvatarUrlInitial] = useState("");
   const [teamRecords, setTeamRecords] = useState<PadelTeamRecord[]>([]);
   const [teamSchemaReady, setTeamSchemaReady] = useState(true);
+  const [plays, setPlays] = useState<PlayerPlay[]>([]);
+  const [playsSchemaReady, setPlaysSchemaReady] = useState(true);
+  const [showPlayCreate, setShowPlayCreate] = useState(false);
+  const [playingClip, setPlayingClip] = useState<PlayerPlay | null>(null);
   const [seasonRows, setSeasonRows] = useState<SeasonStanding[]>([]);
   const [season, setSeason] = useState(new Date().getFullYear());
 
@@ -1362,7 +1543,7 @@ function AppShell({ session }: { session: Session | null }) {
       await client.rpc("archive_padel_season", { p_season: year });
     }
 
-    const [profilesResult, matchesResult, pizzaResult, teamsResult, seasonsResult] = await Promise.all([
+    const [profilesResult, matchesResult, pizzaResult, teamsResult, seasonsResult, playsResult] = await Promise.all([
       client.from("profiles").select("*").order("rating", { ascending: false }),
       client
         .from("matches")
@@ -1379,6 +1560,10 @@ function AppShell({ session }: { session: Session | null }) {
         .select("season, profile_id, position, rating, matches_played, wins, losses, current_streak")
         .order("season", { ascending: false })
         .order("position", { ascending: true }),
+      client
+        .from("player_plays")
+        .select("id, profile_id, match_id, title, video_url, start_seconds, duration_seconds, created_by, created_at")
+        .order("created_at", { ascending: false }),
     ]);
 
     if (profilesResult.error || matchesResult.error) {
@@ -1409,6 +1594,8 @@ function AppShell({ session }: { session: Session | null }) {
       // Se la migrazione delle squadre non è ancora stata eseguita la query
       // fallisce: il resto dell'app deve continuare a funzionare.
       if (!seasonsResult.error) setSeasonRows((seasonsResult.data ?? []) as SeasonStanding[]);
+      setPlaysSchemaReady(!playsResult.error);
+      if (!playsResult.error) setPlays((playsResult.data ?? []) as PlayerPlay[]);
       setTeamSchemaReady(!teamsResult.error);
       if (!teamsResult.error) {
         setTeamRecords(
@@ -1483,6 +1670,9 @@ function AppShell({ session }: { session: Session | null }) {
   const selectedPlayerRank = selectedPlayer?.matches_played ? rankOf(sorted, selectedPlayer.id) : 0;
   const selectedPlayerMatches = selectedPlayer
     ? matches.filter((match) => match.players.some((player) => player.profile_id === selectedPlayer.id))
+    : [];
+  const selectedPlayerPlays = selectedPlayer
+    ? plays.filter((play) => play.profile_id === selectedPlayer.id)
     : [];
   // Con i parimerito il giocatore da raggiungere è il primo con punteggio più
   // alto, non semplicemente quello nella riga precedente.
@@ -1575,6 +1765,13 @@ function AppShell({ session }: { session: Session | null }) {
 
     const { error } = await supabase.from("profiles").update(patch).eq("id", session.user.id);
     setNotice(error ? error.message : "Profilo aggiornato.");
+    if (!error) await loadData();
+  }
+
+  async function removePlay(play: PlayerPlay) {
+    if (!supabase) return;
+    const { error } = await supabase.from("player_plays").delete().eq("id", play.id);
+    setNotice(error ? error.message : "Play rimossa.");
     if (!error) await loadData();
   }
 
@@ -1968,6 +2165,66 @@ function AppShell({ session }: { session: Session | null }) {
               <div className="empty-board"><span>00</span><h2>Nessuna partita giocata</h2><p>La scheda si completerà dopo il primo risultato.</p></div>
             )}
 
+            <section className="player-plays">
+              <div className="player-history-head">
+                <div><p className="eyebrow dark">SPEZZONI</p><h2>Le plays di {selectedPlayer.display_name}</h2></div>
+                {isOwnCard && playsSchemaReady ? (
+                  <button className="button button-primary" onClick={() => setShowPlayCreate(true)}>＋ Play</button>
+                ) : (
+                  <span>{selectedPlayerPlays.length} clip</span>
+                )}
+              </div>
+              {!playsSchemaReady ? (
+                <p className="demo-profile-note">
+                  Per salvare gli spezzoni esegui la migrazione
+                  <code>migration-plays.sql</code> in Supabase.
+                </p>
+              ) : selectedPlayerPlays.length ? (
+                <div className="plays-grid">
+                  {selectedPlayerPlays.map((play) => {
+                    const clipId = youtubeId(play.video_url);
+                    return (
+                      <article className="play-card" key={play.id}>
+                        <button
+                          className="play-card-preview"
+                          type="button"
+                          onClick={() => setPlayingClip(play)}
+                          aria-label={`Guarda ${play.title ?? "la play"}`}
+                        >
+                          {clipId ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={`https://img.youtube.com/vi/${clipId}/mqdefault.jpg`} alt="" />
+                          ) : null}
+                          <b aria-hidden="true">▶</b>
+                          <em>{play.duration_seconds}s</em>
+                        </button>
+                        <div className="play-card-body">
+                          <b>{play.title ?? "Senza titolo"}</b>
+                          <span>dal minuto {formatClock(play.start_seconds)}</span>
+                        </div>
+                        {isOwnCard ? (
+                          <button
+                            className="play-card-remove"
+                            type="button"
+                            onClick={() => void removePlay(play)}
+                            aria-label="Elimina la play"
+                            title="Elimina la play"
+                          >
+                            ×
+                          </button>
+                        ) : null}
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="demo-profile-note">
+                  {isOwnCard
+                    ? "Nessuno spezzone salvato: usa ＋ Play per segnare il minuto di un colpo riuscito."
+                    : "Nessuno spezzone salvato."}
+                </p>
+              )}
+            </section>
           </section>
         ) : null}
 
@@ -2212,6 +2469,42 @@ function AppShell({ session }: { session: Session | null }) {
             </div>
           </section>
         </div>
+      ) : null}
+      {playingClip ? (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setPlayingClip(null)}>
+          <section className="modal video-modal" role="dialog" aria-modal="true" aria-label="Spezzone">
+            <div className="modal-head">
+              <div>
+                <p className="eyebrow dark">PLAY</p>
+                <h2>{playingClip.title ?? "Spezzone"}</h2>
+              </div>
+              <button className="icon-button" onClick={() => setPlayingClip(null)} aria-label="Chiudi">×</button>
+            </div>
+            <div className="video-frame">
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${youtubeId(playingClip.video_url)}?start=${playingClip.start_seconds}&end=${playingClip.start_seconds + playingClip.duration_seconds}&autoplay=1`}
+                title="Spezzone"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+            <p className="field-hint">
+              Da {formatClock(playingClip.start_seconds)} a {formatClock(playingClip.start_seconds + playingClip.duration_seconds)}
+            </p>
+          </section>
+        </div>
+      ) : null}
+      {showPlayCreate && currentUser ? (
+        <PlayCreateModal
+          profileId={currentUser.id}
+          matches={selectedPlayerMatches}
+          onClose={() => setShowPlayCreate(false)}
+          onSaved={async () => {
+            setShowPlayCreate(false);
+            await loadData();
+            setNotice("Play salvata.");
+          }}
+        />
       ) : null}
       {showPizzaCreate ? <PizzaCreateModal onClose={() => setShowPizzaCreate(false)} onSaved={() => handlePizzaSaved("Pizzeria aggiunta. Ora potete inserire i tre voti.")} /> : null}
       {votingRestaurant ? <PizzaVoteModal restaurant={votingRestaurant} voter={currentUser} onClose={() => setVotingRestaurant(null)} onSaved={() => handlePizzaSaved("Voto salvato. Il totale si aggiorna con i voti del gruppo.")} /> : null}

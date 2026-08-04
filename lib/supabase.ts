@@ -43,6 +43,18 @@ export type MatchPlayer = {
   profile: Profile;
 };
 
+export type PlayerPlay = {
+  id: string;
+  profile_id: string;
+  match_id: string | null;
+  title: string | null;
+  video_url: string;
+  start_seconds: number;
+  duration_seconds: number;
+  created_by: string;
+  created_at: string;
+};
+
 export type MatchEvent = {
   id: string;
   lineage_id: string;
