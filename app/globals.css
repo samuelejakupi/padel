@@ -6459,7 +6459,19 @@ button.pizza-ranking-row {
   .pizza-ranking-medal {
     background: var(--pizza-medal-bg);
     border: 1px solid var(--pizza-medal-border);
-    box-shadow: inset 4px 0 0 var(--pizza-medal-accent);
+    box-shadow: none;
+  }
+
+  .pizza-ranking-gold {
+    --pizza-medal-bg: #f8e4a9;
+  }
+
+  .pizza-ranking-silver {
+    --pizza-medal-bg: #e2e8ee;
+  }
+
+  .pizza-ranking-bronze {
+    --pizza-medal-bg: #ead1c0;
   }
 
   .pizza-ranking-medal .pizza-category-score {
