@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import {
   hasSupabaseConfig,
@@ -1456,6 +1456,52 @@ function TeamRankingList({
   );
 }
 
+// Podio a tre gradini: un gradino per posizione, non per persona. Con dei
+// parimerito sullo stesso gradino salgono in due, e i gradini restano tre.
+type PodiumEntry = {
+  key: string;
+  avatar: ReactNode;
+  name: string;
+  detail: string;
+  onSelect?: () => void;
+};
+
+function Podium({ steps }: { steps: { rank: number; entries: PodiumEntry[] }[] }) {
+  const byRank = new Map(steps.map((step) => [step.rank, step.entries]));
+  // Ordine di lettura del podio: secondo, primo, terzo.
+  return (
+    <div className="podium">
+      {[2, 1, 3].map((rank) => {
+        const entries = byRank.get(rank) ?? [];
+        if (!entries.length) return null;
+        return (
+          <div className={`podium-step podium-step-${rank}`} key={rank}>
+            <div className="podium-people">
+              {entries.map((entry) => {
+                const content = (
+                  <>
+                    {entry.avatar}
+                    <b>{entry.name}</b>
+                    <span>{entry.detail}</span>
+                  </>
+                );
+                return entry.onSelect ? (
+                  <button className="podium-person" key={entry.key} type="button" onClick={entry.onSelect}>
+                    {content}
+                  </button>
+                ) : (
+                  <div className="podium-person" key={entry.key}>{content}</div>
+                );
+              })}
+            </div>
+            <div className="podium-bar"><span>#{rank}</span></div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // Il colore della card dice la posizione, e basta quello: giallo il primo
 // (o i primi, se sono a pari punti), azzurro secondo e terzo, chiaro il
 // resto. Tutte le righe portano le stesse informazioni.
@@ -2580,10 +2626,27 @@ function AppShell({ session }: { session: Session | null }) {
       .filter(Boolean) as Profile[];
   }, [season, currentYear, seasonRows, profiles]);
 
+  // I tre gradini del podio: chi è a pari punti condivide il gradino.
+  const podiumSteps = useMemo(() => {
+    const ranked = sortPadelProfiles(seasonProfiles).filter((profile) => profile.matches_played > 0);
+    const ranks = padelRanks(ranked);
+    return [1, 2, 3].map((rank) => ({
+      rank,
+      profiles: ranked.filter((_, index) => ranks[index] === rank),
+    }));
+  }, [seasonProfiles]);
+
   const teams = useMemo(
     () => buildPadelTeams(matches, profiles, teamRecords),
     [matches, profiles, teamRecords],
   );
+  const teamPodiumSteps = useMemo(() => {
+    const ranks = ranksByRating(teams);
+    return [1, 2, 3].map((rank) => ({
+      rank,
+      teams: teams.filter((_, index) => ranks[index] === rank),
+    }));
+  }, [teams]);
   const playerTeams = useMemo(
     () => teams.filter((team) => team.players.some((profile) => profile.id === selectedPlayerId)),
     [teams, selectedPlayerId],
@@ -3144,18 +3207,39 @@ function AppShell({ session }: { session: Session | null }) {
                   </button>
                 </div>
               </div>
-              {/* Nel blocco scuro resta solo la vetta: il primo, o i primi
-                  se sono a pari punti. */}
+              {/* Podio a tre gradini dentro il blocco scuro. Chi è a pari
+                  merito sale sullo stesso gradino, non ne occupa uno in più. */}
               {rankingMode === "single" ? (
-                <RankingList profiles={seasonProfiles} expanded onSelect={openPlayer} maxRank={1} bare />
+                <Podium
+                  steps={podiumSteps.map(({ rank, profiles: people }) => ({
+                    rank,
+                    entries: people.map((profile) => ({
+                      key: profile.id,
+                      avatar: <Avatar profile={profile} size="lg" rank={rank} />,
+                      name: profile.display_name,
+                      detail: `${profile.rating} pt`,
+                      onSelect: () => openPlayer(profile),
+                    })),
+                  }))}
+                />
               ) : teams.length ? (
-                <TeamRankingList teams={teams} maxRank={1} bare />
+                <Podium
+                  steps={teamPodiumSteps.map(({ rank, teams: group }) => ({
+                    rank,
+                    entries: group.map((team) => ({
+                      key: team.id,
+                      avatar: <TeamAvatars team={team} size="lg" />,
+                      name: teamLabel(team),
+                      detail: `${team.rating} pt`,
+                    })),
+                  }))}
+                />
               ) : null}
             </article>
             {rankingMode === "single" ? (
-              <RankingList profiles={seasonProfiles} expanded onSelect={openPlayer} minRank={2} />
+              <RankingList profiles={seasonProfiles} onSelect={openPlayer} />
             ) : teams.length ? (
-              <TeamRankingList teams={teams} minRank={2} />
+              <TeamRankingList teams={teams} />
             ) : (
               <div className="empty-board">
                 <span>00</span>
@@ -3471,19 +3555,30 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
             </div>
 
-            <div className="pizza-podium" aria-label={`Podio pizzerie · classifica ${pizzaRankingMode === "classic" ? "nostalgica" : "contemporanea"}`}>
-              {pizzaEntries.filter((restaurant) => !restaurant.pending).slice(0, 3).map((restaurant, index) => (
-                <article className={`pizza-podium-card pizza-place-${index + 1}`} key={restaurant.name}>
-                  <span className="pizza-medal">{index + 1}</span>
-                  {index === 0 ? <img className="pizza-medal-icon" src="https://cdn-icons-gif.flaticon.com/19016/19016244.gif" alt="Trofeo primo posto pizza" /> : null}
-                  <div>
-                    <small>{index === 0 ? "THEBOYZ CHAMPION" : "TOP THREE"}</small>
-                    <h2>{restaurant.name}</h2>
-                    {restaurant.place ? <p>{restaurant.place}</p> : null}
-                  </div>
-                  <b>{restaurant.total}<small>/100</small></b>
-                </article>
-              ))}
+            <div aria-label={`Podio pizzerie · classifica ${pizzaRankingMode === "classic" ? "nostalgica" : "contemporanea"}`}>
+              <Podium
+                steps={pizzaEntries
+                  .filter((restaurant) => !restaurant.pending)
+                  .slice(0, 3)
+                  .map((restaurant, index) => ({
+                    rank: index + 1,
+                    entries: [{
+                      key: restaurant.id ?? restaurant.name,
+                      avatar: (
+                        <span className="podium-emblem">
+                          {index === 0 ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src="https://cdn-icons-gif.flaticon.com/19016/19016244.gif" alt="" />
+                          ) : (
+                            <em>{restaurant.total}</em>
+                          )}
+                        </span>
+                      ),
+                      name: restaurant.name,
+                      detail: `${restaurant.total}/100${restaurant.place ? ` · ${restaurant.place}` : ""}`,
+                    }],
+                  }))}
+              />
             </div>
 
             <section className="pizza-method">
