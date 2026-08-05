@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { FormEvent, ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import {
   hasSupabaseConfig,
@@ -148,6 +148,7 @@ const pizzaCriteria = [
   { label: "Prezzo", max: PIZZA_WEIGHTS.price, source: "1–10", tone: "yellow" },
   { label: "Bonus Fabio", max: 7, source: "0–7", tone: "blue" },
 ] as const;
+const pizzaMedalTones = ["gold", "silver", "bronze"] as const;
 
 // Le schede storiche erano su scale diverse e comprendevano il bonus Fabio.
 // Qui vengono riportate sugli stessi pesi delle nuove, così la classifica ha
@@ -1523,52 +1524,6 @@ function TeamRankingList({
   );
 }
 
-// Podio a tre gradini: un gradino per posizione, non per persona. Con dei
-// parimerito sullo stesso gradino salgono in due, e i gradini restano tre.
-type PodiumEntry = {
-  key: string;
-  avatar: ReactNode;
-  name: string;
-  detail: string;
-  onSelect?: () => void;
-};
-
-function Podium({ steps }: { steps: { rank: number; entries: PodiumEntry[] }[] }) {
-  const byRank = new Map(steps.map((step) => [step.rank, step.entries]));
-  // Ordine di lettura del podio: secondo, primo, terzo.
-  return (
-    <div className="podium">
-      {[2, 1, 3].map((rank) => {
-        const entries = byRank.get(rank) ?? [];
-        if (!entries.length) return null;
-        return (
-          <div className={`podium-step podium-step-${rank}`} key={rank}>
-            <div className="podium-people">
-              {entries.map((entry) => {
-                const content = (
-                  <>
-                    {entry.avatar}
-                    <b>{entry.name}</b>
-                    <span>{entry.detail}</span>
-                  </>
-                );
-                return entry.onSelect ? (
-                  <button className="podium-person" key={entry.key} type="button" onClick={entry.onSelect}>
-                    {content}
-                  </button>
-                ) : (
-                  <div className="podium-person" key={entry.key}>{content}</div>
-                );
-              })}
-            </div>
-            <div className="podium-bar"><span>#{rank}</span></div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 // Il colore della card dice la posizione, e basta quello: giallo il primo
 // (o i primi, se sono a pari punti), azzurro secondo e terzo, chiaro il
 // resto. Tutte le righe portano le stesse informazioni.
@@ -2899,6 +2854,7 @@ function AppShell({ session }: { session: Session | null }) {
   const [pizzaSessionsReady, setPizzaSessionsReady] = useState(true);
   const [votingSession, setVotingSession] = useState<PizzaSession | null>(null);
   const [showSessionPicker, setShowSessionPicker] = useState(false);
+  const [showPizzaInfo, setShowPizzaInfo] = useState(false);
   // Partite e classifica si aprono e si richiudono dentro la home. Il limite
   // è sul numero di righe, così il tasto compare solo quando c'è davvero
   // qualcosa di nascosto.
@@ -4051,6 +4007,14 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
               <div className="pizza-hero-actions">
                 <div className="pizza-hero-buttons">
+                  <button
+                    className="button pizza-info-trigger"
+                    type="button"
+                    onClick={() => setShowPizzaInfo(true)}
+                    aria-haspopup="dialog"
+                  >
+                    ⓘ Info
+                  </button>
                   <button className="button button-primary" onClick={() => {
                     if (!pizzaSchemaReady || !pizzaSessionsReady) {
                       setNotice("Per votare esegui la migrazione migration-pizza-sessioni.sql in Supabase.");
@@ -4117,49 +4081,6 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
             </div>
 
-            <div aria-label={`Podio pizzerie · classifica ${pizzaRankingMode === "classic" ? "nostalgica" : "contemporanea"}`}>
-              <Podium
-                steps={pizzaEntries
-                  .filter((restaurant) => !restaurant.pending)
-                  .slice(0, 3)
-                  .map((restaurant, index) => ({
-                    rank: index + 1,
-                    entries: [{
-                      key: restaurant.id ?? restaurant.name,
-                      avatar: (
-                        <span className="podium-emblem">
-                          {index === 0 ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src="https://cdn-icons-gif.flaticon.com/19016/19016244.gif" alt="" />
-                          ) : (
-                            <em>{restaurant.total}</em>
-                          )}
-                        </span>
-                      ),
-                      name: restaurant.name,
-                      detail: `${restaurant.total}/100${restaurant.place ? ` · ${restaurant.place}` : ""}`,
-                    }],
-                  }))}
-              />
-            </div>
-
-            <section className="pizza-method">
-              <div className="pizza-method-copy">
-                <p className="eyebrow dark">COME FUNZIONA</p>
-                <h2>Ogni punto conta.</h2>
-                <p>I voti ordinari valgono 93 punti. Con Fabio si aggiungono i suoi 7 punti; senza Fabio i 93 vengono riportati a 100.</p>
-              </div>
-              <div className="pizza-criteria">
-                {pizzaCriteria.map((criterion) => (
-                  <div className={`pizza-criterion criterion-${criterion.tone}`} key={criterion.label}>
-                    <span>{criterion.label}</span>
-                    <b>{criterion.max}</b>
-                    <small>{criterion.source}</small>
-                  </div>
-                ))}
-              </div>
-            </section>
-
             <div className="pizza-board">
               <div className="pizza-board-head">
                 <span>#</span>
@@ -4173,7 +4094,8 @@ function AppShell({ session }: { session: Session | null }) {
               <div className="pizza-ranking-list">
                 {pizzaEntries.map((restaurant, index) => {
                   const complete = !restaurant.pending;
-                  const rowClass = `pizza-ranking-row ${index < 3 && complete ? "pizza-ranking-top" : ""} ${restaurant.isNew ? "pizza-ranking-interactive" : ""} ${restaurant.pending ? "pizza-ranking-pending" : ""}`;
+                  const medalTone = complete ? pizzaMedalTones[index] : undefined;
+                  const rowClass = `pizza-ranking-row ${medalTone ? `pizza-ranking-medal pizza-ranking-${medalTone}` : ""} ${restaurant.isNew ? "pizza-ranking-interactive" : ""} ${restaurant.pending ? "pizza-ranking-pending" : ""}`;
                   const rowContent = (<>
                     <span className="pizza-position">{index + 1}</span>
                     <div className="pizza-name-cell">
@@ -4272,6 +4194,30 @@ function AppShell({ session }: { session: Session | null }) {
           </button>
         ))}
       </nav>
+
+      {showPizzaInfo ? (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setShowPizzaInfo(false)}>
+          <section className="modal pizza-info-modal" role="dialog" aria-modal="true" aria-labelledby="pizza-info-title">
+            <div className="modal-head">
+              <div>
+                <p className="eyebrow dark">COME FUNZIONA</p>
+                <h2 id="pizza-info-title">Ogni punto conta.</h2>
+              </div>
+              <button className="icon-button" onClick={() => setShowPizzaInfo(false)} aria-label="Chiudi">×</button>
+            </div>
+            <p className="pizza-info-copy">I voti ordinari valgono 93 punti. Con Fabio si aggiungono i suoi 7 punti; senza Fabio i 93 vengono riportati a 100.</p>
+            <div className="pizza-criteria">
+              {pizzaCriteria.map((criterion) => (
+                <div className={`pizza-criterion criterion-${criterion.tone}`} key={criterion.label}>
+                  <span>{criterion.label}</span>
+                  <b>{criterion.max}</b>
+                  <small>{criterion.source}</small>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {showMatch || editingMatch || tournamentMatch ? (
         <NewMatchModal

@@ -3941,28 +3941,11 @@ button.ranking-row-blue:hover {
   margin-left: 2px;
 }
 
-.pizza-method {
-  background: var(--white);
-  border-radius: var(--radius);
-  color: var(--ink);
-  display: grid;
-  gap: 28px;
-  grid-template-columns: 250px 1fr;
-  margin: 16px 0;
-  padding: 28px;
-}
-
-.pizza-method-copy h2 {
-  font-size: 27px;
-  letter-spacing: -1px;
-  margin: 0;
-}
-
-.pizza-method-copy > p:last-child {
+.pizza-info-copy {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.55;
-  margin: 10px 0 0;
+  margin: -10px 0 24px;
 }
 
 .pizza-criteria {
@@ -4012,6 +3995,20 @@ button.ranking-row-blue:hover {
 
 .pizza-hero-buttons .button {
   flex: 1 1 auto;
+}
+
+.pizza-info-trigger {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--white);
+}
+
+.pizza-info-trigger:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.pizza-info-modal {
+  max-width: 760px;
 }
 
 .pizza-participant-picker {
@@ -4393,18 +4390,43 @@ button.pizza-ranking-row {
   border-bottom: 0;
 }
 
-.pizza-ranking-top {
-  background: var(--white);
-}
-
 .pizza-position {
   color: var(--ink);
   font-size: 16px;
   font-weight: 900;
 }
 
-.pizza-ranking-top .pizza-position {
-  color: var(--blue-dark);
+.pizza-ranking-medal {
+  --pizza-medal-accent: var(--blue-dark);
+  --pizza-medal-bg: var(--white);
+  background: var(--pizza-medal-bg);
+  box-shadow: inset 4px 0 0 var(--pizza-medal-accent);
+}
+
+.pizza-ranking-gold {
+  --pizza-medal-accent: #c79516;
+  --pizza-medal-bg: linear-gradient(90deg, rgba(241, 190, 43, 0.24), rgba(255, 255, 255, 0.96) 48%);
+}
+
+.pizza-ranking-silver {
+  --pizza-medal-accent: #8293a5;
+  --pizza-medal-bg: linear-gradient(90deg, rgba(163, 178, 193, 0.25), rgba(255, 255, 255, 0.96) 48%);
+}
+
+.pizza-ranking-bronze {
+  --pizza-medal-accent: #a9663c;
+  --pizza-medal-bg: linear-gradient(90deg, rgba(185, 111, 61, 0.24), rgba(255, 255, 255, 0.96) 48%);
+}
+
+.pizza-ranking-medal .pizza-position {
+  align-items: center;
+  background: var(--pizza-medal-accent);
+  border-radius: 50%;
+  color: var(--white);
+  display: flex;
+  height: 30px;
+  justify-content: center;
+  width: 30px;
 }
 
 .pizza-name-cell {
@@ -4452,8 +4474,12 @@ button.pizza-ranking-row {
   height: 100%;
 }
 
-.pizza-ranking-top .pizza-score-track i {
-  background: var(--pizza-lime);
+.pizza-ranking-medal .pizza-score-track i {
+  background: var(--pizza-medal-accent);
+}
+
+.pizza-ranking-medal .pizza-total-score {
+  color: var(--pizza-medal-accent);
 }
 
 .pizza-category-score,
@@ -4940,9 +4966,6 @@ button.pizza-ranking-row {
     width: 34px;
   }
 
-  .pizza-method {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 780px) {
@@ -5162,7 +5185,6 @@ button.pizza-ranking-row {
   .sets-form,
   .pizza-page,
   .pizza-board,
-  .pizza-method,
   .pizza-podium-card,
   .pizza-criterion {
     border-radius: var(--radius-lg);
@@ -5962,10 +5984,6 @@ button.pizza-ranking-row {
     grid-column: auto;
   }
 
-  .pizza-method {
-    padding: 22px 18px;
-  }
-
   .pizza-criteria {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -5990,7 +6008,7 @@ button.pizza-ranking-row {
   }
 
   .pizza-ranking-row {
-    background: var(--paper);
+    background: var(--pizza-medal-bg, var(--paper));
     border: 0;
     border-radius: var(--radius-lg);
     gap: 10px 12px;
@@ -6333,10 +6351,6 @@ button.pizza-ranking-row {
   .elo-chart figcaption {
     line-height: 1.45;
     padding: 0 10px;
-  }
-
-  .pizza-method {
-    gap: 20px;
   }
 
   .pizza-criteria {
