@@ -4776,6 +4776,9 @@ button.pizza-ranking-row {
     pointer-events: none;
     position: fixed;
     right: 0;
+    /* Stessa ragione della barra: senza promozione la sfumatura resta
+       indietro durante lo scorrimento. */
+    transform: translateZ(0);
     z-index: 45;
   }
 
@@ -4813,6 +4816,12 @@ button.pizza-ranking-row {
     padding: var(--nav-inset);
     position: fixed;
     right: 11px;
+    /* Safari su iOS non ridisegna un elemento fisso con backdrop-filter
+       durante lo scorrimento inerziale: la barra sembra scivolare e poi
+       riassestarsi. Promuoverla a livello proprio la aggancia alla finestra
+       invece di farla ricalcolare a ogni fotogramma. */
+    transform: translateZ(0);
+    will-change: transform;
     -webkit-backdrop-filter: blur(40px) saturate(180%);
     z-index: 50;
   }
