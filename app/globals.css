@@ -3806,15 +3806,18 @@ button.ranking-row-blue:hover {
   width: 22px;
 }
 
-/* Il giudizio di Fabio: la sua faccia con l'anello verde o rosso attorno.
+/* Il giudizio di Fabio: la sua faccia con l'anello verde o rosso attorno,
+   appiccicata al nome come il trofeo sull'avatar del primo in classifica.
    Non è un punteggio, quindi non ha numeri accanto. */
 .fabio-badge {
   border: 2px solid transparent;
   border-radius: var(--radius-pill);
-  height: 30px;
+  height: 24px;
+  margin-left: var(--space-2);
   object-fit: cover;
   object-position: center top;
-  width: 30px;
+  vertical-align: -7px;
+  width: 24px;
 }
 
 .fabio-badge.is-positive {
@@ -3828,24 +3831,26 @@ button.ranking-row-blue:hover {
   filter: grayscale(0.55);
 }
 
-.pizza-fabio-cell {
-  align-items: center;
-  display: flex;
-  justify-content: center;
-}
-
-.pizza-fabio-cell em {
-  color: var(--ink-30);
-  font-style: normal;
-}
-
-/* Comandi di Fabio: compaiono sulla riga, sopra il resto. */
+/* Comandi di Fabio: compaiono al passaggio sulla riga. */
 .pizza-fabio-actions {
   display: flex;
   gap: var(--space-1);
+  opacity: 0;
   position: absolute;
   right: var(--space-2);
   top: var(--space-2);
+  transition: opacity 150ms ease;
+}
+
+.pizza-ranking-row:hover .pizza-fabio-actions,
+.pizza-fabio-actions:focus-within {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .pizza-fabio-actions {
+    opacity: 1;
+  }
 }
 
 .fabio-action {
@@ -3869,6 +3874,63 @@ button.ranking-row-blue:hover {
 .fabio-action.is-negative {
   background: rgba(217, 75, 73, 0.16);
   color: var(--danger);
+}
+
+.pizza-hero-buttons {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.pizza-hero-buttons .button {
+  flex: 1 1 auto;
+}
+
+/* Scelta della pizzeria su cui aprire la votazione. */
+.pizza-picker-list {
+  display: grid;
+  gap: var(--space-2);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.pizza-picker-row {
+  align-items: center;
+  background: var(--veil-1);
+  border: 0;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  padding: var(--space-4) var(--space-5);
+  text-align: left;
+}
+
+.pizza-picker-row:hover {
+  background: var(--veil-2);
+}
+
+.pizza-picker-row b {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pizza-picker-row span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.pizza-picker-row em {
+  background: rgba(41, 155, 102, 0.16);
+  border-radius: var(--radius-sm);
+  color: var(--positive);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  padding: 4px 7px;
+  text-transform: uppercase;
 }
 
 /* Card delle votazioni aperte, in cima alla pagina. */
@@ -4079,8 +4141,8 @@ button.ranking-row-blue:hover {
   align-items: center;
   display: grid;
   gap: 12px;
-  grid-template-columns: 42px minmax(220px, 1fr) repeat(5, 66px) 82px;
-  min-width: 790px;
+  grid-template-columns: 42px minmax(220px, 1fr) repeat(4, 66px) 82px;
+  min-width: 720px;
 }
 
 .pizza-board-head {

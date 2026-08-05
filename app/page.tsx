@@ -2340,6 +2340,7 @@ function AppShell({ session }: { session: Session | null }) {
   const [pizzaBadges, setPizzaBadges] = useState<PizzaFabioBadge[]>([]);
   const [pizzaSessionsReady, setPizzaSessionsReady] = useState(true);
   const [votingSession, setVotingSession] = useState<PizzaSession | null>(null);
+  const [showSessionPicker, setShowSessionPicker] = useState(false);
   // Il conto alla rovescia ha bisogno di un battito: senza, la card resterebbe
   // ferma sul valore calcolato all'apertura della pagina.
   const [, setTick] = useState(0);
@@ -2856,6 +2857,19 @@ function AppShell({ session }: { session: Session | null }) {
   // Apre la votazione se non ce n'è già una in corso, poi mostra la card.
   // Il controllo vero è nella funzione su Supabase: due persone che aprono
   // insieme la stessa pizzeria finiscono comunque sulla stessa sessione.
+  // Toccare una riga mostra la votazione, non ne apre una: aprirla è un gesto
+  // esplicito, altrimenti basta un tocco distratto per far partire il timer.
+  function showPizzaSession(restaurantId: string) {
+    const found = pizzaSessions
+      .filter((item) => item.restaurant_id === restaurantId)
+      .sort((a, b) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())[0];
+    if (found) {
+      setVotingSession(found);
+      return;
+    }
+    setNotice("Nessuna votazione per questa pizzeria: aprila con ＋ Apri votazione.");
+  }
+
   async function openPizzaVote(restaurantId: string) {
     if (!supabase) return;
     if (!pizzaSessionsReady) {
@@ -3407,13 +3421,18 @@ function AppShell({ session }: { session: Session | null }) {
                   <strong>{pizzaEntries.find((entry) => !entry.pending)?.total ?? 0} / 100</strong>
                   <small>CAMPIONE IN CARICA</small>
                 </div>
-                <button className="button button-primary" onClick={() => {
-                  if (!pizzaSchemaReady) {
-                    setNotice("Prima di aggiungere una pizzeria devi eseguire lo schema aggiornato in Supabase.");
-                    return;
-                  }
-                  setShowPizzaCreate(true);
-                }}>＋ Aggiungi pizzeria</button>
+                <div className="pizza-hero-buttons">
+                  <button className="button button-primary" onClick={() => setShowSessionPicker(true)}>
+                    ＋ Apri votazione
+                  </button>
+                  <button className="button button-ghost" onClick={() => {
+                    if (!pizzaSchemaReady) {
+                      setNotice("Prima di aggiungere una pizzeria devi eseguire lo schema aggiornato in Supabase.");
+                      return;
+                    }
+                    setShowPizzaCreate(true);
+                  }}>＋ Pizzeria</button>
+                </div>
               </div>
             </div>
 
@@ -3485,7 +3504,6 @@ function AppShell({ session }: { session: Session | null }) {
                 <span>PIZZA</span>
                 <span>DOLCE</span>
                 <span>PREZZO</span>
-                <span>FABIO</span>
                 <span>TOTALE</span>
               </div>
               <div className="pizza-ranking-list">
@@ -3495,7 +3513,18 @@ function AppShell({ session }: { session: Session | null }) {
                   const rowContent = (<>
                     <span className="pizza-position">{index + 1}</span>
                     <div className="pizza-name-cell">
-                      <b>{restaurant.name}</b>
+                      <b>
+                        {restaurant.name}
+                        {restaurant.fabioBadge === null || restaurant.fabioBadge === undefined ? null : (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            className={`fabio-badge ${restaurant.fabioBadge ? "is-positive" : "is-negative"}`}
+                            src={`${basePath}/bonus-fabio.jpg`}
+                            alt={restaurant.fabioBadge ? "Approvata da Fabio" : "Bocciata da Fabio"}
+                            title={restaurant.fabioBadge ? "Approvata da Fabio" : "Bocciata da Fabio"}
+                          />
+                        )}
+                      </b>
                       <small>{restaurant.isNew ? `${restaurant.place ?? "NUOVA SCHEDA"} · ${restaurant.votesCount ?? 0} ${restaurant.votesCount === 1 ? "VOTO" : "VOTI"}` : restaurant.address ? <a className="pizza-address-link" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.address)}`} target="_blank" rel="noopener noreferrer">{restaurant.address}</a> : (restaurant.place ?? "THEBOYZ TESTED")}</small>
                       <span className="pizza-score-track" aria-hidden="true">
                         <i style={{ width: `${complete ? restaurant.total : 0}%` }} />
@@ -3505,19 +3534,6 @@ function AppShell({ session }: { session: Session | null }) {
                     <span className="pizza-category-score"><b>{complete ? restaurant.pizza.toFixed(1) : "—"}</b><small>/10</small></span>
                     <span className="pizza-category-score"><b>{complete ? restaurant.dessert.toFixed(1) : "—"}</b><small>/10</small></span>
                     <span className="pizza-category-score"><b>{complete ? restaurant.price.toFixed(1) : "—"}</b><small>/10</small></span>
-                    <span className="pizza-fabio-cell">
-                      {restaurant.fabioBadge === null || restaurant.fabioBadge === undefined ? (
-                        <em>—</em>
-                      ) : (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          className={`fabio-badge ${restaurant.fabioBadge ? "is-positive" : "is-negative"}`}
-                          src={`${basePath}/bonus-fabio.jpg`}
-                          alt={restaurant.fabioBadge ? "Approvata da Fabio" : "Bocciata da Fabio"}
-                          title={restaurant.fabioBadge ? "Approvata da Fabio" : "Bocciata da Fabio"}
-                        />
-                      )}
-                    </span>
                     <span className="pizza-total-score"><b>{complete ? restaurant.total : "N/C"}</b><small>{complete ? "/100" : ""}</small></span>
                   </>);
                   return restaurant.isNew && restaurant.id ? (
@@ -3525,8 +3541,8 @@ function AppShell({ session }: { session: Session | null }) {
                       type="button"
                       className={rowClass}
                       key={`${restaurant.name}-${index}`}
-                      onClick={() => openPizzaVote(restaurant.id!)}
-                      aria-label={`Apri la votazione di ${restaurant.name}`}
+                      onClick={() => showPizzaSession(restaurant.id!)}
+                      aria-label={`Vedi la votazione di ${restaurant.name}`}
                     >
                       {rowContent}
                       {viewerIsFabio ? (
@@ -3787,7 +3803,55 @@ function AppShell({ session }: { session: Session | null }) {
           }}
         />
       ) : null}
-      {showPizzaCreate ? <PizzaCreateModal onClose={() => setShowPizzaCreate(false)} onSaved={() => handlePizzaSaved("Pizzeria aggiunta. Aprine la votazione quando siete a tavola.")} /> : null}
+      {showSessionPicker ? (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setShowSessionPicker(false)}>
+          <section className="modal" role="dialog" aria-modal="true" aria-labelledby="pizza-session-title">
+            <div className="modal-head">
+              <div>
+                <p className="eyebrow dark">NUOVA VOTAZIONE</p>
+                <h2 id="pizza-session-title">Su quale pizzeria?</h2>
+                <p className="modal-subtitle">Da qui parte il timer: il gruppo ha due ore per votare.</p>
+              </div>
+              <button className="icon-button" onClick={() => setShowSessionPicker(false)} aria-label="Chiudi">×</button>
+            </div>
+            {pizzaRestaurants.length ? (
+              <div className="pizza-picker-list">
+                {pizzaRestaurants.map((restaurant) => {
+                  const running = pizzaSessions.some(
+                    (item) => item.restaurant_id === restaurant.id && sessionIsOpen(item),
+                  );
+                  return (
+                    <button
+                      className="pizza-picker-row"
+                      key={restaurant.id}
+                      type="button"
+                      onClick={async () => {
+                        setShowSessionPicker(false);
+                        await openPizzaVote(restaurant.id);
+                      }}
+                    >
+                      <b>{restaurant.name}</b>
+                      <span>{restaurant.place ?? "—"}</span>
+                      {running ? <em>già aperta</em> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="demo-profile-note">
+                Non c&apos;è ancora nessuna pizzeria: aggiungine una con ＋ Pizzeria e poi torna qui.
+              </p>
+            )}
+            <div className="modal-actions">
+              <button type="button" className="button button-ghost" onClick={() => setShowSessionPicker(false)}>Chiudi</button>
+              <button type="button" className="button button-primary" onClick={() => { setShowSessionPicker(false); setShowPizzaCreate(true); }}>
+                ＋ Nuova pizzeria
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+      {showPizzaCreate ? <PizzaCreateModal onClose={() => setShowPizzaCreate(false)} onSaved={() => handlePizzaSaved("Pizzeria aggiunta. Ora apri la votazione con ＋ Apri votazione.")} /> : null}
       {votingSession && session ? (() => {
         const restaurant = pizzaRestaurants.find((item) => item.id === votingSession.restaurant_id);
         if (!restaurant) return null;
