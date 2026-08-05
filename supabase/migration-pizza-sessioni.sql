@@ -277,6 +277,6 @@ grant execute on function public.save_pizza_session_vote(uuid, smallint, smallin
 
 -- Rimozione richiesta: le tabelle collegate usano ON DELETE CASCADE.
 delete from public.pizza_restaurants
-where lower(trim(name)) = lower('Fucking Spizza');
+where name ilike '%spizza%';
 
 notify pgrst, 'reload schema';

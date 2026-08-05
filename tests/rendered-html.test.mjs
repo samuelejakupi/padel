@@ -56,7 +56,7 @@ test("include configurazione Supabase e pubblicazione Pages", async () => {
   assert.match(pizzaMigration, /pizza_session_participants/);
   assert.match(pizzaMigration, /save_pizza_session_vote/);
   assert.match(pizzaMigration, /completed_at is null/);
-  assert.match(pizzaMigration, /Fucking Spizza/);
+  assert.match(pizzaMigration, /name ilike '%spizza%'/);
   assert.doesNotMatch(page, /remainingLabel|closes_at|due ore per votare/i);
   assert.doesNotMatch(page, /Pizzium/i);
 });
