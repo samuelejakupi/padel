@@ -601,26 +601,36 @@ function NavGlyph({ name }: { name: GlyphName }) {
         <>
           <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
             <rect x="0" y="0" width="24" height="24" fill="white" />
-            {/* Il nero toglie: è la sagoma della racchetta davanti,
-                ingrossata per lasciare un filo di stacco. */}
+            {/* Il nero toglie. È la sagoma della racchetta davanti, piena e
+                ripassata con un tratto largo: il pieno la rende opaca, il
+                tratto lascia il filo di stacco lungo tutto il perimetro. */}
             <g
               transform="translate(4.9 4.1) scale(0.74)"
               fill="black"
               stroke="black"
-              strokeWidth="4.2"
+              strokeWidth="3.4"
+              strokeLinecap="round"
               strokeLinejoin="round"
             >
               <path d={RACKET_HEAD} />
               <path d={RACKET_GRIP} />
             </g>
           </mask>
+          {/* Dietro: nessun foro, è solo una sagoma di riferimento. */}
           <g mask={`url(#${maskId})`} transform="translate(1.3 1.7) scale(0.74)">
             <path d={RACKET_HEAD} />
             <path d={RACKET_GRIP} />
           </g>
+          {/* Davanti: completa di fori, come la racchetta singola. */}
           <g transform="translate(4.9 4.1) scale(0.74)">
             <path d={RACKET_HEAD} />
             <path d={RACKET_GRIP} />
+            <g fill="currentColor" stroke="none">
+              <circle cx="12" cy="7.4" r="0.95" />
+              <circle cx="9.3" cy="10.3" r="0.95" />
+              <circle cx="14.7" cy="10.3" r="0.95" />
+              <circle cx="12" cy="12.8" r="0.95" />
+            </g>
           </g>
         </>
       ) : null}
