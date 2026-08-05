@@ -2790,7 +2790,7 @@ button.ranking-row-blue:hover {
 }
 
 .player-trophies .badge {
-  --badge-accent: var(--lime);
+  --badge-accent: #d6a93b;
   --badge-ink: var(--ink);
   align-items: center;
   background: transparent;
@@ -2820,10 +2820,12 @@ button.ranking-row-blue:hover {
   transform: translateY(-4px) scale(1.04);
 }
 
-.player-trophies .badge-red { --badge-accent: var(--danger); }
-.player-trophies .badge-ice { --badge-accent: var(--blue); }
-.player-trophies .badge-violet { --badge-accent: color-mix(in srgb, var(--blue) 58%, var(--danger)); }
-.player-trophies .badge-bronze { --badge-accent: color-mix(in srgb, var(--lime) 42%, var(--danger)); }
+.player-trophies .badge-gold { --badge-accent: #d6a93b; }
+.player-trophies .badge-red { --badge-accent: #d74b51; }
+.player-trophies .badge-ice { --badge-accent: #43c7e4; }
+.player-trophies .badge-violet { --badge-accent: #986bd5; }
+.player-trophies .badge-bronze { --badge-accent: #b97743; }
+.player-trophies .badge-steel { --badge-accent: #8ea5bc; }
 
 .badge-emblem {
   align-items: center;
@@ -2888,18 +2890,19 @@ button.ranking-row-blue:hover {
   align-items: center;
   background: transparent;
   border-radius: 0;
-  color: var(--badge-accent);
+  color: var(--white);
   display: flex;
-  height: 39px;
+  height: 58px;
   justify-content: center;
-  top: 31px;
-  width: 39px;
+  top: 22px;
+  width: 58px;
 }
 
-.player-trophies .badge-icon svg {
+.player-trophies .badge-icon img {
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
-  height: 35px;
-  width: 35px;
+  height: 58px;
+  object-fit: contain;
+  width: 58px;
 }
 
 .player-trophies .badge-text {

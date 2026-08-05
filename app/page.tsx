@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import {
@@ -738,7 +739,7 @@ function youtubeId(url?: string | null) {
 // salvati né aggiornati a mano: cambiano proprietario insieme alla classifica.
 // ---------------------------------------------------------------------------
 
-type BadgeTone = "gold" | "red" | "ice" | "violet" | "bronze";
+type BadgeTone = "gold" | "red" | "ice" | "violet" | "bronze" | "steel";
 type BadgeGlyph =
   | "goat"
   | "summit"
@@ -986,8 +987,8 @@ function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch
       unlocked: isGoat,
     },
     recordBadge("summit", "gold", "summit", "RE DELLA VETTA", "Chi ha trascorso più partite al primo posto.", "Conta ogni partita dopo la quale il giocatore è rimasto o salito al numero uno.", own.firstPlaceMatches, maxOf((item) => item.firstPlaceMatches), "turni in vetta"),
-    recordBadge("flame", "gold", "flame", "FIAMMA VINCENTE", "La serie di vittorie più lunga.", "Ottieni il maggior numero di vittorie consecutive nella cronologia.", own.bestWinStreak, maxOf((item) => item.bestWinStreak), "vittorie di fila"),
-    recordBadge("sets", "ice", "sets", "SET D'ACCIAIO", "La serie di set vinti consecutivamente più lunga.", "I set restano consecutivi anche attraversando partite diverse.", own.bestSetWinStreak, maxOf((item) => item.bestSetWinStreak), "set di fila"),
+    recordBadge("flame", "red", "flame", "FIAMMA VINCENTE", "La serie di vittorie più lunga.", "Ottieni il maggior numero di vittorie consecutive nella cronologia.", own.bestWinStreak, maxOf((item) => item.bestWinStreak), "vittorie di fila"),
+    recordBadge("sets", "red", "sets", "SET D'ACCIAIO", "La serie di set vinti consecutivamente più lunga.", "I set restano consecutivi anche attraversando partite diverse.", own.bestSetWinStreak, maxOf((item) => item.bestSetWinStreak), "set di fila"),
     {
       id: "turkey", tone: "bronze", glyph: "turkey", label: "TACCHINO DI CODA",
       meaning: "Il giocatore attualmente ultimo in classifica.",
@@ -997,11 +998,11 @@ function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch
       progressLabel: isLast ? "Ultimo posto attuale" : "Badge non assegnato",
       unlocked: isLast,
     },
-    recordBadge("hook", "red", "hook", "AL GANCIO", "La serie di sconfitte consecutive più lunga.", "Detieni il record storico di sconfitte una dopo l'altra.", own.bestLoseStreak, maxOf((item) => item.bestLoseStreak), "sconfitte di fila"),
-    recordBadge("dominator", "gold", "dominator", "DOMINATORE", "Chi ha vinto più partite senza concedere set.", "Conta le vittorie concluse 2–0.", own.straightSetWins, maxOf((item) => item.straightSetWins), "vittorie 2–0"),
-    recordBadge("comeback", "gold", "comeback", "RE DELLA RIMONTA", "Chi ha ribaltato più partite dopo aver perso il primo set.", "Conta le vittorie ottenute partendo da 0–1 nei set.", own.comebackWins, maxOf((item) => item.comebackWins), "rimonte"),
+    recordBadge("hook", "bronze", "hook", "AL GANCIO", "La serie di sconfitte consecutive più lunga.", "Detieni il record storico di sconfitte una dopo l'altra.", own.bestLoseStreak, maxOf((item) => item.bestLoseStreak), "sconfitte di fila"),
+    recordBadge("dominator", "ice", "dominator", "DOMINATORE", "Chi ha vinto più partite senza concedere set.", "Conta le vittorie concluse 2–0.", own.straightSetWins, maxOf((item) => item.straightSetWins), "vittorie 2–0"),
+    recordBadge("comeback", "ice", "comeback", "RE DELLA RIMONTA", "Chi ha ribaltato più partite dopo aver perso il primo set.", "Conta le vittorie ottenute partendo da 0–1 nei set.", own.comebackWins, maxOf((item) => item.comebackWins), "rimonte"),
     recordBadge("clutch", "ice", "clutch", "SANGUE FREDDO", "Chi ha vinto più partite al set decisivo.", "Conta le vittorie in tre set, dopo averne concesso almeno uno.", own.decidingSetWins, maxOf((item) => item.decidingSetWins), "set decisivi"),
-    recordBadge("marathon", "bronze", "marathon", "MARATONETA", "Il giocatore con più presenze.", "Detieni il maggior numero totale di partite disputate.", own.matchesPlayed, maxOf((item) => item.matchesPlayed), "partite"),
+    recordBadge("marathon", "steel", "marathon", "MARATONETA", "Il giocatore con più presenze.", "Detieni il maggior numero totale di partite disputate.", own.matchesPlayed, maxOf((item) => item.matchesPlayed), "partite"),
     {
       id: "duo", tone: "violet", glyph: "duo", label: "COPPIA D'ORO",
       meaning: "I componenti della coppia con il rendimento migliore.",
@@ -1013,7 +1014,7 @@ function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch
     },
     recordBadge("goat-slayer", "red", "goat-slayer", "AMMAZZA-GOAT", "Chi ha battuto più volte il numero uno.", "Conta solo quando l'avversario era GOAT prima dell'inizio della partita.", own.winsAgainstGoat, maxOf((item) => item.winsAgainstGoat), "GOAT battuti"),
     {
-      id: "centurion", tone: "bronze", glyph: "centurion", label: "CENTURIONE",
+      id: "centurion", tone: "steel", glyph: "centurion", label: "CENTURIONE",
       meaning: "Il riconoscimento personale per chi ha raggiunto 20 presenze.",
       criterion: "Si conquista disputando almeno 20 partite e non dipende dai risultati degli altri.",
       value: `${profile.matches_played} partite`,
@@ -1079,7 +1080,7 @@ function BadgeList({ badges }: { badges: Badge[] }) {
         >
           <div className="badge-emblem" aria-hidden="true">
             <span className="badge-crown">◆</span>
-            <span className="badge-icon"><BadgeGlyphIcon name={badge.glyph} /></span>
+            <span className="badge-icon"><Image src={`/emblems/${badge.glyph}.png`} alt="" width={58} height={58} /></span>
             <span className="badge-laurel badge-laurel-left">❯</span>
             <span className="badge-laurel badge-laurel-right">❮</span>
           </div>
