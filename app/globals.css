@@ -3477,22 +3477,23 @@ button.pizza-ranking-row {
    dentro il layout dell'app al posto del contenuto. */
 .splash {
   align-items: center;
-  background:
-    radial-gradient(circle at 50% 32%, rgba(24, 223, 228, 0.16), transparent 55%),
-    linear-gradient(165deg, #0a1a2a 0%, #0d3441 55%, #08131f 100%);
+  /* Tinta unita, la stessa della barra di stato: qualunque sfumatura crea
+     uno stacco visibile sui bordi di sistema di iOS. */
+  background: var(--ink);
   display: flex;
   flex-direction: column;
   inset: 0;
   justify-content: center;
   min-height: 100dvh;
+  padding: env(safe-area-inset-top) 24px env(safe-area-inset-bottom);
   position: fixed;
   z-index: 90;
 }
 
 .splash-mark {
   animation: splash-breathe 2.4s ease-in-out infinite;
-  height: 108px;
-  width: 108px;
+  height: 150px;
+  width: 150px;
 }
 
 .splash-mark img {
@@ -3506,6 +3507,11 @@ button.pizza-ranking-row {
 @keyframes splash-breathe {
   0%, 100% { opacity: 0.72; transform: scale(0.96); }
   50% { opacity: 1; transform: scale(1); }
+}
+
+/* Sul blu pieno il grigio dei testi di attesa sparirebbe. */
+.splash p {
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .mobile-nav {

@@ -447,7 +447,7 @@ function LoadingScreen() {
     <main className="splash" role="status" aria-label="Caricamento in corso">
       <div className="splash-mark">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`${basePath}/theboyz-mark.png`} alt="TheBoyz" width={108} height={108} />
+        <img src={`${basePath}/theBOYZwhite.png`} alt="TheBoyz" width={150} height={150} />
       </div>
     </main>
   );
