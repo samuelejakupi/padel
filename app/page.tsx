@@ -3466,12 +3466,12 @@ function AppShell({ session }: { session: Session | null }) {
                   className={pizzaRankingMode === "classic" ? "active" : ""}
                   onClick={() => setPizzaRankingMode("classic")}
                 >
-                  Classica
+                  Nostalgica
                 </button>
               </div>
             </div>
 
-            <div className="pizza-podium" aria-label={`Podio pizzerie · classifica ${pizzaRankingMode === "classic" ? "classica" : "contemporanea"}`}>
+            <div className="pizza-podium" aria-label={`Podio pizzerie · classifica ${pizzaRankingMode === "classic" ? "nostalgica" : "contemporanea"}`}>
               {pizzaEntries.filter((restaurant) => !restaurant.pending).slice(0, 3).map((restaurant, index) => (
                 <article className={`pizza-podium-card pizza-place-${index + 1}`} key={restaurant.name}>
                   <span className="pizza-medal">{index + 1}</span>
