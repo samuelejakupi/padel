@@ -1877,13 +1877,20 @@ button.ranking-row-link:focus-visible {
   margin: 12px 0 0;
 }
 
+/* Con i parimerito il podio può ospitare più di tre card: le colonne si
+   adattano da sole e lo scambio 2°-1°-3° resta solo quando sono esattamente
+   tre, perché è lì che ha senso alzare il primo al centro. */
 .podium {
   align-items: end;
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   margin: 0 auto 28px;
   max-width: 920px;
+}
+
+.podium-classic {
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .podium-card {
@@ -1901,14 +1908,17 @@ button.ranking-row-link:focus-visible {
   background: var(--ink);
   color: var(--white);
   min-height: 250px;
+}
+
+.podium-classic .podium-1 {
   order: 2;
 }
 
-.podium-2 {
+.podium-classic .podium-2 {
   order: 1;
 }
 
-.podium-3 {
+.podium-classic .podium-3 {
   order: 3;
 }
 
@@ -4825,8 +4835,12 @@ button.pizza-ranking-row {
     grid-template-columns: 1fr;
   }
 
-  .podium-card,
-  .podium-1 {
+  /* In verticale il podio è già in ordine di classifica: lo scambio
+     2°-1°-3° avrebbe solo l'effetto di mescolare le posizioni. */
+  .podium .podium-card,
+  .podium-classic .podium-1,
+  .podium-classic .podium-2,
+  .podium-classic .podium-3 {
     display: grid;
     gap: 4px 14px;
     grid-template-columns: 64px minmax(0, 1fr);

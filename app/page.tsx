@@ -211,15 +211,19 @@ function heroGreetingPool(rank: number, isLast: boolean, hasNarrowLead: boolean)
 
 // Parimerito: a punteggio uguale la posizione è la stessa, e quella successiva
 // riparte contando anche gli ex aequo (1, 1, 3) come nelle classifiche sportive.
+// Parimerito "densi": due primi a pari punti sono entrambi 1°, e chi viene
+// dopo è 2°, non 3°. Nello sport si usa spesso l'altra convenzione (1, 1, 3),
+// ma qui la posizione conta come gradino del podio, non come piazzamento.
 function padelRanks(sorted: Profile[]) {
   let lastRating: number | null = null;
-  let lastRank = 0;
-  return sorted.map((profile, index) => {
+  let rank = 0;
+  return sorted.map((profile) => {
     if (profile.matches_played === 0) return 0;
-    if (lastRating !== null && profile.rating === lastRating) return lastRank;
-    lastRating = profile.rating;
-    lastRank = index + 1;
-    return lastRank;
+    if (lastRating === null || profile.rating !== lastRating) {
+      rank += 1;
+      lastRating = profile.rating;
+    }
+    return rank;
   });
 }
 
@@ -323,12 +327,13 @@ function buildPadelTeams(
 
 function ranksByRating(items: { rating: number }[]) {
   let lastRating: number | null = null;
-  let lastRank = 0;
-  return items.map((item, index) => {
-    if (lastRating !== null && item.rating === lastRating) return lastRank;
-    lastRating = item.rating;
-    lastRank = index + 1;
-    return lastRank;
+  let rank = 0;
+  return items.map((item) => {
+    if (lastRating === null || item.rating !== lastRating) {
+      rank += 1;
+      lastRating = item.rating;
+    }
+    return rank;
   });
 }
 
@@ -1100,11 +1105,12 @@ function SeasonPicker({
   );
 }
 
-function TeamRankingList({ teams }: { teams: PadelTeam[] }) {
+function TeamRankingList({ teams, skipPodium = false }: { teams: PadelTeam[]; skipPodium?: boolean }) {
   const ranks = ranksByRating(teams);
   return (
     <div className="ranking-table ranking-table-team">
       {teams.map((team, index) => {
+        if (skipPodium && ranks[index] <= 3) return null;
         const winRate = team.matches_played ? Math.round((team.wins / team.matches_played) * 100) : 0;
         return (
           <div className="ranking-row" key={team.id}>
@@ -1139,10 +1145,14 @@ function RankingList({
   profiles,
   expanded = false,
   onSelect,
+  skipPodium = false,
 }: {
   profiles: Profile[];
   expanded?: boolean;
   onSelect?: (profile: Profile) => void;
+  // Chi è già sul podio non va ripetuto nell'elenco sotto: la lista parte
+  // dal primo che sta fuori dai primi tre gradini.
+  skipPodium?: boolean;
 }) {
   const sorted = sortPadelProfiles(profiles);
   const ranks = padelRanks(sorted);
@@ -1151,6 +1161,7 @@ function RankingList({
       {sorted.map((profile, index) => {
         const isRanked = profile.matches_played > 0;
         const rank = ranks[index];
+        if (skipPodium && isRanked && rank <= 3) return null;
         const winRate = profile.matches_played ? Math.round((profile.wins / profile.matches_played) * 100) : 0;
         const content = (
           <>
@@ -2060,6 +2071,15 @@ function AppShell({ session }: { session: Session | null }) {
     [seasonSorted],
   );
   const seasonRanks = useMemo(() => padelRanks(seasonRanked), [seasonRanked]);
+  // Il podio non è "i primi tre nomi" ma "chi occupa i primi tre gradini":
+  // con dei parimerito le persone sul podio possono essere più di tre.
+  const podiumProfiles = useMemo(
+    () =>
+      seasonRanked
+        .map((profile, index) => ({ profile, rank: seasonRanks[index] }))
+        .filter((entry) => entry.rank > 0 && entry.rank <= 3),
+    [seasonRanked, seasonRanks],
+  );
 
   const teams = useMemo(
     () => buildPadelTeams(matches, profiles, teamRecords),
@@ -2070,6 +2090,13 @@ function AppShell({ session }: { session: Session | null }) {
     [teams, selectedPlayerId],
   );
   const teamRanks = useMemo(() => ranksByRating(teams), [teams]);
+  const podiumTeams = useMemo(
+    () =>
+      teams
+        .map((team, index) => ({ team, rank: teamRanks[index] }))
+        .filter((entry) => entry.rank <= 3),
+    [teams, teamRanks],
+  );
   const pizzaEntries = useMemo(() => buildPizzaRanking(pizzaRestaurants), [pizzaRestaurants]);
   const currentUser = profiles.find((profile) => profile.id === session?.user.id);
   const currentUserCanManagePizza = currentUser ? canManagePizza(currentUser.display_name, session?.user.email) : false;
@@ -2609,14 +2636,14 @@ function AppShell({ session }: { session: Session | null }) {
                 </div>
               </div>
               {rankingMode === "single" ? (
-                <div className="podium">
-                  {seasonRanked.slice(0, 3).map((profile, index) => (
-                    <article key={profile.id} className={`podium-card podium-${index + 1}`}>
+                <div className={`podium ${podiumProfiles.length === 3 ? "podium-classic" : ""}`}>
+                  {podiumProfiles.map(({ profile, rank }) => (
+                    <article key={profile.id} className={`podium-card podium-${rank}`}>
                       <div className="podium-avatars">
-                        <Avatar profile={profile} size="lg" rank={seasonRanks[index]} />
+                        <Avatar profile={profile} size="lg" rank={rank} />
                       </div>
                       <h3>
-                        <span className="podium-rank">#{seasonRanks[index]}</span>
+                        <span className="podium-rank">#{rank}</span>
                         {profile.display_name}
                       </h3>
                       <b>{profile.rating} pt</b>
@@ -2624,20 +2651,20 @@ function AppShell({ session }: { session: Session | null }) {
                   ))}
                 </div>
               ) : teams.length ? (
-                <div className="podium">
-                  {teams.slice(0, 3).map((team, index) => (
-                    <article key={team.id} className={`podium-card podium-${index + 1} podium-shared`}>
+                <div className={`podium ${podiumTeams.length === 3 ? "podium-classic" : ""}`}>
+                  {podiumTeams.map(({ team, rank: teamRank }) => (
+                    <article key={team.id} className={`podium-card podium-${teamRank} podium-shared`}>
                       {team.imageUrl ? (
                         <TeamAvatars team={team} size="lg" />
                       ) : (
                         <div className="podium-avatars">
                           {team.players.map((profile) => (
-                            <Avatar key={profile.id} profile={profile} size="lg" rank={teamRanks[index]} />
+                            <Avatar key={profile.id} profile={profile} size="lg" rank={teamRank} />
                           ))}
                         </div>
                       )}
                       <h3>
-                        <span className="podium-rank">#{teamRanks[index]}</span>
+                        <span className="podium-rank">#{teamRank}</span>
                         {teamLabel(team)}
                       </h3>
                       <b>{team.rating} pt</b>
@@ -2657,9 +2684,9 @@ function AppShell({ session }: { session: Session | null }) {
               ) : null}
             </article>
             {rankingMode === "single" ? (
-              <RankingList profiles={seasonProfiles} expanded onSelect={openPlayer} />
+              <RankingList profiles={seasonProfiles} expanded onSelect={openPlayer} skipPodium />
             ) : teams.length ? (
-              <TeamRankingList teams={teams} />
+              <TeamRankingList teams={teams} skipPodium />
             ) : (
               <div className="empty-board">
                 <span>00</span>
