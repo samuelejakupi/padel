@@ -2805,7 +2805,7 @@ button.ranking-row-blue:hover {
   box-shadow: none;
   color: var(--ink);
   display: flex;
-  flex: 0 0 124px;
+  flex: 0 0 140px;
   flex-direction: column;
   gap: 0;
   min-height: 176px;
@@ -2840,7 +2840,7 @@ button.ranking-row-blue:hover {
   justify-content: center;
   position: relative;
   transition: transform 160ms ease;
-  width: 112px;
+  width: 128px;
 }
 
 .badge-emblem::before,
@@ -2852,7 +2852,7 @@ button.ranking-row-blue:hover {
   filter: drop-shadow(0 9px 9px rgba(11, 27, 44, 0.22));
   height: 168px;
   object-fit: contain;
-  width: 112px;
+  width: 128px;
 }
 
 .player-trophies .badge-text {
@@ -5882,7 +5882,7 @@ button.pizza-ranking-row {
   }
 
   .player-trophies .badge {
-    flex-basis: 116px;
+    flex-basis: 132px;
     min-height: 166px;
     scroll-snap-align: start;
   }
