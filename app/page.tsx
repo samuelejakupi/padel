@@ -3185,7 +3185,7 @@ function AppShell({ session }: { session: Session | null }) {
 
             <section className="player-trophies">
               <div className="player-history-head">
-                <div><p className="eyebrow dark">BACHECA</p><h2>Emblemi e trofei</h2></div>
+                <div><p className="eyebrow dark">BACHECA</p></div>
               </div>
 
               <div className="bacheca-group-head">
