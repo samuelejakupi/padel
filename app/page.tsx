@@ -3372,7 +3372,16 @@ function AppShell({ session }: { session: Session | null }) {
   const navButtonsRef = useRef<(HTMLButtonElement | null)[]>([]);
   const navDragging = useRef(false);
   const navPointerStart = useRef<number | null>(null);
-  const pageSwipeStart = useRef<{ x: number; y: number } | null>(null);
+  const contentRef = useRef<HTMLElement | null>(null);
+  const pageTransitioning = useRef(false);
+  const pageSwipeStart = useRef<{
+    x: number;
+    y: number;
+    lastX: number;
+    lastAt: number;
+    velocityX: number;
+    axis: "pending" | "horizontal" | "vertical";
+  } | null>(null);
 
   // Il Padel è la home: partite e classifica si aprono lì dentro, quindi non
   // serve più una voce separata.
@@ -3683,6 +3692,115 @@ function AppShell({ session }: { session: Session | null }) {
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   }
 
+  type MobileDestination = "padel" | "pizza" | "profile";
+
+  // Le tre schermate principali formano una sequenza, come le pagine di
+  // un'app: Padel <-> Pizza <-> Profilo. Dagli archivi si puo invece solo
+  // tornare indietro verso la home Padel.
+  function mobileDestination(direction: "left" | "right"): MobileDestination | null {
+    const isPadelArchive = view === "padel"
+      && (padelView === "matches" || padelView === "ranking" || padelView === "tournaments");
+    if (isPadelArchive) return direction === "right" ? "padel" : null;
+
+    const mainPages: MobileDestination[] = ["padel", "pizza", "profile"];
+    const currentPage: MobileDestination | null = view === "pizza"
+      ? "pizza"
+      : isOwnCard
+        ? "profile"
+        : view === "padel" && padelView === "overview"
+          ? "padel"
+          : null;
+    if (!currentPage) return null;
+    const nextIndex = mainPages.indexOf(currentPage) + (direction === "left" ? 1 : -1);
+    return mainPages[nextIndex] ?? null;
+  }
+
+  function openMobileDestination(destination: MobileDestination) {
+    if (destination === "padel") goHome();
+    if (destination === "pizza") setView("pizza");
+    if (destination === "profile") openOwnCard();
+  }
+
+  function clearPageMotion() {
+    const page = contentRef.current;
+    if (!page) return;
+    page.classList.remove("is-page-dragging", "is-page-transitioning");
+    page.style.removeProperty("transform");
+    page.style.removeProperty("opacity");
+    page.style.removeProperty("filter");
+  }
+
+  async function restorePagePosition() {
+    const page = contentRef.current;
+    if (!page) return;
+    // Un semplice tap o uno scroll verticale non hanno mai spostato la
+    // pagina: in quel caso non va avviata un'animazione che potrebbe
+    // intercettare il click appena dopo il touchend.
+    if (!page.classList.contains("is-page-dragging") && !page.style.transform) return;
+    const fromTransform = page.style.transform || "translate3d(0, 0, 0)";
+    const fromOpacity = page.style.opacity || "1";
+    page.classList.remove("is-page-dragging");
+    page.classList.add("is-page-transitioning");
+    if (!page.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      clearPageMotion();
+      return;
+    }
+    const animation = page.animate(
+      [
+        { transform: fromTransform, opacity: fromOpacity },
+        { transform: "translate3d(0, 0, 0) scale(1)", opacity: "1" },
+      ],
+      { duration: 230, easing: "cubic-bezier(0.22, 0.85, 0.25, 1)" },
+    );
+    try { await animation.finished; } catch { /* gesto interrotto da un nuovo disegno */ }
+    clearPageMotion();
+  }
+
+  async function completePageSwipe(destination: MobileDestination, direction: "left" | "right") {
+    const page = contentRef.current;
+    if (!page || pageTransitioning.current) return;
+    pageTransitioning.current = true;
+    page.classList.remove("is-page-dragging");
+    page.classList.add("is-page-transitioning");
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const exitSign = direction === "left" ? -1 : 1;
+    if (!reduceMotion && page.animate) {
+      const fromTransform = page.style.transform || "translate3d(0, 0, 0) scale(1)";
+      const fromOpacity = page.style.opacity || "1";
+      const exit = page.animate(
+        [
+          { transform: fromTransform, opacity: fromOpacity },
+          { transform: `translate3d(${exitSign * 108}vw, 0, 0) scale(0.975)`, opacity: "0.82" },
+        ],
+        { duration: 190, easing: "cubic-bezier(0.45, 0, 0.75, 0.3)", fill: "forwards" },
+      );
+      try { await exit.finished; } catch { /* la navigazione puo cancellarla */ }
+    }
+
+    openMobileDestination(destination);
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+
+    // Due frame lasciano a React il tempo di montare il contenuto nuovo;
+    // poi la nuova pagina entra dal lato opposto a quello di uscita.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    if (!reduceMotion && page.animate) {
+      page.getAnimations().forEach((animation) => animation.cancel());
+      page.style.transform = `translate3d(${-exitSign * 34}vw, 0, 0) scale(0.985)`;
+      page.style.opacity = "0.88";
+      const enter = page.animate(
+        [
+          { transform: page.style.transform, opacity: page.style.opacity },
+          { transform: "translate3d(0, 0, 0) scale(1)", opacity: "1" },
+        ],
+        { duration: 320, easing: "cubic-bezier(0.2, 0.82, 0.2, 1)" },
+      );
+      try { await enter.finished; } catch { /* nessun assestamento se cambia pagina */ }
+    }
+    clearPageMotion();
+    pageTransitioning.current = false;
+  }
+
 
 
   return (
@@ -3714,12 +3832,13 @@ function AppShell({ session }: { session: Session | null }) {
       {notice ? <button className="notice" onClick={() => setNotice("")}>{notice}<span>×</span></button> : null}
 
       <main
+        ref={contentRef}
         className="content"
         onTouchStart={(event) => {
-          const canSwipeBack = view === "padel" && (padelView === "matches" || padelView === "ranking" || padelView === "tournaments");
+          const page = contentRef.current;
           const target = event.target instanceof Element ? event.target : null;
           const ignored = target?.closest("input, select, textarea, label, iframe, video, [role='slider'], [role='dialog'], .tournament-tabs, .badge-grid");
-          if (!canSwipeBack || event.touches.length !== 1 || ignored || !window.matchMedia("(max-width: 780px)").matches) {
+          if (!page || pageTransitioning.current || event.touches.length !== 1 || ignored || !window.matchMedia("(max-width: 780px)").matches) {
             pageSwipeStart.current = null;
             return;
           }
@@ -3728,21 +3847,68 @@ function AppShell({ session }: { session: Session | null }) {
             pageSwipeStart.current = null;
             return;
           }
-          pageSwipeStart.current = { x: touch.clientX, y: touch.clientY };
+          page.getAnimations().forEach((animation) => animation.cancel());
+          const now = performance.now();
+          pageSwipeStart.current = {
+            x: touch.clientX,
+            y: touch.clientY,
+            lastX: touch.clientX,
+            lastAt: now,
+            velocityX: 0,
+            axis: "pending",
+          };
+        }}
+        onTouchMove={(event) => {
+          const swipe = pageSwipeStart.current;
+          const touch = event.touches[0];
+          const page = contentRef.current;
+          if (!swipe || !touch || !page) return;
+          const distanceX = touch.clientX - swipe.x;
+          const distanceY = touch.clientY - swipe.y;
+          if (swipe.axis === "pending" && Math.max(Math.abs(distanceX), Math.abs(distanceY)) >= 9) {
+            swipe.axis = Math.abs(distanceX) > Math.abs(distanceY) * 1.15 ? "horizontal" : "vertical";
+          }
+          if (swipe.axis !== "horizontal") return;
+
+          const now = performance.now();
+          const elapsed = Math.max(1, now - swipe.lastAt);
+          swipe.velocityX = (touch.clientX - swipe.lastX) / elapsed;
+          swipe.lastX = touch.clientX;
+          swipe.lastAt = now;
+
+          const direction = distanceX < 0 ? "left" : "right";
+          const canMove = Boolean(mobileDestination(direction));
+          const translated = canMove ? distanceX : distanceX * 0.18;
+          const progress = Math.min(1, Math.abs(translated) / Math.max(window.innerWidth, 1));
+          page.classList.add("is-page-dragging");
+          page.style.transform = `translate3d(${translated}px, 0, 0) scale(${1 - progress * 0.018})`;
+          page.style.opacity = String(1 - progress * 0.09);
+          page.style.filter = `drop-shadow(${-Math.sign(translated) * 14}px 10px 20px rgba(4, 15, 24, ${0.08 + progress * 0.18}))`;
         }}
         onTouchEnd={(event) => {
           const start = pageSwipeStart.current;
           pageSwipeStart.current = null;
           const touch = event.changedTouches[0];
-          if (!start || !touch) return;
+          if (!start || !touch || start.axis !== "horizontal") {
+            void restorePagePosition();
+            return;
+          }
           const distanceX = touch.clientX - start.x;
           const distanceY = Math.abs(touch.clientY - start.y);
-          if (distanceX >= 70 && distanceX > distanceY * 1.35) {
-            goHome();
-            window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+          const direction = distanceX < 0 ? "left" : "right";
+          const destination = mobileDestination(direction);
+          const enoughDistance = Math.abs(distanceX) >= Math.max(68, window.innerWidth * 0.2);
+          const enoughMomentum = Math.abs(distanceX) >= 34 && Math.abs(start.velocityX) >= 0.42;
+          if (destination && distanceX !== 0 && distanceY < Math.abs(distanceX) * 0.9 && (enoughDistance || enoughMomentum)) {
+            void completePageSwipe(destination, direction);
+            return;
           }
+          void restorePagePosition();
         }}
-        onTouchCancel={() => { pageSwipeStart.current = null; }}
+        onTouchCancel={() => {
+          pageSwipeStart.current = null;
+          void restorePagePosition();
+        }}
       >
         {loading ? (
           <LoadingScreen />

@@ -5379,6 +5379,25 @@ button.pizza-ranking-row {
     padding: 24px 14px 6px;
   }
 
+  /* La pagina e una superficie unica durante lo swipe: segue il dito e
+     riceve l'ombra solo mentre si stacca dalla schermata corrente. */
+  .content.is-page-dragging,
+  .content.is-page-transitioning {
+    position: relative;
+    transform-origin: center center;
+    will-change: transform, opacity, filter;
+    z-index: 2;
+  }
+
+  .content.is-page-dragging {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .content.is-page-transitioning {
+    pointer-events: none;
+  }
+
   /* Stesso passo verticale del resto del sito. */
   .hub-page {
     gap: 10px;
