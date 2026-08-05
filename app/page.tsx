@@ -4240,7 +4240,8 @@ function AppShell({ session }: { session: Session | null }) {
                 onClick={() => setShowPizzaInfo(true)}
                 aria-haspopup="dialog"
               >
-                ⓘ Info
+                <span className="pizza-info-icon" aria-hidden="true">i</span>
+                <span>Info</span>
               </button>
               <div className="pizza-hero-title">
                 <h1>Pizzeria<br /><span>Ranking.</span></h1>

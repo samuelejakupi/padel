@@ -4326,12 +4326,28 @@ button.ranking-row-bronze:hover {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.18);
   color: var(--white);
+  gap: 7px;
   min-height: 40px;
   padding: 0 15px;
   position: absolute;
   right: 0;
   top: 0;
   z-index: 3;
+}
+
+.pizza-info-icon {
+  align-items: center;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  display: inline-flex;
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 900;
+  height: 16px;
+  justify-content: center;
+  line-height: 1;
+  text-transform: none;
+  width: 16px;
 }
 
 .pizza-info-trigger:hover {
