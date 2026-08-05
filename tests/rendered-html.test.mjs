@@ -52,7 +52,7 @@ test("include configurazione Supabase e pubblicazione Pages", async () => {
   assert.doesNotMatch(page, /signUp\s*\(/);
   assert.match(page, /avatars/);
   assert.match(page, /Portego[\s\S]*De Mà/i);
-  assert.match(page, /Punti Fabio/);
+  assert.match(page, /Bonus Fabio/);
   assert.match(page, /buildContemporaryPizzaRanking/);
   assert.match(page, /buildClassicPizzaRanking/);
   assert.match(page, /"samu", "dani", "fabio"/);

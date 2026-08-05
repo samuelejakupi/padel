@@ -143,7 +143,7 @@ const pizzaCriteria = [
   { label: "Pizza", max: PIZZA_WEIGHTS.pizza, source: "1–10", tone: "lime" },
   { label: "Dolce", max: PIZZA_WEIGHTS.dessert, source: "1–10", tone: "pink" },
   { label: "Prezzo", max: PIZZA_WEIGHTS.price, source: "1–10", tone: "yellow" },
-  { label: "Fabio", max: 7, source: "0–7", tone: "blue" },
+  { label: "Bonus Fabio", max: 7, source: "0–7", tone: "blue" },
 ] as const;
 
 // Le schede storiche erano su scale diverse e comprendevano il bonus Fabio.
@@ -177,6 +177,16 @@ function buildContemporaryPizzaRanking(
   sessionVotes: PizzaSessionVote[],
   profiles: Profile[],
 ): PizzaDisplayEntry[] {
+  const historical: PizzaDisplayEntry[] = pizzaRanking.map((entry) => ({
+    ...entry,
+    location: (entry.location / HISTORIC_MAX.location) * 10,
+    pizza: (entry.pizza / HISTORIC_MAX.pizza) * 10,
+    dessert: (entry.dessert / HISTORIC_MAX.dessert) * 10,
+    price: (entry.price / HISTORIC_MAX.price) * 10,
+    total: entry.total,
+    isNew: false,
+    votesCount: 3,
+  }));
   const interactive = restaurants.map((restaurant) => {
     // Di una pizzeria conta l'ultima votazione. Finché non hanno votato tutti,
     // il database non restituisce i voti altrui e il risultato resta sospeso.
@@ -202,7 +212,7 @@ function buildContemporaryPizzaRanking(
     } as PizzaDisplayEntry;
   });
 
-  return sortPizzaEntries(interactive);
+  return sortPizzaEntries([...historical, ...interactive]);
 }
 
 function buildClassicPizzaRanking(
@@ -2318,7 +2328,7 @@ function PizzaVoteModal({
               <PizzaScoreField label="Dolce" weight={PIZZA_WEIGHTS.dessert} value={scores.dessert} onChange={(value) => updateScore("dessert", value)} />
               <PizzaScoreField label="Prezzo" weight={PIZZA_WEIGHTS.price} value={scores.price} onChange={(value) => updateScore("price", value)} />
               {viewerIsFabio ? (
-                <PizzaScoreField label="Punti Fabio" weight={7} min={0} max={7} value={scores.bonus_fabio} onChange={(value) => updateScore("bonus_fabio", value)} />
+                <PizzaScoreField label="Bonus Fabio" weight={7} min={0} max={7} value={scores.bonus_fabio} onChange={(value) => updateScore("bonus_fabio", value)} />
               ) : null}
             </div>
             <p className="pizza-vote-hint">
