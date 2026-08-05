@@ -4002,20 +4002,20 @@ function AppShell({ session }: { session: Session | null }) {
           <><section className="pizza-page">
             <BlockMark size="lg" />
             <div className="pizza-hero">
-              <div>
+              <button
+                className="button pizza-info-trigger"
+                type="button"
+                onClick={() => setShowPizzaInfo(true)}
+                aria-haspopup="dialog"
+              >
+                ⓘ Info
+              </button>
+              <div className="pizza-hero-title">
                 <h1>Pizzeria<br /><span>Ranking.</span></h1>
               </div>
               <div className="pizza-hero-actions">
                 <div className="pizza-hero-buttons">
-                  <button
-                    className="button pizza-info-trigger"
-                    type="button"
-                    onClick={() => setShowPizzaInfo(true)}
-                    aria-haspopup="dialog"
-                  >
-                    ⓘ Info
-                  </button>
-                  <button className="button button-primary" onClick={() => {
+                  <button className="button button-primary pizza-open-vote" onClick={() => {
                     if (!pizzaSchemaReady || !pizzaSessionsReady) {
                       setNotice("Per votare esegui la migrazione migration-pizza-sessioni.sql in Supabase.");
                       return;

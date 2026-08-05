@@ -3819,11 +3819,17 @@ button.ranking-row-blue:hover {
 
 .pizza-hero {
   align-items: center;
-  display: grid;
-  gap: 40px;
-  grid-template-columns: 1fr 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  justify-content: center;
   min-height: 350px;
+  padding: 52px 0 42px;
   position: relative;
+}
+
+.pizza-hero-title {
+  text-align: center;
 }
 
 .pizza-hero h1 {
@@ -3845,8 +3851,8 @@ button.ranking-row-blue:hover {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  justify-self: center;
   position: relative;
+  width: min(440px, 100%);
   z-index: 2;
 }
 
@@ -3991,6 +3997,7 @@ button.ranking-row-blue:hover {
 .pizza-hero-buttons {
   display: flex;
   gap: var(--space-3);
+  width: 100%;
 }
 
 .pizza-hero-buttons .button {
@@ -4001,6 +4008,12 @@ button.ranking-row-blue:hover {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.18);
   color: var(--white);
+  min-height: 40px;
+  padding: 0 15px;
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 3;
 }
 
 .pizza-info-trigger:hover {
@@ -4009,6 +4022,13 @@ button.ranking-row-blue:hover {
 
 .pizza-info-modal {
   max-width: 760px;
+}
+
+.pizza-open-vote {
+  border-radius: var(--radius-lg);
+  font-size: 15px;
+  min-height: 64px;
+  width: 100%;
 }
 
 .pizza-participant-picker {
@@ -4399,23 +4419,32 @@ button.pizza-ranking-row {
 .pizza-ranking-medal {
   --pizza-medal-accent: var(--blue-dark);
   --pizza-medal-bg: var(--white);
+  --pizza-medal-border: rgba(11, 27, 44, 0.12);
+  --pizza-medal-panel: rgba(11, 27, 44, 0.045);
   background: var(--pizza-medal-bg);
+  border-color: var(--pizza-medal-border);
   box-shadow: inset 4px 0 0 var(--pizza-medal-accent);
 }
 
 .pizza-ranking-gold {
   --pizza-medal-accent: #c79516;
-  --pizza-medal-bg: linear-gradient(90deg, rgba(241, 190, 43, 0.24), rgba(255, 255, 255, 0.96) 48%);
+  --pizza-medal-bg: linear-gradient(90deg, rgba(241, 190, 43, 0.3), rgba(255, 255, 255, 0.96) 52%);
+  --pizza-medal-border: rgba(199, 149, 22, 0.36);
+  --pizza-medal-panel: rgba(199, 149, 22, 0.11);
 }
 
 .pizza-ranking-silver {
   --pizza-medal-accent: #8293a5;
-  --pizza-medal-bg: linear-gradient(90deg, rgba(163, 178, 193, 0.25), rgba(255, 255, 255, 0.96) 48%);
+  --pizza-medal-bg: linear-gradient(90deg, rgba(163, 178, 193, 0.3), rgba(255, 255, 255, 0.96) 52%);
+  --pizza-medal-border: rgba(130, 147, 165, 0.38);
+  --pizza-medal-panel: rgba(130, 147, 165, 0.12);
 }
 
 .pizza-ranking-bronze {
   --pizza-medal-accent: #a9663c;
-  --pizza-medal-bg: linear-gradient(90deg, rgba(185, 111, 61, 0.24), rgba(255, 255, 255, 0.96) 48%);
+  --pizza-medal-bg: linear-gradient(90deg, rgba(185, 111, 61, 0.3), rgba(255, 255, 255, 0.96) 52%);
+  --pizza-medal-border: rgba(169, 102, 60, 0.4);
+  --pizza-medal-panel: rgba(169, 102, 60, 0.12);
 }
 
 .pizza-ranking-medal .pizza-position {
@@ -5938,9 +5967,9 @@ button.pizza-ranking-row {
   }
 
   .pizza-hero {
-    gap: 26px;
-    grid-template-columns: 1fr;
+    gap: 24px;
     min-height: 0;
+    padding: 62px 0 34px;
   }
 
   .pizza-hero h1 {
@@ -5950,6 +5979,10 @@ button.pizza-ranking-row {
 
   .pizza-hero-actions {
     gap: 16px;
+  }
+
+  .pizza-open-vote {
+    min-height: 60px;
   }
 
   .pizza-vote-fields {
@@ -6022,6 +6055,16 @@ button.pizza-ranking-row {
     min-height: 0;
     min-width: 0;
     padding: 16px 14px;
+  }
+
+  .pizza-ranking-medal {
+    background: var(--pizza-medal-bg);
+    border: 1px solid var(--pizza-medal-border);
+    box-shadow: inset 4px 0 0 var(--pizza-medal-accent);
+  }
+
+  .pizza-ranking-medal .pizza-category-score {
+    background: var(--pizza-medal-panel);
   }
 
   .pizza-ranking-row > .pizza-position { grid-area: position; }
