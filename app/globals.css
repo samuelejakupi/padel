@@ -222,6 +222,22 @@ button {
   letter-spacing: 0.4px;
 }
 
+/* Copia del tasto principale che vive dentro al riquadro: serve solo su
+   mobile, dove l'intestazione di sezione non c'e. Su desktop resta quello
+   nell'intestazione, quindi qui sparisce. */
+.cta-in-panel {
+  display: none;
+}
+
+/* Stato vuoto dentro a un riquadro: il fondo bianco ce l'ha gia il
+   riquadro, quindi qui serve solo lo spazio. */
+.panel-empty {
+  background: transparent;
+  box-shadow: none;
+  min-height: 0;
+  padding: 6px 0 14px;
+}
+
 /* Gemello giallo del tasto principale: stessa forma e stesso peso, colore
    diverso perche i tornei sono un'altra cosa dalle partite. */
 .button-lime {
@@ -5864,24 +5880,25 @@ button.pizza-ranking-row {
     order: 2;
   }
 
-  .section-head {
-    order: 3;
+  /* Le intestazioni di sezione su mobile contenevano solo il tasto, che ora
+     sta dentro al riquadro: qui non serve piu niente. */
+  .section-head,
+  .section-head-tournaments {
+    display: none;
+  }
+
+  .cta-in-panel {
+    display: inline-flex;
+    margin: 14px 0 4px;
+    width: 100%;
   }
 
   .match-panel {
+    order: 3;
+  }
+
+  .tournament-panel {
     order: 4;
-  }
-
-  .compact-empty {
-    order: 4;
-  }
-
-  .tournament-empty {
-    order: 6;
-  }
-
-  .section-head-tournaments {
-    order: 5;
   }
 
   .tournament-row-main {
@@ -5909,9 +5926,7 @@ button.pizza-ranking-row {
     font-size: 9px;
   }
 
-  .tournament-panel {
-    order: 6;
-  }
+
 
   /* Card partita su mobile: intestazione (data + campo) e sotto una sola
      riga con squadra, punteggio, avversari e anteprima video.

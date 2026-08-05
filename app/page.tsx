@@ -2920,7 +2920,7 @@ function AppShell({ session }: { session: Session | null }) {
   const [allRanking, setAllRanking] = useState(false);
   // Quattro righe di classifica: è anche il taglio che il CSS applica su
   // mobile, e tenerli uguali evita che il tasto prometta righe già visibili.
-  const HOME_ROWS = 4;
+  const HOME_ROWS = 3;
   const HOME_MATCHES = 2;
   const HOME_TOURNAMENTS = 2;
 
@@ -3676,14 +3676,15 @@ function AppShell({ session }: { session: Session | null }) {
                     ) : null}
                   </div>
                 </div>
-                {matches.length ? (
-                  // Su mobile le partite e il tasto stanno in un unico
-                  // riquadro, come la classifica: vedi .match-panel.
-                  <div className="match-panel">
-                    {/* Titolo interno al riquadro, come "Classifica Elo".
-                        Su desktop resta nascosto: li il titolo di sezione
-                        c'e gia sopra, fuori dal riquadro. */}
-                    <div className="match-panel-head"><h2>Ultime partite</h2></div>
+                <div className="match-panel">
+                  {/* Su mobile il tasto sta in cima al riquadro; su desktop
+                      resta quello nell'intestazione di sezione qui sopra. */}
+                  <button className="button button-primary cta-new-match cta-in-panel" onClick={() => setShowMatch(true)}>+ Nuova partita</button>
+                  {/* Titolo interno al riquadro, come "Classifica Elo".
+                      Su desktop resta nascosto: li il titolo di sezione
+                      c'e gia sopra, fuori dal riquadro. */}
+                  <div className="match-panel-head"><h2>Ultime partite</h2></div>
+                  {matches.length ? (
                     <div className="match-list">
                       {(allMatches ? matches : matches.slice(0, HOME_MATCHES)).map((match) => (
                         <MatchCard
@@ -3695,18 +3696,18 @@ function AppShell({ session }: { session: Session | null }) {
                         />
                       ))}
                     </div>
-                    {matches.length ? (
-                      <button
-                        className="button button-ghost button-full cta-see-all-bottom"
-                        onClick={() => setAllMatches((open) => !open)}
-                      >
-                        {allMatches ? "Vedi meno" : `Vedi tutte (${matches.length})`}
-                      </button>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="compact-empty"><span>00</span><p>Nessuna partita registrata. La prima scriverà la storia.</p></div>
-                )}
+                  ) : (
+                    <div className="compact-empty panel-empty"><span>00</span><p>Nessuna partita registrata. La prima scriverà la storia.</p></div>
+                  )}
+                  {matches.length ? (
+                    <button
+                      className="button button-ghost button-full cta-see-all-bottom"
+                      onClick={() => setAllMatches((open) => !open)}
+                    >
+                      {allMatches ? "Vedi meno" : `Vedi tutte (${matches.length})`}
+                    </button>
+                  ) : null}
+                </div>
 
                 {/* Tornei: stessa impaginazione delle partite, tasto di
                     creazione sopra e riquadro con gli ultimi due sotto. */}
@@ -3722,9 +3723,16 @@ function AppShell({ session }: { session: Session | null }) {
                     </button>
                   </div>
                 </div>
-                {tournaments.length ? (
-                  <div className="match-panel tournament-panel">
-                    <div className="match-panel-head"><h2>Ultimi tornei</h2></div>
+                <div className="match-panel tournament-panel">
+                  <button
+                    className="button button-lime cta-new-match cta-in-panel"
+                    onClick={() => setShowTournamentCreate(true)}
+                    disabled={!tournamentSchemaReady}
+                  >
+                    + Nuovo torneo
+                  </button>
+                  <div className="match-panel-head"><h2>Ultimi tornei</h2></div>
+                  {tournaments.length ? (
                     <div className="match-list">
                       {tournaments.slice(0, HOME_TOURNAMENTS).map((tournament) => (
                         <TournamentRow
@@ -3735,6 +3743,10 @@ function AppShell({ session }: { session: Session | null }) {
                         />
                       ))}
                     </div>
+                  ) : (
+                    <div className="compact-empty panel-empty"><span>00</span><p>Nessun torneo ancora. Il primo trofeo aspetta un nome.</p></div>
+                  )}
+                  {tournaments.length ? (
                     <button
                       className="button button-ghost button-full cta-see-all-bottom"
                       aria-label="Vedi tutti i tornei"
@@ -3742,10 +3754,8 @@ function AppShell({ session }: { session: Session | null }) {
                     >
                       {`Vedi tutto (${tournaments.length})`}
                     </button>
-                  </div>
-                ) : (
-                  <div className="compact-empty tournament-empty"><span>00</span><p>Nessun torneo ancora. Il primo trofeo aspetta un nome.</p></div>
-                )}
+                  ) : null}
+                </div>
               </div>
 
               <aside className={`dashboard-side ${allRanking ? "is-open" : ""}`}>
