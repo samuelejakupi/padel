@@ -6103,9 +6103,13 @@ button.pizza-ranking-row {
     display: none;
   }
 
+  /* Piu alto dei 46px predefiniti: la regola da 104px valeva per
+     l'intestazione di sezione, che su mobile non c'e piu, quindi il tasto
+     ricadeva sull'altezza minima dei pulsanti normali. */
   .cta-in-panel {
     display: inline-flex;
-    margin: 14px 0 4px;
+    margin: 14px 0 6px;
+    min-height: 68px;
     width: 100%;
   }
 
