@@ -1038,32 +1038,15 @@ function BadgeList({ badges }: { badges: Badge[] }) {
 
 function FieldRegister({
   profile,
-  rank,
   profiles,
   matches,
 }: {
   profile: Profile;
-  rank: number;
   profiles: Profile[];
   matches: PadelMatch[];
 }) {
   const own = buildBadgeMetrics(profiles, matches).metrics.get(profile.id) ?? emptyBadgeMetrics();
-  const winRate = profile.matches_played ? Math.round((profile.wins / profile.matches_played) * 100) : 0;
-  const streak = profile.current_streak > 0
-    ? `${profile.current_streak} vittorie di fila`
-    : profile.current_streak < 0
-      ? `${Math.abs(profile.current_streak)} sconfitte di fila`
-      : "Nessuna serie aperta";
   const registerEntries = [
-    {
-      id: "standing", glyph: "summit" as BadgeGlyph, tone: "lime", label: "CLASSIFICA",
-      detail: profile.matches_played ? `Posizione #${rank} · ${profile.rating} Elo` : "In attesa della prima partita",
-      footer: "DATI LIVE", locked: false,
-    },
-    {
-      id: "form", glyph: "flame" as BadgeGlyph, tone: "blue", label: "FORMA ATTUALE",
-      detail: streak, footer: profile.matches_played ? "AGGIORNATO" : "NON DISPONIBILE", locked: false,
-    },
     {
       id: "clean", glyph: "dominator" as BadgeGlyph, tone: "plain", label: "VITTORIE NETTE",
       detail: `${own.straightSetWins} partite vinte senza perdere set`,
@@ -1080,19 +1063,14 @@ function FieldRegister({
       footer: profile.matches_played >= 20 ? "CONQUISTATO" : `${profile.matches_played}/20`,
       locked: profile.matches_played < 20,
     },
-    {
-      id: "record", glyph: "clutch" as BadgeGlyph, tone: "plain", label: "BILANCIO",
-      detail: `${profile.wins} vittorie · ${profile.losses} sconfitte`,
-      footer: `${winRate}% WIN RATE`, locked: false,
-    },
   ];
 
   return (
     <article className="field-register">
       <header className="field-register-head">
         <span>THEBOYZ PADEL CLUB</span>
-        <b>{profile.display_name.toUpperCase()} · PLAYER {String(rank || 0).padStart(2, "0")}</b>
-        <i aria-hidden="true">♟</i>
+        <b>REGISTRO DI CAMPO</b>
+        <i aria-hidden="true">{new Date().getFullYear()}</i>
       </header>
       <div className="field-register-page">
         {registerEntries.map((entry) => (
@@ -1107,31 +1085,6 @@ function FieldRegister({
             </div>
           </div>
         ))}
-      </div>
-    </article>
-  );
-}
-
-function CourtPass({ profile, rank }: { profile: Profile; rank: number }) {
-  const joined = new Intl.DateTimeFormat("it-IT", { month: "short", year: "numeric" })
-    .format(new Date(profile.created_at ?? "2026-01-01"));
-  const code = profile.id.replace(/[^a-z0-9]/gi, "").slice(0, 8).toUpperCase().padEnd(8, "0");
-  return (
-    <article className="court-pass">
-      <div className="court-pass-topline"><span>THE BOYZ / PLAYER ID</span><b>COURT PASS</b><em>{new Date().getFullYear()}</em></div>
-      <div className="court-pass-body">
-        <div className="court-pass-photo"><Avatar profile={profile} size="xl" rank={rank || undefined} /></div>
-        <div className="court-pass-identity">
-          <small>ATLETA</small><h3>{profile.display_name}</h3>
-          <div className="court-pass-fields">
-            <span><small>RANK</small><b>{rank ? `#${rank}` : "N/C"}</b></span>
-            <span><small>ELO</small><b>{profile.matches_played ? profile.rating : "—"}</b></span>
-            <span><small>LATO</small><b>{profile.court_side === "sinistra" ? "ROVESCIO" : profile.court_side === "destra" ? "DRITTO" : "—"}</b></span>
-            <span><small>DAL</small><b>{joined.toUpperCase()}</b></span>
-          </div>
-          <div className="court-pass-signature">{profile.display_name}</div>
-        </div>
-        <div className="court-pass-security" aria-hidden="true"><span>TB</span><i /><b>{code}</b></div>
       </div>
     </article>
   );
@@ -3232,9 +3185,8 @@ function AppShell({ session }: { session: Session | null }) {
 
             <section className="player-trophies">
               <div className="player-history-head">
-                <div><p className="eyebrow dark">BACHECA</p><h2>Identità, emblemi e trofei</h2></div>
+                <div><p className="eyebrow dark">BACHECA</p><h2>Emblemi e trofei</h2></div>
               </div>
-              <CourtPass profile={selectedPlayer} rank={selectedPlayerRank} />
 
               <div className="bacheca-group-head">
                 <div><span>01</span><div><h3>Emblemi</h3></div></div>
@@ -3243,13 +3195,10 @@ function AppShell({ session }: { session: Session | null }) {
                 <div className="player-trophies-empty"><p>Nessun emblema ancora conquistato.</p></div>
               )}
 
-              <div className="bacheca-group-head">
-                <div><span>02</span><div><p className="eyebrow dark">PRESTAZIONI</p><h3>Registro di campo</h3></div></div>
-              </div>
-              <FieldRegister profile={selectedPlayer} rank={selectedPlayerRank} profiles={profiles} matches={matches} />
+              <FieldRegister profile={selectedPlayer} profiles={profiles} matches={matches} />
 
               <div className="bacheca-group-head">
-                <div><span>03</span><div><p className="eyebrow dark">TORNEI</p><h3>Sala trofei</h3></div></div>
+                <div><span>02</span><div><p className="eyebrow dark">TORNEI</p><h3>Sala trofei</h3></div></div>
                 <small>Prossimamente</small>
               </div>
               <div className="trophy-room-empty">
