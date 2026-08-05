@@ -3832,64 +3832,12 @@ button.ranking-row-blue:hover {
   font-weight: 900;
   letter-spacing: -7px;
   line-height: 0.75;
-  margin: 0 0 34px;
+  margin: 0;
   text-transform: uppercase;
 }
 
 .pizza-hero h1 span {
   color: var(--lime);
-}
-
-.pizza-hero > div:first-child > p:last-child {
-  color: rgba(255, 255, 255, 0.58);
-  font-size: 15px;
-  line-height: 1.6;
-  max-width: 520px;
-}
-
-.pizza-stamp {
-  align-items: center;
-  background: var(--lime);
-  border: 9px solid rgba(255, 255, 255, 0.08);
-  border-radius: 50%;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.32);
-  color: var(--ink);
-  display: flex;
-  flex-direction: column;
-  height: 230px;
-  justify-content: center;
-  position: relative;
-  transform: rotate(7deg);
-  width: 230px;
-  z-index: 2;
-}
-
-.pizza-stamp > span {
-  color: var(--blue-dark);
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: 2px;
-  margin-bottom: 8px;
-}
-
-.pizza-stamp b {
-  font-size: 24px;
-  font-style: italic;
-  line-height: 0.9;
-  text-align: center;
-}
-
-.pizza-stamp strong {
-  font-size: 22px;
-  margin-top: 10px;
-}
-
-.pizza-stamp small {
-  color: rgba(11, 27, 44, 0.56);
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 1.4px;
-  margin-top: 8px;
 }
 
 .pizza-hero-actions {
@@ -5976,20 +5924,6 @@ button.pizza-ranking-row {
   .pizza-hero h1 {
     font-size: clamp(48px, 16vw, 62px);
     letter-spacing: -4px;
-  }
-
-  .pizza-stamp {
-    height: 180px;
-    justify-self: center;
-    width: 180px;
-  }
-
-  .pizza-stamp b {
-    font-size: 20px;
-  }
-
-  .pizza-stamp strong {
-    font-size: 18px;
   }
 
   .pizza-hero-actions {

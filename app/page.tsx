@@ -4047,17 +4047,9 @@ function AppShell({ session }: { session: Session | null }) {
             <BlockMark size="lg" />
             <div className="pizza-hero">
               <div>
-                <p className="eyebrow">CLASSIFICA UFFICIALMENTE NON UFFICIALE</p>
                 <h1>Pizzeria<br /><span>Ranking.</span></h1>
-                <p>Le pizzerie dei TheBoyz. Chi apre indica i partecipanti e la votazione si chiude quando hanno votato tutti.</p>
               </div>
               <div className="pizza-hero-actions">
-                <div className="pizza-stamp">
-                  <span>01</span>
-                  <b>{(pizzaEntries.find((entry) => !entry.pending)?.name ?? "—").toUpperCase()}</b>
-                  <strong>{pizzaEntries.find((entry) => !entry.pending)?.total ?? 0} / 100</strong>
-                  <small>CAMPIONE IN CARICA</small>
-                </div>
                 <div className="pizza-hero-buttons">
                   <button className="button button-primary" onClick={() => {
                     if (!pizzaSchemaReady || !pizzaSessionsReady) {
