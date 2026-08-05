@@ -2796,7 +2796,8 @@ button.ranking-row-blue:hover {
 }
 
 .player-trophies .badge {
-  --badge-accent: var(--lime);
+  --badge-accent: #d6a93b;
+  --badge-ink: var(--ink);
   align-items: center;
   background: transparent;
   border: 0;
@@ -2804,10 +2805,10 @@ button.ranking-row-blue:hover {
   box-shadow: none;
   color: var(--ink);
   display: flex;
-  flex: 0 0 156px;
+  flex: 0 0 140px;
   flex-direction: column;
   gap: 0;
-  min-height: 164px;
+  min-height: 176px;
   outline: none;
   overflow: visible;
   padding: 4px;
@@ -2820,105 +2821,38 @@ button.ranking-row-blue:hover {
   box-shadow: none;
 }
 
+.player-trophies .badge:hover .badge-emblem,
 .player-trophies .badge:focus-visible .badge-emblem {
-  transform: scale(1.03);
+  transform: translateY(-4px) scale(1.04);
 }
 
-.player-trophies .badge-gold { --badge-accent: var(--lime); }
-.player-trophies .badge-red { --badge-accent: var(--danger); }
-.player-trophies .badge-ice { --badge-accent: var(--blue); }
-.player-trophies .badge-violet { --badge-accent: var(--blue-dark); }
-.player-trophies .badge-bronze { --badge-accent: color-mix(in srgb, var(--danger) 58%, var(--ink)); }
-.player-trophies .badge-steel { --badge-accent: var(--muted); }
-
-@media (hover: hover) {
-  .player-trophies .badge:hover .badge-emblem {
-    transform: scale(1.03);
-  }
-}
+.player-trophies .badge-gold { --badge-accent: #d6a93b; }
+.player-trophies .badge-red { --badge-accent: #d74b51; }
+.player-trophies .badge-ice { --badge-accent: #43c7e4; }
+.player-trophies .badge-violet { --badge-accent: #986bd5; }
+.player-trophies .badge-bronze { --badge-accent: #b97743; }
+.player-trophies .badge-steel { --badge-accent: #8ea5bc; }
 
 .badge-emblem {
   align-items: center;
   display: flex;
-  height: 156px;
+  height: 168px;
   justify-content: center;
   position: relative;
   transition: transform 160ms ease;
-  width: 148px;
+  width: 128px;
 }
 
-.badge-emblem-shadow,
-.badge-emblem-frame,
-.badge-emblem-face {
-  clip-path: polygon(10% 0, 90% 0, 100% 9%, 100% 69%, 50% 100%, 0 69%, 0 9%);
-  display: block;
-  position: absolute;
+.badge-emblem::before,
+.badge-emblem::after {
+  content: none;
 }
 
-.badge-emblem-shadow {
-  background: var(--badge-accent);
-  inset: 5px 0 0 5px;
-  opacity: 0.55;
-}
-
-.badge-emblem-frame {
-  background: var(--ink);
-  inset: 0 5px 5px 0;
-}
-
-.badge-emblem-face {
-  background: var(--white);
-  inset: 4px;
-  overflow: hidden;
-}
-
-.badge-emblem-band {
-  background: var(--badge-accent);
-  border-bottom: 3px solid var(--ink);
-  display: block;
-  height: 21px;
-  left: 0;
-  position: absolute;
-  right: 0;
-  top: 0;
-}
-
-.badge-mark {
-  color: var(--ink);
-  height: 104px;
-  left: 14px;
-  position: absolute;
-  top: 28px;
-  width: 112px;
-}
-
-.badge-mark-number,
-.badge-mark-score {
-  fill: currentColor;
-  font-family: "Inter", Arial, Helvetica, sans-serif;
-  font-weight: 900;
-  stroke: none;
-}
-
-.badge-mark-number {
-  font-size: 12px;
-}
-
-.badge-mark-score {
-  font-size: 25px;
-  letter-spacing: -2px;
-}
-
-.badge-emblem-ball {
-  background: var(--badge-accent);
-  border: 3px solid var(--ink);
-  border-radius: 50%;
-  bottom: 10px;
-  display: block;
-  height: 12px;
-  left: calc(50% - 6px);
-  position: absolute;
-  width: 12px;
+.player-trophies .badge-art {
+  filter: drop-shadow(0 9px 9px rgba(11, 27, 44, 0.22));
+  height: 168px;
+  object-fit: contain;
+  width: 128px;
 }
 
 .player-trophies .badge-text {
@@ -2972,7 +2906,8 @@ button.ranking-row-blue:hover {
 }
 
 .badge.is-locked .badge-emblem {
-  opacity: 0.38;
+  filter: grayscale(0.78);
+  opacity: 0.42;
 }
 
 .badge.is-locked .badge-state {
@@ -5947,9 +5882,14 @@ button.pizza-ranking-row {
   }
 
   .player-trophies .badge {
-    flex-basis: 148px;
-    min-height: 164px;
+    flex-basis: 132px;
+    min-height: 166px;
     scroll-snap-align: start;
+  }
+
+  .badge-emblem {
+    transform: scale(0.9);
+    transform-origin: center;
   }
 
   .badge-tooltip {
