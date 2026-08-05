@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
+/* Le regole di stile di questo file sono spiegate in STYLE.md, alla radice
+   del progetto. Prima di aggiungere un valore nuovo, leggilo. */
 :root {
+  /* Colori. Non se ne aggiungono altri senza passare da qui. */
   --ink: #0b1b2c;
   --ink-soft: #183346;
   --paper: #f3f5f1;
@@ -12,6 +15,23 @@
   --muted: #72808c;
   --danger: #d94b49;
   --shadow: 0 18px 50px rgba(16, 29, 43, 0.09);
+
+  /* Angoli. Quattro gradini, non uno in più. */
+  --radius-sm: 4px;   /* chip, etichette, badge di serie */
+  --radius: 9px;      /* card, righe di classifica, pannelli */
+  --radius-md: 7px;   /* tasti e campi */
+  --radius-lg: 18px;  /* modali e barra mobile */
+  --radius-pill: 999px;
+
+  /* Spaziature. Scala a passo 4 con due eccezioni storiche (10 e 22). */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 10px;   /* passo base fra card ed elenchi */
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 22px;
+  --space-7: 28px;
+  --space-8: 40px;
 }
 
 * {
