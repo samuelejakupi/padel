@@ -5765,14 +5765,16 @@ button.pizza-ranking-row {
     border: 0;
     border-radius: var(--radius-lg);
     gap: 10px 12px;
+    /* Il totale sale in alto a destra, accanto al nome: è il dato che si
+       cerca per primo. Le quattro categorie restano sotto, a coppie. */
     grid-template-areas:
-      "position name name"
+      "position name total"
       "position location pizza"
-      "position dessert price"
-      "position fabio total";
+      "position dessert price";
     grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr);
     min-height: 0;
     min-width: 0;
+    overflow: visible;
     padding: 16px 14px;
   }
 
@@ -5782,33 +5784,44 @@ button.pizza-ranking-row {
   .pizza-ranking-row > .pizza-category-score:nth-child(4) { grid-area: pizza; }
   .pizza-ranking-row > .pizza-category-score:nth-child(5) { grid-area: dessert; }
   .pizza-ranking-row > .pizza-category-score:nth-child(6) { grid-area: price; }
-  .pizza-ranking-row > .pizza-category-score:nth-child(7) { grid-area: fabio; }
   .pizza-ranking-row > .pizza-total-score { grid-area: total; }
 
-.pizza-total-score {
-  background: var(--ink);
-  border-radius: var(--radius-sm);
-  color: var(--white);
-  justify-content: space-between;
-  min-height: 34px;
-  padding: 7px 8px;
-}
+  /* Il numero di posizione si allinea al nome, non al centro della card. */
+  .pizza-position {
+    align-self: start;
+    line-height: 1;
+    padding-top: 2px;
+  }
 
-.pizza-total-score::before {
-  color: rgba(255, 255, 255, 0.65);
-  content: "TOTALE";
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.5px;
-}
+  /* Totale nudo, senza riquadro: è già il numero più grande della card. */
+  .pizza-total-score {
+    align-items: baseline;
+    align-self: start;
+    justify-content: flex-end;
+  }
 
-.pizza-total-score b {
-  font-size: 16px;
-}
+  .pizza-total-score b {
+    font-size: 30px;
+    letter-spacing: -1.4px;
+    line-height: 1;
+  }
 
-.pizza-total-score small {
-  color: rgba(255, 255, 255, 0.65);
-}
+  .pizza-total-score small {
+    color: var(--muted);
+  }
+
+  /* Il badge di Fabio scavalca lo spigolo in basso a destra, come il trofeo
+     sull'avatar del primo in classifica. */
+  .pizza-name-cell > b .fabio-badge {
+    border-width: 3px;
+    bottom: -9px;
+    height: 34px;
+    margin: 0;
+    position: absolute;
+    right: -8px;
+    width: 34px;
+    z-index: 2;
+  }
 
   .pizza-category-score {
     background: rgba(11, 27, 44, 0.045);
@@ -5829,7 +5842,6 @@ button.pizza-ranking-row {
   .pizza-category-score:nth-child(4)::before { content: "PIZZA"; }
   .pizza-category-score:nth-child(5)::before { content: "DOLCE"; }
   .pizza-category-score:nth-child(6)::before { content: "PREZZO"; }
-  .pizza-category-score:nth-child(7)::before { content: "BONUS FABIO"; }
 
   .pizza-score-track {
     width: 100%;
