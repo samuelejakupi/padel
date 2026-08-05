@@ -2478,7 +2478,9 @@ function AppShell({ session }: { session: Session | null }) {
   // qualcosa di nascosto.
   const [allMatches, setAllMatches] = useState(false);
   const [allRanking, setAllRanking] = useState(false);
-  const HOME_ROWS = 5;
+  // Quattro righe di classifica: è anche il taglio che il CSS applica su
+  // mobile, e tenerli uguali evita che il tasto prometta righe già visibili.
+  const HOME_ROWS = 4;
   const HOME_MATCHES = 2;
   const [editingMatch, setEditingMatch] = useState<PadelMatch | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
@@ -3141,7 +3143,7 @@ function AppShell({ session }: { session: Session | null }) {
                         className="button button-card cta-see-all-top"
                         onClick={() => setAllMatches((open) => !open)}
                       >
-                        {allMatches ? "Vedi meno" : "Vedi tutto"}
+                        {allMatches ? "Vedi meno" : `Vedi tutto (${matches.length})`}
                       </button>
                     ) : null}
                   </div>
@@ -3179,7 +3181,7 @@ function AppShell({ session }: { session: Session | null }) {
                 )}
               </div>
 
-              <aside className="dashboard-side">
+              <aside className={`dashboard-side ${allRanking ? "is-open" : ""}`}>
                 <div className="side-head">
                   <div><h2>Classifica Elo</h2></div>
                   {/* Due icone al posto di due parole: una racchetta per il

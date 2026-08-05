@@ -5127,8 +5127,10 @@ button.pizza-ranking-row {
     margin-top: 4px;
   }
 
-  /* Nel ranking bastano i primi quattro: per gli altri c'e "Vedi tutto". */
-  .dashboard-side .ranking-list .ranking-row:nth-child(n + 5) {
+  /* Nel ranking bastano i primi quattro: per gli altri c'e "Vedi tutto".
+     Ad elenco aperto il taglio deve sparire, altrimenti il tasto non
+     mostrerebbe niente di nuovo. */
+  .dashboard-side:not(.is-open) .ranking-list .ranking-row:nth-child(n + 5) {
     display: none;
   }
 
@@ -5136,7 +5138,7 @@ button.pizza-ranking-row {
      separazione restava sulla quarta e andava a sbattere contro il tasto.
      Servono entrambi i casi: quarta riga, oppure ultima quando i giocatori
      in classifica sono meno di quattro. */
-  .dashboard-side .ranking-list .ranking-row:nth-child(4),
+  .dashboard-side:not(.is-open) .ranking-list .ranking-row:nth-child(4),
   .dashboard-side .ranking-list .ranking-row:last-child {
     border-bottom: 0;
   }
