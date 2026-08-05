@@ -586,18 +586,17 @@ function NavGlyph({ name }: { name: GlyphName }) {
           </g>
         </>
       ) : null}
-      {/* Due racchette incrociate: la coppia. Sono la stessa forma del
-          singolo, rimpicciolita e ruotata di venti gradi per lato. */}
+      {/* Due racchette incrociate: la coppia. Disegnate con la loro geometria
+          invece che scalando quella del singolo, che a questa dimensione
+          diventava illeggibile. I manici si incrociano, i piatti restano
+          separati: nessun tratto passa sopra a un altro dentro la stessa
+          racchetta. */}
       {name === "rackets" ? (
         <>
-          <g transform="rotate(-20 12 12) translate(-3.3 1.4) scale(0.72)" transform-origin="12 12">
-            <path d="M9.6 16.2C7 15 5.3 12.4 5.3 9.4 5.3 5.7 8.3 2.7 12 2.7s6.7 3 6.7 6.7c0 3-1.7 5.6-4.3 6.8Z" />
-            <path d="M10.4 16.2v3.1a1.6 1.6 0 0 0 3.2 0v-3.1" />
-          </g>
-          <g transform="rotate(20 12 12) translate(3.3 1.4) scale(0.72)" transform-origin="12 12">
-            <path d="M9.6 16.2C7 15 5.3 12.4 5.3 9.4 5.3 5.7 8.3 2.7 12 2.7s6.7 3 6.7 6.7c0 3-1.7 5.6-4.3 6.8Z" />
-            <path d="M10.4 16.2v3.1a1.6 1.6 0 0 0 3.2 0v-3.1" />
-          </g>
+          <ellipse cx="8.7" cy="8.9" rx="4.1" ry="5" transform="rotate(-20 8.7 8.9)" />
+          <path d="m10.3 13.7 2.1 6.1" />
+          <ellipse cx="15.3" cy="8.9" rx="4.1" ry="5" transform="rotate(20 15.3 8.9)" />
+          <path d="m13.7 13.7-2.1 6.1" />
         </>
       ) : null}
     </svg>
