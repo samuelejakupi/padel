@@ -6289,6 +6289,16 @@ button.pizza-ranking-row {
     padding: 14px;
   }
 
+  .ranking-table .ranking-row.ranking-row-gold {
+    background: var(--lime);
+    color: var(--ink);
+  }
+
+  .ranking-table .ranking-row.ranking-row-blue {
+    background: var(--blue);
+    color: var(--ink);
+  }
+
   .ranking-table .ranking-row > .table-stat,
   .ranking-table .ranking-row > .streak {
     display: none;
