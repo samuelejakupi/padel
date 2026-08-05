@@ -2171,6 +2171,74 @@ button.ranking-row-link:focus-visible {
   padding: 12px 28px;
 }
 
+/* Dentro il blocco scuro il contenitore sparisce: restano solo le card. */
+.ranking-table-bare {
+  background: transparent;
+  padding: 0;
+}
+
+/* Il colore della card è l'unica cosa che distingue le posizioni. Le righe
+   colorate diventano blocchi staccati, quindi perdono il filo di separazione
+   e prendono il loro respiro. */
+.ranking-row-gold,
+.ranking-row-blue {
+  border-bottom: 0;
+  border-radius: 9px;
+  margin-bottom: 10px;
+  padding: 0 20px;
+}
+
+.ranking-row-gold {
+  background: var(--lime);
+  color: var(--ink);
+}
+
+.ranking-row-blue {
+  background: var(--blue);
+  color: var(--ink);
+}
+
+/* Su fondo pieno il grigio delle etichette e dei numeri non si legge. */
+.ranking-row-gold .rank-number,
+.ranking-row-blue .rank-number,
+.ranking-row-gold .ranking-points b,
+.ranking-row-blue .ranking-points b,
+.ranking-row-gold .table-stat b,
+.ranking-row-blue .table-stat b {
+  color: var(--ink);
+}
+
+.ranking-row-gold .ranking-name span,
+.ranking-row-blue .ranking-name span,
+.ranking-row-gold .table-stat small,
+.ranking-row-blue .table-stat small,
+.ranking-row-gold .ranking-points small,
+.ranking-row-blue .ranking-points small {
+  color: rgba(11, 27, 44, 0.62);
+}
+
+.ranking-row-gold .streak,
+.ranking-row-blue .streak {
+  background: rgba(11, 27, 44, 0.12);
+  color: var(--ink);
+}
+
+.ranking-row-gold .avatar,
+.ranking-row-blue .avatar {
+  border-color: rgba(255, 255, 255, 0.85);
+}
+
+/* Senza questo l'hover generico delle righe schiarirebbe la card colorata. */
+button.ranking-row-gold:hover {
+  background: var(--lime);
+  filter: brightness(0.95);
+}
+
+button.ranking-row-blue:hover {
+  background: var(--blue);
+  filter: brightness(0.95);
+}
+
 .ranking-table .ranking-row {
   grid-template-columns: 40px 50px minmax(140px, 1fr) 76px 76px 84px 80px 70px;
   min-height: 78px;
@@ -2257,46 +2325,25 @@ button.ranking-row-link:focus-visible {
   color: var(--ink);
 }
 
-/* Dentro il blocco scuro il podio occupa tutta la larghezza disponibile
-   invece di restare centrato entro i 920px. */
-.section-hero .podium {
-  margin: 30px 0 0;
-  max-width: none;
+/* La vetta della classifica dentro il blocco scuro: nessun contenitore,
+   solo le card gialle staccate dal fondo. */
+.section-hero .ranking-table-bare {
+  margin-top: 22px;
 }
 
-.section-hero .podium-card {
-  background: rgba(255, 255, 255, 0.07);
-  color: var(--white);
+.section-hero .ranking-table-bare .ranking-row:last-child {
+  margin-bottom: 0;
 }
 
-.section-hero .podium-1 {
-  background: var(--lime);
-  color: var(--ink);
+/* Il salto fra il primo e il secondo deve valere quanto quello fra due card
+   qualsiasi: il blocco scuro perde il suo margine e il pannello sotto porta
+   i 10px al posto suo. */
+.ranking-page .section-hero {
+  margin-bottom: 0;
 }
 
-.section-hero .podium-1 .podium-rank {
-  color: var(--ink);
-}
-
-.section-hero .podium-2 .podium-rank,
-.section-hero .podium-3 .podium-rank {
-  color: var(--blue);
-}
-
-.section-hero .podium-card > b {
-  color: var(--blue);
-}
-
-.section-hero .podium-1 > b {
-  color: var(--ink);
-}
-
-.section-hero .podium-members span {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.section-hero .podium-1 .podium-members span {
-  color: rgba(11, 27, 44, 0.6);
+.ranking-page .ranking-table {
+  padding-top: 10px;
 }
 
 .player-detail-hero {

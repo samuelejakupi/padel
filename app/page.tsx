@@ -1310,16 +1310,28 @@ function SeasonPicker({
   );
 }
 
-function TeamRankingList({ teams, skipPodium = false }: { teams: PadelTeam[]; skipPodium?: boolean }) {
+function TeamRankingList({
+  teams,
+  minRank,
+  maxRank,
+  bare = false,
+}: {
+  teams: PadelTeam[];
+  minRank?: number;
+  maxRank?: number;
+  bare?: boolean;
+}) {
   const ranks = ranksByRating(teams);
   return (
-    <div className="ranking-table ranking-table-team">
+    <div className={`ranking-table ranking-table-team${bare ? " ranking-table-bare" : ""}`}>
       {teams.map((team, index) => {
-        if (skipPodium && ranks[index] <= 3) return null;
+        const rank = ranks[index];
+        if (minRank !== undefined && rank < minRank) return null;
+        if (maxRank !== undefined && rank > maxRank) return null;
         const winRate = team.matches_played ? Math.round((team.wins / team.matches_played) * 100) : 0;
         return (
-          <div className="ranking-row" key={team.id}>
-            <span className={`rank-number rank-${ranks[index]}`}>{ranks[index]}</span>
+          <div className={`ranking-row ${rankTone(rank)}`} key={team.id}>
+            <span className={`rank-number rank-${rank}`}>{rank}</span>
             <TeamAvatars team={team} />
             <div className="ranking-name">
               <b>{teamLabel(team)}</b>
@@ -1346,27 +1358,42 @@ function TeamRankingList({ teams, skipPodium = false }: { teams: PadelTeam[]; sk
   );
 }
 
+// Il colore della card dice la posizione, e basta quello: giallo il primo
+// (o i primi, se sono a pari punti), azzurro secondo e terzo, chiaro il
+// resto. Tutte le righe portano le stesse informazioni.
+function rankTone(rank: number) {
+  if (rank === 1) return "ranking-row-gold";
+  if (rank === 2 || rank === 3) return "ranking-row-blue";
+  return "";
+}
+
 function RankingList({
   profiles,
   expanded = false,
   onSelect,
-  skipPodium = false,
+  minRank,
+  maxRank,
+  bare = false,
 }: {
   profiles: Profile[];
   expanded?: boolean;
   onSelect?: (profile: Profile) => void;
-  // Chi è già sul podio non va ripetuto nell'elenco sotto: la lista parte
-  // dal primo che sta fuori dai primi tre gradini.
-  skipPodium?: boolean;
+  // La classifica è divisa in due tronconi: i primi stanno nel blocco scuro,
+  // il resto sotto. Le posizioni si calcolano però sempre sull'elenco intero.
+  minRank?: number;
+  maxRank?: number;
+  bare?: boolean;
 }) {
   const sorted = sortPadelProfiles(profiles);
   const ranks = padelRanks(sorted);
   return (
-    <div className={expanded ? "ranking-table" : "ranking-list"}>
+    <div className={`${expanded ? "ranking-table" : "ranking-list"}${bare ? " ranking-table-bare" : ""}`}>
       {sorted.map((profile, index) => {
         const isRanked = profile.matches_played > 0;
         const rank = ranks[index];
-        if (skipPodium && isRanked && rank <= 3) return null;
+        const position = isRanked ? rank : Number.POSITIVE_INFINITY;
+        if (minRank !== undefined && position < minRank) return null;
+        if (maxRank !== undefined && position > maxRank) return null;
         const winRate = profile.matches_played ? Math.round((profile.wins / profile.matches_played) * 100) : 0;
         const content = (
           <>
@@ -1398,10 +1425,11 @@ function RankingList({
             </span>
           </>
         );
+        const tone = isRanked ? rankTone(rank) : "";
         return onSelect ? (
           <button
             type="button"
-            className={`ranking-row ranking-row-link ${isRanked ? "" : "unranked"}`}
+            className={`ranking-row ranking-row-link ${tone} ${isRanked ? "" : "unranked"}`}
             key={profile.id}
             onClick={() => onSelect(profile)}
             aria-label={`Apri la scheda di ${profile.display_name}`}
@@ -1409,7 +1437,7 @@ function RankingList({
             {content}
           </button>
         ) : (
-          <div className={`ranking-row ${isRanked ? "" : "unranked"}`} key={profile.id}>
+          <div className={`ranking-row ${tone} ${isRanked ? "" : "unranked"}`} key={profile.id}>
             {content}
           </div>
         );
@@ -2267,25 +2295,6 @@ function AppShell({ session }: { session: Session | null }) {
       .filter(Boolean) as Profile[];
   }, [season, currentYear, seasonRows, profiles]);
 
-  // Classifica della stagione scelta: la pagina del ranking usa queste, non
-  // quelle correnti, altrimenti il selettore di stagione non cambierebbe
-  // nulla di quello che si vede.
-  const seasonSorted = useMemo(() => sortPadelProfiles(seasonProfiles), [seasonProfiles]);
-  const seasonRanked = useMemo(
-    () => seasonSorted.filter((profile) => profile.matches_played > 0),
-    [seasonSorted],
-  );
-  const seasonRanks = useMemo(() => padelRanks(seasonRanked), [seasonRanked]);
-  // Il podio non è "i primi tre nomi" ma "chi occupa i primi tre gradini":
-  // con dei parimerito le persone sul podio possono essere più di tre.
-  const podiumProfiles = useMemo(
-    () =>
-      seasonRanked
-        .map((profile, index) => ({ profile, rank: seasonRanks[index] }))
-        .filter((entry) => entry.rank > 0 && entry.rank <= 3),
-    [seasonRanked, seasonRanks],
-  );
-
   const teams = useMemo(
     () => buildPadelTeams(matches, profiles, teamRecords),
     [matches, profiles, teamRecords],
@@ -2293,14 +2302,6 @@ function AppShell({ session }: { session: Session | null }) {
   const playerTeams = useMemo(
     () => teams.filter((team) => team.players.some((profile) => profile.id === selectedPlayerId)),
     [teams, selectedPlayerId],
-  );
-  const teamRanks = useMemo(() => ranksByRating(teams), [teams]);
-  const podiumTeams = useMemo(
-    () =>
-      teams
-        .map((team, index) => ({ team, rank: teamRanks[index] }))
-        .filter((entry) => entry.rank <= 3),
-    [teams, teamRanks],
   );
   const pizzaEntries = useMemo(() => buildPizzaRanking(pizzaRestaurants), [pizzaRestaurants]);
   const currentUser = profiles.find((profile) => profile.id === session?.user.id);
@@ -2807,7 +2808,7 @@ function AppShell({ session }: { session: Session | null }) {
         ) : null}
 
         {!loading && view === "padel" && padelView === "ranking" ? (
-          <section className="page-section">
+          <section className="page-section ranking-page">
             <article className="section-hero">
               <BlockMark size="lg" />
               <div className="section-hero-head">
@@ -2837,58 +2838,18 @@ function AppShell({ session }: { session: Session | null }) {
                   </button>
                 </div>
               </div>
+              {/* Nel blocco scuro resta solo la vetta: il primo, o i primi
+                  se sono a pari punti. */}
               {rankingMode === "single" ? (
-                <div className={`podium ${podiumProfiles.length === 3 ? "podium-classic" : ""}`}>
-                  {podiumProfiles.map(({ profile, rank }) => (
-                    <article key={profile.id} className={`podium-card podium-${rank}`}>
-                      <div className="podium-avatars">
-                        <Avatar profile={profile} size="lg" rank={rank} />
-                      </div>
-                      <h3>
-                        <span className="podium-rank">#{rank}</span>
-                        {profile.display_name}
-                      </h3>
-                      <b>{profile.rating} pt</b>
-                    </article>
-                  ))}
-                </div>
+                <RankingList profiles={seasonProfiles} expanded onSelect={openPlayer} maxRank={1} bare />
               ) : teams.length ? (
-                <div className={`podium ${podiumTeams.length === 3 ? "podium-classic" : ""}`}>
-                  {podiumTeams.map(({ team, rank: teamRank }) => (
-                    <article key={team.id} className={`podium-card podium-${teamRank} podium-shared`}>
-                      {team.imageUrl ? (
-                        <TeamAvatars team={team} size="lg" />
-                      ) : (
-                        <div className="podium-avatars">
-                          {team.players.map((profile) => (
-                            <Avatar key={profile.id} profile={profile} size="lg" rank={teamRank} />
-                          ))}
-                        </div>
-                      )}
-                      <h3>
-                        <span className="podium-rank">#{teamRank}</span>
-                        {teamLabel(team)}
-                      </h3>
-                      <b>{team.rating} pt</b>
-                      {team.name ? (
-                        <div className="podium-members">
-                          <div className="team-avatars">
-                            {team.players.map((profile) => (
-                              <Avatar key={profile.id} profile={profile} size="sm" />
-                            ))}
-                          </div>
-                          <span>{team.players.map((profile) => profile.display_name).join(" · ")}</span>
-                        </div>
-                      ) : null}
-                    </article>
-                  ))}
-                </div>
+                <TeamRankingList teams={teams} maxRank={1} bare />
               ) : null}
             </article>
             {rankingMode === "single" ? (
-              <RankingList profiles={seasonProfiles} expanded onSelect={openPlayer} skipPodium />
+              <RankingList profiles={seasonProfiles} expanded onSelect={openPlayer} minRank={2} />
             ) : teams.length ? (
-              <TeamRankingList teams={teams} skipPodium />
+              <TeamRankingList teams={teams} minRank={2} />
             ) : (
               <div className="empty-board">
                 <span>00</span>
