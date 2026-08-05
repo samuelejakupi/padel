@@ -2433,6 +2433,24 @@ function PizzaVoteModal({
   );
 }
 
+function PadelSectionNav({
+  active,
+  onSelect,
+}: {
+  active: "matches" | "ranking";
+  onSelect: (view: "matches" | "ranking") => void;
+}) {
+  return (
+    <div className="padel-section-nav">
+      <div><p className="eyebrow dark">PADEL</p><h2>Partite e classifiche</h2></div>
+      <div className="ranking-switch" role="group" aria-label="Sezione Padel">
+        <button className={active === "matches" ? "active" : ""} onClick={() => onSelect("matches")}>Partite</button>
+        <button className={active === "ranking" ? "active" : ""} onClick={() => onSelect("ranking")}>Ranking</button>
+      </div>
+    </div>
+  );
+}
+
 function AppShell({ session }: { session: Session | null }) {
   // Il Court è la home: si entra direttamente lì.
   const [view, setView] = useState<View>("padel");
@@ -2736,8 +2754,7 @@ function AppShell({ session }: { session: Session | null }) {
 
   const navItems = useMemo(() => ([
     { key: "overview", glyph: "home", label: "Home", active: view === "padel" && padelView === "overview", select: () => { setView("padel"); setPadelView("overview"); } },
-    { key: "matches", glyph: "racket", label: "Match", active: view === "padel" && padelView === "matches", select: () => { setView("padel"); setPadelView("matches"); } },
-    { key: "ranking", glyph: "ranking", label: "Rank", active: view === "padel" && padelView === "ranking", select: () => { setView("padel"); setPadelView("ranking"); } },
+    { key: "padel", glyph: "racket", label: "Padel", active: view === "padel" && (padelView === "matches" || padelView === "ranking"), select: () => { setView("padel"); setPadelView("matches"); } },
     { key: "pizza", glyph: "pizza", label: "Pizza", active: view === "pizza", select: () => setView("pizza") },
     { key: "profile", glyph: "", label: "Profilo", active: isOwnCard, select: openOwnCard },
   ]), [view, padelView, isOwnCard, openOwnCard]);
@@ -3046,16 +3063,10 @@ function AppShell({ session }: { session: Session | null }) {
             Home
           </button>
           <button
-            className={view === "padel" && padelView === "matches" ? "active" : ""}
+            className={view === "padel" && (padelView === "matches" || padelView === "ranking") ? "active" : ""}
             onClick={() => { setView("padel"); setPadelView("matches"); }}
           >
-            Matches
-          </button>
-          <button
-            className={view === "padel" && padelView === "ranking" ? "active" : ""}
-            onClick={() => { setView("padel"); setPadelView("ranking"); }}
-          >
-            Ranking
+            Padel
           </button>
           <button
             className={view === "pizza" ? "active" : ""}
@@ -3178,6 +3189,7 @@ function AppShell({ session }: { session: Session | null }) {
 
         {!loading && view === "padel" && padelView === "ranking" ? (
           <section className="page-section ranking-page">
+            <PadelSectionNav active="ranking" onSelect={setPadelView} />
             <article className="section-hero">
               <BlockMark size="lg" />
               <div className="section-hero-head">
@@ -3447,6 +3459,7 @@ function AppShell({ session }: { session: Session | null }) {
 
         {!loading && view === "padel" && padelView === "matches" ? (
           <section className="page-section">
+            <PadelSectionNav active="matches" onSelect={setPadelView} />
             <article className="section-hero">
               <BlockMark size="lg" />
               <div className="section-hero-head">

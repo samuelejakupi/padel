@@ -2050,6 +2050,24 @@ button.podium-person {
   color: var(--white);
 }
 
+.padel-section-nav {
+  align-items: center;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: flex;
+  gap: var(--space-5);
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+  padding: var(--space-5) var(--space-6);
+}
+
+.padel-section-nav h2 {
+  font-size: 22px;
+  letter-spacing: -0.7px;
+  margin: 3px 0 0;
+}
+
 .team-image {
   border-radius: 50%;
   display: block;
@@ -4789,7 +4807,7 @@ button.pizza-ranking-row {
       0 2px 6px rgba(11, 27, 44, 0.06),
       inset 0 0.5px 0 rgba(255, 255, 255, 0.7);
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     left: 11px;
     overflow: hidden;
     padding: var(--nav-inset);
@@ -5101,6 +5119,12 @@ button.pizza-ranking-row {
   .ranking-switch button {
     flex: 1;
     padding: 0;
+  }
+
+  .padel-section-nav {
+    align-items: stretch;
+    flex-direction: column;
+    padding: var(--space-5);
   }
 
   .ranking-table-team .ranking-row {

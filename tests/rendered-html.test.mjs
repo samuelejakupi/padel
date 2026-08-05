@@ -57,7 +57,9 @@ test("include configurazione Supabase e pubblicazione Pages", async () => {
   assert.match(page, /buildClassicPizzaRanking/);
   assert.match(page, /"samu", "dani", "fabio"/);
   assert.match(page, /Contemporanea/);
-  assert.match(page, /Classica/);
+  assert.match(page, /Nostalgica/);
+  assert.match(page, /key: "padel", glyph: "racket", label: "Padel"/);
+  assert.match(page, /function PadelSectionNav/);
   assert.match(pizzaMigration, /pizza_session_participants/);
   assert.match(pizzaMigration, /save_pizza_session_vote/);
   assert.match(pizzaMigration, /completed_at is null/);
