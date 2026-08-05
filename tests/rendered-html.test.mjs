@@ -53,6 +53,11 @@ test("include configurazione Supabase e pubblicazione Pages", async () => {
   assert.match(page, /avatars/);
   assert.match(page, /Portego[\s\S]*De Mà/i);
   assert.match(page, /Punti Fabio/);
+  assert.match(page, /buildContemporaryPizzaRanking/);
+  assert.match(page, /buildClassicPizzaRanking/);
+  assert.match(page, /"samu", "dani", "fabio"/);
+  assert.match(page, /Contemporanea/);
+  assert.match(page, /Classica/);
   assert.match(pizzaMigration, /pizza_session_participants/);
   assert.match(pizzaMigration, /save_pizza_session_vote/);
   assert.match(pizzaMigration, /completed_at is null/);

@@ -14,6 +14,7 @@ import {
 
 type View = "padel" | "pizza";
 type PadelView = "overview" | "ranking" | "matches" | "player";
+type PizzaRankingMode = "contemporary" | "classic";
 type PizzaRankingEntry = {
   name: string;
   place?: string;
@@ -150,23 +151,32 @@ const pizzaCriteria = [
 // un metro solo: si divide per il vecchio massimo e si moltiplica per il peso.
 const HISTORIC_MAX = { location: 21, pizza: 30, dessert: 12, price: 30 } as const;
 
-function buildPizzaRanking(
+function averagePizzaVotes(votes: PizzaSessionVote[]) {
+  return votes.length
+    ? {
+        location: votes.reduce((sum, vote) => sum + vote.location, 0) / votes.length,
+        pizza: votes.reduce((sum, vote) => sum + vote.pizza, 0) / votes.length,
+        dessert: votes.reduce((sum, vote) => sum + vote.dessert, 0) / votes.length,
+        price: votes.reduce((sum, vote) => sum + vote.price, 0) / votes.length,
+      }
+    : { location: 0, pizza: 0, dessert: 0, price: 0 };
+}
+
+function sortPizzaEntries(entries: PizzaDisplayEntry[]) {
+  return entries.sort((a, b) => {
+    const aReady = !a.pending;
+    const bReady = !b.pending;
+    if (aReady !== bReady) return aReady ? -1 : 1;
+    return b.total - a.total || a.name.localeCompare(b.name, "it");
+  });
+}
+
+function buildContemporaryPizzaRanking(
   restaurants: PizzaRestaurantRecord[],
   sessions: PizzaSession[],
   sessionVotes: PizzaSessionVote[],
   profiles: Profile[],
 ): PizzaDisplayEntry[] {
-  const historical: PizzaDisplayEntry[] = pizzaRanking.map((entry) => ({
-    ...entry,
-    location: (entry.location / HISTORIC_MAX.location) * 10,
-    pizza: (entry.pizza / HISTORIC_MAX.pizza) * 10,
-    dessert: (entry.dessert / HISTORIC_MAX.dessert) * 10,
-    price: (entry.price / HISTORIC_MAX.price) * 10,
-    total: entry.total,
-    isNew: false,
-    votesCount: 3,
-  }));
-
   const interactive = restaurants.map((restaurant) => {
     // Di una pizzeria conta l'ultima votazione. Finché non hanno votato tutti,
     // il database non restituisce i voti altrui e il risultato resta sospeso.
@@ -177,14 +187,7 @@ function buildPizzaRanking(
     const votes = session ? sessionVotes.filter((vote) => vote.session_id === session.id) : [];
     const pending = !session || sessionIsOpen(session) || votes.length === 0;
 
-    const average = votes.length
-      ? {
-          location: votes.reduce((sum, vote) => sum + vote.location, 0) / votes.length,
-          pizza: votes.reduce((sum, vote) => sum + vote.pizza, 0) / votes.length,
-          dessert: votes.reduce((sum, vote) => sum + vote.dessert, 0) / votes.length,
-          price: votes.reduce((sum, vote) => sum + vote.price, 0) / votes.length,
-        }
-      : { location: 0, pizza: 0, dessert: 0, price: 0 };
+    const average = averagePizzaVotes(votes);
 
     return {
       id: restaurant.id,
@@ -199,12 +202,59 @@ function buildPizzaRanking(
     } as PizzaDisplayEntry;
   });
 
-  return [...historical, ...interactive].sort((a, b) => {
-    const aReady = !a.pending;
-    const bReady = !b.pending;
-    if (aReady !== bReady) return aReady ? -1 : 1;
-    return b.total - a.total || a.name.localeCompare(b.name, "it");
+  return sortPizzaEntries(interactive);
+}
+
+function buildClassicPizzaRanking(
+  restaurants: PizzaRestaurantRecord[],
+  sessions: PizzaSession[],
+  sessionVotes: PizzaSessionVote[],
+  profiles: Profile[],
+): PizzaDisplayEntry[] {
+  const classicNames = new Set(["samu", "dani", "fabio"]);
+  const classicIds = new Set(
+    profiles
+      .filter((profile) => classicNames.has(profile.display_name.toLowerCase()))
+      .map((profile) => profile.id),
+  );
+  const historical: PizzaDisplayEntry[] = pizzaRanking.map((entry) => ({
+    ...entry,
+    location: (entry.location / HISTORIC_MAX.location) * 10,
+    pizza: (entry.pizza / HISTORIC_MAX.pizza) * 10,
+    dessert: (entry.dessert / HISTORIC_MAX.dessert) * 10,
+    price: (entry.price / HISTORIC_MAX.price) * 10,
+    total: entry.total,
+    isNew: false,
+    votesCount: 3,
+  }));
+  if (classicIds.size !== 3) return sortPizzaEntries(historical);
+
+  const interactive = restaurants.flatMap((restaurant) => {
+    const session = sessions
+      .filter((item) => item.restaurant_id === restaurant.id)
+      .filter((item) => [...classicIds].every((id) => item.participants.some((participant) => participant.voter_id === id)))
+      .sort((a, b) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())[0];
+    if (!session) return [];
+    const votes = sessionVotes.filter(
+      (vote) => vote.session_id === session.id && classicIds.has(vote.voter_id),
+    );
+    const pending = sessionIsOpen(session) || votes.length !== 3;
+    return [{
+      id: restaurant.id,
+      name: restaurant.name,
+      place: restaurant.place ?? undefined,
+      ...averagePizzaVotes(votes),
+      fabio: votes.find((vote) => (
+        profiles.find((profile) => profile.id === vote.voter_id)?.display_name.toLowerCase() === "fabio"
+      ))?.bonus_fabio ?? 0,
+      total: pending ? 0 : finalPizzaScore(votes, session, profiles),
+      isNew: true,
+      pending,
+      votesCount: votes.length,
+    } as PizzaDisplayEntry];
   });
+
+  return sortPizzaEntries([...historical, ...interactive]);
 }
 
 function initials(name: string) {
@@ -2122,7 +2172,7 @@ function PizzaSessionCreateModal({
               })}
             </div>
           </fieldset>
-          <p className="field-hint">
+          <p className="field-hint pizza-participant-note">
             La votazione si chiude automaticamente quando tutti i partecipanti hanno votato.
           </p>
           {error ? <p className="form-message error">{error}</p> : null}
@@ -2346,6 +2396,7 @@ function AppShell({ session }: { session: Session | null }) {
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const avatarFileRef = useRef<HTMLInputElement>(null);
   const [rankingMode, setRankingMode] = useState<"single" | "team">("single");
+  const [pizzaRankingMode, setPizzaRankingMode] = useState<PizzaRankingMode>("contemporary");
   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(Boolean(supabase));
@@ -2527,10 +2578,15 @@ function AppShell({ session }: { session: Session | null }) {
     () => teams.filter((team) => team.players.some((profile) => profile.id === selectedPlayerId)),
     [teams, selectedPlayerId],
   );
-  const pizzaEntries = useMemo(
-    () => buildPizzaRanking(pizzaRestaurants, pizzaSessions, pizzaSessionVotes, profiles),
+  const contemporaryPizzaEntries = useMemo(
+    () => buildContemporaryPizzaRanking(pizzaRestaurants, pizzaSessions, pizzaSessionVotes, profiles),
     [pizzaRestaurants, pizzaSessions, pizzaSessionVotes, profiles],
   );
+  const classicPizzaEntries = useMemo(
+    () => buildClassicPizzaRanking(pizzaRestaurants, pizzaSessions, pizzaSessionVotes, profiles),
+    [pizzaRestaurants, pizzaSessions, pizzaSessionVotes, profiles],
+  );
+  const pizzaEntries = pizzaRankingMode === "classic" ? classicPizzaEntries : contemporaryPizzaEntries;
   const currentUser = profiles.find((profile) => profile.id === session?.user.id);
   // Votazioni ancora aperte: alimentano sia la card in cima alla pagina pizza
   // sia il pallino sull'icona della barra.
@@ -3384,7 +3440,28 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
             ) : null}
 
-            <div className="pizza-podium" aria-label="Podio pizzerie">
+            <div className="pizza-ranking-toolbar">
+              <div>
+                <p className="eyebrow">CLASSIFICA</p>
+                <h2>{pizzaRankingMode === "classic" ? "Il trio originale" : "Tutto il tavolo"}</h2>
+              </div>
+              <div className="ranking-switch pizza-ranking-switch" role="group" aria-label="Classifica pizzerie">
+                <button
+                  className={pizzaRankingMode === "contemporary" ? "active" : ""}
+                  onClick={() => setPizzaRankingMode("contemporary")}
+                >
+                  Contemporanea
+                </button>
+                <button
+                  className={pizzaRankingMode === "classic" ? "active" : ""}
+                  onClick={() => setPizzaRankingMode("classic")}
+                >
+                  Classica
+                </button>
+              </div>
+            </div>
+
+            <div className="pizza-podium" aria-label={`Podio pizzerie · classifica ${pizzaRankingMode === "classic" ? "classica" : "contemporanea"}`}>
               {pizzaEntries.filter((restaurant) => !restaurant.pending).slice(0, 3).map((restaurant, index) => (
                 <article className={`pizza-podium-card pizza-place-${index + 1}`} key={restaurant.name}>
                   <span className="pizza-medal">{index + 1}</span>
@@ -3460,7 +3537,10 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
             </div>
             <p className="pizza-source-note">
-              Il punteggio finale viene arrotondato all&apos;intero più vicino: da 0,5 si arrotonda per eccesso.
+              {pizzaRankingMode === "classic"
+                ? "Classifica calcolata soltanto con i voti di Samu, Dani e Fabio nelle sessioni in cui erano presenti tutti e tre."
+                : "Classifica calcolata con tutti i partecipanti presenti alla votazione."}
+              {" "}Il punteggio finale viene arrotondato all&apos;intero più vicino: da 0,5 si arrotonda per eccesso.
             </p>
           </section></>
         ) : null}

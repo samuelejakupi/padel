@@ -3504,6 +3504,8 @@ button.ranking-row-blue:hover {
   display: grid;
   gap: var(--space-2);
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-height: 280px;
+  overflow-y: auto;
 }
 
 .pizza-participant-picker label {
@@ -3532,6 +3534,11 @@ button.ranking-row-blue:hover {
 .pizza-participant-picker span {
   font-size: 12px;
   font-weight: 900;
+}
+
+.pizza-participant-note {
+  margin: var(--space-4) 0 0;
+  position: static;
 }
 
 /* Card delle votazioni aperte, in cima alla pagina. */
@@ -3583,6 +3590,34 @@ button.ranking-row-blue:hover {
   font-weight: 900;
   letter-spacing: -1px;
   margin-top: var(--space-1);
+}
+
+.pizza-ranking-toolbar {
+  align-items: flex-end;
+  display: flex;
+  gap: var(--space-5);
+  justify-content: space-between;
+  margin: var(--space-7) 0 var(--space-5);
+}
+
+.pizza-ranking-toolbar h2 {
+  color: var(--white);
+  font-size: 25px;
+  letter-spacing: -0.8px;
+  margin: 3px 0 0;
+}
+
+.pizza-ranking-switch {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.pizza-ranking-switch button {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.pizza-ranking-switch button.active {
+  background: var(--lime);
+  color: var(--ink);
 }
 
 /* Campi di voto: cursore da 1 a 10 con il peso scritto accanto. */
@@ -5314,6 +5349,21 @@ button.pizza-ranking-row {
 
   .pizza-vote-fields {
     grid-template-columns: 1fr;
+  }
+
+  .pizza-ranking-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pizza-ranking-switch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .pizza-ranking-switch button {
+    padding-inline: var(--space-3);
   }
 
   .pizza-podium {
