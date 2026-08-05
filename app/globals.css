@@ -161,6 +161,79 @@ button {
   color: var(--white);
 }
 
+/* Riga di un torneo: trofeo e nome a sinistra, partite giocate e
+   moltiplicatore a destra. Vale su tutte le larghezze; il breakpoint mobile
+   stringe solo le misure. */
+.tournament-row-main {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.tournament-row-badge {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.tournament-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tournament-row-text b {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tournament-row-text span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tournament-row-meta {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+}
+
+.tournament-row-meta b {
+  font-size: 15px;
+}
+
+.tournament-row-meta small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+}
+
+/* Gemello giallo del tasto principale: stessa forma e stesso peso, colore
+   diverso perche i tornei sono un'altra cosa dalle partite. */
+.button-lime {
+  background: var(--lime);
+  box-shadow: 0 8px 20px rgba(239, 255, 0, 0.3);
+  color: var(--ink);
+}
+
+.button-lime:hover {
+  background: #e2f000;
+}
+
 /* Azione secondaria: leggibile ma senza gridare come il pieno scuro. */
 .button-ghost {
   background: var(--veil-2);
@@ -5331,10 +5404,11 @@ button.pizza-ranking-row {
      La curva di uscita e morbida in coda, cosi l'arrivo sembra frenato
      invece che tagliato di netto. */
   .mobile-nav-pill {
-    /* Il vetro vero sta qui: la pastiglia e traslucida e sfoca per conto
-       suo quello che ha sotto. Prima era bianca quasi piena, quindi non
-       rifrangeva niente e sembrava solo una macchia chiara. */
-    backdrop-filter: blur(3px) saturate(240%) brightness(126%) contrast(108%);
+    /* Niente sfocatura qui. Vale lo stesso motivo scritto per la barra: su
+       iOS un elemento con backdrop-filter dentro un contenitore fisso viene
+       ricomposto in ritardo, e mentre la pastiglia scorre o la pagina si
+       muove sembra che tutta la barra, icone comprese, scivoli e si
+       riassesti. La luce del vetro la portano gia i gradienti qui sotto. */
     /* Due sfondi sovrapposti: il primo si ferma dentro il bordo ed e il
        vetro, il secondo occupa anche il bordo ed e il riflesso che ne
        disegna lo spessore. Il bordo e trasparente e fa da finestra sul
@@ -5359,8 +5433,8 @@ button.pizza-ranking-row {
       ) padding-box,
       linear-gradient(
         180deg,
-        rgba(255, 255, 255, 0.26) 0%,
-        rgba(255, 255, 255, 0.1) 100%
+        rgba(255, 255, 255, 0.5) 0%,
+        rgba(255, 255, 255, 0.34) 100%
       ) padding-box,
       linear-gradient(
         145deg,
@@ -5387,7 +5461,6 @@ button.pizza-ranking-row {
     top: var(--nav-inset);
     transform-origin: center;
     transition: opacity 200ms ease;
-    -webkit-backdrop-filter: blur(3px) saturate(240%) brightness(126%) contrast(108%);
     width: 0;
     z-index: 0;
   }
@@ -5432,9 +5505,23 @@ button.pizza-ranking-row {
     height: var(--nav-item-height);
   }
 
+  /* Al tocco si muove solo la pastiglia: icone ed etichette cambiano
+     soltanto opacita, senza spostamenti ne ingrandimenti, e senza il
+     lampo grigio che iOS disegna sopra ai pulsanti. */
   .mobile-nav-icon,
   .mobile-nav-label {
+    transform: none;
     transition: opacity 200ms ease;
+    will-change: opacity;
+  }
+
+  .mobile-nav button {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-nav button:active,
+  .mobile-nav button:hover {
+    transform: none;
   }
 
   .mobile-nav-label {
@@ -5755,8 +5842,75 @@ button.pizza-ranking-row {
     display: block;
   }
 
+  /* Ordine della home su mobile. dashboard-main sparisce come contenitore
+     (display: contents) cosi i suoi figli diventano fratelli della
+     classifica e si possono impaginare tutti insieme: profilo, classifica,
+     tasto nuova partita, ultime partite, tasto nuovo torneo, ultimi tornei.
+     Su desktop resta la disposizione a due colonne. */
+  .dashboard-grid {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dashboard-main {
+    display: contents;
+  }
+
+  .hero-stat {
+    order: 1;
+  }
+
   .dashboard-side {
-    order: initial;
+    order: 2;
+  }
+
+  .section-head {
+    order: 3;
+  }
+
+  .match-panel {
+    order: 4;
+  }
+
+  .compact-empty {
+    order: 4;
+  }
+
+  .tournament-empty {
+    order: 6;
+  }
+
+  .section-head-tournaments {
+    order: 5;
+  }
+
+  .tournament-row-main {
+    gap: 10px;
+  }
+
+  .tournament-row-badge {
+    height: 40px;
+    width: 40px;
+  }
+
+  .tournament-row-text b {
+    font-size: 13px;
+  }
+
+  .tournament-row-text span {
+    font-size: 10px;
+  }
+
+  .tournament-row-meta b {
+    font-size: 14px;
+  }
+
+  .tournament-row-meta small {
+    font-size: 9px;
+  }
+
+  .tournament-panel {
+    order: 6;
   }
 
   /* Card partita su mobile: intestazione (data + campo) e sotto una sola

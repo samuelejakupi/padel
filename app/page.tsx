@@ -2527,6 +2527,64 @@ function TournamentTrophyBadge({ kind, compact = false }: { kind: TournamentTrop
   );
 }
 
+// Riga di un torneo nel riquadro della home: stesso impianto della riga
+// partita, con le sole informazioni che servono a colpo d'occhio.
+function TournamentRow({
+  tournament,
+  matches,
+  onOpen,
+}: {
+  tournament: Tournament;
+  matches: PadelMatch[];
+  onOpen: () => void;
+}) {
+  const played = tournament.fixtures.filter((fixture) => fixture.match_id).length;
+  const total = tournament.fixtures.length;
+  const done = Boolean(total && played === total);
+  const standings = buildTournamentStandings(tournament, matches);
+  // A torneo finito conta chi ha vinto; mentre e in corso, chi guida.
+  const leader = standings[0]?.played ? standings[0].team.name : null;
+
+  return (
+    <article
+      className="match-card match-card-link tournament-row"
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Apri il torneo ${tournament.name}`}
+    >
+      <div className="match-head">
+        <div className="match-date tournament-row-date">
+          <b>{new Intl.DateTimeFormat("it-IT", { day: "2-digit" }).format(new Date(tournament.created_at))}</b>
+          <span>{new Intl.DateTimeFormat("it-IT", { month: "short" }).format(new Date(tournament.created_at)).replace(".", "")}</span>
+        </div>
+        <p className="match-court">{done ? "COMPLETATO" : "IN CORSO"}</p>
+      </div>
+      <div className="match-main tournament-row-main">
+        <div className="tournament-row-badge">
+          <TournamentTrophyBadge kind={tournament.trophy_badge} compact />
+        </div>
+        <div className="tournament-row-text">
+          <b>{tournament.name}</b>
+          <span>
+            {leader ? `${done ? "Vince" : "Guida"} ${leader}` : "Nessuna partita giocata"}
+          </span>
+        </div>
+      </div>
+      <div className="match-video tournament-row-meta">
+        <b>{played}/{total}</b>
+        <small>×{tournament.elo_multiplier}</small>
+      </div>
+    </article>
+  );
+}
+
 function buildTournamentStandings(tournament: Tournament, matches: PadelMatch[]) {
   const matchMap = new Map(matches.map((match) => [match.id, match]));
   const rows = new Map<string, TournamentStanding>(tournament.teams.map((team) => [team.id, {
@@ -2864,6 +2922,7 @@ function AppShell({ session }: { session: Session | null }) {
   // mobile, e tenerli uguali evita che il tasto prometta righe già visibili.
   const HOME_ROWS = 4;
   const HOME_MATCHES = 2;
+  const HOME_TOURNAMENTS = 2;
 
   // Cambiare classifica o aprirla fa cambiare l'altezza della pagina, e il
   // browser rimette lo scorrimento dove può: se eri in fondo, risali. Qui
@@ -3606,8 +3665,7 @@ function AppShell({ session }: { session: Session | null }) {
                 <div className="section-head">
                   <div className="section-head-label"><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
                   <div className="court-actions">
-                    <button className="button button-primary cta-new-match" onClick={() => setShowMatch(true)}>+ New Match</button>
-                    <button className="button button-card" onClick={() => setPadelView("tournaments")}>Tornei</button>
+                    <button className="button button-primary cta-new-match" onClick={() => setShowMatch(true)}>+ Nuova partita</button>
                     {matches.length ? (
                       <button
                         className="button button-card cta-see-all-top"
@@ -3648,6 +3706,45 @@ function AppShell({ session }: { session: Session | null }) {
                   </div>
                 ) : (
                   <div className="compact-empty"><span>00</span><p>Nessuna partita registrata. La prima scriverà la storia.</p></div>
+                )}
+
+                {/* Tornei: stessa impaginazione delle partite, tasto di
+                    creazione sopra e riquadro con gli ultimi due sotto. */}
+                <div className="section-head section-head-tournaments">
+                  <div className="section-head-label"><p className="eyebrow dark">THEBOYZ CUP</p><h2>I tornei</h2></div>
+                  <div className="court-actions">
+                    <button
+                      className="button button-lime cta-new-match"
+                      onClick={() => setShowTournamentCreate(true)}
+                      disabled={!tournamentSchemaReady}
+                    >
+                      + Nuovo torneo
+                    </button>
+                  </div>
+                </div>
+                {tournaments.length ? (
+                  <div className="match-panel tournament-panel">
+                    <div className="match-panel-head"><h2>Ultimi tornei</h2></div>
+                    <div className="match-list">
+                      {tournaments.slice(0, HOME_TOURNAMENTS).map((tournament) => (
+                        <TournamentRow
+                          key={tournament.id}
+                          tournament={tournament}
+                          matches={matches}
+                          onOpen={() => setPadelView("tournaments")}
+                        />
+                      ))}
+                    </div>
+                    <button
+                      className="button button-ghost button-full cta-see-all-bottom"
+                      aria-label="Vedi tutti i tornei"
+                      onClick={() => setPadelView("tournaments")}
+                    >
+                      {`Vedi tutto (${tournaments.length})`}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="compact-empty tournament-empty"><span>00</span><p>Nessun torneo ancora. Il primo trofeo aspetta un nome.</p></div>
                 )}
               </div>
 
