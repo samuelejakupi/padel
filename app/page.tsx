@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import {
   hasSupabaseConfig,
@@ -533,9 +533,16 @@ function Avatar({
 
 type GlyphName = "home" | "ranking" | "racket" | "rackets" | "pizza";
 
+// La racchetta singola, riusata anche per la coppia.
+const RACKET_HEAD = "M9.6 16.2C7 15 5.3 12.4 5.3 9.4 5.3 5.7 8.3 2.7 12 2.7s6.7 3 6.7 6.7c0 3-1.7 5.6-4.3 6.8Z";
+const RACKET_GRIP = "M10.4 16.2v3.1a1.6 1.6 0 0 0 3.2 0v-3.1";
+
 // Glifi in stile SF Symbols: tratto uniforme, estremi arrotondati, nessun
 // riempimento. Ereditano currentColor, così seguono lo stato della barra.
 function NavGlyph({ name }: { name: GlyphName }) {
+  // La maschera del doppio ha bisogno di un identificatore unico: la stessa
+  // icona compare in più punti della pagina.
+  const maskId = useId();
   return (
     <svg
       className="nav-glyph"
@@ -574,10 +581,10 @@ function NavGlyph({ name }: { name: GlyphName }) {
       {/* Racchetta da padel: piatto pieno e forato, manico corto. */}
       {name === "racket" ? (
         <>
-          <path d="M9.6 16.2C7 15 5.3 12.4 5.3 9.4 5.3 5.7 8.3 2.7 12 2.7s6.7 3 6.7 6.7c0 3-1.7 5.6-4.3 6.8Z" />
+          <path d={RACKET_HEAD} />
           {/* Manico aperto in alto: il tratto orizzontale sarebbe doppiato
               sul bordo inferiore del piatto. */}
-          <path d="M10.4 16.2v3.1a1.6 1.6 0 0 0 3.2 0v-3.1" />
+          <path d={RACKET_GRIP} />
           <g fill="currentColor" stroke="none">
             <circle cx="12" cy="7.4" r="0.95" />
             <circle cx="9.3" cy="10.3" r="0.95" />
@@ -586,17 +593,35 @@ function NavGlyph({ name }: { name: GlyphName }) {
           </g>
         </>
       ) : null}
-      {/* Due racchette incrociate: la coppia. Disegnate con la loro geometria
-          invece che scalando quella del singolo, che a questa dimensione
-          diventava illeggibile. I manici si incrociano, i piatti restano
-          separati: nessun tratto passa sopra a un altro dentro la stessa
-          racchetta. */}
+      {/* La coppia: due racchette identiche a quella singola, una davanti e
+          una dietro. Quella davanti ritaglia l'altra invece di sovrapporsi e
+          basta, così i tratti non si incrociano mai e in trasparenza non si
+          formano zone più scure. */}
       {name === "rackets" ? (
         <>
-          <ellipse cx="8.7" cy="8.9" rx="4.1" ry="5" transform="rotate(-20 8.7 8.9)" />
-          <path d="m10.3 13.7 2.1 6.1" />
-          <ellipse cx="15.3" cy="8.9" rx="4.1" ry="5" transform="rotate(20 15.3 8.9)" />
-          <path d="m13.7 13.7-2.1 6.1" />
+          <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+            <rect x="0" y="0" width="24" height="24" fill="white" />
+            {/* Il nero toglie: è la sagoma della racchetta davanti,
+                ingrossata per lasciare un filo di stacco. */}
+            <g
+              transform="translate(4.9 4.1) scale(0.74)"
+              fill="black"
+              stroke="black"
+              strokeWidth="4.2"
+              strokeLinejoin="round"
+            >
+              <path d={RACKET_HEAD} />
+              <path d={RACKET_GRIP} />
+            </g>
+          </mask>
+          <g mask={`url(#${maskId})`} transform="translate(1.3 1.7) scale(0.74)">
+            <path d={RACKET_HEAD} />
+            <path d={RACKET_GRIP} />
+          </g>
+          <g transform="translate(4.9 4.1) scale(0.74)">
+            <path d={RACKET_HEAD} />
+            <path d={RACKET_GRIP} />
+          </g>
         </>
       ) : null}
     </svg>
@@ -2482,6 +2507,30 @@ function AppShell({ session }: { session: Session | null }) {
   // mobile, e tenerli uguali evita che il tasto prometta righe già visibili.
   const HOME_ROWS = 4;
   const HOME_MATCHES = 2;
+
+  // Cambiare classifica o aprirla fa cambiare l'altezza della pagina, e il
+  // browser rimette lo scorrimento dove può: se eri in fondo, risali. Qui
+  // teniamo fermo il punto di riferimento — lo switch — spostando lo
+  // scorrimento della stessa quantità di cui si è mosso lui.
+  const rankingAnchorRef = useRef<HTMLDivElement | null>(null);
+
+  const keepScroll = useCallback((change: () => void) => {
+    const before = rankingAnchorRef.current?.getBoundingClientRect().top ?? null;
+    change();
+    if (before === null) return;
+    requestAnimationFrame(() => {
+      const after = rankingAnchorRef.current?.getBoundingClientRect().top;
+      if (after === undefined) return;
+      window.scrollBy({ top: after - before, behavior: "instant" as ScrollBehavior });
+    });
+  }, []);
+
+  const toggleKeepingScroll = useCallback(
+    (setter: (update: (open: boolean) => boolean) => void) => {
+      keepScroll(() => setter((open) => !open));
+    },
+    [keepScroll],
+  );
   const [editingMatch, setEditingMatch] = useState<PadelMatch | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
@@ -3138,7 +3187,7 @@ function AppShell({ session }: { session: Session | null }) {
                   <div className="section-head-label"><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
                   <div className="court-actions">
                     <button className="button button-primary cta-new-match" onClick={() => setShowMatch(true)}>+ New Match</button>
-                    {matches.length > HOME_MATCHES ? (
+                    {matches.length ? (
                       <button
                         className="button button-card cta-see-all-top"
                         onClick={() => setAllMatches((open) => !open)}
@@ -3167,7 +3216,7 @@ function AppShell({ session }: { session: Session | null }) {
                         />
                       ))}
                     </div>
-                    {matches.length > HOME_MATCHES ? (
+                    {matches.length ? (
                       <button
                         className="button button-ghost button-full cta-see-all-bottom"
                         onClick={() => setAllMatches((open) => !open)}
@@ -3186,10 +3235,10 @@ function AppShell({ session }: { session: Session | null }) {
                   <div><h2>Classifica Elo</h2></div>
                   {/* Due icone al posto di due parole: una racchetta per il
                       singolo, due per le coppie. */}
-                  <div className="mode-switch" role="group" aria-label="Tipo di classifica">
+                  <div className="mode-switch" role="group" aria-label="Tipo di classifica" ref={rankingAnchorRef}>
                     <button
                       className={rankingMode === "single" ? "active" : ""}
-                      onClick={() => setRankingMode("single")}
+                      onClick={() => keepScroll(() => setRankingMode("single"))}
                       aria-label="Classifica singolo"
                       title="Singolo"
                     >
@@ -3197,7 +3246,7 @@ function AppShell({ session }: { session: Session | null }) {
                     </button>
                     <button
                       className={rankingMode === "team" ? "active" : ""}
-                      onClick={() => setRankingMode("team")}
+                      onClick={() => keepScroll(() => setRankingMode("team"))}
                       aria-label="Classifica squadre"
                       title="Squadra"
                     >
@@ -3218,10 +3267,10 @@ function AppShell({ session }: { session: Session | null }) {
                     Le coppie si formano dalle partite: registra un doppio e compariranno qui.
                   </p>
                 )}
-                {rankingRows > HOME_ROWS ? (
+                {rankingRows ? (
                   <button
                     className="button button-ghost button-full"
-                    onClick={() => setAllRanking((open) => !open)}
+                    onClick={() => toggleKeepingScroll(setAllRanking)}
                   >
                     {allRanking ? "Vedi meno" : `Vedi tutti (${rankingRows})`}
                   </button>
