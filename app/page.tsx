@@ -531,11 +531,15 @@ function Avatar({
   );
 }
 
-type GlyphName = "home" | "ranking" | "racket" | "rackets" | "pizza";
+type GlyphName = "home" | "ranking" | "racket" | "rackets" | "person" | "people" | "pizza";
 
 // La racchetta singola, riusata anche per la coppia.
 const RACKET_HEAD = "M9.6 16.2C7 15 5.3 12.4 5.3 9.4 5.3 5.7 8.3 2.7 12 2.7s6.7 3 6.7 6.7c0 3-1.7 5.6-4.3 6.8Z";
 const RACKET_GRIP = "M10.4 16.2v3.1a1.6 1.6 0 0 0 3.2 0v-3.1";
+
+// Busto: testa e spalle chiuse in basso, non un arco aperto.
+const PERSON_HEAD = "M12 3.6a3.9 3.9 0 1 1 0 7.8 3.9 3.9 0 0 1 0-7.8Z";
+const PERSON_BODY = "M4.9 20.4c0-3.7 3.2-6.5 7.1-6.5s7.1 2.8 7.1 6.5Z";
 
 // Glifi in stile SF Symbols: tratto uniforme, estremi arrotondati, nessun
 // riempimento. Ereditano currentColor, così seguono lo stato della barra.
@@ -632,6 +636,24 @@ function NavGlyph({ name }: { name: GlyphName }) {
               <circle cx="12" cy="12.8" r="0.95" />
             </g>
           </g>
+        </>
+      ) : null}
+      {/* Un busto: il singolo. */}
+      {name === "person" ? (
+        <>
+          <path d={PERSON_HEAD} />
+          <path d={PERSON_BODY} />
+        </>
+      ) : null}
+      {/* Due busti affiancati: la coppia. Niente sovrapposizioni e niente
+          maschere — a questa dimensione un busto che ne taglia un altro
+          diventa illeggibile, e la maschera storpiava la forma chiusa. */}
+      {name === "people" ? (
+        <>
+          <circle cx="6.8" cy="8.8" r="2.9" />
+          <path d="M2.2 20.4c0-2.5 2.1-4.6 4.6-4.6s4.6 2.1 4.6 4.6Z" />
+          <circle cx="17.2" cy="8.8" r="2.9" />
+          <path d="M12.6 20.4c0-2.5 2.1-4.6 4.6-4.6s4.6 2.1 4.6 4.6Z" />
         </>
       ) : null}
     </svg>
@@ -3252,7 +3274,7 @@ function AppShell({ session }: { session: Session | null }) {
                       aria-label="Classifica singolo"
                       title="Singolo"
                     >
-                      <NavGlyph name="racket" />
+                      <NavGlyph name="person" />
                     </button>
                     <button
                       className={rankingMode === "team" ? "active" : ""}
@@ -3260,7 +3282,7 @@ function AppShell({ session }: { session: Session | null }) {
                       aria-label="Classifica squadre"
                       title="Squadra"
                     >
-                      <NavGlyph name="rackets" />
+                      <NavGlyph name="people" />
                     </button>
                   </div>
                 </div>
@@ -3314,7 +3336,7 @@ function AppShell({ session }: { session: Session | null }) {
                     aria-label="Classifica singolo"
                     title="Singolo"
                   >
-                    <NavGlyph name="racket" />
+                    <NavGlyph name="person" />
                   </button>
                   <button
                     className={rankingMode === "team" ? "active" : ""}
@@ -3322,7 +3344,7 @@ function AppShell({ session }: { session: Session | null }) {
                     aria-label="Classifica squadre"
                     title="Squadra"
                   >
-                    <NavGlyph name="rackets" />
+                    <NavGlyph name="people" />
                   </button>
                 </div>
               </div>
