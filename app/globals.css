@@ -4776,9 +4776,6 @@ button.pizza-ranking-row {
     pointer-events: none;
     position: fixed;
     right: 0;
-    /* Stessa ragione della barra: senza promozione la sfumatura resta
-       indietro durante lo scorrimento. */
-    transform: translateZ(0);
     z-index: 45;
   }
 
@@ -4786,20 +4783,13 @@ button.pizza-ranking-row {
     --nav-inset: 7px;
     --nav-item-height: 54px;
     align-items: center;
-    /* Il materiale di Apple non e lucido: e quasi solo sfocatura, con la
-       saturazione spinta perche i colori che passano da dietro restino
-       vivi. I gradienti bianchi sovrapposti che c'erano prima davano
-       l'effetto plastica; qui resta un velo unico appena accennato. */
-    backdrop-filter: blur(40px) saturate(180%);
-    /* Velo appena freddo invece che bianco puro. Piu coprente di quanto
-       vorrebbe il vetro, ma sotto la barra passano anche i blocchi scuri
-       e le foto: con un velo leggero le icone diventavano illeggibili.
-       Fra estetica e leggibilita vince la leggibilita. */
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.66) 0%,
-      rgba(236, 243, 250, 0.54) 100%
-    );
+    /* Nessuna sfocatura su questo elemento: la porta lo strato interno qui
+       sotto. Safari su iOS, quando un elemento fisso ha un backdrop-filter,
+       lo stacca dal flusso di composizione e durante lo scorrimento inerziale
+       lo ridisegna in ritardo: la barra sembra scivolare e poi riassestarsi.
+       Con la sfocatura su un figlio in posizione assoluta il problema non si
+       presenta, ed e il modo in cui iOS stesso costruisce le sue tab bar. */
+    background: transparent;
     /* Filo di contorno sottilissimo, non un bordo disegnato. */
     border: 0.5px solid rgba(255, 255, 255, 0.5);
     border-radius: var(--radius-pill);
@@ -4816,14 +4806,29 @@ button.pizza-ranking-row {
     padding: var(--nav-inset);
     position: fixed;
     right: 11px;
-    /* Safari su iOS non ridisegna un elemento fisso con backdrop-filter
-       durante lo scorrimento inerziale: la barra sembra scivolare e poi
-       riassestarsi. Promuoverla a livello proprio la aggancia alla finestra
-       invece di farla ricalcolare a ogni fotogramma. */
-    transform: translateZ(0);
-    will-change: transform;
-    -webkit-backdrop-filter: blur(40px) saturate(180%);
     z-index: 50;
+  }
+
+  /* Lo strato che porta il vetro. Sta dentro la barra, quindi non e fisso e
+     non innesca il difetto di composizione di iOS. */
+  .mobile-nav::before {
+    backdrop-filter: blur(40px) saturate(180%);
+    /* Velo appena freddo invece che bianco puro. Piu coprente di quanto
+       vorrebbe il vetro, ma sotto la barra passano anche i blocchi scuri
+       e le foto: con un velo leggero le icone diventavano illeggibili.
+       Fra estetica e leggibilita vince la leggibilita. */
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.66) 0%,
+      rgba(236, 243, 250, 0.54) 100%
+    );
+    border-radius: inherit;
+    content: "";
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    z-index: -1;
   }
 
   /* La pastiglia: un solo elemento che scivola da una voce all'altra.
@@ -4895,8 +4900,11 @@ button.pizza-ranking-row {
 
   /* Se il browser non sfoca, meglio un fondo pieno che una barra slavata. */
   @supports not (backdrop-filter: blur(1px)) {
-    .mobile-nav {
+    .mobile-nav::before {
       background: rgba(255, 255, 255, 0.94);
+    }
+
+    .mobile-nav {
       border-color: rgba(255, 255, 255, 0.8);
     }
 
