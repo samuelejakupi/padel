@@ -4,6 +4,10 @@ import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+// Safari tiene in cache l'icona della schermata Home per indirizzo e non la
+// ricontrolla mai: senza un indirizzo nuovo a ogni build resterebbe quella
+// del primo salvataggio, o peggio ricadrebbe sull'immagine di condivisione.
+const iconVersion = process.env.NEXT_PUBLIC_BUILD_ID ?? "dev";
 
 // Colora la barra di stato su iOS e Android con il blu del sito invece del
 // bianco di sistema.
@@ -42,8 +46,14 @@ export const metadata: Metadata = {
     statusBarStyle: "black",
   },
   icons: {
-    icon: `${basePath}/theboyz-mark.png`,
-    apple: `${basePath}/apple-touch-icon.png`,
+    icon: `${basePath}/theboyz-mark.png?v=${iconVersion}`,
+    apple: [
+      {
+        url: `${basePath}/apple-touch-icon.png?v=${iconVersion}`,
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
   },
 };
 
