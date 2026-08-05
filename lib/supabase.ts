@@ -80,4 +80,36 @@ export type PadelMatch = {
   sets: PadelSet[];
   players: MatchPlayer[];
   rating_delta?: number;
+  tournament_fixture_id?: string | null;
+};
+
+export type TournamentTeam = {
+  id: string;
+  tournament_id: string;
+  name: string;
+  player_a: string;
+  player_b: string;
+  sort_order: number;
+};
+
+export type TournamentFixture = {
+  id: string;
+  tournament_id: string;
+  match_number: number;
+  team1_id: string;
+  team2_id: string;
+  match_id: string | null;
+};
+
+export type Tournament = {
+  id: string;
+  name: string;
+  status: "active" | "completed";
+  trophy_name: string;
+  trophy_badge: "cup" | "crown" | "shield" | "star";
+  elo_multiplier: number;
+  created_by: string;
+  created_at: string;
+  teams: TournamentTeam[];
+  fixtures: TournamentFixture[];
 };

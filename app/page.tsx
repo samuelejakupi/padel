@@ -10,11 +10,13 @@ import {
   type PadelSet,
   type PlayerPlay,
   type Profile,
+  type Tournament,
+  type TournamentTeam,
   supabase,
 } from "@/lib/supabase";
 
 type View = "padel" | "pizza";
-type PadelView = "overview" | "ranking" | "matches" | "player";
+type PadelView = "overview" | "ranking" | "matches" | "tournaments" | "player";
 type PizzaRankingMode = "contemporary" | "classic";
 type PizzaRankingEntry = {
   name: string;
@@ -1764,11 +1766,13 @@ function matchSummary(profiles: Profile[], playerIds: string[], sets: PadelSet[]
 function NewMatchModal({
   profiles,
   match,
+  tournamentContext,
   onClose,
   onSaved,
 }: {
   profiles: Profile[];
   match?: PadelMatch | null;
+  tournamentContext?: TournamentMatchContext | null;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -1778,7 +1782,7 @@ function NewMatchModal({
         ...match.players.filter((player) => player.team === 1).map((player) => player.profile_id),
         ...match.players.filter((player) => player.team === 2).map((player) => player.profile_id),
       ]
-    : profiles.slice(0, 4).map((profile) => profile.id);
+    : tournamentContext?.playerIds ?? profiles.slice(0, 4).map((profile) => profile.id);
   const initialScores = match
     ? [0, 1, 2].map((index) => {
         const set = [...match.sets].sort((a, b) => a.set_number - b.set_number)[index];
@@ -1904,6 +1908,21 @@ function NewMatchModal({
       // partita resta salvata comunque, senza bloccare nulla.
       const matchId = typeof newId === "string" ? newId : null;
 
+      if (matchId && tournamentContext) {
+        const { error: tournamentError } = await supabase.rpc("assign_tournament_match", {
+          p_fixture_id: tournamentContext.fixtureId,
+          p_match_id: matchId,
+        });
+        if (tournamentError) {
+          // Se l'aggancio fallisce, rimuove il risultato appena creato: una
+          // partita di torneo non deve restare per errore come match normale.
+          await supabase.rpc("delete_match", { p_match_id: matchId });
+          setError(tournamentError.message);
+          setBusy(false);
+          return;
+        }
+      }
+
       // Come lo storico, anche il campo da gioco e opzionale: se la
       // migrazione non e stata eseguita la partita resta comunque salvata.
       if (matchId) {
@@ -1947,6 +1966,12 @@ function NewMatchModal({
           <button className="icon-button" onClick={onClose} aria-label="Chiudi">×</button>
         </div>
         <form onSubmit={save}>
+          {tournamentContext ? (
+            <div className="tournament-match-banner">
+              <TournamentTrophyBadge kind="cup" compact />
+              <span><small>PARTITA DI TORNEO · ELO ×{tournamentContext.eloMultiplier}</small><b>{tournamentContext.tournamentName}</b></span>
+            </div>
+          ) : null}
           <label>
             Data della partita
             <input type="date" value={playedAt} onChange={(e) => setPlayedAt(e.target.value)} required />
@@ -1958,7 +1983,7 @@ function NewMatchModal({
                 {[0, 1].map((position) => {
                   const index = (team - 1) * 2 + position;
                   return (
-                    <select key={index} value={players[index] ?? ""} onChange={(e) => updatePlayer(index, e.target.value)} aria-label={`Giocatore ${position + 1} squadra ${team}`}>
+                    <select key={index} value={players[index] ?? ""} onChange={(e) => updatePlayer(index, e.target.value)} aria-label={`Giocatore ${position + 1} squadra ${team}`} disabled={Boolean(tournamentContext)}>
                       <option value="">Scegli giocatore</option>
                       {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.display_name}</option>)}
                     </select>
@@ -2495,19 +2520,366 @@ function PizzaVoteModal({
   );
 }
 
+type TournamentTrophyKind = Tournament["trophy_badge"];
+
+type TournamentMatchContext = {
+  fixtureId: string;
+  tournamentName: string;
+  eloMultiplier: number;
+  playerIds: [string, string, string, string];
+};
+
+type TournamentStanding = {
+  team: TournamentTeam;
+  played: number;
+  wins: number;
+  losses: number;
+  gamesWon: number;
+  gamesLost: number;
+  directWins: number;
+};
+
+function TournamentTrophyBadge({ kind, compact = false }: { kind: TournamentTrophyKind; compact?: boolean }) {
+  return (
+    <div className={`tournament-trophy tournament-trophy-${kind}${compact ? " is-compact" : ""}`} aria-hidden="true">
+      <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+        {kind === "cup" ? (
+          <>
+            <path d="M20 12h24v15c0 10-5 17-12 17s-12-7-12-17V12Z" />
+            <path d="M20 17h-8v6c0 7 4 11 10 11M44 17h8v6c0 7-4 11-10 11M32 44v8M22 56h20" />
+          </>
+        ) : null}
+        {kind === "crown" ? (
+          <>
+            <path d="m10 20 11 9 11-17 11 17 11-9-5 27H15l-5-27Z" />
+            <path d="M15 47h34v8H15z" />
+          </>
+        ) : null}
+        {kind === "shield" ? (
+          <>
+            <path d="M32 8 52 16v16c0 12-8 20-20 25C20 52 12 44 12 32V16l20-8Z" />
+            <path d="m22 32 7 7 14-15" />
+          </>
+        ) : null}
+        {kind === "star" ? (
+          <>
+            <path d="m32 7 7 16 18 2-13 12 4 18-16-9-16 9 4-18L7 25l18-2 7-16Z" />
+            <circle cx="32" cy="34" r="6" />
+          </>
+        ) : null}
+      </svg>
+    </div>
+  );
+}
+
+function buildTournamentStandings(tournament: Tournament, matches: PadelMatch[]) {
+  const matchMap = new Map(matches.map((match) => [match.id, match]));
+  const rows = new Map<string, TournamentStanding>(tournament.teams.map((team) => [team.id, {
+    team,
+    played: 0,
+    wins: 0,
+    losses: 0,
+    gamesWon: 0,
+    gamesLost: 0,
+    directWins: 0,
+  }]));
+
+  tournament.fixtures.forEach((fixture) => {
+    const match = fixture.match_id ? matchMap.get(fixture.match_id) : null;
+    const team1 = rows.get(fixture.team1_id);
+    const team2 = rows.get(fixture.team2_id);
+    if (!match || !team1 || !team2) return;
+    team1.played += 1;
+    team2.played += 1;
+    team1.wins += match.winner_team === 1 ? 1 : 0;
+    team1.losses += match.winner_team === 2 ? 1 : 0;
+    team2.wins += match.winner_team === 2 ? 1 : 0;
+    team2.losses += match.winner_team === 1 ? 1 : 0;
+    match.sets.forEach((set) => {
+      team1.gamesWon += set.team1_games;
+      team1.gamesLost += set.team2_games;
+      team2.gamesWon += set.team2_games;
+      team2.gamesLost += set.team1_games;
+    });
+  });
+
+  const standings = [...rows.values()];
+  const tiedByWins = new Map<number, TournamentStanding[]>();
+  standings.forEach((row) => tiedByWins.set(row.wins, [...(tiedByWins.get(row.wins) ?? []), row]));
+  tiedByWins.forEach((tiedRows) => {
+    if (tiedRows.length < 2) return;
+    const tiedIds = new Set(tiedRows.map((row) => row.team.id));
+    tournament.fixtures.forEach((fixture) => {
+      if (!tiedIds.has(fixture.team1_id) || !tiedIds.has(fixture.team2_id) || !fixture.match_id) return;
+      const match = matchMap.get(fixture.match_id);
+      if (!match) return;
+      const winnerId = match.winner_team === 1 ? fixture.team1_id : fixture.team2_id;
+      const winner = rows.get(winnerId);
+      if (winner) winner.directWins += 1;
+    });
+  });
+
+  return standings.sort((a, b) =>
+    b.wins - a.wins
+    || b.directWins - a.directWins
+    || b.gamesWon - a.gamesWon
+    || a.team.sort_order - b.team.sort_order,
+  );
+}
+
+function TournamentCreateModal({
+  profiles,
+  onClose,
+  onSaved,
+}: {
+  profiles: Profile[];
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const initialTeams = [0, 1, 2].map((teamIndex) => ({
+    playerA: profiles[teamIndex * 2]?.id ?? "",
+    playerB: profiles[teamIndex * 2 + 1]?.id ?? "",
+    name: "",
+  }));
+  const [name, setName] = useState("Torneo TheBoyz");
+  const [teams, setTeams] = useState(initialTeams);
+  const [trophyName, setTrophyName] = useState("Coppa TheBoyz");
+  const [trophyBadge, setTrophyBadge] = useState<TournamentTrophyKind>("cup");
+  const [eloMultiplier, setEloMultiplier] = useState<1 | 2>(2);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  function updateTeam(index: number, key: "playerA" | "playerB" | "name", value: string) {
+    setTeams((current) => current.map((team, teamIndex) => teamIndex === index ? { ...team, [key]: value } : team));
+  }
+
+  async function createTournament(event: FormEvent) {
+    event.preventDefault();
+    setError("");
+    const playerIds = teams.flatMap((team) => [team.playerA, team.playerB]);
+    if (teams.length < 3 || teams.some((team) => !team.playerA || !team.playerB)) {
+      setError("Servono almeno tre squadre complete.");
+      return;
+    }
+    if (new Set(playerIds).size !== playerIds.length) {
+      setError("Ogni partecipante può giocare in una sola squadra.");
+      return;
+    }
+    if (!name.trim() || !trophyName.trim()) {
+      setError("Inserisci il nome del torneo e del trofeo.");
+      return;
+    }
+    if (!supabase) return;
+    setBusy(true);
+    const teamPayload = teams.map((team, index) => {
+      const playerA = profiles.find((profile) => profile.id === team.playerA);
+      const playerB = profiles.find((profile) => profile.id === team.playerB);
+      return {
+        player_a: team.playerA,
+        player_b: team.playerB,
+        name: team.name.trim() || `${playerA?.display_name ?? "?"} & ${playerB?.display_name ?? "?"}`,
+        sort_order: index + 1,
+      };
+    });
+    const { error: createError } = await supabase.rpc("create_round_robin_tournament", {
+      p_name: name.trim(),
+      p_trophy_name: trophyName.trim(),
+      p_trophy_badge: trophyBadge,
+      p_elo_multiplier: eloMultiplier,
+      p_teams: teamPayload,
+    });
+    if (createError) {
+      setError(createError.message);
+      setBusy(false);
+      return;
+    }
+    await onSaved();
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section className="modal tournament-create-modal" role="dialog" aria-modal="true" aria-labelledby="tournament-create-title">
+        <div className="modal-head">
+          <div><p className="eyebrow dark">NUOVO TORNEO</p><h2 id="tournament-create-title">Crea il tabellone</h2></div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="Chiudi">×</button>
+        </div>
+        <form onSubmit={createTournament}>
+          <label>Nome del torneo<input value={name} onChange={(event) => setName(event.target.value)} maxLength={70} required /></label>
+
+          <div className="tournament-form-head">
+            <div><p className="eyebrow dark">PARTECIPANTI E SQUADRE</p><h3>{teams.length} coppie · {teams.length * (teams.length - 1) / 2} partite</h3></div>
+            {teams.length < 4 && profiles.length >= (teams.length + 1) * 2 ? (
+              <button className="button button-ghost" type="button" onClick={() => setTeams((current) => [...current, { playerA: "", playerB: "", name: "" }])}>+ Squadra</button>
+            ) : null}
+          </div>
+          <div className="tournament-team-builder">
+            {teams.map((team, index) => (
+              <fieldset key={index}>
+                <legend>Squadra {index + 1}</legend>
+                <div className="tournament-team-selects">
+                  <select value={team.playerA} onChange={(event) => updateTeam(index, "playerA", event.target.value)} aria-label={`Primo giocatore squadra ${index + 1}`}>
+                    <option value="">Primo giocatore</option>
+                    {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.display_name}</option>)}
+                  </select>
+                  <select value={team.playerB} onChange={(event) => updateTeam(index, "playerB", event.target.value)} aria-label={`Secondo giocatore squadra ${index + 1}`}>
+                    <option value="">Secondo giocatore</option>
+                    {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.display_name}</option>)}
+                  </select>
+                </div>
+                <input value={team.name} onChange={(event) => updateTeam(index, "name", event.target.value)} placeholder="Nome squadra facoltativo" maxLength={50} aria-label={`Nome squadra ${index + 1}`} />
+                {teams.length > 3 ? <button className="tournament-team-remove" type="button" onClick={() => setTeams((current) => current.filter((_, teamIndex) => teamIndex !== index))}>Rimuovi</button> : null}
+              </fieldset>
+            ))}
+          </div>
+
+          <div className="tournament-prize-form">
+            <div className="tournament-prize-preview"><TournamentTrophyBadge kind={trophyBadge} /><span><b>{trophyName || "Trofeo"}</b><small>IN PALIO</small></span></div>
+            <div>
+              <label>Nome del trofeo<input value={trophyName} onChange={(event) => setTrophyName(event.target.value)} maxLength={60} required /></label>
+              <span className="tournament-field-label">Simbolo del trofeo</span>
+              <div className="tournament-trophy-picker" role="group" aria-label="Simbolo del trofeo">
+                {(["cup", "crown", "shield", "star"] as TournamentTrophyKind[]).map((kind) => (
+                  <button className={trophyBadge === kind ? "active" : ""} type="button" key={kind} onClick={() => setTrophyBadge(kind)} aria-label={kind} aria-pressed={trophyBadge === kind}>
+                    <TournamentTrophyBadge kind={kind} compact />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="tournament-elo-choice">
+            <div><p className="eyebrow dark">ELO IN PALIO</p><h3>Quanto valgono le partite?</h3><small>Il moltiplicatore si applica sia ai punti guadagnati sia a quelli persi.</small></div>
+            <div className="ranking-switch" role="group" aria-label="Moltiplicatore Elo">
+              <button type="button" className={eloMultiplier === 1 ? "active" : ""} onClick={() => setEloMultiplier(1)}>Normale ×1</button>
+              <button type="button" className={eloMultiplier === 2 ? "active" : ""} onClick={() => setEloMultiplier(2)}>Doppio ×2</button>
+            </div>
+          </div>
+          {error ? <p className="form-message error">{error}</p> : null}
+          <div className="modal-actions">
+            <button className="button button-ghost" type="button" onClick={onClose}>Annulla</button>
+            <button className="button button-primary" disabled={busy}>{busy ? "Creazione…" : "Crea torneo"}</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+function TournamentsPage({
+  tournaments,
+  profiles,
+  matches,
+  schemaReady,
+  onCreate,
+  onRecord,
+  onSelectSection,
+}: {
+  tournaments: Tournament[];
+  profiles: Profile[];
+  matches: PadelMatch[];
+  schemaReady: boolean;
+  onCreate: () => void;
+  onRecord: (context: TournamentMatchContext) => void;
+  onSelectSection: (view: "matches" | "ranking" | "tournaments") => void;
+}) {
+  const [selectedId, setSelectedId] = useState(tournaments[0]?.id ?? "");
+  const tournament = tournaments.find((item) => item.id === selectedId) ?? tournaments[0];
+  const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
+  const matchMap = new Map(matches.map((match) => [match.id, match]));
+  const teamMap = new Map(tournament?.teams.map((team) => [team.id, team]) ?? []);
+  const standings = tournament ? buildTournamentStandings(tournament, matches) : [];
+  const playedMatches = tournament?.fixtures.filter((fixture) => fixture.match_id && matchMap.has(fixture.match_id)).length ?? 0;
+  const completed = Boolean(tournament?.fixtures.length && playedMatches === tournament.fixtures.length);
+
+  return (
+    <section className="page-section tournament-page">
+      <PadelSectionNav active="tournaments" onSelect={onSelectSection} />
+      <article className="section-hero tournament-hero">
+        <BlockMark size="lg" />
+        <div className="section-hero-head">
+          <div><p className="eyebrow">THEBOYZ CUP</p><h1>Tornei</h1><p>Girone all’italiana: vittorie, scontri diretti, game vinti.</p></div>
+          <button className="button button-primary" onClick={onCreate} disabled={!schemaReady}>+ Nuovo torneo</button>
+        </div>
+      </article>
+      {!schemaReady ? (
+        <p className="demo-profile-note">Per creare i tornei esegui <code>migration-tornei.sql</code> nel SQL Editor di Supabase.</p>
+      ) : tournaments.length && tournament ? (
+        <>
+          {tournaments.length > 1 ? (
+            <div className="tournament-tabs" role="tablist" aria-label="Tornei">
+              {tournaments.map((item) => <button className={item.id === tournament.id ? "active" : ""} key={item.id} onClick={() => setSelectedId(item.id)}>{item.name}</button>)}
+            </div>
+          ) : null}
+          <article className="tournament-board-head">
+            <div className="tournament-prize-card"><TournamentTrophyBadge kind={tournament.trophy_badge} /><span><small>TROFEO IN PALIO</small><b>{tournament.trophy_name}</b></span></div>
+            <div className="tournament-title-card"><p className="eyebrow dark">{completed ? "TORNEO COMPLETATO" : "TORNEO IN CORSO"}</p><h2>{tournament.name}</h2><span>{playedMatches}/{tournament.fixtures.length} partite · Elo ×{tournament.elo_multiplier}</span></div>
+          </article>
+
+          <div className="tournament-layout">
+            <section className="tournament-standings">
+              <div className="player-history-head"><div><p className="eyebrow dark">CLASSIFICA</p><h2>{completed ? "Risultato finale" : "Situazione attuale"}</h2></div></div>
+              <div className="tournament-table">
+                <div className="tournament-table-head"><span>#</span><span>Squadra</span><span>G</span><span>V</span><span>SD</span><span>Game</span></div>
+                {standings.map((row, index) => (
+                  <div className={`tournament-table-row${index === 0 && row.played ? " is-leader" : ""}`} key={row.team.id}>
+                    <b>{index + 1}</b>
+                    <span className="tournament-team-cell"><strong>{row.team.name}</strong><small>{profileMap.get(row.team.player_a)?.display_name} · {profileMap.get(row.team.player_b)?.display_name}</small></span>
+                    <span>{row.played}</span><span>{row.wins}</span><span>{row.directWins}</span><span>{row.gamesWon}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="tournament-rule-note">Parità: vittorie negli scontri diretti tra le squadre appaiate, poi numero totale di game vinti.</p>
+            </section>
+
+            <section className="tournament-fixtures">
+              <div className="player-history-head"><div><p className="eyebrow dark">CALENDARIO</p><h2>Tutte contro tutte</h2></div><span>{tournament.fixtures.length} match</span></div>
+              <div className="tournament-fixture-list">
+                {[...tournament.fixtures].sort((a, b) => a.match_number - b.match_number).map((fixture) => {
+                  const team1 = teamMap.get(fixture.team1_id);
+                  const team2 = teamMap.get(fixture.team2_id);
+                  const match = fixture.match_id ? matchMap.get(fixture.match_id) : null;
+                  if (!team1 || !team2) return null;
+                  const score = match ? [...match.sets].sort((a, b) => a.set_number - b.set_number).map((set) => `${set.team1_games}-${set.team2_games}`).join("  ") : null;
+                  return (
+                    <article className={`tournament-fixture${match ? " is-played" : ""}`} key={fixture.id}>
+                      <span className="tournament-match-number">{String(fixture.match_number).padStart(2, "0")}</span>
+                      <div><b className={match?.winner_team === 1 ? "winner" : ""}>{team1.name}</b><small>vs</small><b className={match?.winner_team === 2 ? "winner" : ""}>{team2.name}</b></div>
+                      {match ? <strong className="tournament-score">{score}</strong> : (
+                        <button className="button button-dark" onClick={() => onRecord({
+                          fixtureId: fixture.id,
+                          tournamentName: tournament.name,
+                          eloMultiplier: tournament.elo_multiplier,
+                          playerIds: [team1.player_a, team1.player_b, team2.player_a, team2.player_b],
+                        })}>Inserisci risultato</button>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          </div>
+        </>
+      ) : (
+        <div className="empty-board tournament-empty"><span>00</span><h2>Nessun torneo creato</h2><p>Scegli partecipanti, componi le coppie e genera il girone.</p><button className="button button-primary" onClick={onCreate}>Crea il primo torneo</button></div>
+      )}
+    </section>
+  );
+}
+
 function PadelSectionNav({
   active,
   onSelect,
 }: {
-  active: "matches" | "ranking";
-  onSelect: (view: "matches" | "ranking") => void;
+  active: "matches" | "ranking" | "tournaments";
+  onSelect: (view: "matches" | "ranking" | "tournaments") => void;
 }) {
   return (
     <div className="padel-section-nav">
-      <div><p className="eyebrow dark">PADEL</p><h2>Partite e classifiche</h2></div>
+      <div><p className="eyebrow dark">PADEL</p><h2>Partite, ranking e tornei</h2></div>
       <div className="ranking-switch" role="group" aria-label="Sezione Padel">
         <button className={active === "matches" ? "active" : ""} onClick={() => onSelect("matches")}>Partite</button>
         <button className={active === "ranking" ? "active" : ""} onClick={() => onSelect("ranking")}>Ranking</button>
+        <button className={active === "tournaments" ? "active" : ""} onClick={() => onSelect("tournaments")}>Tornei</button>
       </div>
     </div>
   );
@@ -2583,6 +2955,10 @@ function AppShell({ session }: { session: Session | null }) {
   const [playingClip, setPlayingClip] = useState<PlayerPlay | null>(null);
   const [seasonRows, setSeasonRows] = useState<SeasonStanding[]>([]);
   const [season, setSeason] = useState(new Date().getFullYear());
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [tournamentSchemaReady, setTournamentSchemaReady] = useState(true);
+  const [showTournamentCreate, setShowTournamentCreate] = useState(false);
+  const [tournamentMatch, setTournamentMatch] = useState<TournamentMatchContext | null>(null);
 
   const loadData = useCallback(async () => {
     const client = supabase;
@@ -2603,6 +2979,7 @@ function AppShell({ session }: { session: Session | null }) {
       playsResult,
       pizzaSessionsResult,
       pizzaSessionVotesResult,
+      tournamentsResult,
       courtsResult,
     ] = await Promise.all([
       client.from("profiles").select("*").order("rating", { ascending: false }),
@@ -2633,6 +3010,10 @@ function AppShell({ session }: { session: Session | null }) {
       client
         .from("pizza_session_votes")
         .select("session_id, voter_id, location, pizza, dessert, price, bonus_fabio"),
+      client
+        .from("padel_tournaments")
+        .select("id, name, status, trophy_name, trophy_badge, elo_multiplier, created_by, created_at, teams:tournament_teams(id, tournament_id, name, player_a, player_b, sort_order), fixtures:tournament_fixtures(id, tournament_id, match_number, team1_id, team2_id, match_id)")
+        .order("created_at", { ascending: false }),
       // Il campo da gioco sta in una query a parte: se la migrazione non e
       // stata eseguita questa fallisce da sola, senza portarsi dietro il
       // caricamento delle partite.
@@ -2653,6 +3034,12 @@ function AppShell({ session }: { session: Session | null }) {
           : null,
       })) as Profile[];
       const profileMap = new Map(withAvatars.map((profile) => [profile.id, profile]));
+      const loadedTournaments = tournamentsResult.error ? [] : (tournamentsResult.data ?? []) as unknown as Tournament[];
+      const fixtureByMatch = new Map(
+        loadedTournaments.flatMap((tournament) => tournament.fixtures)
+          .filter((fixture) => fixture.match_id)
+          .map((fixture) => [fixture.match_id as string, fixture.id]),
+      );
       // Vuota finche la migrazione del campo da gioco non e stata eseguita.
       const courtMap = new Map(
         courtsResult.error
@@ -2662,6 +3049,7 @@ function AppShell({ session }: { session: Session | null }) {
       const normalized = (matchesResult.data ?? []).map((match) => ({
         ...match,
         court: courtMap.get(match.id) ?? null,
+        tournament_fixture_id: fixtureByMatch.get(match.id) ?? null,
         players: (match.players ?? []).map((player) => ({
           ...player,
           profile: profileMap.get(player.profile_id) ?? player.profile,
@@ -2669,6 +3057,14 @@ function AppShell({ session }: { session: Session | null }) {
       })) as unknown as PadelMatch[];
       setProfiles(withAvatars);
       setMatches(normalized);
+      setTournamentSchemaReady(!tournamentsResult.error);
+      if (!tournamentsResult.error) {
+        setTournaments(loadedTournaments.map((tournament) => ({
+          ...tournament,
+          teams: [...(tournament.teams ?? [])].sort((a, b) => a.sort_order - b.sort_order),
+          fixtures: [...(tournament.fixtures ?? [])].sort((a, b) => a.match_number - b.match_number),
+        })));
+      }
       setPizzaSchemaReady(!pizzaResult.error);
       if (!pizzaResult.error) setPizzaRestaurants((pizzaResult.data ?? []) as PizzaRestaurantRecord[]);
       // Finché la migrazione delle sessioni non è stata eseguita queste query
@@ -2783,6 +3179,39 @@ function AppShell({ session }: { session: Session | null }) {
     return playerBadges(selectedPlayer, profiles, matches);
   }, [selectedPlayer, profiles, matches]);
   const earnedPlayerBadges = selectedPlayerBadges.filter((badge) => badge.unlocked);
+  const editingTournamentContext: TournamentMatchContext | null = (() => {
+    const fixtureId = editingMatch?.tournament_fixture_id;
+    if (!fixtureId) return null;
+    for (const tournament of tournaments) {
+      const fixture = tournament.fixtures.find((item) => item.id === fixtureId);
+      if (!fixture) continue;
+      const team1 = tournament.teams.find((team) => team.id === fixture.team1_id);
+      const team2 = tournament.teams.find((team) => team.id === fixture.team2_id);
+      if (!team1 || !team2) return null;
+      return {
+        fixtureId,
+        tournamentName: tournament.name,
+        eloMultiplier: tournament.elo_multiplier,
+        playerIds: [team1.player_a, team1.player_b, team2.player_a, team2.player_b],
+      };
+    }
+    return null;
+  })();
+  const selectedPlayerTrophies = selectedPlayer ? tournaments.filter((tournament) => {
+    const completed = tournament.fixtures.length > 0 && tournament.fixtures.every(
+      (fixture) => fixture.match_id && matches.some((match) => match.id === fixture.match_id),
+    );
+    if (!completed) return false;
+    const standings = buildTournamentStandings(tournament, matches);
+    const winner = standings[0];
+    if (!winner) return false;
+    const championTeams = standings.filter((row) =>
+      row.wins === winner.wins
+      && row.directWins === winner.directWins
+      && row.gamesWon === winner.gamesWon,
+    );
+    return championTeams.some((row) => row.team.player_a === selectedPlayer.id || row.team.player_b === selectedPlayer.id);
+  }) : [];
   // Con i parimerito il giocatore da raggiungere è il primo con punteggio più
   // alto, non semplicemente quello nella riga precedente.
   const nextRankedPlayer = currentUser
@@ -2809,17 +3238,19 @@ function AppShell({ session }: { session: Session | null }) {
   // Saluto e frase si pescano indipendentemente: con un solo numero casuale
   // le due scelte sarebbero rimaste sempre appaiate.
   const [saluteSeed] = useState(() => Math.random());
+  const currentUserId = currentUser?.id ?? null;
+  const currentUserName = currentUser?.display_name ?? "";
 
   // Profilo e scheda giocatore sono la stessa pagina: la propria è solo la
   // scheda di sé stessi, con in più i campi modificabili. Memoizzata perche
   // finisce fra le voci della barra mobile, che altrimenti verrebbero
   // ricostruite a ogni render.
   const openOwnCard = useCallback(() => {
-    if (!currentUser) return;
-    setSelectedPlayerId(currentUser.id);
+    if (!currentUserId) return;
+    setSelectedPlayerId(currentUserId);
     setPadelView("player");
     setView("padel");
-  }, [currentUser]);
+  }, [currentUserId]);
 
   // --- Barra di navigazione mobile -----------------------------------------
   // La pastiglia viene spostata scrivendo direttamente sullo stile: passando
@@ -2966,10 +3397,10 @@ function AppShell({ session }: { session: Session | null }) {
     const salutes = heroSalutePool(currentRank, isLastRanked);
     const salute = salutes[Math.floor(saluteSeed * salutes.length)] ?? salutes[0];
     return {
-      lead: salute.replace("{nome}", currentUser?.display_name ?? ""),
+      lead: salute.replace("{nome}", currentUserName),
       rest: pool[Math.floor(greetingSeed * pool.length)] ?? pool[0] ?? "",
     };
-  }, [currentRank, isLastRanked, hasNarrowLead, currentUser?.display_name, greetingSeed, saluteSeed]);
+  }, [currentRank, isLastRanked, hasNarrowLead, currentUserName, greetingSeed, saluteSeed]);
   const winRate = currentUser?.matches_played
     ? Math.round((currentUser.wins / currentUser.matches_played) * 100)
     : 0;
@@ -3005,13 +3436,17 @@ function AppShell({ session }: { session: Session | null }) {
 
   async function handleSaved() {
     const wasEditing = Boolean(editingMatch);
+    const wasTournament = Boolean(tournamentMatch || editingTournamentContext);
     setShowMatch(false);
     setEditingMatch(null);
+    setTournamentMatch(null);
     await loadData();
     setNotice(
       wasEditing
         ? "Correzione salvata. Classifica e statistiche sono state ricalcolate."
-        : "Partita salvata. La classifica è stata aggiornata.",
+        : wasTournament
+          ? "Risultato del torneo salvato. Classifica ed Elo sono stati aggiornati."
+          : "Partita salvata. La classifica è stata aggiornata.",
     );
   }
 
@@ -3216,6 +3651,7 @@ function AppShell({ session }: { session: Session | null }) {
                   <div className="section-head-label"><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
                   <div className="court-actions">
                     <button className="button button-primary cta-new-match" onClick={() => setShowMatch(true)}>+ New Match</button>
+                    <button className="button button-card" onClick={() => setPadelView("tournaments")}>Tornei</button>
                     {matches.length ? (
                       <button
                         className="button button-card cta-see-all-top"
@@ -3360,6 +3796,18 @@ function AppShell({ session }: { session: Session | null }) {
           </section>
         ) : null}
 
+        {!loading && view === "padel" && padelView === "tournaments" ? (
+          <TournamentsPage
+            tournaments={tournaments}
+            profiles={profiles}
+            matches={matches}
+            schemaReady={tournamentSchemaReady}
+            onCreate={() => setShowTournamentCreate(true)}
+            onRecord={(context) => { setEditingMatch(null); setTournamentMatch(context); }}
+            onSelectSection={setPadelView}
+          />
+        ) : null}
+
         {!loading && view === "padel" && padelView === "player" && selectedPlayer ? (
           <section className="page-section player-detail-page">
             <article className="player-detail-hero">
@@ -3426,12 +3874,23 @@ function AppShell({ session }: { session: Session | null }) {
 
               <div className="bacheca-group-head">
                 <div><span>02</span><div><p className="eyebrow dark">TORNEI</p><h3>Sala trofei</h3></div></div>
-                <small>Prossimamente</small>
+                <small>{selectedPlayerTrophies.length ? `${selectedPlayerTrophies.length} conquistati` : "Nessun trofeo"}</small>
               </div>
-              <div className="trophy-room-empty">
-                <div aria-hidden="true"><BadgeGlyphIcon name="trophy" /></div>
-                <span><b>La prima coppa aspetta il suo torneo.</b><small>I trofei compariranno qui, separati dai record statistici.</small></span>
-              </div>
+              {selectedPlayerTrophies.length ? (
+                <div className="trophy-room-list">
+                  {selectedPlayerTrophies.map((tournament) => (
+                    <article className="trophy-room-card" key={tournament.id}>
+                      <TournamentTrophyBadge kind={tournament.trophy_badge} />
+                      <span><small>{tournament.name}</small><b>{tournament.trophy_name}</b></span>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="trophy-room-empty">
+                  <div aria-hidden="true"><BadgeGlyphIcon name="trophy" /></div>
+                  <span><b>La prima coppa aspetta il suo torneo.</b><small>Comparirà qui quando una coppia completerà il girone al primo posto.</small></span>
+                </div>
+              )}
             </section>
 
             <EloChart profile={selectedPlayer} matches={matches} isSelf={isOwnCard} />
@@ -3822,12 +4281,24 @@ function AppShell({ session }: { session: Session | null }) {
         ))}
       </nav>
 
-      {showMatch || editingMatch ? (
+      {showMatch || editingMatch || tournamentMatch ? (
         <NewMatchModal
           profiles={profiles}
           match={editingMatch}
-          onClose={() => { setShowMatch(false); setEditingMatch(null); }}
+          tournamentContext={tournamentMatch ?? editingTournamentContext}
+          onClose={() => { setShowMatch(false); setEditingMatch(null); setTournamentMatch(null); }}
           onSaved={() => void handleSaved()}
+        />
+      ) : null}
+      {showTournamentCreate ? (
+        <TournamentCreateModal
+          profiles={profiles}
+          onClose={() => setShowTournamentCreate(false)}
+          onSaved={async () => {
+            setShowTournamentCreate(false);
+            await loadData();
+            setNotice("Torneo creato: calendario e classifica sono pronti.");
+          }}
         />
       ) : null}
       {showAvatarPicker ? (
