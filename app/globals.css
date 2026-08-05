@@ -3136,6 +3136,144 @@ button.ranking-row-link:focus-visible {
   font-weight: 750;
 }
 
+.field-register {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 18px 45px rgba(11, 27, 44, 0.09);
+  overflow: hidden;
+}
+
+.field-register-head {
+  align-items: flex-start;
+  background: var(--blue);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  min-height: 82px;
+  padding: 18px 22px;
+  position: relative;
+}
+
+.field-register-head span {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.field-register-head b {
+  font-size: 15px;
+  letter-spacing: 0.4px;
+  margin-top: 4px;
+}
+
+.field-register-head i {
+  font-size: 20px;
+  font-style: normal;
+  position: absolute;
+  right: 22px;
+  top: 28px;
+}
+
+.field-register-page {
+  background-color: color-mix(in srgb, var(--paper) 45%, var(--white));
+  background-image: radial-gradient(var(--line) 1px, transparent 1px);
+  background-size: 18px 18px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 26px;
+}
+
+.field-register-card {
+  align-items: center;
+  background: var(--white);
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  color: var(--ink);
+  display: grid;
+  gap: 13px;
+  grid-template-columns: 50px minmax(0, 1fr);
+  min-height: 140px;
+  padding: 17px;
+  transform: rotate(-0.6deg);
+}
+
+.field-register-card:nth-child(2n) { transform: rotate(0.5deg); }
+.field-register-card:nth-child(3n) { transform: rotate(-0.2deg); }
+
+.field-register-card.is-lime {
+  background: color-mix(in srgb, var(--lime) 28%, var(--white));
+}
+
+.field-register-card.is-blue {
+  background: color-mix(in srgb, var(--blue) 16%, var(--white));
+}
+
+.field-register-icon {
+  align-items: center;
+  border: 2px solid var(--ink-soft);
+  border-radius: 50%;
+  color: var(--ink-soft);
+  display: flex;
+  height: 50px;
+  justify-content: center;
+  width: 50px;
+}
+
+.field-register-icon svg {
+  height: 23px;
+  width: 23px;
+}
+
+.field-register-icon b {
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.field-register-card > div {
+  min-width: 0;
+}
+
+.field-register-card > div > b {
+  display: block;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.3px;
+}
+
+.field-register-card p {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+  margin: 7px 0;
+}
+
+.field-register-card small {
+  color: var(--ink);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
+.field-register-card.is-locked {
+  background: rgba(255, 255, 255, 0.55);
+  border-color: var(--muted);
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.field-register-card.is-locked .field-register-icon {
+  border-color: var(--muted);
+  color: var(--muted);
+  opacity: 0.68;
+}
+
+.field-register-card.is-locked p,
+.field-register-card.is-locked small {
+  color: var(--muted);
+}
+
 .trophy-room-empty {
   align-items: center;
   background: linear-gradient(135deg, rgba(11, 27, 44, 0.045), rgba(24, 223, 228, 0.06));
@@ -5707,6 +5845,18 @@ button.pizza-ranking-row {
 
   .progress-entry {
     padding-right: 0;
+  }
+
+  .field-register-page {
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
+
+  .field-register-card,
+  .field-register-card:nth-child(2n),
+  .field-register-card:nth-child(3n) {
+    min-height: 118px;
+    transform: none;
   }
 }
 

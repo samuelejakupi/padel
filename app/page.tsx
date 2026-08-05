@@ -593,6 +593,7 @@ type BadgeGlyph =
   | "marathon"
   | "duo"
   | "goat-slayer"
+  | "centurion"
   | "trophy";
 
 type Badge = {
@@ -852,6 +853,15 @@ function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch
       unlocked: own.ownsTopPair,
     },
     recordBadge("goat-slayer", "red", "goat-slayer", "AMMAZZA-GOAT", "Chi ha battuto più volte il numero uno.", "Conta solo quando l'avversario era GOAT prima dell'inizio della partita.", own.winsAgainstGoat, maxOf((item) => item.winsAgainstGoat), "GOAT battuti"),
+    {
+      id: "centurion", tone: "bronze", glyph: "centurion", label: "CENTURIONE",
+      meaning: "Il riconoscimento personale per chi ha raggiunto 20 presenze.",
+      criterion: "Si conquista disputando almeno 20 partite e non dipende dai risultati degli altri.",
+      value: `${profile.matches_played} partite`,
+      progress: clampProgress((profile.matches_played / 20) * 100),
+      progressLabel: profile.matches_played >= 20 ? "Traguardo conquistato" : `${profile.matches_played}/20 partite`,
+      unlocked: profile.matches_played >= 20,
+    },
   ];
 }
 
@@ -893,6 +903,7 @@ function BadgeGlyphIcon({ name }: { name: BadgeGlyph }) {
       {name === "marathon" ? <><path d="M7 3h10M7 21h10M8 3c0 5 1.7 6.7 4 9-2.3 2.3-4 4-4 9M16 3c0 5-1.7 6.7-4 9 2.3 2.3 4 4 4 9" /><path d="M3 8h4m10 0h4M4 6 2 8l2 2m16-4 2 2-2 2" /></> : null}
       {name === "duo" ? <><path d="M9.5 4 4 6.2v5c0 3.5 2.2 6.2 5.5 7.5 3.3-1.3 5.5-4 5.5-7.5v-5z" /><path d="M14.5 4 20 6.2v5c0 3.5-2.2 6.2-5.5 7.5M9.5 11.2l2.5 2.5 2.5-2.5" /></> : null}
       {name === "goat-slayer" ? <><path d="m5 6 2-3 3 2 2-3 2 3 3-2 2 3-3 3H8z" /><path d="M6 19c4.5-7.5 7-9 12-7-3.2.8-4.7 3.4-5 7M4 20 20 8" /></> : null}
+      {name === "centurion" ? <><path d="M6 18V9a6 6 0 0 1 12 0v9M6 11h12M9 18v-4m6 4v-4M9 5.2C10 3.5 11 2.5 12 2c1 1.5 1.7 3 1.7 5" /><text x="12" y="10" textAnchor="middle" stroke="none" fill="currentColor" fontSize="5" fontWeight="900">XX</text></> : null}
     </svg>
   );
 }
@@ -925,30 +936,77 @@ function BadgeList({ badges }: { badges: Badge[] }) {
   );
 }
 
-function ProgressBook({ badges }: { badges: Badge[] }) {
+function FieldRegister({
+  profile,
+  rank,
+  profiles,
+  matches,
+}: {
+  profile: Profile;
+  rank: number;
+  profiles: Profile[];
+  matches: PadelMatch[];
+}) {
+  const own = buildBadgeMetrics(profiles, matches).metrics.get(profile.id) ?? emptyBadgeMetrics();
+  const winRate = profile.matches_played ? Math.round((profile.wins / profile.matches_played) * 100) : 0;
+  const streak = profile.current_streak > 0
+    ? `${profile.current_streak} vittorie di fila`
+    : profile.current_streak < 0
+      ? `${Math.abs(profile.current_streak)} sconfitte di fila`
+      : "Nessuna serie aperta";
+  const registerEntries = [
+    {
+      id: "standing", glyph: "summit" as BadgeGlyph, tone: "lime", label: "CLASSIFICA",
+      detail: profile.matches_played ? `Posizione #${rank} · ${profile.rating} Elo` : "In attesa della prima partita",
+      footer: "DATI LIVE", locked: false,
+    },
+    {
+      id: "form", glyph: "flame" as BadgeGlyph, tone: "blue", label: "FORMA ATTUALE",
+      detail: streak, footer: profile.matches_played ? "AGGIORNATO" : "NON DISPONIBILE", locked: false,
+    },
+    {
+      id: "clean", glyph: "dominator" as BadgeGlyph, tone: "plain", label: "VITTORIE NETTE",
+      detail: `${own.straightSetWins} partite vinte senza perdere set`,
+      footer: `${own.straightSetWins} ${own.straightSetWins === 1 ? "VOLTA" : "VOLTE"}`, locked: false,
+    },
+    {
+      id: "pair", glyph: "duo" as BadgeGlyph, tone: "plain", label: "COPPIA MIGLIORE",
+      detail: own.bestPairMatches ? `${Math.round(own.bestPairRate * 100)}% di vittorie in ${own.bestPairMatches} match` : "Nessuna coppia registrata",
+      footer: own.bestPairMatches >= 5 ? "DATI CONSOLIDATI" : "SERVONO 5 MATCH", locked: false,
+    },
+    {
+      id: "centurion", glyph: "centurion" as BadgeGlyph, tone: "plain", label: "CENTURIONE",
+      detail: profile.matches_played >= 20 ? "Hai disputato almeno 20 partite." : "Gioca 20 partite.",
+      footer: profile.matches_played >= 20 ? "CONQUISTATO" : `${profile.matches_played}/20`,
+      locked: profile.matches_played < 20,
+    },
+    {
+      id: "record", glyph: "clutch" as BadgeGlyph, tone: "plain", label: "BILANCIO",
+      detail: `${profile.wins} vittorie · ${profile.losses} sconfitte`,
+      footer: `${winRate}% WIN RATE`, locked: false,
+    },
+  ];
+
   return (
-    <article className="progress-book">
-      <header className="progress-book-cover">
-        <span>THE BOYZ / PERFORMANCE LOG</span>
-        <b>REGISTRO DI CAMPO</b>
-        <em>OBIETTIVI ATTIVI</em>
+    <article className="field-register">
+      <header className="field-register-head">
+        <span>THEBOYZ PADEL CLUB</span>
+        <b>{profile.display_name.toUpperCase()} · PLAYER {String(rank || 0).padStart(2, "0")}</b>
+        <i aria-hidden="true">♟</i>
       </header>
-      <div className="progress-book-page">
-        <div className="progress-book-stamp" aria-hidden="true">TB<br />26</div>
-        <div className="progress-book-list">
-          {badges.map((badge, index) => (
-            <div className="progress-entry" key={badge.id}>
-              <span className={`progress-entry-icon badge-${badge.tone}`} aria-hidden="true">
-                <BadgeGlyphIcon name={badge.glyph} />
-              </span>
-              <div className="progress-entry-copy">
-                <span><small>{String(index + 1).padStart(2, "0")}</small><b>{badge.label}</b><em>{badge.value}</em></span>
-                <div className="progress-entry-track"><i style={{ width: `${badge.progress}%` }} /></div>
-                <small>{badge.progressLabel}</small>
-              </div>
+      <div className="field-register-page">
+        {registerEntries.map((entry) => (
+          <div className={`field-register-card is-${entry.tone} ${entry.locked ? "is-locked" : ""}`} key={entry.id}>
+            <span className="field-register-icon" aria-hidden="true">
+              {entry.locked ? <b>⌑</b> : <BadgeGlyphIcon name={entry.glyph} />}
+            </span>
+            <div>
+              <b>{entry.label}</b>
+              <p>{entry.detail}</p>
+              <small>{entry.footer}</small>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     </article>
   );
@@ -2263,7 +2321,6 @@ function AppShell({ session }: { session: Session | null }) {
     return playerBadges(selectedPlayer, profiles, matches);
   }, [selectedPlayer, profiles, matches]);
   const earnedPlayerBadges = selectedPlayerBadges.filter((badge) => badge.unlocked);
-  const pendingPlayerBadges = selectedPlayerBadges.filter((badge) => !badge.unlocked);
   // Con i parimerito il giocatore da raggiungere è il primo con punteggio più
   // alto, non semplicemente quello nella riga precedente.
   const nextRankedPlayer = currentUser
@@ -2894,25 +2951,23 @@ function AppShell({ session }: { session: Session | null }) {
 
             <section className="player-trophies">
               <div className="player-history-head">
-                <div><p className="eyebrow dark">BACHECA</p><h2>Identità, badge e trofei</h2></div>
+                <div><p className="eyebrow dark">BACHECA</p><h2>Identità, emblemi e trofei</h2></div>
               </div>
               <CourtPass profile={selectedPlayer} rank={selectedPlayerRank} />
 
               <div className="bacheca-group-head">
-                <div><span>01</span><div><p className="eyebrow dark">EMBLEMI ATTIVI</p><h3>Badge conquistati</h3></div></div>
+                <div><span>01</span><div><h3>Emblemi</h3></div></div>
                 <small>Passa sopra un emblema per scoprirne il significato</small>
               </div>
               {earnedPlayerBadges.length ? <BadgeList badges={earnedPlayerBadges} /> : (
-                <div className="player-trophies-empty"><p>Nessun badge ancora conquistato.</p></div>
+                <div className="player-trophies-empty"><p>Nessun emblema ancora conquistato.</p></div>
               )}
 
               <div className="bacheca-group-head">
-                <div><span>02</span><div><p className="eyebrow dark">PROGRESSIONE</p><h3>Registro di campo</h3></div></div>
-                <small>La distanza dai prossimi riconoscimenti</small>
+                <div><span>02</span><div><p className="eyebrow dark">PRESTAZIONI</p><h3>Registro di campo</h3></div></div>
+                <small>La fotografia aggiornata della carriera</small>
               </div>
-              {pendingPlayerBadges.length ? <ProgressBook badges={pendingPlayerBadges} /> : (
-                <div className="player-trophies-empty"><p>Tutti gli obiettivi disponibili sono stati completati.</p></div>
-              )}
+              <FieldRegister profile={selectedPlayer} rank={selectedPlayerRank} profiles={profiles} matches={matches} />
 
               <div className="bacheca-group-head">
                 <div><span>03</span><div><p className="eyebrow dark">TORNEI</p><h3>Sala trofei</h3></div></div>
