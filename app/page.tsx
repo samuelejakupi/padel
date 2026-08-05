@@ -3834,7 +3834,7 @@ function AppShell({ session }: { session: Session | null }) {
                   <div className="court-actions">
                     <button
                       className="button button-lime cta-new-match"
-                      onClick={() => setPadelView("tournaments")}
+                      onClick={() => setShowTournamentCreate(true)}
                       disabled={!tournamentSchemaReady}
                     >
                       + Nuovo torneo
