@@ -3806,6 +3806,254 @@ button.ranking-row-blue:hover {
   width: 22px;
 }
 
+/* Il giudizio di Fabio: la sua faccia con l'anello verde o rosso attorno.
+   Non è un punteggio, quindi non ha numeri accanto. */
+.fabio-badge {
+  border: 2px solid transparent;
+  border-radius: var(--radius-pill);
+  height: 30px;
+  object-fit: cover;
+  object-position: center top;
+  width: 30px;
+}
+
+.fabio-badge.is-positive {
+  border-color: var(--positive);
+  box-shadow: 0 0 0 2px rgba(41, 155, 102, 0.22);
+}
+
+.fabio-badge.is-negative {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 2px rgba(217, 75, 73, 0.22);
+  filter: grayscale(0.55);
+}
+
+.pizza-fabio-cell {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.pizza-fabio-cell em {
+  color: var(--ink-30);
+  font-style: normal;
+}
+
+/* Comandi di Fabio: compaiono sulla riga, sopra il resto. */
+.pizza-fabio-actions {
+  display: flex;
+  gap: var(--space-1);
+  position: absolute;
+  right: var(--space-2);
+  top: var(--space-2);
+}
+
+.fabio-action {
+  background: var(--veil-2);
+  border: 0;
+  border-radius: var(--radius-pill);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+  height: 22px;
+  line-height: 1;
+  width: 22px;
+}
+
+.fabio-action.is-positive {
+  background: rgba(41, 155, 102, 0.16);
+  color: var(--positive);
+}
+
+.fabio-action.is-negative {
+  background: rgba(217, 75, 73, 0.16);
+  color: var(--danger);
+}
+
+/* Card delle votazioni aperte, in cima alla pagina. */
+.pizza-open-sessions {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  margin-bottom: var(--space-7);
+}
+
+.pizza-session-card {
+  background: var(--lime);
+  border: 0;
+  border-radius: var(--radius);
+  color: var(--ink);
+  cursor: pointer;
+  display: grid;
+  gap: 2px;
+  padding: var(--space-5) var(--space-6);
+  text-align: left;
+}
+
+.pizza-session-card.is-voted {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--white);
+}
+
+.pizza-session-state {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  opacity: 0.7;
+}
+
+.pizza-session-card b {
+  font-size: 19px;
+  letter-spacing: -0.6px;
+}
+
+.pizza-session-date {
+  font-size: 10px;
+  font-weight: 800;
+  opacity: 0.6;
+  text-transform: uppercase;
+}
+
+.pizza-session-timer {
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  letter-spacing: -1px;
+  margin-top: var(--space-1);
+}
+
+/* Campi di voto: cursore da 1 a 10 con il peso scritto accanto. */
+.pizza-score-fields {
+  display: grid;
+  gap: var(--space-5);
+  margin-bottom: var(--space-4);
+}
+
+.pizza-score-head {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+}
+
+.pizza-score-head b {
+  font-size: 13px;
+}
+
+.pizza-score-head span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.pizza-score-input {
+  align-items: center;
+  display: flex;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.pizza-score-input input {
+  flex: 1 1 auto;
+  margin: 0;
+  min-height: 0;
+}
+
+.pizza-score-input em {
+  background: var(--veil-2);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-style: normal;
+  font-weight: 900;
+  min-width: 40px;
+  padding: 6px 0;
+  text-align: center;
+}
+
+/* Media in tempo reale dentro la modale. */
+.pizza-live {
+  border-top: 1px solid var(--line);
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
+}
+
+.pizza-live-head {
+  align-items: flex-end;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+}
+
+.pizza-live-head b {
+  display: block;
+  font-size: 44px;
+  letter-spacing: -2px;
+  line-height: 1;
+}
+
+.pizza-live-head b small {
+  color: var(--muted);
+  font-size: 14px;
+  letter-spacing: 0;
+}
+
+.pizza-live-head > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.pizza-live-rows {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.pizza-live-row {
+  align-items: center;
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 62px minmax(0, 1fr) 34px;
+}
+
+.pizza-live-row span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.pizza-live-row i {
+  background: var(--veil-2);
+  border-radius: var(--radius-pill);
+  display: block;
+  height: 6px;
+  overflow: hidden;
+}
+
+.pizza-live-row i b {
+  background: var(--blue-dark);
+  display: block;
+  height: 100%;
+}
+
+.pizza-live-row em {
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  text-align: right;
+}
+
+.pizza-live-voters {
+  display: flex;
+  margin-top: var(--space-5);
+}
+
+.pizza-live-voters .avatar + .avatar {
+  margin-left: -10px;
+}
+
 .pizza-criterion b {
   font-size: 30px;
   letter-spacing: -1px;
@@ -3856,6 +4104,7 @@ button.ranking-row-blue:hover {
   border-bottom: 1px solid var(--veil-2);
   min-height: 78px;
   padding: 12px 22px;
+  position: relative;
 }
 
 button.pizza-ranking-row {
@@ -4376,7 +4625,26 @@ button.pizza-ranking-row {
   flex: 0 0 auto;
   height: 30px;
   justify-content: center;
+  position: relative;
   width: 30px;
+}
+
+/* Pallino delle votazioni pizza in sospeso. */
+.nav-dot {
+  align-items: center;
+  background: var(--danger);
+  border-radius: var(--radius-pill);
+  color: var(--white);
+  display: flex;
+  font-size: 9px;
+  font-weight: 900;
+  height: 15px;
+  justify-content: center;
+  min-width: 15px;
+  padding: 0 3px;
+  position: absolute;
+  right: -3px;
+  top: -2px;
 }
 
 .nav-glyph {
