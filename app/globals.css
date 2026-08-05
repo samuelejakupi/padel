@@ -2805,10 +2805,10 @@ button.ranking-row-blue:hover {
   box-shadow: none;
   color: var(--ink);
   display: flex;
-  flex: 0 0 108px;
+  flex: 0 0 124px;
   flex-direction: column;
   gap: 0;
-  min-height: 116px;
+  min-height: 176px;
   outline: none;
   overflow: visible;
   padding: 4px;
@@ -2835,81 +2835,24 @@ button.ranking-row-blue:hover {
 
 .badge-emblem {
   align-items: center;
-  color: var(--badge-accent);
   display: flex;
-  height: 104px;
+  height: 168px;
   justify-content: center;
   position: relative;
   transition: transform 160ms ease;
-  width: 84px;
+  width: 112px;
 }
 
 .badge-emblem::before,
 .badge-emblem::after {
-  content: "";
-  left: 50%;
-  position: absolute;
-  transform: translateX(-50%);
+  content: none;
 }
 
-.badge-emblem::before {
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.28), transparent 35%),
-    linear-gradient(180deg, color-mix(in srgb, var(--badge-accent) 72%, var(--white)), color-mix(in srgb, var(--badge-accent) 42%, var(--ink)));
-  clip-path: polygon(50% 0, 94% 16%, 88% 72%, 50% 100%, 12% 72%, 6% 16%);
-  filter: drop-shadow(0 8px 8px rgba(11, 27, 44, 0.2));
-  height: 92px;
-  top: 5px;
-  width: 74px;
-}
-
-.badge-emblem::after {
-  background: #07101b;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--badge-accent) 30%, transparent);
-  clip-path: polygon(50% 0, 94% 16%, 88% 72%, 50% 100%, 12% 72%, 6% 16%);
-  height: 80px;
-  top: 11px;
-  width: 64px;
-}
-
-.badge-crown,
-.badge-laurel,
-.badge-icon {
-  position: absolute;
-  z-index: 1;
-}
-
-.badge-crown {
-  font-size: 10px;
-  top: 4px;
-}
-
-.badge-laurel {
-  bottom: 9px;
-  font-size: 18px;
-  opacity: 0.86;
-}
-
-.badge-laurel-left { left: 1px; transform: rotate(20deg); }
-.badge-laurel-right { right: 1px; transform: rotate(-20deg); }
-
-.player-trophies .badge-icon {
-  align-items: center;
-  background: transparent;
-  border-radius: 0;
-  color: var(--white);
-  display: flex;
-  height: 68px;
-  justify-content: center;
-  top: 17px;
-  width: 68px;
-}
-
-.player-trophies .badge-icon img {
-  filter: brightness(1.2) contrast(1.18) drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
-  height: 68px;
+.player-trophies .badge-art {
+  filter: drop-shadow(0 9px 9px rgba(11, 27, 44, 0.22));
+  height: 168px;
   object-fit: contain;
-  width: 68px;
+  width: 112px;
 }
 
 .player-trophies .badge-text {
@@ -5939,8 +5882,8 @@ button.pizza-ranking-row {
   }
 
   .player-trophies .badge {
-    flex-basis: 104px;
-    min-height: 112px;
+    flex-basis: 116px;
+    min-height: 166px;
     scroll-snap-align: start;
   }
 

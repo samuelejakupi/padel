@@ -1135,10 +1135,7 @@ function BadgeList({ badges }: { badges: Badge[] }) {
           aria-label={`${badge.label}. ${badge.meaning} ${badge.progressLabel}`}
         >
           <div className="badge-emblem" aria-hidden="true">
-            <span className="badge-crown">◆</span>
-            <span className="badge-icon"><Image src={`${basePath}/emblems/${badge.glyph}.png`} alt="" width={68} height={68} /></span>
-            <span className="badge-laurel badge-laurel-left">❯</span>
-            <span className="badge-laurel badge-laurel-right">❮</span>
+            <Image className="badge-art" src={`${basePath}/emblems/${badge.glyph}.png`} alt="" width={112} height={168} />
           </div>
           <aside className="badge-tooltip" role="tooltip">
             <strong>{badge.label}</strong>
