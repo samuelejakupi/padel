@@ -3238,7 +3238,6 @@ function AppShell({ session }: { session: Session | null }) {
 
               <div className="bacheca-group-head">
                 <div><span>01</span><div><h3>Emblemi</h3></div></div>
-                <small>Passa sopra un emblema per scoprirne il significato</small>
               </div>
               {earnedPlayerBadges.length ? <BadgeList badges={earnedPlayerBadges} /> : (
                 <div className="player-trophies-empty"><p>Nessun emblema ancora conquistato.</p></div>
@@ -3246,7 +3245,6 @@ function AppShell({ session }: { session: Session | null }) {
 
               <div className="bacheca-group-head">
                 <div><span>02</span><div><p className="eyebrow dark">PRESTAZIONI</p><h3>Registro di campo</h3></div></div>
-                <small>La fotografia aggiornata della carriera</small>
               </div>
               <FieldRegister profile={selectedPlayer} rank={selectedPlayerRank} profiles={profiles} matches={matches} />
 
