@@ -1483,15 +1483,20 @@ function TeamRankingList({
   teams,
   limit,
   bare = false,
+  expanded = false,
 }: {
   teams: PadelTeam[];
   limit?: number;
   bare?: boolean;
+  // Come per il singolo: in home la lista e compatta, nella pagina del
+  // ranking diventa tabella. Senza questo le due classifiche in home si
+  // presentavano con due impaginazioni diverse.
+  expanded?: boolean;
 }) {
   const ranks = ranksByRating(teams);
   const visible = limit === undefined ? teams : teams.slice(0, limit);
   return (
-    <div className={`ranking-table ranking-table-team${bare ? " ranking-table-bare" : ""}`}>
+    <div className={`${expanded ? "ranking-table ranking-table-team" : "ranking-list ranking-list-team"}${bare ? " ranking-table-bare" : ""}`}>
       {visible.map((team, index) => {
         const rank = ranks[index];
         const winRate = team.matches_played ? Math.round((team.wins / team.matches_played) * 100) : 0;
@@ -1527,9 +1532,12 @@ function TeamRankingList({
 // Il colore della card dice la posizione, e basta quello: giallo il primo
 // (o i primi, se sono a pari punti), azzurro secondo e terzo, chiaro il
 // resto. Tutte le righe portano le stesse informazioni.
+// Le prime tre posizioni prendono i colori del podio. Vale per entrambe le
+// classifiche, singolo e squadre.
 function rankTone(rank: number) {
   if (rank === 1) return "ranking-row-gold";
-  if (rank === 2 || rank === 3) return "ranking-row-blue";
+  if (rank === 2) return "ranking-row-silver";
+  if (rank === 3) return "ranking-row-bronze";
   return "";
 }
 
@@ -3966,7 +3974,7 @@ function AppShell({ session }: { session: Session | null }) {
             {rankingMode === "single" ? (
               <RankingList profiles={seasonProfiles} onSelect={openPlayer} />
             ) : teams.length ? (
-              <TeamRankingList teams={teams} />
+              <TeamRankingList teams={teams} expanded />
             ) : (
               <div className="empty-board">
                 <span>00</span>

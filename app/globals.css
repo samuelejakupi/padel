@@ -2354,6 +2354,13 @@ button.podium-person {
   grid-template-columns: 40px 66px minmax(140px, 1fr) 76px 76px 84px 80px 70px;
 }
 
+/* Versione compatta della classifica squadre: stessa impaginazione di
+   quella del singolo, con la sola colonna degli avatar allargata perche
+   qui ce ne stanno due affiancati. */
+.ranking-list-team .ranking-row {
+  grid-template-columns: 26px 62px minmax(0, 1fr) 20px 44px;
+}
+
 .podium-avatars {
   display: flex;
   justify-content: center;
@@ -2428,62 +2435,87 @@ button.podium-person {
    colorate diventano blocchi staccati, quindi perdono il filo di separazione
    e prendono il loro respiro. */
 .ranking-row-gold,
-.ranking-row-blue {
+.ranking-row-silver,
+.ranking-row-bronze {
   border-bottom: 0;
   border-radius: var(--radius);
   margin-bottom: 10px;
   padding: 0 20px;
 }
 
+/* I colori del podio. Tinte piene e chiare, cosi il testo scuro sopra
+   resta leggibile come sulle righe normali. */
 .ranking-row-gold {
-  background: var(--lime);
+  background: linear-gradient(135deg, #f4d970 0%, #e2b93f 100%);
   color: var(--ink);
 }
 
-.ranking-row-blue {
-  background: var(--blue);
+.ranking-row-silver {
+  background: linear-gradient(135deg, #e4eaee 0%, #bfcad3 100%);
+  color: var(--ink);
+}
+
+.ranking-row-bronze {
+  background: linear-gradient(135deg, #eab98b 0%, #cd8f55 100%);
   color: var(--ink);
 }
 
 /* Su fondo pieno il grigio delle etichette e dei numeri non si legge. */
 .ranking-row-gold .rank-number,
-.ranking-row-blue .rank-number,
+.ranking-row-silver .rank-number,
+.ranking-row-bronze .rank-number,
 .ranking-row-gold .ranking-points b,
-.ranking-row-blue .ranking-points b,
+.ranking-row-silver .ranking-points b,
+.ranking-row-bronze .ranking-points b,
 .ranking-row-gold .table-stat b,
-.ranking-row-blue .table-stat b {
+.ranking-row-silver .table-stat b,
+.ranking-row-bronze .table-stat b {
   color: var(--ink);
 }
 
 .ranking-row-gold .ranking-name span,
-.ranking-row-blue .ranking-name span,
+.ranking-row-silver .ranking-name span,
+.ranking-row-bronze .ranking-name span,
 .ranking-row-gold .table-stat small,
-.ranking-row-blue .table-stat small,
+.ranking-row-silver .table-stat small,
+.ranking-row-bronze .table-stat small,
 .ranking-row-gold .ranking-points small,
-.ranking-row-blue .ranking-points small {
+.ranking-row-silver .ranking-points small,
+.ranking-row-bronze .ranking-points small {
   color: rgba(11, 27, 44, 0.62);
 }
 
 .ranking-row-gold .streak,
-.ranking-row-blue .streak {
+.ranking-row-silver .streak,
+.ranking-row-bronze .streak {
   background: rgba(11, 27, 44, 0.12);
   color: var(--ink);
 }
 
 .ranking-row-gold .avatar,
-.ranking-row-blue .avatar {
+.ranking-row-silver .avatar,
+.ranking-row-bronze .avatar {
   border-color: rgba(255, 255, 255, 0.85);
 }
 
-/* Senza questo l'hover generico delle righe schiarirebbe la card colorata. */
-button.ranking-row-gold:hover {
-  background: var(--lime);
+/* Senza questo l'hover generico delle righe schiarirebbe la card colorata.
+   Il fondo resta quello del podio: si scurisce appena. */
+button.ranking-row-gold:hover,
+button.ranking-row-silver:hover,
+button.ranking-row-bronze:hover {
   filter: brightness(0.95);
 }
 
-button.ranking-row-blue:hover {
-  background: var(--blue);
-  filter: brightness(0.95);
+button.ranking-row-gold:hover {
+  background: linear-gradient(135deg, #f4d970 0%, #e2b93f 100%);
+}
+
+button.ranking-row-silver:hover {
+  background: linear-gradient(135deg, #e4eaee 0%, #bfcad3 100%);
+}
+
+button.ranking-row-bronze:hover {
+  background: linear-gradient(135deg, #eab98b 0%, #cd8f55 100%);
 }
 
 .ranking-table .ranking-row {
@@ -6109,7 +6141,7 @@ button.pizza-ranking-row {
   .cta-in-panel {
     display: inline-flex;
     margin: 14px 0 6px;
-    min-height: 68px;
+    min-height: 84px;
     width: 100%;
   }
 
@@ -6294,12 +6326,17 @@ button.pizza-ranking-row {
   }
 
   .ranking-table .ranking-row.ranking-row-gold {
-    background: var(--lime);
+    background: linear-gradient(135deg, #f4d970 0%, #e2b93f 100%);
     color: var(--ink);
   }
 
-  .ranking-table .ranking-row.ranking-row-blue {
-    background: var(--blue);
+  .ranking-table .ranking-row.ranking-row-silver {
+    background: linear-gradient(135deg, #e4eaee 0%, #bfcad3 100%);
+    color: var(--ink);
+  }
+
+  .ranking-table .ranking-row.ranking-row-bronze {
+    background: linear-gradient(135deg, #eab98b 0%, #cd8f55 100%);
     color: var(--ink);
   }
 
