@@ -3039,13 +3039,8 @@ function AppShell({ session }: { session: Session | null }) {
   const [votingSession, setVotingSession] = useState<PizzaSession | null>(null);
   const [showSessionPicker, setShowSessionPicker] = useState(false);
   const [showPizzaInfo, setShowPizzaInfo] = useState(false);
-  // Partite e classifica si aprono e si richiudono dentro la home. Il limite
-  // è sul numero di righe, così il tasto compare solo quando c'è davvero
-  // qualcosa di nascosto.
-  const [allMatches, setAllMatches] = useState(false);
-  const [allRanking, setAllRanking] = useState(false);
-  // Quattro righe di classifica: è anche il taglio che il CSS applica su
-  // mobile, e tenerli uguali evita che il tasto prometta righe già visibili.
+  // La home mostra soltanto un'anteprima; i "Vedi tutto" aprono le pagine
+  // complete, così la schermata principale non cambia altezza.
   const HOME_ROWS = 3;
   const HOME_MATCHES = 2;
   const HOME_TOURNAMENTS = 2;
@@ -3067,12 +3062,6 @@ function AppShell({ session }: { session: Session | null }) {
     });
   }, []);
 
-  const toggleKeepingScroll = useCallback(
-    (setter: (update: (open: boolean) => boolean) => void) => {
-      keepScroll(() => setter((open) => !open));
-    },
-    [keepScroll],
-  );
   const [editingMatch, setEditingMatch] = useState<PadelMatch | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
@@ -3402,6 +3391,7 @@ function AppShell({ session }: { session: Session | null }) {
   const navButtonsRef = useRef<(HTMLButtonElement | null)[]>([]);
   const navDragging = useRef(false);
   const navPointerStart = useRef<number | null>(null);
+  const pageSwipeStart = useRef<{ x: number; y: number } | null>(null);
 
   // Il Padel è la home: partite e classifica si aprono lì dentro, quindi non
   // serve più una voce separata.
@@ -3706,6 +3696,12 @@ function AppShell({ session }: { session: Session | null }) {
     setPadelView("overview");
   }
 
+  function openPadelPage(next: "matches" | "ranking" | "tournaments") {
+    setView("padel");
+    setPadelView(next);
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }
+
 
 
   return (
@@ -3736,7 +3732,37 @@ function AppShell({ session }: { session: Session | null }) {
 
       {notice ? <button className="notice" onClick={() => setNotice("")}>{notice}<span>×</span></button> : null}
 
-      <main className="content">
+      <main
+        className="content"
+        onTouchStart={(event) => {
+          const canSwipeBack = view === "padel" && (padelView === "matches" || padelView === "ranking" || padelView === "tournaments");
+          const target = event.target instanceof Element ? event.target : null;
+          const ignored = target?.closest("input, select, textarea, label, iframe, video, [role='slider'], [role='dialog'], .tournament-tabs, .badge-grid");
+          if (!canSwipeBack || event.touches.length !== 1 || ignored || !window.matchMedia("(max-width: 780px)").matches) {
+            pageSwipeStart.current = null;
+            return;
+          }
+          const touch = event.touches[0];
+          if (touch.clientX < 24 || touch.clientX > window.innerWidth - 24) {
+            pageSwipeStart.current = null;
+            return;
+          }
+          pageSwipeStart.current = { x: touch.clientX, y: touch.clientY };
+        }}
+        onTouchEnd={(event) => {
+          const start = pageSwipeStart.current;
+          pageSwipeStart.current = null;
+          const touch = event.changedTouches[0];
+          if (!start || !touch) return;
+          const distanceX = touch.clientX - start.x;
+          const distanceY = Math.abs(touch.clientY - start.y);
+          if (distanceX >= 70 && distanceX > distanceY * 1.35) {
+            goHome();
+            window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+          }
+        }}
+        onTouchCancel={() => { pageSwipeStart.current = null; }}
+      >
         {loading ? (
           <LoadingScreen />
         ) : null}
@@ -3795,9 +3821,9 @@ function AppShell({ session }: { session: Session | null }) {
                     {matches.length ? (
                       <button
                         className="button button-card cta-see-all-top"
-                        onClick={() => setAllMatches((open) => !open)}
+                        onClick={() => openPadelPage("matches")}
                       >
-                        {allMatches ? "Vedi meno" : `Vedi tutto (${matches.length})`}
+                        {`Vedi tutto (${matches.length})`}
                       </button>
                     ) : null}
                   </div>
@@ -3812,7 +3838,7 @@ function AppShell({ session }: { session: Session | null }) {
                   <div className="match-panel-head"><h2>Ultime partite</h2></div>
                   {matches.length ? (
                     <div className="match-list">
-                      {(allMatches ? matches : matches.slice(0, HOME_MATCHES)).map((match) => (
+                      {matches.slice(0, HOME_MATCHES).map((match) => (
                         <MatchCard
                           key={match.id}
                           match={match}
@@ -3828,9 +3854,9 @@ function AppShell({ session }: { session: Session | null }) {
                   {matches.length ? (
                     <button
                       className="button button-ghost button-full cta-see-all-bottom"
-                      onClick={() => setAllMatches((open) => !open)}
+                      onClick={() => openPadelPage("matches")}
                     >
-                      {allMatches ? "Vedi meno" : `Vedi tutte (${matches.length})`}
+                      {`Vedi tutte (${matches.length})`}
                     </button>
                   ) : null}
                 </div>
@@ -3865,7 +3891,7 @@ function AppShell({ session }: { session: Session | null }) {
                           key={tournament.id}
                           tournament={tournament}
                           matches={matches}
-                          onOpen={() => setPadelView("tournaments")}
+                          onOpen={() => openPadelPage("tournaments")}
                         />
                       ))}
                     </div>
@@ -3876,7 +3902,7 @@ function AppShell({ session }: { session: Session | null }) {
                     <button
                       className="button button-ghost button-full cta-see-all-bottom"
                       aria-label="Vedi tutti i tornei"
-                      onClick={() => setPadelView("tournaments")}
+                      onClick={() => openPadelPage("tournaments")}
                     >
                       {`Vedi tutto (${tournaments.length})`}
                     </button>
@@ -3884,7 +3910,7 @@ function AppShell({ session }: { session: Session | null }) {
                 </div>
               </div>
 
-              <aside className={`dashboard-side ${allRanking ? "is-open" : ""}`}>
+              <aside className="dashboard-side">
                 <div className="side-head">
                   <div><h2>Classifica Elo</h2></div>
                   {/* Due icone al posto di due parole: una racchetta per il
@@ -3912,10 +3938,10 @@ function AppShell({ session }: { session: Session | null }) {
                   <RankingList
                     profiles={seasonProfiles}
                     onSelect={openPlayer}
-                    limit={allRanking ? undefined : HOME_ROWS}
+                    limit={HOME_ROWS}
                   />
                 ) : teams.length ? (
-                  <TeamRankingList teams={teams} limit={allRanking ? undefined : HOME_ROWS} />
+                  <TeamRankingList teams={teams} limit={HOME_ROWS} />
                 ) : (
                   <p className="demo-profile-note">
                     Le coppie si formano dalle partite: registra un doppio e compariranno qui.
@@ -3924,9 +3950,9 @@ function AppShell({ session }: { session: Session | null }) {
                 {rankingRows ? (
                   <button
                     className="button button-ghost button-full"
-                    onClick={() => toggleKeepingScroll(setAllRanking)}
+                    onClick={() => openPadelPage("ranking")}
                   >
-                    {allRanking ? "Vedi meno" : `Vedi tutti (${rankingRows})`}
+                    {`Vedi tutti (${rankingRows})`}
                   </button>
                 ) : null}
               </aside>
