@@ -3806,9 +3806,12 @@ button.ranking-row-blue:hover {
   width: 22px;
 }
 
-/* Il giudizio di Fabio: la sua faccia con l'anello verde o rosso attorno,
-   appiccicata al nome come il trofeo sull'avatar del primo in classifica.
-   Non è un punteggio, quindi non ha numeri accanto. */
+/* Su desktop la classifica è una tabella: il giudizio di Fabio sta accanto
+   al nome. Il campo rettangolare è la versione per le card su mobile. */
+.pizza-fabio-cell {
+  display: none;
+}
+
 .fabio-badge {
   border: 2px solid transparent;
   border-radius: var(--radius-pill);
@@ -5774,8 +5777,16 @@ button.pizza-ranking-row {
     grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr);
     min-height: 0;
     min-width: 0;
-    overflow: visible;
     padding: 16px 14px;
+  }
+
+  /* Con il giudizio di Fabio si aggiunge una riga fra il totale e i voti. */
+  .pizza-ranking-row.has-fabio {
+    grid-template-areas:
+      "position name total"
+      "position fabio fabio"
+      "position location pizza"
+      "position dessert price";
   }
 
   .pizza-ranking-row > .pizza-position { grid-area: position; }
@@ -5810,17 +5821,44 @@ button.pizza-ranking-row {
     color: var(--muted);
   }
 
-  /* Il badge di Fabio scavalca lo spigolo in basso a destra, come il trofeo
-     sull'avatar del primo in classifica. */
+  /* Nella card il giudizio di Fabio è un campo come gli altri, colorato,
+     con la sua faccia sulla destra. Quello accanto al nome sparisce. */
   .pizza-name-cell > b .fabio-badge {
-    border-width: 3px;
-    bottom: -9px;
-    height: 34px;
-    margin: 0;
-    position: absolute;
-    right: -8px;
-    width: 34px;
-    z-index: 2;
+    display: none;
+  }
+
+  .pizza-fabio-cell {
+    align-items: center;
+    border-radius: var(--radius-sm);
+    display: flex;
+    grid-area: fabio;
+    justify-content: space-between;
+    min-height: 34px;
+    padding: 4px 5px 4px 8px;
+  }
+
+  .pizza-fabio-cell b {
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+  }
+
+  .pizza-fabio-cell img {
+    border-radius: var(--radius-pill);
+    height: 26px;
+    object-fit: cover;
+    object-position: center top;
+    width: 26px;
+  }
+
+  .pizza-fabio-cell.is-positive {
+    background: rgba(41, 155, 102, 0.16);
+    color: var(--positive);
+  }
+
+  .pizza-fabio-cell.is-negative {
+    background: rgba(217, 75, 73, 0.16);
+    color: var(--danger);
   }
 
   .pizza-category-score {

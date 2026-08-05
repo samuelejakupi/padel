@@ -3512,7 +3512,8 @@ function AppShell({ session }: { session: Session | null }) {
               <div className="pizza-ranking-list">
                 {pizzaEntries.map((restaurant, index) => {
                   const complete = !restaurant.pending;
-                  const rowClass = `pizza-ranking-row ${index < 3 && complete ? "pizza-ranking-top" : ""} ${restaurant.isNew ? "pizza-ranking-interactive" : ""} ${restaurant.pending ? "pizza-ranking-pending" : ""}`;
+                  const hasFabio = restaurant.fabioBadge !== null && restaurant.fabioBadge !== undefined;
+                  const rowClass = `pizza-ranking-row ${index < 3 && complete ? "pizza-ranking-top" : ""} ${restaurant.isNew ? "pizza-ranking-interactive" : ""} ${restaurant.pending ? "pizza-ranking-pending" : ""} ${hasFabio ? "has-fabio" : ""}`;
                   const rowContent = (<>
                     <span className="pizza-position">{index + 1}</span>
                     <div className="pizza-name-cell">
@@ -3538,6 +3539,15 @@ function AppShell({ session }: { session: Session | null }) {
                     <span className="pizza-category-score"><b>{complete ? restaurant.dessert.toFixed(1) : "—"}</b><small>/10</small></span>
                     <span className="pizza-category-score"><b>{complete ? restaurant.price.toFixed(1) : "—"}</b><small>/10</small></span>
                     <span className="pizza-total-score"><b>{complete ? restaurant.total : "N/C"}</b><small>{complete ? "/100" : ""}</small></span>
+                    {/* Il giudizio di Fabio come campo a sé: su mobile prende
+                        una riga tutta sua, su desktop resta accanto al nome. */}
+                    {restaurant.fabioBadge === null || restaurant.fabioBadge === undefined ? null : (
+                      <span className={`pizza-fabio-cell ${restaurant.fabioBadge ? "is-positive" : "is-negative"}`}>
+                        <b>{restaurant.fabioBadge ? "BONUS" : "MALUS"}</b>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={`${basePath}/bonus-fabio.jpg`} alt="Fabio" />
+                      </span>
+                    )}
                   </>);
                   return restaurant.isNew && restaurant.id ? (
                     <button
