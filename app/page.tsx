@@ -3005,25 +3005,6 @@ function TournamentsPage({
   );
 }
 
-function PadelSectionNav({
-  active,
-  onSelect,
-}: {
-  active: "matches" | "ranking" | "tournaments";
-  onSelect: (view: "matches" | "ranking" | "tournaments") => void;
-}) {
-  return (
-    <div className="padel-section-nav">
-      <div><p className="eyebrow dark">PADEL</p><h2>Partite, ranking e tornei</h2></div>
-      <div className="ranking-switch" role="group" aria-label="Sezione Padel">
-        <button className={active === "matches" ? "active" : ""} onClick={() => onSelect("matches")}>Partite</button>
-        <button className={active === "ranking" ? "active" : ""} onClick={() => onSelect("ranking")}>Ranking</button>
-        <button className={active === "tournaments" ? "active" : ""} onClick={() => onSelect("tournaments")}>Tornei</button>
-      </div>
-    </div>
-  );
-}
-
 function AppShell({ session }: { session: Session | null }) {
   // Il Court è la home: si entra direttamente lì.
   const [view, setView] = useState<View>("padel");
@@ -3962,7 +3943,6 @@ function AppShell({ session }: { session: Session | null }) {
 
         {!loading && view === "padel" && padelView === "ranking" ? (
           <section className="page-section ranking-page">
-            <PadelSectionNav active="ranking" onSelect={setPadelView} />
             <article className="section-hero">
               <BlockMark size="lg" />
               <div className="section-hero-head">
@@ -4230,12 +4210,10 @@ function AppShell({ session }: { session: Session | null }) {
 
         {!loading && view === "padel" && padelView === "matches" ? (
           <section className="page-section">
-            <PadelSectionNav active="matches" onSelect={setPadelView} />
             <article className="section-hero">
               <BlockMark size="lg" />
               <div className="section-hero-head">
                 <div><p className="eyebrow">ARCHIVIO THEBOYZ PADEL</p><h1>Tutte le partite</h1><p>{matches.length} risultati registrati dal gruppo.</p></div>
-                <button className="button button-primary cta-new-match" onClick={() => setShowMatch(true)}>+ New Match</button>
               </div>
             </article>
             {matches.length ? (
