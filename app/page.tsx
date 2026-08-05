@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { FormEvent, ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import {
@@ -1124,6 +1123,151 @@ function BadgeGlyphIcon({ name }: { name: BadgeGlyph }) {
   );
 }
 
+/* Gli emblemi usano pittogrammi vettoriali disegnati per l'interfaccia:
+   restano nitidi su ogni schermo e non dipendono da immagini generate. */
+function EmblemMark({ name }: { name: BadgeGlyph }) {
+  return (
+    <svg
+      className="badge-mark"
+      viewBox="0 0 100 100"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="4.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {name === "goat" ? (
+        <>
+          <path d="M15 51c6-12 19-15 34-10l15 5 9-10 12 2 6 7-8 7-14-1-6 8H29c-8 0-13-2-14-8Z" />
+          <path d="M77 37c-2-9 5-15 11-14-4 2-5 8-2 13M74 36c-7-5-8-12-4-16 0 6 3 10 9 12M87 45h.1M80 51l-2 8" />
+          <path d="M29 58v20h7l3-19M57 58l4 20h7l1-27M22 45l-8-5M84 52l-4 9M45 43l4-8" />
+        </>
+      ) : null}
+      {name === "summit" ? (
+        <>
+          <path d="m9 76 25-34 12 14 14-24 31 44H9Z" />
+          <path d="m34 42 7-7 5 7 7-11 7 1M60 32V14h22l-6 7 6 7H60" />
+          <path d="M26 23h26l-3 10H29l-3-10Zm2 0-4-9 11 6 6-10 7 10 10-6-6 9" />
+        </>
+      ) : null}
+      {name === "flame" ? (
+        <>
+          <path d="M28 31h44v14c0 15-9 25-22 25S28 60 28 45V31Z" />
+          <path d="M28 36H16v8c0 9 6 14 15 14M72 36h12v8c0 9-6 14-15 14M50 70v10M36 85h28" />
+          <path d="M50 22c7-5 9-11 7-17 10 8 14 16 10 26H36c-3-8 0-15 8-22-1 7 1 11 6 13Z" />
+        </>
+      ) : null}
+      {name === "sets" ? (
+        <>
+          <rect x="15" y="17" width="70" height="66" rx="5" />
+          <path d="M15 39h70M15 61h70M39 17v66" />
+          <circle cx="27" cy="28" r="5" fill="currentColor" stroke="none" />
+          <circle cx="27" cy="50" r="5" fill="currentColor" stroke="none" />
+          <circle cx="27" cy="72" r="5" fill="currentColor" stroke="none" />
+          <path d="m51 28 7 7 15-15M51 50l7 7 15-15M51 72l7 7 15-15" />
+        </>
+      ) : null}
+      {name === "turkey" ? (
+        <>
+          <path d="M48 52C22 55 10 39 15 20c6 10 13 15 22 17-3-12 1-22 9-27 0 12 3 20 9 25 3-12 10-20 20-22-4 11-4 20 0 27 5-7 11-10 18-10-3 16-14 25-31 26" />
+          <path d="M45 49c-9 8-8 27 6 32 14 5 27-5 24-19-2-10-11-14-19-9" />
+          <path d="M55 53c-2-14 2-24 12-28 8-3 15 1 15 8l8 5-9 4-4 11M74 32h.1M45 80l-5 9M58 83l2 8" />
+        </>
+      ) : null}
+      {name === "hook" ? (
+        <>
+          <path d="M50 8v47c0 17-8 28-21 28-12 0-20-9-20-20 0-8 5-15 13-19l5 13c-3 2-5 4-5 7 0 4 3 7 7 7 6 0 8-6 8-16V8h13Z" />
+          <path d="M31 8h25M37 18h13M37 29h13" />
+          <circle cx="72" cy="27" r="11" />
+          <path d="M72 16V8M61 27h-8" />
+        </>
+      ) : null}
+      {name === "dominator" ? (
+        <>
+          <path d="m18 82 22-28M82 82 60 54M19 20l22 28M81 20 59 48" />
+          <ellipse cx="29" cy="32" rx="12" ry="18" transform="rotate(-38 29 32)" />
+          <ellipse cx="71" cy="32" rx="12" ry="18" transform="rotate(38 71 32)" />
+          <rect x="22" y="47" width="56" height="34" rx="5" fill="var(--paper)" />
+          <text className="badge-mark-score" x="50" y="71" textAnchor="middle">2–0</text>
+        </>
+      ) : null}
+      {name === "comeback" ? (
+        <>
+          <rect x="10" y="20" width="31" height="30" rx="5" />
+          <rect x="59" y="50" width="31" height="30" rx="5" />
+          <text className="badge-mark-number" x="25.5" y="41" textAnchor="middle">0–1</text>
+          <text className="badge-mark-number" x="74.5" y="71" textAnchor="middle">2–1</text>
+          <path d="M23 64c10 17 30 23 48 12M77 36C67 19 47 13 29 24M23 24l8-12M23 24l14 2M77 76l-8 12M77 76l-14-2" />
+        </>
+      ) : null}
+      {name === "clutch" ? (
+        <>
+          <path d="M50 10v80M16 30l68 40M16 70l68-40M41 16l9 9 9-9M41 84l9-9 9 9M18 39l12 3-3-12M82 61l-12-3 3 12M27 70l3-12-12 3M73 30l-3 12 12-3" />
+          <circle cx="50" cy="50" r="17" fill="var(--paper)" />
+          <path d="M41 56c3-9 5-13 9-16 4 3 6 7 9 16M42 57h16M46 45h8" />
+        </>
+      ) : null}
+      {name === "marathon" ? (
+        <>
+          <circle cx="55" cy="17" r="8" />
+          <path d="m48 30-12 19 17 8 10-17 14 11M47 32l17 7 11-12M52 57 38 78 24 89M53 57l15 13 14 17" />
+          <ellipse cx="82" cy="18" rx="9" ry="14" transform="rotate(28 82 18)" />
+          <path d="m77 30-7 13M13 51h16M9 61h20M16 71h12" />
+        </>
+      ) : null}
+      {name === "duo" ? (
+        <>
+          <ellipse cx="31" cy="22" rx="10" ry="14" />
+          <ellipse cx="69" cy="22" rx="10" ry="14" />
+          <path d="M12 76c2-25 9-38 19-38s17 13 19 38M50 76c2-25 9-38 19-38s17 13 19 38M15 76h70" />
+          <ellipse cx="21" cy="53" rx="8" ry="13" transform="rotate(30 21 53)" />
+          <ellipse cx="79" cy="53" rx="8" ry="13" transform="rotate(-30 79 53)" />
+          <path d="m17 64-8 19M83 64l8 19" />
+        </>
+      ) : null}
+      {name === "goat-slayer" ? (
+        <>
+          <circle cx="67" cy="17" r="8" />
+          <path d="M64 30 51 48l14 12 12-17M51 48 37 38M64 59 49 82M64 59l19 21M75 42l10-17" />
+          <ellipse cx="86" cy="17" rx="7" ry="12" transform="rotate(26 86 17)" />
+          <path d="M12 75c5-12 15-16 28-11l9 4-5 10H24l-6 8M20 67l-7-4M37 65l6-7M42 78l4 9M21 77l-3 10" />
+          <path d="m10 47 8-2 5 6 5-7 8 3-3 9H14l-4-9Z" />
+        </>
+      ) : null}
+      {name === "centurion" ? (
+        <>
+          <path d="M27 82V48c0-23 11-35 31-35 14 0 24 7 29 20l-13 8v18l-12 8v15H27Z" />
+          <path d="M27 46h47M40 46V24M51 46V17M62 46V16M73 41V22M74 50h13M62 67H45M39 58h.1" />
+          <path d="M18 82h55M27 70l-10 6M62 82l10 7" />
+        </>
+      ) : null}
+      {name === "trophy" ? (
+        <>
+          <path d="M28 19h44v23c0 16-9 27-22 27S28 58 28 42V19Z" />
+          <path d="M28 26H13v10c0 12 7 19 18 19M72 26h15v10c0 12-7 19-18 19M50 69v12M34 88h32" />
+        </>
+      ) : null}
+    </svg>
+  );
+}
+
+function BadgeArtwork({ glyph }: { glyph: BadgeGlyph }) {
+  return (
+    <div className="badge-emblem" aria-hidden="true">
+      <span className="badge-emblem-shadow" />
+      <span className="badge-emblem-frame">
+        <span className="badge-emblem-face">
+          <span className="badge-emblem-band" />
+          <EmblemMark name={glyph} />
+          <span className="badge-emblem-ball" />
+        </span>
+      </span>
+    </div>
+  );
+}
+
 function BadgeList({ badges }: { badges: Badge[] }) {
   return (
     <div className="badge-grid">
@@ -1134,9 +1278,7 @@ function BadgeList({ badges }: { badges: Badge[] }) {
           tabIndex={0}
           aria-label={`${badge.label}. ${badge.meaning} ${badge.progressLabel}`}
         >
-          <div className="badge-emblem" aria-hidden="true">
-            <Image className="badge-art" src={`${basePath}/emblems/${badge.glyph}.webp`} alt="" width={128} height={168} />
-          </div>
+          <BadgeArtwork glyph={badge.glyph} />
           <aside className="badge-tooltip" role="tooltip">
             <strong>{badge.label}</strong>
             <p>{badge.meaning}</p>
