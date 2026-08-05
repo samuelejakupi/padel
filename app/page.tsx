@@ -1424,22 +1424,19 @@ function SeasonPicker({
 
 function TeamRankingList({
   teams,
-  minRank,
-  maxRank,
+  limit,
   bare = false,
 }: {
   teams: PadelTeam[];
-  minRank?: number;
-  maxRank?: number;
+  limit?: number;
   bare?: boolean;
 }) {
   const ranks = ranksByRating(teams);
+  const visible = limit === undefined ? teams : teams.slice(0, limit);
   return (
     <div className={`ranking-table ranking-table-team${bare ? " ranking-table-bare" : ""}`}>
-      {teams.map((team, index) => {
+      {visible.map((team, index) => {
         const rank = ranks[index];
-        if (minRank !== undefined && rank < minRank) return null;
-        if (maxRank !== undefined && rank > maxRank) return null;
         const winRate = team.matches_played ? Math.round((team.wins / team.matches_played) * 100) : 0;
         return (
           <div className={`ranking-row ${rankTone(rank)}`} key={team.id}>
@@ -1529,29 +1526,26 @@ function RankingList({
   profiles,
   expanded = false,
   onSelect,
-  minRank,
-  maxRank,
+  limit,
   bare = false,
 }: {
   profiles: Profile[];
   expanded?: boolean;
   onSelect?: (profile: Profile) => void;
-  // La classifica è divisa in due tronconi: i primi stanno nel blocco scuro,
-  // il resto sotto. Le posizioni si calcolano però sempre sull'elenco intero.
-  minRank?: number;
-  maxRank?: number;
+  // Numero massimo di righe da mostrare. Si conta per righe e non per
+  // posizione: con dei parimerito una soglia sulla posizione mostrerebbe un
+  // numero di persone diverso da quello promesso.
+  limit?: number;
   bare?: boolean;
 }) {
   const sorted = sortPadelProfiles(profiles);
   const ranks = padelRanks(sorted);
+  const visible = limit === undefined ? sorted : sorted.slice(0, limit);
   return (
     <div className={`${expanded ? "ranking-table" : "ranking-list"}${bare ? " ranking-table-bare" : ""}`}>
-      {sorted.map((profile, index) => {
+      {visible.map((profile, index) => {
         const isRanked = profile.matches_played > 0;
         const rank = ranks[index];
-        const position = isRanked ? rank : Number.POSITIVE_INFINITY;
-        if (minRank !== undefined && position < minRank) return null;
-        if (maxRank !== undefined && position > maxRank) return null;
         const winRate = profile.matches_played ? Math.round((profile.wins / profile.matches_played) * 100) : 0;
         const content = (
           <>
@@ -2479,9 +2473,13 @@ function AppShell({ session }: { session: Session | null }) {
   const [pizzaSessionsReady, setPizzaSessionsReady] = useState(true);
   const [votingSession, setVotingSession] = useState<PizzaSession | null>(null);
   const [showSessionPicker, setShowSessionPicker] = useState(false);
-  // Partite e classifica si aprono e si richiudono dentro la home.
+  // Partite e classifica si aprono e si richiudono dentro la home. Il limite
+  // è sul numero di righe, così il tasto compare solo quando c'è davvero
+  // qualcosa di nascosto.
   const [allMatches, setAllMatches] = useState(false);
   const [allRanking, setAllRanking] = useState(false);
+  const HOME_ROWS = 5;
+  const HOME_MATCHES = 2;
   const [editingMatch, setEditingMatch] = useState<PadelMatch | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
@@ -2665,6 +2663,7 @@ function AppShell({ session }: { session: Session | null }) {
     () => buildPadelTeams(matches, profiles, teamRecords),
     [matches, profiles, teamRecords],
   );
+  const rankingRows = rankingMode === "single" ? seasonProfiles.length : teams.length;
   const playerTeams = useMemo(
     () => teams.filter((team) => team.players.some((profile) => profile.id === selectedPlayerId)),
     [teams, selectedPlayerId],
@@ -3137,7 +3136,7 @@ function AppShell({ session }: { session: Session | null }) {
                   <div className="section-head-label"><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
                   <div className="court-actions">
                     <button className="button button-primary cta-new-match" onClick={() => setShowMatch(true)}>+ New Match</button>
-                    {matches.length > 2 ? (
+                    {matches.length > HOME_MATCHES ? (
                       <button
                         className="button button-card cta-see-all-top"
                         onClick={() => setAllMatches((open) => !open)}
@@ -3156,7 +3155,7 @@ function AppShell({ session }: { session: Session | null }) {
                         c'e gia sopra, fuori dal riquadro. */}
                     <div className="match-panel-head"><h2>Ultime partite</h2></div>
                     <div className="match-list">
-                      {(allMatches ? matches : matches.slice(0, 2)).map((match) => (
+                      {(allMatches ? matches : matches.slice(0, HOME_MATCHES)).map((match) => (
                         <MatchCard
                           key={match.id}
                           match={match}
@@ -3166,7 +3165,7 @@ function AppShell({ session }: { session: Session | null }) {
                         />
                       ))}
                     </div>
-                    {matches.length > 2 ? (
+                    {matches.length > HOME_MATCHES ? (
                       <button
                         className="button button-ghost button-full cta-see-all-bottom"
                         onClick={() => setAllMatches((open) => !open)}
@@ -3208,21 +3207,23 @@ function AppShell({ session }: { session: Session | null }) {
                   <RankingList
                     profiles={seasonProfiles}
                     onSelect={openPlayer}
-                    maxRank={allRanking ? undefined : 5}
+                    limit={allRanking ? undefined : HOME_ROWS}
                   />
                 ) : teams.length ? (
-                  <TeamRankingList teams={teams} maxRank={allRanking ? undefined : 5} />
+                  <TeamRankingList teams={teams} limit={allRanking ? undefined : HOME_ROWS} />
                 ) : (
                   <p className="demo-profile-note">
                     Le coppie si formano dalle partite: registra un doppio e compariranno qui.
                   </p>
                 )}
-                <button
-                  className="button button-ghost button-full"
-                  onClick={() => setAllRanking((open) => !open)}
-                >
-                  {allRanking ? "Vedi meno" : "Vedi tutto"}
-                </button>
+                {rankingRows > HOME_ROWS ? (
+                  <button
+                    className="button button-ghost button-full"
+                    onClick={() => setAllRanking((open) => !open)}
+                  >
+                    {allRanking ? "Vedi meno" : `Vedi tutti (${rankingRows})`}
+                  </button>
+                ) : null}
               </aside>
             </section>
           </>
