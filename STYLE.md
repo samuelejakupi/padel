@@ -23,14 +23,31 @@ scrivere un numero nuovo, controlla se esiste già la variabile.**
 | `--line` | `#dce2dc` | Bordi e separatori |
 | `--muted` | `#72808c` | Testo secondario |
 | `--danger` | `#d94b49` | Errori, record negativi, uscita |
+| `--positive` | `#299b66` | Guadagni Elo, serie positive |
+
+Per le tinte intermedie ci sono i **veli**, cioè il blu scuro a bassa opacità:
+
+| Variabile | Uso |
+|---|---|
+| `--veil-1` | Fondo dell'hover su bianco |
+| `--veil-2` | Tasti secondari, separatori di riga |
+| `--veil-3` | Hover dei tasti secondari, tracce di progresso |
+| `--ink-30` | Testo disattivato, segni grafici |
+| `--ink-45` | Testo non classificato |
 
 **Non si scrivono colori in esadecimale nelle regole.** Se serve una tinta più
-chiara o più scura di una esistente, si usa `rgba()` sul colore di base:
+chiara o più scura di una esistente, si usa un velo, `rgba()` sul colore di
+base, oppure `color-mix()`:
 
 ```css
-/* sì */   color: rgba(11, 27, 44, 0.62);
+/* sì */   color: var(--ink-45);
+/* sì */   background: rgba(217, 75, 73, 0.1);
 /* no */   color: #6e7a85;
 ```
+
+Eccezioni ammesse, perché rappresentano un dato e non un'interfaccia: i quattro
+colori delle categorie della pizza e il gradiente di riempimento degli avatar
+senza foto.
 
 Il motivo è pratico: cinque grigi quasi uguali scritti a mano non si notano
 uno per uno, ma insieme fanno sembrare la pagina sporca — e il giorno che si

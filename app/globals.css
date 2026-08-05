@@ -14,7 +14,23 @@
   --line: #dce2dc;
   --muted: #72808c;
   --danger: #d94b49;
+  --positive: #299b66;
   --shadow: 0 18px 50px rgba(16, 29, 43, 0.09);
+
+  /* Veli sul blu scuro: sostituiscono i grigi e i bianchi sporchi scritti a
+     mano, che erano una ventina tutti leggermente diversi fra loro. */
+  --veil-1: rgba(11, 27, 44, 0.03);
+  --veil-2: rgba(11, 27, 44, 0.06);
+  --veil-3: rgba(11, 27, 44, 0.1);
+  --ink-30: rgba(11, 27, 44, 0.3);
+  --ink-45: rgba(11, 27, 44, 0.45);
+
+  /* Categorie della pizza: rappresentano un dato, non l'interfaccia, quindi
+     stanno fuori dalla palette del marchio. Restano comunque qui. */
+  --pizza-lime: #bfd400;
+  --pizza-pink: #e67fa5;
+  --pizza-yellow: #f0b82d;
+  --pizza-blue: #5978d9;
 
   /* Angoli. Quattro gradini, non uno in più. */
   --radius-sm: 4px;   /* chip, etichette, badge di serie */
@@ -86,7 +102,7 @@ button {
 }
 
 .brand-logo {
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   height: 46px;
   object-fit: cover;
   width: 46px;
@@ -101,13 +117,13 @@ button {
 }
 
 .eyebrow.dark {
-  color: #008e96;
+  color: var(--blue-dark);
 }
 
 .button {
   align-items: center;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   display: inline-flex;
   font-size: 12px;
@@ -147,12 +163,12 @@ button {
 
 /* Azione secondaria: leggibile ma senza gridare come il pieno scuro. */
 .button-ghost {
-  background: #edf0ec;
+  background: var(--veil-2);
   color: var(--ink);
 }
 
 .button-ghost:hover {
-  background: #e3e8e2;
+  background: var(--veil-3);
 }
 
 /* Come una card: serve dove il tasto sta sul fondo pagina, che ha lo
@@ -163,7 +179,7 @@ button {
 }
 
 .button-card:hover {
-  background: #f7faf7;
+  background: var(--veil-1);
 }
 
 .button-full {
@@ -315,7 +331,7 @@ button {
 .login-showcase {
   background:
     radial-gradient(circle at 86% 22%, rgba(24, 223, 228, 0.18), transparent 28%),
-    linear-gradient(135deg, #091827, #0d2f3e);
+    linear-gradient(135deg, var(--ink), var(--ink-soft));
   color: var(--white);
   min-height: 100vh;
   overflow: hidden;
@@ -371,7 +387,7 @@ button {
   color: rgba(255,255,255,.045);
   font-size: 23vw;
   font-style: italic;
-  font-weight: 1000;
+  font-weight: 900;
   letter-spacing: -2vw;
 }
 
@@ -416,7 +432,7 @@ form select,
 .teams-form select {
   background: var(--white);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   color: var(--ink);
   display: block;
   margin-top: 8px;
@@ -434,8 +450,8 @@ form select:focus,
 }
 
 .form-message {
-  background: #edf3ff;
-  border-radius: 6px;
+  background: rgba(24, 223, 228, 0.12);
+  border-radius: var(--radius-md);
   color: var(--blue);
   font-size: 12px;
   line-height: 1.5;
@@ -443,7 +459,7 @@ form select:focus,
 }
 
 .form-message.error {
-  background: #fff0ef;
+  background: rgba(217, 75, 73, 0.09);
   color: var(--danger);
 }
 
@@ -500,7 +516,7 @@ form select:focus,
 .setup-page code {
   background: var(--white);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   color: var(--blue);
   display: inline-block;
   font-size: 11px;
@@ -534,7 +550,7 @@ form select:focus,
 .topbar {
   align-items: center;
   background: var(--white);
-  border-bottom: 1px solid #e7ebe7;
+  border-bottom: 1px solid var(--line);
   display: flex;
   height: 76px;
   justify-content: space-between;
@@ -553,7 +569,7 @@ form select:focus,
 .desktop-nav button {
   background: transparent;
   border: 0;
-  color: #6e7a85;
+  color: var(--muted);
   cursor: pointer;
   font-size: 11px;
   font-weight: 800;
@@ -600,7 +616,7 @@ form select:focus,
 /* Il nome si comporta come una voce di menu: grigio finché non sei nel
    profilo, poi scuro come la voce selezionata. */
 .profile-chip b {
-  color: #6e7a85;
+  color: var(--muted);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 1px;
@@ -623,7 +639,7 @@ form select:focus,
   align-items: center;
   background: var(--ink);
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   bottom: 24px;
   box-shadow: var(--shadow);
   color: var(--white);
@@ -701,7 +717,7 @@ form select:focus,
 .hub-hero-copy h1 {
   font-size: clamp(54px, 6vw, 88px);
   font-style: italic;
-  font-weight: 1000;
+  font-weight: 900;
   letter-spacing: -5px;
   line-height: 0.86;
   margin: 0 0 26px;
@@ -760,7 +776,7 @@ form select:focus,
   align-items: center;
   background: var(--white);
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius);
   cursor: pointer;
   display: flex;
   gap: 24px;
@@ -825,7 +841,7 @@ form select:focus,
   align-items: center;
   background: var(--white);
   border: 0;
-  border-radius: 9px;
+  border-radius: var(--radius);
   color: var(--ink);
   cursor: pointer;
   display: flex;
@@ -845,7 +861,7 @@ form select:focus,
 .hub-card h3 {
   font-size: 52px;
   font-style: italic;
-  font-weight: 1000;
+  font-weight: 900;
   letter-spacing: -2.8px;
   line-height: 0.9;
   margin: 0;
@@ -945,7 +961,7 @@ form select:focus,
 .compact-empty {
   align-items: center;
   background: var(--white);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   display: flex;
   gap: 18px;
   min-height: 110px;
@@ -955,7 +971,7 @@ form select:focus,
 .compact-empty > span {
   color: var(--blue-dark);
   font-size: 34px;
-  font-weight: 1000;
+  font-weight: 900;
 }
 
 .compact-empty p {
@@ -966,8 +982,8 @@ form select:focus,
 .empty-board {
   align-items: center;
   background: var(--white);
-  border: 1px dashed #cad2cc;
-  border-radius: 9px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -978,7 +994,7 @@ form select:focus,
 .empty-board > span {
   color: var(--blue-dark);
   font-size: 60px;
-  font-weight: 1000;
+  font-weight: 900;
 }
 
 .empty-board h2 {
@@ -1014,7 +1030,7 @@ form select:focus,
 .dashboard-grid {
   align-items: stretch;
   display: grid;
-  gap: 36px;
+  gap: var(--space-7);
   grid-template-columns: minmax(0, 1.55fr) minmax(330px, 0.7fr);
 }
 
@@ -1026,7 +1042,7 @@ form select:focus,
 .court-actions {
   display: flex;
   flex: 0 0 auto;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 /* I due tasti occupano lo stesso spazio: senza questo "＋ Match" resterebbe
@@ -1071,14 +1087,14 @@ form select:focus,
 .hero-stat {
   background:
     radial-gradient(circle at 78% 35%, rgba(24, 223, 228, 0.2), transparent 32%),
-    linear-gradient(135deg, #0a1a2a, #0d3441);
-  border-radius: 9px;
+    linear-gradient(135deg, var(--ink), var(--ink-soft));
+  border-radius: var(--radius);
   color: var(--white);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   min-height: 300px;
   overflow: hidden;
-  padding: 42px;
+  padding: var(--space-8);
   position: relative;
 }
 
@@ -1125,7 +1141,7 @@ form select:focus,
 .hero-stat-copy > p:not(.eyebrow) {
   color: rgba(255, 255, 255, 0.72);
   font-size: 12px;
-  margin: 28px 0 10px;
+  margin: var(--space-7) 0 var(--space-3);
 }
 
 .hero-stat-copy > p b {
@@ -1148,7 +1164,7 @@ form select:focus,
   color: rgba(255, 255, 255, 0.58);
   display: block;
   font-size: 10px;
-  margin-top: 10px;
+  margin-top: var(--space-3);
 }
 
 .hero-player {
@@ -1186,7 +1202,7 @@ form select:focus,
 .hero-kpis span {
   align-items: baseline;
   display: flex;
-  gap: 7px;
+  gap: var(--space-2);
 }
 
 .hero-kpis b {
@@ -1206,7 +1222,7 @@ form select:focus,
   align-items: flex-end;
   display: flex;
   justify-content: space-between;
-  margin: 38px 0 18px;
+  margin: var(--space-7) 0 var(--space-5);
 }
 
 .section-head h2,
@@ -1218,20 +1234,20 @@ form select:focus,
 
 .section-head .eyebrow,
 .side-head .eyebrow {
-  margin-bottom: 6px;
+  margin-bottom: var(--space-1);
 }
 
 .dashboard-side {
   background: var(--white);
-  border-radius: 9px;
+  border-radius: var(--radius);
   box-shadow: 0 8px 30px rgba(16, 29, 43, 0.04);
   display: flex;
   flex-direction: column;
-  padding: 26px;
+  padding: var(--space-6);
 }
 
 .dashboard-side .side-head {
-  margin: 0 0 15px;
+  margin: 0 0 var(--space-5);
 }
 
 .season-picker {
@@ -1269,7 +1285,7 @@ form select:focus,
 
 .season-menu {
   background: var(--white);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   box-shadow: 0 14px 40px rgba(16, 29, 43, 0.18);
   list-style: none;
   margin: 6px 0 0;
@@ -1285,7 +1301,7 @@ form select:focus,
 .season-menu button {
   background: transparent;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   color: var(--ink);
   cursor: pointer;
   display: block;
@@ -1310,7 +1326,7 @@ form select:focus,
 
 .ranking-row {
   align-items: center;
-  border-bottom: 1px solid #edf0ed;
+  border-bottom: 1px solid var(--veil-2);
   display: grid;
   gap: 12px;
   grid-template-columns: 26px 38px minmax(0, 1fr) 20px 44px;
@@ -1355,7 +1371,7 @@ form select:focus,
 
 .up,
 .positive {
-  color: #299b66;
+  color: var(--positive);
 }
 
 .down,
@@ -1381,13 +1397,13 @@ form select:focus,
 
 .ranking-row.unranked .rank-number,
 .ranking-row.unranked .ranking-points b {
-  color: #89949b;
+  color: var(--ink-45);
 }
 
 button.ranking-row-link {
   background: transparent;
   border-left: 0;
-  border-radius: 10px;
+  border-radius: var(--radius);
   border-right: 0;
   border-top: 0;
   color: inherit;
@@ -1411,7 +1427,7 @@ button.ranking-row-link {
 }
 
 button.ranking-row-link:hover {
-  background: #f7faf7;
+  background: var(--veil-1);
 }
 
 button.ranking-row-link:focus-visible {
@@ -1426,21 +1442,21 @@ button.ranking-row-link:focus-visible {
 }
 
 .dashboard-side .ranking-list {
-  margin-bottom: 18px;
+  margin-bottom: var(--space-5);
 }
 
 /* Match cards */
 .match-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .match-card {
   align-items: center;
   background: var(--white);
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   color: inherit;
   display: grid;
   font: inherit;
@@ -1522,7 +1538,7 @@ button.ranking-row-link:focus-visible {
 }
 
 .match-team em {
-  color: #299b66;
+  color: var(--positive);
   font-size: 9px;
   font-style: normal;
   font-weight: 900;
@@ -1561,7 +1577,7 @@ button.ranking-row-link:focus-visible {
 
 .match-score > span {
   background: var(--paper);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   display: grid;
   font-size: 10px;
   gap: 2px;
@@ -1572,7 +1588,7 @@ button.ranking-row-link:focus-visible {
 }
 
 .match-score i {
-  color: #a7afb5;
+  color: var(--ink-30);
   font-size: 9px;
 }
 
@@ -1595,7 +1611,7 @@ button.ranking-row-link:focus-visible {
 .match-video-preview {
   background: var(--paper);
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   display: block;
   height: 48px;
@@ -1616,7 +1632,7 @@ button.ranking-row-link:focus-visible {
 .match-video-empty {
   align-items: center;
   background: var(--paper);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   display: none;
   height: 48px;
   justify-content: center;
@@ -1625,13 +1641,13 @@ button.ranking-row-link:focus-visible {
 }
 
 .match-video-empty b {
-  color: #b6bec5;
+  color: var(--ink-30);
   font-size: 15px;
 }
 
 /* La sbarra che indica "nessun video". */
 .match-video-empty::after {
-  background: #b6bec5;
+  background: var(--ink-30);
   content: "";
   height: 1.5px;
   left: 50%;
@@ -1750,7 +1766,7 @@ button.ranking-row-link:focus-visible {
 
 .play-card {
   background: var(--white);
-  border-radius: 9px;
+  border-radius: var(--radius);
   overflow: hidden;
   position: relative;
 }
@@ -1790,7 +1806,7 @@ button.ranking-row-link:focus-visible {
 
 .play-card-preview em {
   background: rgba(11, 27, 44, 0.78);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   bottom: 8px;
   color: var(--white);
   font-size: 10px;
@@ -1876,7 +1892,7 @@ button.ranking-row-link:focus-visible {
 .video-frame {
   aspect-ratio: 16 / 9;
   background: var(--ink);
-  border-radius: 8px;
+  border-radius: var(--radius);
   overflow: hidden;
   width: 100%;
 }
@@ -1916,7 +1932,7 @@ button.ranking-row-link:focus-visible {
 .podium-card {
   align-items: center;
   background: var(--white);
-  border-radius: 9px;
+  border-radius: var(--radius);
   display: flex;
   flex-direction: column;
   min-height: 220px;
@@ -1943,8 +1959,8 @@ button.ranking-row-link:focus-visible {
 }
 
 .ranking-switch {
-  background: #edf0ec;
-  border-radius: 8px;
+  background: var(--veil-2);
+  border-radius: var(--radius);
   display: inline-flex;
   gap: 2px;
   padding: 3px;
@@ -1953,7 +1969,7 @@ button.ranking-row-link:focus-visible {
 .ranking-switch button {
   background: transparent;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   color: var(--muted);
   cursor: pointer;
   font-size: 11px;
@@ -2187,7 +2203,7 @@ button.ranking-row-link:focus-visible {
 
 .ranking-table {
   background: var(--white);
-  border-radius: 9px;
+  border-radius: var(--radius);
   padding: 12px 28px;
 }
 
@@ -2203,7 +2219,7 @@ button.ranking-row-link:focus-visible {
 .ranking-row-gold,
 .ranking-row-blue {
   border-bottom: 0;
-  border-radius: 9px;
+  border-radius: var(--radius);
   margin-bottom: 10px;
   padding: 0 20px;
 }
@@ -2281,8 +2297,8 @@ button.ranking-row-blue:hover {
 }
 
 .streak {
-  background: #eff8f3;
-  border-radius: 4px;
+  background: rgba(41, 155, 102, 0.1);
+  border-radius: var(--radius-sm);
   font-size: 10px;
   font-weight: 900;
   justify-self: start;
@@ -2290,7 +2306,7 @@ button.ranking-row-blue:hover {
 }
 
 .streak.down {
-  background: #fff1f0;
+  background: rgba(217, 75, 73, 0.1);
 }
 
 .match-list-full .match-card {
@@ -2301,7 +2317,7 @@ button.ranking-row-blue:hover {
    visiva della scheda giocatore. */
 .section-hero {
   background: var(--ink);
-  border-radius: 10px;
+  border-radius: var(--radius);
   color: var(--white);
   margin-bottom: 28px;
   overflow: hidden;
@@ -2369,7 +2385,7 @@ button.ranking-row-blue:hover {
 .player-detail-hero {
   align-items: stretch;
   background: var(--ink);
-  border-radius: 10px;
+  border-radius: var(--radius);
   color: var(--white);
   display: grid;
   gap: 30px;
@@ -2401,7 +2417,7 @@ button.ranking-row-blue:hover {
 .player-edit-button {
   background: rgba(255, 255, 255, 0.14);
   border: 0;
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   color: var(--white);
   cursor: pointer;
   font-size: 10px;
@@ -2431,8 +2447,8 @@ button.ranking-row-blue:hover {
 
 .player-traits span {
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  color: #c8d2d8;
+  border-radius: var(--radius-sm);
+  color: rgba(255, 255, 255, 0.72);
   font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.8px;
@@ -2443,7 +2459,7 @@ button.ranking-row-blue:hover {
 .player-rating-card {
   align-items: flex-start;
   background: var(--lime);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   color: var(--ink);
   display: flex;
   flex-direction: column;
@@ -2480,7 +2496,7 @@ button.ranking-row-blue:hover {
 .player-kpis article {
   align-items: baseline;
   background: var(--white);
-  border-radius: 8px;
+  border-radius: var(--radius);
   display: flex;
   flex-wrap: wrap;
   gap: 4px 10px;
@@ -2518,7 +2534,7 @@ button.ranking-row-blue:hover {
 .player-trophies-empty {
   background: var(--white);
   border: 1px dashed var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius);
   padding: 30px;
   text-align: center;
 }
@@ -2540,7 +2556,7 @@ button.ranking-row-blue:hover {
 
 .badge {
   align-items: center;
-  border-radius: 9px;
+  border-radius: var(--radius);
   display: flex;
   gap: 12px;
   padding: 14px 16px;
@@ -2575,7 +2591,9 @@ button.ranking-row-blue:hover {
   line-height: 1.1;
 }
 
-.badge-text span {
+/* Lo stato del badge ha una scala tutta sua: escluderlo qui evita di doverlo
+   riscrivere a forza di !important più in basso. */
+.badge-text > span:not(.badge-state) {
   font-size: 10px;
   font-weight: 700;
   opacity: 0.7;
@@ -2595,7 +2613,7 @@ button.ranking-row-blue:hover {
 
 .badge-red {
   background: rgba(217, 75, 73, 0.12);
-  color: #8f2c2b;
+  color: color-mix(in srgb, var(--danger) 72%, var(--ink));
 }
 
 .badge-red .badge-icon {
@@ -2617,7 +2635,7 @@ button.ranking-row-blue:hover {
     radial-gradient(circle at 82% 20%, rgba(24, 223, 228, 0.2), transparent 28%),
     linear-gradient(135deg, var(--ink) 0%, var(--ink-soft) 68%, var(--ink) 100%);
   border: 1px solid rgba(255, 255, 255, 0.13);
-  border-radius: 14px;
+  border-radius: var(--radius);
   box-shadow: 0 24px 55px rgba(11, 27, 44, 0.2);
   color: var(--white);
   margin-bottom: 34px;
@@ -2669,12 +2687,12 @@ button.ranking-row-blue:hover {
 
 .court-pass-photo {
   border: 1px solid rgba(239, 255, 0, 0.5);
-  border-radius: 10px;
+  border-radius: var(--radius);
   padding: 7px;
 }
 
 .court-pass-photo .avatar-xl {
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   height: 132px;
   width: 112px;
 }
@@ -2746,7 +2764,7 @@ button.ranking-row-blue:hover {
   color: var(--ink);
   display: flex;
   font-size: 22px;
-  font-weight: 950;
+  font-weight: 900;
   height: 66px;
   justify-content: center;
   width: 66px;
@@ -2780,7 +2798,7 @@ button.ranking-row-blue:hover {
 .bacheca-group-head > div > span {
   color: var(--line);
   font-size: 27px;
-  font-weight: 950;
+  font-weight: 900;
   letter-spacing: -1px;
 }
 
@@ -2930,10 +2948,10 @@ button.ranking-row-blue:hover {
 
 .badge-state {
   color: color-mix(in srgb, var(--badge-accent) 78%, var(--ink));
-  font-size: 7px !important;
-  font-weight: 950 !important;
+  font-size: 7px;
+  font-weight: 900;
   letter-spacing: 1.4px;
-  opacity: 1 !important;
+  opacity: 1;
 }
 
 .player-trophies .badge-text b {
@@ -2950,7 +2968,7 @@ button.ranking-row-blue:hover {
 
 .badge-progress {
   background: rgba(11, 27, 44, 0.09);
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   height: 5px;
   margin-top: 5px;
   overflow: hidden;
@@ -2986,7 +3004,7 @@ button.ranking-row-blue:hover {
   color: var(--white);
   display: flex;
   flex-direction: column;
-  border-radius: 9px;
+  border-radius: var(--radius);
   bottom: calc(100% - 4px);
   justify-content: center;
   left: 50%;
@@ -3015,7 +3033,7 @@ button.ranking-row-blue:hover {
 
 .badge-tooltip p {
   font-size: 11px;
-  font-weight: 750;
+  font-weight: 800;
   line-height: 1.35;
   margin: 8px 0 6px;
 }
@@ -3023,7 +3041,7 @@ button.ranking-row-blue:hover {
 .badge-tooltip span {
   color: rgba(255, 255, 255, 0.65);
   font-size: 9px;
-  font-weight: 650;
+  font-weight: 700;
   line-height: 1.4;
 }
 
@@ -3031,7 +3049,7 @@ button.ranking-row-blue:hover {
   border-top: 1px solid rgba(255, 255, 255, 0.14);
   color: var(--white);
   font-size: 9px;
-  font-weight: 850;
+  font-weight: 900;
   line-height: 1.35;
   margin-top: 10px;
   padding-top: 9px;
@@ -3041,7 +3059,7 @@ button.ranking-row-blue:hover {
 .progress-book {
   background: var(--ink);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
+  border-radius: var(--radius);
   box-shadow: 0 22px 50px rgba(11, 27, 44, 0.17);
   color: var(--white);
   overflow: hidden;
@@ -3097,7 +3115,7 @@ button.ranking-row-blue:hover {
   color: var(--blue);
   display: flex;
   font-size: 17px;
-  font-weight: 950;
+  font-weight: 900;
   height: 72px;
   justify-content: center;
   letter-spacing: 1px;
@@ -3163,7 +3181,7 @@ button.ranking-row-blue:hover {
 .progress-entry-copy > span small {
   color: var(--blue);
   font-size: 7px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .progress-entry-copy > span b {
@@ -3184,7 +3202,7 @@ button.ranking-row-blue:hover {
 
 .progress-entry-track {
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  border-radius: var(--radius);
   height: 4px;
   overflow: hidden;
 }
@@ -3200,13 +3218,13 @@ button.ranking-row-blue:hover {
 .progress-entry-copy > small {
   color: rgba(255, 255, 255, 0.58);
   font-size: 8px;
-  font-weight: 750;
+  font-weight: 800;
 }
 
 .field-register {
   background: var(--white);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius);
   box-shadow: 0 18px 45px rgba(11, 27, 44, 0.09);
   overflow: hidden;
 }
@@ -3256,7 +3274,7 @@ button.ranking-row-blue:hover {
   align-items: center;
   background: var(--white);
   border: 2px solid var(--ink);
-  border-radius: 10px;
+  border-radius: var(--radius);
   color: var(--ink);
   display: grid;
   gap: 13px;
@@ -3295,7 +3313,7 @@ button.ranking-row-blue:hover {
 
 .field-register-icon b {
   font-size: 24px;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .field-register-card > div {
@@ -3305,7 +3323,7 @@ button.ranking-row-blue:hover {
 .field-register-card > div > b {
   display: block;
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 900;
   letter-spacing: 0.3px;
 }
 
@@ -3345,7 +3363,7 @@ button.ranking-row-blue:hover {
   align-items: center;
   background: linear-gradient(135deg, rgba(11, 27, 44, 0.045), rgba(24, 223, 228, 0.06));
   border: 1px dashed color-mix(in srgb, var(--blue) 38%, var(--line));
-  border-radius: 12px;
+  border-radius: var(--radius);
   display: flex;
   gap: 18px;
   min-height: 110px;
@@ -3370,7 +3388,7 @@ button.ranking-row-blue:hover {
 
 .elo-panel {
   background: var(--white);
-  border-radius: 10px;
+  border-radius: var(--radius);
   box-shadow: 0 8px 30px rgba(16, 29, 43, 0.04);
   padding: 28px 30px 22px;
 }
@@ -3476,7 +3494,7 @@ button.ranking-row-blue:hover {
 
 .player-history-head > span {
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   color: var(--muted);
   font-size: 10px;
   font-weight: 900;
@@ -3488,7 +3506,7 @@ button.ranking-row-blue:hover {
 /* Squadre: stanno fra l'andamento Elo e lo storico partite. */
 .player-teams-list {
   background: var(--white);
-  border-radius: 9px;
+  border-radius: var(--radius);
   padding: 24px 26px 14px;
 }
 
@@ -3521,7 +3539,7 @@ button.ranking-row-blue:hover {
 
 .player-teams .demo-profile-note {
   background: var(--white);
-  border-radius: 9px;
+  border-radius: var(--radius);
   margin: 0;
   padding: 24px 26px;
 }
@@ -3530,7 +3548,7 @@ button.ranking-row-blue:hover {
 /* Pizzeria ranking */
 .pizza-page {
   background: var(--ink);
-  border-radius: 10px;
+  border-radius: var(--radius);
   color: var(--white);
   overflow: hidden;
   padding: 38px 48px 42px;
@@ -3549,7 +3567,7 @@ button.ranking-row-blue:hover {
 .pizza-hero h1 {
   font-size: clamp(62px, 8vw, 112px);
   font-style: italic;
-  font-weight: 1000;
+  font-weight: 900;
   letter-spacing: -7px;
   line-height: 0.75;
   margin: 0 0 34px;
@@ -3587,7 +3605,7 @@ button.ranking-row-blue:hover {
 .pizza-stamp > span {
   color: var(--blue-dark);
   font-size: 14px;
-  font-weight: 1000;
+  font-weight: 900;
   letter-spacing: 2px;
   margin-bottom: 8px;
 }
@@ -3633,7 +3651,7 @@ button.ranking-row-blue:hover {
   align-items: center;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 9px;
+  border-radius: var(--radius);
   display: grid;
   gap: 16px;
   grid-template-columns: 44px minmax(0, 1fr) auto;
@@ -3669,12 +3687,12 @@ button.ranking-row-blue:hover {
 .pizza-podium-card div small {
   color: var(--blue);
   font-size: 9px;
-  font-weight: 1000;
+  font-weight: 900;
   letter-spacing: 1.2px;
 }
 
 .pizza-place-1 div small {
-  color: #087b82;
+  color: var(--blue-dark);
 }
 
 .pizza-podium-card h2 {
@@ -3715,7 +3733,7 @@ button.ranking-row-blue:hover {
 
 .pizza-method {
   background: var(--white);
-  border-radius: 9px;
+  border-radius: var(--radius);
   color: var(--ink);
   display: grid;
   gap: 28px;
@@ -3744,8 +3762,8 @@ button.ranking-row-blue:hover {
 }
 
 .pizza-criterion {
-  background: #edf1ee;
-  border-radius: 7px;
+  background: var(--veil-2);
+  border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
   min-height: 108px;
@@ -3755,7 +3773,7 @@ button.ranking-row-blue:hover {
 
 .pizza-criterion::before {
   background: var(--criterion-color, var(--blue));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   content: "";
   height: 4px;
   left: 14px;
@@ -3764,11 +3782,11 @@ button.ranking-row-blue:hover {
   top: 0;
 }
 
-.criterion-lime { --criterion-color: #bfd400; }
+.criterion-lime { --criterion-color: var(--pizza-lime); }
 .criterion-cyan { --criterion-color: var(--blue-dark); }
-.criterion-pink { --criterion-color: #e67fa5; }
-.criterion-yellow { --criterion-color: #f0b82d; }
-.criterion-blue { --criterion-color: #5978d9; }
+.criterion-pink { --criterion-color: var(--pizza-pink); }
+.criterion-yellow { --criterion-color: var(--pizza-yellow); }
+.criterion-blue { --criterion-color: var(--pizza-blue); }
 
 .pizza-criterion span {
   font-size: 10px;
@@ -3778,7 +3796,7 @@ button.ranking-row-blue:hover {
 }
 
 .bonus-fabio-icon {
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   display: inline-block;
   height: 22px;
   margin-left: 6px;
@@ -3802,8 +3820,8 @@ button.ranking-row-blue:hover {
 }
 
 .pizza-board {
-  background: #f4f5f1;
-  border-radius: 9px;
+  background: var(--paper);
+  border-radius: var(--radius);
   color: var(--ink);
   overflow-x: auto;
 }
@@ -3818,7 +3836,7 @@ button.ranking-row-blue:hover {
 }
 
 .pizza-board-head {
-  border-bottom: 1px solid #d7ddd7;
+  border-bottom: 1px solid var(--line);
   color: var(--muted);
   font-size: 9px;
   font-weight: 900;
@@ -3835,7 +3853,7 @@ button.ranking-row-blue:hover {
 }
 
 .pizza-ranking-row {
-  border-bottom: 1px solid #dfe4df;
+  border-bottom: 1px solid var(--veil-2);
   min-height: 78px;
   padding: 12px 22px;
 }
@@ -3850,12 +3868,12 @@ button.pizza-ranking-row {
 
 .pizza-ranking-interactive:hover,
 .pizza-ranking-interactive:focus-visible {
-  background: #eaf8f4;
+  background: rgba(24, 223, 228, 0.12);
   outline: none;
 }
 
 .pizza-ranking-pending {
-  background: #fbfcf8;
+  background: rgba(255, 255, 255, 0.66);
 }
 
 .pizza-ranking-pending .pizza-position,
@@ -3903,13 +3921,13 @@ button.pizza-ranking-row {
 }
 
 .pizza-ranking-top {
-  background: #fff;
+  background: var(--white);
 }
 
 .pizza-position {
   color: var(--ink);
   font-size: 16px;
-  font-weight: 1000;
+  font-weight: 900;
 }
 
 .pizza-ranking-top .pizza-position {
@@ -3947,8 +3965,8 @@ button.pizza-ranking-row {
 }
 
 .pizza-score-track {
-  background: #dfe5df;
-  border-radius: 999px;
+  background: var(--veil-3);
+  border-radius: var(--radius-pill);
   height: 3px;
   margin-top: 8px;
   overflow: hidden;
@@ -3962,7 +3980,7 @@ button.pizza-ranking-row {
 }
 
 .pizza-ranking-top .pizza-score-track i {
-  background: #b4c900;
+  background: var(--pizza-lime);
 }
 
 .pizza-category-score,
@@ -3984,7 +4002,7 @@ button.pizza-ranking-row {
 }
 
 .pizza-fabio-score {
-  color: #5978d9;
+  color: var(--pizza-blue);
 }
 
 .pizza-total-score {
@@ -4016,7 +4034,7 @@ button.pizza-ranking-row {
 .profile-card,
 .settings-card {
   background: var(--white);
-  border-radius: 9px;
+  border-radius: var(--radius);
   padding: 38px;
 }
 
@@ -4112,7 +4130,7 @@ button.pizza-ranking-row {
 }
 
 .profile-rank {
-  color: #9aa3a9;
+  color: var(--ink-45);
   font-weight: 900;
   margin-right: 8px;
 }
@@ -4195,7 +4213,7 @@ button.pizza-ranking-row {
 
 .modal {
   background: var(--paper);
-  border-radius: 10px;
+  border-radius: var(--radius);
   box-shadow: 0 30px 90px rgba(4, 12, 22, 0.4);
   max-height: calc(100vh - 32px);
   max-width: 680px;
@@ -4239,7 +4257,7 @@ button.pizza-ranking-row {
 
 .teams-form fieldset {
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   margin: 0;
   padding: 14px;
 }
@@ -4259,7 +4277,7 @@ button.pizza-ranking-row {
 
 .sets-form {
   background: var(--white);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   display: grid;
   gap: 7px;
   grid-template-columns: 56px 1fr 1fr;
@@ -4464,8 +4482,8 @@ button.pizza-ranking-row {
     background: linear-gradient(
       180deg,
       var(--ink) 0%,
-      #0f3243 40%,
-      #0d2838 70%,
+      var(--ink-soft) 40%,
+      var(--ink-soft) 70%,
       var(--ink) 100%
     );
   }
@@ -4583,7 +4601,7 @@ button.pizza-ranking-row {
 
   .hub-card h3 {
     font-size: 46px;
-    font-weight: 1000;
+    font-weight: 900;
   }
 
   .block-mark {
@@ -4602,7 +4620,7 @@ button.pizza-ranking-row {
 
   /* Stessi angoli morbidi delle card anche sui tasti. */
   .button {
-    border-radius: 18px;
+    border-radius: var(--radius-lg);
   }
 
   /* Il tasto principale e grande quanto una card: la scritta e l'icona
@@ -4659,7 +4677,7 @@ button.pizza-ranking-row {
   .pizza-method,
   .pizza-podium-card,
   .pizza-criterion {
-    border-radius: 18px;
+    border-radius: var(--radius-lg);
   }
 
   form input,
@@ -4671,7 +4689,7 @@ button.pizza-ranking-row {
   .ranking-switch,
   .match-video-preview,
   .match-video-empty {
-    border-radius: 12px;
+    border-radius: var(--radius);
   }
 
   .match-score > span,
@@ -4685,7 +4703,7 @@ button.pizza-ranking-row {
   .ranking-switch button,
   .setup-page code,
   .brand-logo {
-    border-radius: 8px;
+    border-radius: var(--radius);
   }
 
   /* Barra in vetro staccata dai bordi, come le tab bar di iOS.
@@ -4738,7 +4756,7 @@ button.pizza-ranking-row {
     );
     /* Filo di contorno sottilissimo, non un bordo disegnato. */
     border: 0.5px solid rgba(255, 255, 255, 0.5);
-    border-radius: 34px;
+    border-radius: var(--radius-pill);
     bottom: calc(11px + env(safe-area-inset-bottom));
     box-shadow:
       0 0 0 0.5px rgba(11, 27, 44, 0.05),
@@ -4799,7 +4817,7 @@ button.pizza-ranking-row {
         rgba(255, 255, 255, 0.98) 100%
       ) border-box;
     border: 1.5px solid transparent;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     box-shadow:
       0 8px 20px rgba(11, 27, 44, 0.16),
       0 2px 5px rgba(11, 27, 44, 0.08),
@@ -4842,7 +4860,7 @@ button.pizza-ranking-row {
     align-items: center;
     background: transparent;
     border: 0;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     color: var(--ink);
     display: flex;
     flex-direction: column;
@@ -4954,7 +4972,7 @@ button.pizza-ranking-row {
      separate da una linea invece di card staccate, e il tasto dentro. */
   .match-panel {
     background: var(--white);
-    border-radius: 18px;
+    border-radius: var(--radius-lg);
     display: block;
     overflow: hidden;
     padding: 0 14px 14px;
@@ -4982,7 +5000,7 @@ button.pizza-ranking-row {
   /* La card perde fondo, ombra e angoli: dentro al riquadro e una riga. */
   .match-panel .match-card {
     background: transparent;
-    border-bottom: 1px solid #edf0ed;
+    border-bottom: 1px solid var(--veil-2);
     border-radius: 0;
     box-shadow: none;
     /* Il fondo dell'hover arriva ai bordi del riquadro invece di fermarsi
@@ -4997,7 +5015,7 @@ button.pizza-ranking-row {
   }
 
   .match-panel .match-card-link:hover {
-    background: #f7faf7;
+    background: var(--veil-1);
     box-shadow: none;
     transform: none;
   }
@@ -5251,7 +5269,7 @@ button.pizza-ranking-row {
   .ranking-table .ranking-row {
     background: var(--white);
     border: 0;
-    border-radius: 18px;
+    border-radius: var(--radius-lg);
     box-shadow: 0 5px 18px rgba(16, 29, 43, 0.04);
     grid-template-columns: 30px 42px minmax(0, 1fr) auto;
     margin-bottom: 10px;
@@ -5413,9 +5431,9 @@ button.pizza-ranking-row {
   }
 
   .pizza-ranking-row {
-    background: #f4f5f1;
+    background: var(--paper);
     border: 0;
-    border-radius: 18px;
+    border-radius: var(--radius-lg);
     gap: 10px 12px;
     grid-template-areas:
       "position name name"
@@ -5439,7 +5457,7 @@ button.pizza-ranking-row {
 
 .pizza-total-score {
   background: var(--ink);
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   color: var(--white);
   justify-content: space-between;
   min-height: 34px;
@@ -5464,7 +5482,7 @@ button.pizza-ranking-row {
 
   .pizza-category-score {
     background: rgba(11, 27, 44, 0.045);
-    border-radius: 5px;
+    border-radius: var(--radius-sm);
     justify-content: space-between;
     min-height: 34px;
     padding: 7px 8px;
@@ -5497,7 +5515,7 @@ button.pizza-ranking-row {
   }
 
   .modal {
-    border-radius: 18px;
+    border-radius: var(--radius-lg);
     max-height: calc(100dvh - 24px);
     padding: 24px 18px;
   }
@@ -5547,7 +5565,7 @@ button.pizza-ranking-row {
 
   .hub-card h3 {
     font-size: 40px;
-    font-weight: 1000;
+    font-weight: 900;
   }
 
   .hub-card-icon {
@@ -5779,7 +5797,7 @@ button.pizza-ranking-row {
   /* Foglio che sale dal basso: arrotondato solo in alto, con lo stesso
      raggio delle superfici. */
   .modal {
-    border-radius: 18px 18px 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     max-height: 92dvh;
     padding-bottom: calc(22px + env(safe-area-inset-bottom));
   }
@@ -5956,7 +5974,7 @@ button.pizza-ranking-row {
   }
 
   .button-ghost:hover {
-    background: #edf0ec;
+    background: var(--veil-2);
   }
 
   .button-card:hover {
