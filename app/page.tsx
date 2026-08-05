@@ -2540,7 +2540,8 @@ function TournamentRow({
 }) {
   const played = tournament.fixtures.filter((fixture) => fixture.match_id).length;
   const total = tournament.fixtures.length;
-  const done = Boolean(total && played === total);
+  // Stessa definizione usata dalla pagina tornei, invece di ricalcolarla qui.
+  const done = tournamentIsCompleted(tournament, matches);
   const standings = buildTournamentStandings(tournament, matches);
   // A torneo finito conta chi ha vinto; mentre e in corso, chi guida.
   const leader = standings[0]?.played ? standings[0].team.name : null;
