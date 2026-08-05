@@ -168,6 +168,9 @@ function buildPizzaRanking(
     dessert: (entry.dessert / HISTORIC_MAX.dessert) * 10,
     price: (entry.price / HISTORIC_MAX.price) * 10,
     total: Math.round(historicScore(entry)),
+    // Il vecchio bonus Fabio, che andava da 0 a 7, diventa un giudizio secco:
+    // metà scala in giù è bocciatura, metà in su è approvazione.
+    fabioBadge: entry.fabio >= 3.6,
     isNew: false,
     votesCount: 3,
   }));
