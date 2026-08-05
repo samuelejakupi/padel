@@ -26,6 +26,8 @@ test("include configurazione Supabase e pubblicazione Pages", async () => {
   assert.match(schema, /padel_margin_factor/);
   assert.match(schema, /32\.0\s+\* margin_factor/);
   assert.match(schema, /current_player\.rating/);
+  assert.match(schema, /team2_rating - team1_rating/);
+  assert.match(schema, /expected_score := expected_team1/);
   assert.match(schema, /match_player\.rating_delta/);
   assert.match(schema, /current_streak = 0\s+where true/);
   assert.match(schema, /Registrazione pubblica disabilitata/);

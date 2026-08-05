@@ -485,6 +485,7 @@ declare
   all_players uuid[];
   team1_rating numeric;
   team2_rating numeric;
+  expected_team1 numeric;
   team1_wins integer;
   team2_wins integer;
   winner smallint;
@@ -551,6 +552,11 @@ begin
   perform 1 from public.profiles where id = any(all_players) order by id for update;
   select avg(rating) into team1_rating from public.profiles where id = any(p_team1);
   select avg(rating) into team2_rating from public.profiles where id = any(p_team2);
+  -- ELO V3: la probabilita attesa appartiene alla coppia. In questo modo
+  -- l'Elo del compagno pesa quanto quello del singolo giocatore.
+  expected_team1 := 1.0 / (
+    1.0 + power(10.0, (team2_rating - team1_rating) / 400.0)
+  );
   margin_factor := public.padel_margin_factor(p_sets, winner);
 
   insert into public.matches (id, played_at, created_by, winner_team, rating_delta, notes)
@@ -571,14 +577,10 @@ begin
     order by id
   loop
     if current_player.id = any(p_team1) then
-      expected_score := 1.0 / (
-        1.0 + power(10.0, (team2_rating - current_player.rating) / 400.0)
-      );
+      expected_score := expected_team1;
       player_won := winner = 1;
     else
-      expected_score := 1.0 / (
-        1.0 + power(10.0, (team1_rating - current_player.rating) / 400.0)
-      );
+      expected_score := 1.0 - expected_team1;
       player_won := winner = 2;
     end if;
 

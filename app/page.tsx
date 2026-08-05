@@ -573,197 +573,286 @@ function youtubeId(url?: string | null) {
 }
 
 // ---------------------------------------------------------------------------
-// Trofei e record
+// Bacheca giocatore
 //
-// Due famiglie diverse. I trofei sono soglie personali: li prende chiunque le
-// superi, e quello più alto sostituisce i precedenti (chi ha 15 vittorie non
-// mostra anche 10 e 5). I record sono comparativi: li tiene solo chi guida la
-// classifica di quella statistica, e in caso di parità li tengono in due.
-// Tutto si calcola qui dai dati già caricati: niente da salvare, niente da
-// aggiornare a mano, e le soglie si spostano da sole quando qualcuno cresce.
+// I badge sono primati comparativi calcolati dai dati già caricati. Non vanno
+// salvati né aggiornati a mano: cambiano proprietario insieme alla classifica.
 // ---------------------------------------------------------------------------
 
-type BadgeTone = "gold" | "red" | "plain";
-type BadgeGlyph = "flame" | "trophy" | "medal" | "chart" | "shield" | "down";
+type BadgeTone = "gold" | "red" | "ice" | "violet" | "bronze";
+type BadgeGlyph =
+  | "goat"
+  | "summit"
+  | "flame"
+  | "sets"
+  | "turkey"
+  | "hook"
+  | "dominator"
+  | "comeback"
+  | "clutch"
+  | "marathon"
+  | "duo"
+  | "goat-slayer"
+  | "trophy";
 
 type Badge = {
   id: string;
   tone: BadgeTone;
   glyph: BadgeGlyph;
   label: string;
-  detail: string;
+  meaning: string;
+  criterion: string;
+  value: string;
+  progressLabel: string;
+  progress: number;
+  unlocked: boolean;
 };
 
-// Storia di un giocatore in ordine cronologico: esito e Elo dopo ogni partita.
-type PlayerHistory = {
-  results: boolean[];
-  ratings: number[];
-  peak: number;
-  low: number;
+type PlayerBadgeMetrics = {
   bestWinStreak: number;
   bestLoseStreak: number;
+  bestSetWinStreak: number;
+  firstPlaceMatches: number;
+  straightSetWins: number;
+  comebackWins: number;
+  decidingSetWins: number;
+  matchesPlayed: number;
+  winsAgainstGoat: number;
+  bestPairMatches: number;
+  bestPairRate: number;
+  ownsTopPair: boolean;
 };
 
-function playerHistory(profile: Profile, matches: PadelMatch[]): PlayerHistory {
-  const own = [...matches]
-    .filter((match) => match.players.some((player) => player.profile_id === profile.id))
-    .sort((a, b) =>
-      new Date(a.played_at).getTime() - new Date(b.played_at).getTime()
-      || new Date(a.created_at ?? a.played_at).getTime() - new Date(b.created_at ?? b.played_at).getTime()
-      || a.id.localeCompare(b.id),
-    );
-
-  const results = own.map((match) => {
-    const side = match.players.find((player) => player.profile_id === profile.id)?.team;
-    return match.winner_team === side;
-  });
-
-  // L'Elo attuale è il punto di arrivo: si risale all'indietro sottraendo i
-  // delta, così la serie non dipende da nessuno storico salvato.
-  const deltas = own.map(
-    (match) => match.players.find((player) => player.profile_id === profile.id)?.rating_delta ?? 0,
-  );
-  const ratings: number[] = [];
-  let running = profile.rating;
-  for (let index = deltas.length - 1; index >= 0; index -= 1) {
-    ratings.unshift(running);
-    running -= deltas[index];
-  }
-  ratings.unshift(running);
-
-  let bestWinStreak = 0;
-  let bestLoseStreak = 0;
-  let winRun = 0;
-  let loseRun = 0;
-  for (const won of results) {
-    winRun = won ? winRun + 1 : 0;
-    loseRun = won ? 0 : loseRun + 1;
-    bestWinStreak = Math.max(bestWinStreak, winRun);
-    bestLoseStreak = Math.max(bestLoseStreak, loseRun);
-  }
-
+function emptyBadgeMetrics(): PlayerBadgeMetrics {
   return {
-    results,
-    ratings,
-    peak: ratings.length ? Math.max(...ratings) : profile.rating,
-    low: ratings.length ? Math.min(...ratings) : profile.rating,
-    bestWinStreak,
-    bestLoseStreak,
+    bestWinStreak: 0,
+    bestLoseStreak: 0,
+    bestSetWinStreak: 0,
+    firstPlaceMatches: 0,
+    straightSetWins: 0,
+    comebackWins: 0,
+    decidingSetWins: 0,
+    matchesPlayed: 0,
+    winsAgainstGoat: 0,
+    bestPairMatches: 0,
+    bestPairRate: 0,
+    ownsTopPair: false,
   };
 }
 
-// Scalino inferiore più vicino: 1287 con passo 25 diventa 1275.
-function stepDown(value: number, step: number) {
-  return Math.floor(value / step) * step;
+function chronologicalMatches(matches: PadelMatch[]) {
+  return [...matches].sort((a, b) =>
+    new Date(a.played_at).getTime() - new Date(b.played_at).getTime()
+    || new Date(a.created_at ?? a.played_at).getTime() - new Date(b.created_at ?? b.played_at).getTime()
+    || a.id.localeCompare(b.id),
+  );
 }
 
-function playerTrophies(profile: Profile, history: PlayerHistory): Badge[] {
-  const badges: Badge[] = [];
+function buildBadgeMetrics(profiles: Profile[], matches: PadelMatch[]) {
+  const metrics = new Map(profiles.map((profile) => [profile.id, emptyBadgeMetrics()]));
+  const currentWinRuns = new Map<string, number>();
+  const currentLoseRuns = new Map<string, number>();
+  const currentSetRuns = new Map<string, number>();
+  const ratings = new Map(profiles.map((profile) => [profile.id, profile.rating]));
+  const played = new Map(profiles.map((profile) => [profile.id, 0]));
+  const ordered = chronologicalMatches(matches);
 
-  if (history.peak >= 1250) {
-    const step = stepDown(history.peak, 25);
-    badges.push({
-      id: "elo",
-      tone: "gold",
-      glyph: "chart",
-      label: `${step} ELO`,
-      detail: `Massimo toccato: ${history.peak}`,
+  // Ricostruisce i rating iniziali per sapere chi fosse davvero primo prima
+  // di ogni partita, invece di applicare retroattivamente la classifica odierna.
+  ordered.forEach((match) => match.players.forEach((player) => {
+    ratings.set(player.profile_id, (ratings.get(player.profile_id) ?? 1000) - (player.rating_delta ?? 0));
+  }));
+
+  ordered.forEach((match) => {
+    const activeBefore = profiles.filter((profile) => (played.get(profile.id) ?? 0) > 0);
+    const leaderRatingBefore = activeBefore.length
+      ? Math.max(...activeBefore.map((profile) => ratings.get(profile.id) ?? 1000))
+      : null;
+    const goatsBefore = new Set(
+      activeBefore
+        .filter((profile) => (ratings.get(profile.id) ?? 1000) === leaderRatingBefore)
+        .map((profile) => profile.id),
+    );
+    const losingGoat = match.players.some(
+      (player) => goatsBefore.has(player.profile_id) && player.team !== match.winner_team,
+    );
+
+    match.players.forEach((player) => {
+      const item = metrics.get(player.profile_id);
+      if (!item) return;
+      const won = player.team === match.winner_team;
+      const winRun = won ? (currentWinRuns.get(player.profile_id) ?? 0) + 1 : 0;
+      const loseRun = won ? 0 : (currentLoseRuns.get(player.profile_id) ?? 0) + 1;
+      currentWinRuns.set(player.profile_id, winRun);
+      currentLoseRuns.set(player.profile_id, loseRun);
+      item.bestWinStreak = Math.max(item.bestWinStreak, winRun);
+      item.bestLoseStreak = Math.max(item.bestLoseStreak, loseRun);
+      item.matchesPlayed += 1;
+      if (won && losingGoat) item.winsAgainstGoat += 1;
+
+      const sets = [...match.sets].sort((a, b) => a.set_number - b.set_number);
+      const setResults = sets.map((set) => player.team === 1
+        ? set.team1_games > set.team2_games
+        : set.team2_games > set.team1_games);
+      setResults.forEach((setWon) => {
+        const run = setWon ? (currentSetRuns.get(player.profile_id) ?? 0) + 1 : 0;
+        currentSetRuns.set(player.profile_id, run);
+        item.bestSetWinStreak = Math.max(item.bestSetWinStreak, run);
+      });
+
+      if (won) {
+        const ownSetWins = setResults.filter(Boolean).length;
+        const lostSets = setResults.length - ownSetWins;
+        if (ownSetWins >= 2 && lostSets === 0) item.straightSetWins += 1;
+        if (setResults[0] === false) item.comebackWins += 1;
+        if (setResults.length >= 3 && lostSets > 0) item.decidingSetWins += 1;
+      }
     });
-  } else if (history.peak >= 1125) {
-    badges.push({ id: "elo", tone: "plain", glyph: "chart", label: "1125 ELO", detail: `Massimo toccato: ${history.peak}` });
-  }
 
-  if (profile.matches_played >= 20) {
-    const step = stepDown(profile.matches_played, 5);
-    badges.push({ id: "matches", tone: "gold", glyph: "shield", label: `${step} PARTITE`, detail: `${profile.matches_played} giocate` });
-  } else if (profile.matches_played >= 15) {
-    badges.push({ id: "matches", tone: "plain", glyph: "shield", label: "15 PARTITE", detail: `${profile.matches_played} giocate` });
-  } else if (profile.matches_played >= 10) {
-    badges.push({ id: "matches", tone: "plain", glyph: "shield", label: "10 PARTITE", detail: `${profile.matches_played} giocate` });
-  }
-
-  if (profile.wins >= 15) {
-    const step = stepDown(profile.wins, 5);
-    badges.push({ id: "wins", tone: "gold", glyph: "trophy", label: `${step} VITTORIE`, detail: `${profile.wins} vinte in totale` });
-  } else if (profile.wins >= 10) {
-    badges.push({ id: "wins", tone: "gold", glyph: "trophy", label: "10 VITTORIE", detail: `${profile.wins} vinte in totale` });
-  } else if (profile.wins >= 5) {
-    badges.push({ id: "wins", tone: "plain", glyph: "trophy", label: "5 VITTORIE", detail: `${profile.wins} vinte in totale` });
-  }
-
-  if (history.bestWinStreak >= 5) {
-    badges.push({
-      id: "streak",
-      tone: "gold",
-      glyph: "flame",
-      label: `${history.bestWinStreak} DI FILA`,
-      detail: "Serie di vittorie consecutive",
+    match.players.forEach((player) => {
+      ratings.set(player.profile_id, (ratings.get(player.profile_id) ?? 1000) + (player.rating_delta ?? 0));
+      played.set(player.profile_id, (played.get(player.profile_id) ?? 0) + 1);
     });
-  }
 
-  return badges;
+    const activeAfter = profiles.filter((profile) => (played.get(profile.id) ?? 0) > 0);
+    if (activeAfter.length) {
+      const top = Math.max(...activeAfter.map((profile) => ratings.get(profile.id) ?? 1000));
+      activeAfter.forEach((profile) => {
+        if ((ratings.get(profile.id) ?? 1000) === top) {
+          const item = metrics.get(profile.id);
+          if (item) item.firstPlaceMatches += 1;
+        }
+      });
+    }
+  });
+
+  type PairRun = { ids: string[]; matches: number; wins: number };
+  const pairs = new Map<string, PairRun>();
+  ordered.forEach((match) => ([1, 2] as const).forEach((side) => {
+    const ids = match.players.filter((player) => player.team === side).map((player) => player.profile_id).sort();
+    if (ids.length !== 2) return;
+    const key = ids.join("|");
+    const pair = pairs.get(key) ?? { ids, matches: 0, wins: 0 };
+    pair.matches += 1;
+    pair.wins += match.winner_team === side ? 1 : 0;
+    pairs.set(key, pair);
+  }));
+
+  const eligiblePairs = [...pairs.values()].filter((pair) => pair.matches >= 5);
+  const topPairRate = eligiblePairs.length
+    ? Math.max(...eligiblePairs.map((pair) => pair.wins / pair.matches))
+    : 0;
+  pairs.forEach((pair) => {
+    const rate = pair.matches ? pair.wins / pair.matches : 0;
+    pair.ids.forEach((id) => {
+      const item = metrics.get(id);
+      if (!item) return;
+      const shouldUseEligiblePair = pair.matches >= 5 && (
+        item.bestPairMatches < 5
+        || rate > item.bestPairRate
+        || (rate === item.bestPairRate && pair.matches > item.bestPairMatches)
+      );
+      const shouldUseDevelopingPair = pair.matches < 5
+        && item.bestPairMatches < 5
+        && pair.matches > item.bestPairMatches;
+      if (shouldUseEligiblePair || shouldUseDevelopingPair) {
+        item.bestPairMatches = pair.matches;
+        item.bestPairRate = rate;
+      }
+      if (pair.matches >= 5 && rate === topPairRate) item.ownsTopPair = true;
+    });
+  });
+
+  return { metrics, topPairRate };
 }
 
-// I record guardano tutti gli altri: si vincono, non si raggiungono.
-function playerRecords(
-  profile: Profile,
-  profiles: Profile[],
-  matches: PadelMatch[],
-  history: PlayerHistory,
-): Badge[] {
-  const badges: Badge[] = [];
-  const others = profiles.filter((other) => other.id !== profile.id);
-  const historyOf = new Map(profiles.map((item) => [item.id, playerHistory(item, matches)]));
-  const eligible = (item: Profile) => item.matches_played >= 5;
+function clampProgress(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
 
-  const leads = (value: number, pick: (item: Profile) => number, filter = (_: Profile) => true) =>
-    others.filter(filter).every((other) => pick(other) <= value);
+function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch[]): Badge[] {
+  const { metrics, topPairRate } = buildBadgeMetrics(profiles, matches);
+  const own = metrics.get(profile.id) ?? emptyBadgeMetrics();
+  const all = [...metrics.values()];
+  const ranked = sortPadelProfiles(profiles).filter((item) => item.matches_played > 0);
+  const rank = rankOf(ranked, profile.id);
+  const leaderRating = ranked[0]?.rating ?? profile.rating;
+  const lastRating = ranked[ranked.length - 1]?.rating ?? profile.rating;
+  const isGoat = rank === 1;
+  const isLast = ranked.length > 1 && profile.matches_played > 0 && profile.rating === lastRating;
+  const maxOf = (pick: (item: PlayerBadgeMetrics) => number) => all.length ? Math.max(...all.map(pick)) : 0;
 
-  if (history.bestWinStreak > 0 && leads(history.bestWinStreak, (other) => historyOf.get(other.id)?.bestWinStreak ?? 0)) {
-    badges.push({
-      id: "record-streak",
-      tone: "gold",
-      glyph: "flame",
-      label: "SERIE PIÙ LUNGA",
-      detail: `${history.bestWinStreak} vittorie consecutive`,
-    });
-  }
+  const recordBadge = (
+    id: string,
+    tone: BadgeTone,
+    glyph: BadgeGlyph,
+    label: string,
+    meaning: string,
+    criterion: string,
+    value: number,
+    target: number,
+    unit: string,
+  ): Badge => {
+    const unlocked = target > 0 && value === target;
+    const remaining = Math.max(0, target - value);
+    return {
+      id,
+      tone,
+      glyph,
+      label,
+      meaning,
+      criterion,
+      value: `${value} ${unit}`,
+      progress: target ? clampProgress((value / target) * 100) : 0,
+      progressLabel: unlocked ? `Primato: ${value} ${unit}` : target ? `Ne mancano ${remaining}` : "In attesa del primo risultato",
+      unlocked,
+    };
+  };
 
-  if (eligible(profile) && profile.wins > 0 && leads(profile.wins, (other) => (eligible(other) ? other.wins : 0))) {
-    badges.push({ id: "record-wins", tone: "gold", glyph: "medal", label: "PIÙ VITTORIE", detail: `${profile.wins} in totale` });
-  }
+  const goatGap = Math.max(0, leaderRating - profile.rating);
+  const pairReady = own.bestPairMatches >= 5;
+  const pairProgress = pairReady && topPairRate
+    ? (own.bestPairRate / topPairRate) * 100
+    : (own.bestPairMatches / 5) * 100;
 
-  if (history.peak >= 1050 && leads(history.peak, (other) => historyOf.get(other.id)?.peak ?? 0)) {
-    badges.push({ id: "record-elo", tone: "gold", glyph: "chart", label: "ELO PIÙ ALTO", detail: `Picco a ${history.peak}` });
-  }
-
-  if (
-    eligible(profile)
-    && history.bestLoseStreak > 0
-    && leads(history.bestLoseStreak, (other) => (eligible(other) ? historyOf.get(other.id)?.bestLoseStreak ?? 0 : 0))
-  ) {
-    badges.push({
-      id: "record-lose-streak",
-      tone: "red",
-      glyph: "down",
-      label: "PEGGIOR SERIE",
-      detail: `${history.bestLoseStreak} sconfitte consecutive`,
-    });
-  }
-
-  if (eligible(profile) && profile.losses > 0 && leads(profile.losses, (other) => (eligible(other) ? other.losses : 0))) {
-    badges.push({ id: "record-losses", tone: "red", glyph: "down", label: "PIÙ SCONFITTE", detail: `${profile.losses} in totale` });
-  }
-
-  // Qui vince chi sta più in basso, quindi il confronto si rovescia.
-  const lowestOthers = others
-    .map((other) => historyOf.get(other.id)?.low ?? Number.POSITIVE_INFINITY)
-    .filter((value) => Number.isFinite(value));
-  if (history.low <= 999 && lowestOthers.every((value) => value >= history.low)) {
-    badges.push({ id: "record-low", tone: "red", glyph: "down", label: "ELO PIÙ BASSO", detail: `Minimo a ${history.low}` });
-  }
-
-  return badges;
+  return [
+    {
+      id: "goat", tone: "gold", glyph: "goat", label: "GOAT",
+      meaning: "Il giocatore al comando della classifica individuale.",
+      criterion: "Occupa il primo posto per Elo; i pari merito condividono il titolo.",
+      value: profile.matches_played ? `#${rank} · ${profile.rating} Elo` : "Non classificato",
+      progress: isGoat ? 100 : leaderRating ? clampProgress((profile.rating / leaderRating) * 100) : 0,
+      progressLabel: isGoat ? "Sei in vetta" : profile.matches_played ? `${goatGap} Elo dalla vetta` : "Gioca la prima partita",
+      unlocked: isGoat,
+    },
+    recordBadge("summit", "gold", "summit", "RE DELLA VETTA", "Chi ha trascorso più partite al primo posto.", "Conta ogni partita dopo la quale il giocatore è rimasto o salito al numero uno.", own.firstPlaceMatches, maxOf((item) => item.firstPlaceMatches), "turni in vetta"),
+    recordBadge("flame", "gold", "flame", "FIAMMA VINCENTE", "La serie di vittorie più lunga.", "Ottieni il maggior numero di vittorie consecutive nella cronologia.", own.bestWinStreak, maxOf((item) => item.bestWinStreak), "vittorie di fila"),
+    recordBadge("sets", "ice", "sets", "SET D'ACCIAIO", "La serie di set vinti consecutivamente più lunga.", "I set restano consecutivi anche attraversando partite diverse.", own.bestSetWinStreak, maxOf((item) => item.bestSetWinStreak), "set di fila"),
+    {
+      id: "turkey", tone: "bronze", glyph: "turkey", label: "TACCHINO DI CODA",
+      meaning: "Il giocatore attualmente ultimo in classifica.",
+      criterion: "Viene assegnato all'ultimo classificato che abbia disputato almeno una partita.",
+      value: profile.matches_played ? `Posizione #${rank}` : "Non classificato",
+      progress: isLast ? 100 : 0,
+      progressLabel: isLast ? "Ultimo posto attuale" : "Badge non assegnato",
+      unlocked: isLast,
+    },
+    recordBadge("hook", "red", "hook", "AL GANCIO", "La serie di sconfitte consecutive più lunga.", "Detieni il record storico di sconfitte una dopo l'altra.", own.bestLoseStreak, maxOf((item) => item.bestLoseStreak), "sconfitte di fila"),
+    recordBadge("dominator", "gold", "dominator", "DOMINATORE", "Chi ha vinto più partite senza concedere set.", "Conta le vittorie concluse 2–0.", own.straightSetWins, maxOf((item) => item.straightSetWins), "vittorie 2–0"),
+    recordBadge("comeback", "gold", "comeback", "RE DELLA RIMONTA", "Chi ha ribaltato più partite dopo aver perso il primo set.", "Conta le vittorie ottenute partendo da 0–1 nei set.", own.comebackWins, maxOf((item) => item.comebackWins), "rimonte"),
+    recordBadge("clutch", "ice", "clutch", "SANGUE FREDDO", "Chi ha vinto più partite al set decisivo.", "Conta le vittorie in tre set, dopo averne concesso almeno uno.", own.decidingSetWins, maxOf((item) => item.decidingSetWins), "set decisivi"),
+    recordBadge("marathon", "bronze", "marathon", "MARATONETA", "Il giocatore con più presenze.", "Detieni il maggior numero totale di partite disputate.", own.matchesPlayed, maxOf((item) => item.matchesPlayed), "partite"),
+    {
+      id: "duo", tone: "violet", glyph: "duo", label: "COPPIA D'ORO",
+      meaning: "I componenti della coppia con il rendimento migliore.",
+      criterion: "Miglior percentuale di vittorie tra le coppie con almeno 5 partite insieme.",
+      value: own.bestPairMatches ? `${Math.round(own.bestPairRate * 100)}% · ${own.bestPairMatches} match` : "Nessuna coppia",
+      progress: own.ownsTopPair ? 100 : clampProgress(pairProgress),
+      progressLabel: own.ownsTopPair ? "Miglior coppia" : pairReady ? `${Math.round(topPairRate * 100)}% da raggiungere` : `${own.bestPairMatches}/5 partite di coppia`,
+      unlocked: own.ownsTopPair,
+    },
+    recordBadge("goat-slayer", "red", "goat-slayer", "AMMAZZA-GOAT", "Chi ha battuto più volte il numero uno.", "Conta solo quando l'avversario era GOAT prima dell'inizio della partita.", own.winsAgainstGoat, maxOf((item) => item.winsAgainstGoat), "GOAT battuti"),
+  ];
 }
 
 function BadgeGlyphIcon({ name }: { name: BadgeGlyph }) {
@@ -785,33 +874,25 @@ function BadgeGlyphIcon({ name }: { name: BadgeGlyph }) {
           <path d="M12 13.5v3.2M8.6 20.2h6.8l-.7-3.5H9.3z" />
         </>
       ) : null}
-      {name === "medal" ? (
-        <>
-          <circle cx="12" cy="14.6" r="5.6" />
-          <path d="m8.6 9.4-2.5-6h11.8l-2.5 6" />
-          <path d="m12 11.9 1.05 2.13 2.35.34-1.7 1.66.4 2.34L12 17.3l-2.1 1.07.4-2.34-1.7-1.66 2.35-.34z" />
-        </>
-      ) : null}
       {name === "flame" ? (
         <path d="M12 2.9c3.4 3 5.1 5.5 5.1 7.6 0 1.2-.5 2.2-1.4 2.9.3-1.7-.4-3.2-2-4.6.2 3-1 4.5-2.4 5.7-1 .9-1.6 1.8-1.6 3 0 .6.2 1.2.5 1.7-2.1-.9-3.5-2.9-3.5-5.4 0-2.1 1-3.9 2.4-5.5-.1 1.2.2 2.1.9 2.7.5-3.6 1.4-6.2 2-8.1Z" />
       ) : null}
-      {name === "chart" ? (
+      {name === "goat" ? (
         <>
-          <path d="M3.4 20.3h17.2" />
-          <path d="m4.6 15.6 4.5-4.6 3.5 3.3 6.6-7" />
-          <path d="M15.4 7.3h3.8v3.8" />
+          <path d="M8.2 7.2C4.1 7.4 3.3 3.1 5 2.3c-.2 2.1 1.2 3 3.8 2.8M15.8 7.2c4.1.2 4.9-4.1 3.2-4.9.2 2.1-1.2 3-3.8 2.8" />
+          <path d="M7.8 6.1 5.6 9l2.1.2C7.4 14 9 19.7 12 21c3-1.3 4.6-7 4.3-11.8l2.1-.2-2.2-2.9M9.4 12.1h.1m5 0h.1M10 16.4c1.3.8 2.7.8 4 0" />
         </>
       ) : null}
-      {name === "shield" ? (
-        <path d="M12 3.1 4.9 5.9v5.6c0 4.1 2.9 7.6 7.1 9 4.2-1.4 7.1-4.9 7.1-9V5.9z" />
-      ) : null}
-      {name === "down" ? (
-        <>
-          <path d="M3.4 4.2h17.2" />
-          <path d="m4.6 8.6 4.5 4.6 3.5-3.3 6.6 7" />
-          <path d="M15.4 16.9h3.8v-3.8" />
-        </>
-      ) : null}
+      {name === "summit" ? <><path d="m3 18 6.2-9 2.1 2.8L14.8 6 21 18z" /><path d="M8.4 4.8 9.3 2l2.7 2 2.7-2 .9 2.8zM12 18v4" /></> : null}
+      {name === "sets" ? <><rect x="5" y="3.5" width="14" height="4.5" rx="1" /><rect x="5" y="9.8" width="14" height="4.5" rx="1" /><rect x="5" y="16.1" width="14" height="4.5" rx="1" /><path d="M9 5.8h6M9 12h6M9 18.3h6" /></> : null}
+      {name === "turkey" ? <><path d="M12 9C5 9 3.4 4.6 5.2 3.2c.8 2.2 2.5 3.1 4 3.4C7.8 3.9 9.4 2.1 11 5c.5-3 2.5-3 2.8.2 2.3-2.6 3.7-.7 1.7 2.2 2.7 4.6 3.1 7" /><path d="M10.4 8.3c-2 1.3-2.3 4.1-.6 5.3-1.7 1.6-1.1 5.5 2.2 6.4 3.3-.9 3.9-4.8 2.2-6.4 1.7-1.2 1.4-4-.6-5.3M12.7 10.1h.1M12.8 11.8l1.8.6-1.7.8" /></> : null}
+      {name === "hook" ? <><path d="M12 3v11.2a5.3 5.3 0 1 1-5.3-5.3" /><path d="m4.2 10.4 2.5-1.5.6 2.8" /><circle cx="12" cy="3.5" r="1.8" /></> : null}
+      {name === "dominator" ? <><rect x="3.7" y="6" width="16.6" height="12" rx="2" /><text x="12" y="14.7" textAnchor="middle" stroke="none" fill="currentColor" fontSize="7" fontWeight="900">2–0</text></> : null}
+      {name === "comeback" ? <><path d="M5 17c1.8-7.8 8.2-10.2 14-7" /><path d="m15.8 6.4 3.2 3.7-4.7 2M5 17l3-1.2L6.9 20" /></> : null}
+      {name === "clutch" ? <path d="m12 3 6.6 5.1L16 19l-4 2-4-2L5.4 8.1zM12 3v18M5.4 8.1h13.2M8 19l4-10.9L16 19" /> : null}
+      {name === "marathon" ? <><path d="M7 3h10M7 21h10M8 3c0 5 1.7 6.7 4 9-2.3 2.3-4 4-4 9M16 3c0 5-1.7 6.7-4 9 2.3 2.3 4 4 4 9" /><path d="M3 8h4m10 0h4M4 6 2 8l2 2m16-4 2 2-2 2" /></> : null}
+      {name === "duo" ? <><path d="M9.5 4 4 6.2v5c0 3.5 2.2 6.2 5.5 7.5 3.3-1.3 5.5-4 5.5-7.5v-5z" /><path d="M14.5 4 20 6.2v5c0 3.5-2.2 6.2-5.5 7.5M9.5 11.2l2.5 2.5 2.5-2.5" /></> : null}
+      {name === "goat-slayer" ? <><path d="m5 6 2-3 3 2 2-3 2 3 3-2 2 3-3 3H8z" /><path d="M6 19c4.5-7.5 7-9 12-7-3.2.8-4.7 3.4-5 7M4 20 20 8" /></> : null}
     </svg>
   );
 }
@@ -820,15 +901,60 @@ function BadgeList({ badges }: { badges: Badge[] }) {
   return (
     <div className="badge-grid">
       {badges.map((badge) => (
-        <article className={`badge badge-${badge.tone}`} key={badge.id} title={badge.detail}>
-          <span className="badge-icon"><BadgeGlyphIcon name={badge.glyph} /></span>
-          <div className="badge-text">
-            <b>{badge.label}</b>
-            <span>{badge.detail}</span>
+        <article
+          className={`badge badge-${badge.tone} ${badge.unlocked ? "is-unlocked" : "is-locked"}`}
+          key={badge.id}
+          tabIndex={0}
+          aria-label={`${badge.label}. ${badge.meaning} ${badge.progressLabel}`}
+        >
+          <div className="badge-emblem" aria-hidden="true">
+            <span className="badge-crown">◆</span>
+            <span className="badge-icon"><BadgeGlyphIcon name={badge.glyph} /></span>
+            <span className="badge-laurel badge-laurel-left">❯</span>
+            <span className="badge-laurel badge-laurel-right">❮</span>
           </div>
+          <div className="badge-text">
+            <span className="badge-state">{badge.unlocked ? "CONQUISTATO" : "IN CORSA"}</span>
+            <b>{badge.label}</b>
+            <span>{badge.value}</span>
+            <div className="badge-progress" aria-label={badge.progressLabel}>
+              <i style={{ width: `${badge.progress}%` }} />
+            </div>
+            <small>{badge.progressLabel}</small>
+          </div>
+          <aside className="badge-tooltip" role="tooltip">
+            <strong>{badge.label}</strong>
+            <p>{badge.meaning}</p>
+            <span>{badge.criterion}</span>
+          </aside>
         </article>
       ))}
     </div>
+  );
+}
+
+function CourtPass({ profile, rank }: { profile: Profile; rank: number }) {
+  const joined = new Intl.DateTimeFormat("it-IT", { month: "short", year: "numeric" })
+    .format(new Date(profile.created_at ?? "2026-01-01"));
+  const code = profile.id.replace(/[^a-z0-9]/gi, "").slice(0, 8).toUpperCase().padEnd(8, "0");
+  return (
+    <article className="court-pass">
+      <div className="court-pass-topline"><span>THE BOYZ / PLAYER ID</span><b>COURT PASS</b><em>{new Date().getFullYear()}</em></div>
+      <div className="court-pass-body">
+        <div className="court-pass-photo"><Avatar profile={profile} size="xl" rank={rank || undefined} /></div>
+        <div className="court-pass-identity">
+          <small>ATLETA</small><h3>{profile.display_name}</h3>
+          <div className="court-pass-fields">
+            <span><small>RANK</small><b>{rank ? `#${rank}` : "N/C"}</b></span>
+            <span><small>ELO</small><b>{profile.matches_played ? profile.rating : "—"}</b></span>
+            <span><small>LATO</small><b>{profile.court_side === "sinistra" ? "ROVESCIO" : profile.court_side === "destra" ? "DRITTO" : "—"}</b></span>
+            <span><small>DAL</small><b>{joined.toUpperCase()}</b></span>
+          </div>
+          <div className="court-pass-signature">{profile.display_name}</div>
+        </div>
+        <div className="court-pass-security" aria-hidden="true"><span>TB</span><i /><b>{code}</b></div>
+      </div>
+    </article>
   );
 }
 
@@ -2110,15 +2236,13 @@ function AppShell({ session }: { session: Session | null }) {
   const selectedPlayerPlays = selectedPlayer
     ? plays.filter((play) => play.profile_id === selectedPlayer.id)
     : [];
-  // I record confrontano tutti con tutti: il calcolo va fatto una volta sola.
+  // Tutta la bacheca confronta il giocatore con la cronologia del gruppo.
   const selectedPlayerBadges = useMemo(() => {
     if (!selectedPlayer) return [];
-    const history = playerHistory(selectedPlayer, matches);
-    return [
-      ...playerRecords(selectedPlayer, profiles, matches, history),
-      ...playerTrophies(selectedPlayer, history),
-    ];
+    return playerBadges(selectedPlayer, profiles, matches);
   }, [selectedPlayer, profiles, matches]);
+  const earnedPlayerBadges = selectedPlayerBadges.filter((badge) => badge.unlocked);
+  const pendingPlayerBadges = selectedPlayerBadges.filter((badge) => !badge.unlocked);
   // Con i parimerito il giocatore da raggiungere è il primo con punteggio più
   // alto, non semplicemente quello nella riga precedente.
   const nextRankedPlayer = currentUser
@@ -2749,16 +2873,35 @@ function AppShell({ session }: { session: Session | null }) {
 
             <section className="player-trophies">
               <div className="player-history-head">
-                <div><p className="eyebrow dark">BACHECA</p><h2>Trofei e record</h2></div>
-                <span>{selectedPlayerBadges.length} {selectedPlayerBadges.length === 1 ? "titolo" : "titoli"}</span>
+                <div><p className="eyebrow dark">BACHECA</p><h2>Identità, badge e trofei</h2></div>
+                <span>{earnedPlayerBadges.length}/{selectedPlayerBadges.length} badge</span>
               </div>
-              {selectedPlayerBadges.length ? (
-                <BadgeList badges={selectedPlayerBadges} />
-              ) : (
-                <div className="player-trophies-empty">
-                  <p>Ancora nessun titolo: i primi arrivano a 5 vittorie, 10 partite o 1125 di Elo.</p>
-                </div>
+              <CourtPass profile={selectedPlayer} rank={selectedPlayerRank} />
+
+              <div className="bacheca-group-head">
+                <div><span>01</span><div><p className="eyebrow dark">EMBLEMI ATTIVI</p><h3>Badge conquistati</h3></div></div>
+                <small>{earnedPlayerBadges.length} sbloccati</small>
+              </div>
+              {earnedPlayerBadges.length ? <BadgeList badges={earnedPlayerBadges} /> : (
+                <div className="player-trophies-empty"><p>Nessun badge ancora conquistato. Sotto trovi i progressi verso il primo.</p></div>
               )}
+
+              <div className="bacheca-group-head">
+                <div><span>02</span><div><p className="eyebrow dark">OBIETTIVI</p><h3>Badge in corsa</h3></div></div>
+                <small>Passa sopra un emblema per scoprire come ottenerlo</small>
+              </div>
+              {pendingPlayerBadges.length ? <BadgeList badges={pendingPlayerBadges} /> : (
+                <div className="player-trophies-empty"><p>Tutti i badge disponibili sono già in bacheca.</p></div>
+              )}
+
+              <div className="bacheca-group-head">
+                <div><span>03</span><div><p className="eyebrow dark">TORNEI</p><h3>Sala trofei</h3></div></div>
+                <small>Prossimamente</small>
+              </div>
+              <div className="trophy-room-empty">
+                <div aria-hidden="true"><BadgeGlyphIcon name="trophy" /></div>
+                <span><b>La prima coppa aspetta il suo torneo.</b><small>I trofei compariranno qui, separati dai record statistici.</small></span>
+              </div>
             </section>
 
             <EloChart profile={selectedPlayer} matches={matches} isSelf={isOwnCard} />
