@@ -1,58 +1,47 @@
--- TheBoyz · migrazione: votazioni pizza a sessione, con timer e pesi
--- Esegui questo file UNA SOLA VOLTA nel SQL Editor del progetto Supabase.
--- È idempotente: rilanciarlo non rompe nulla.
---
--- Cosa cambia rispetto a prima.
--- Prima ogni pizzeria aveva tre voti fissi, uno a testa per Samu, Fabio e
--- Dani, e il totale era la somma dei loro punteggi su scale diverse
--- (location 0-7, pizza 0-10, dolce 0-4, prezzo 0-10) più il bonus Fabio.
--- Adesso si apre una sessione di voto che dura due ore, chiunque del gruppo
--- vota da 1 a 10 in ogni campo, e il totale è la media dei votanti pesata
--- sull'importanza dei campi.
---
--- I pesi vengono dalle vecchie scale, riportate a 100 senza il bonus:
---   location 21, pizza 30, dolce 12, prezzo 30  →  totale 93
---   riscalati:  23        32        13       32  →  totale 100
--- Un voto pieno (10 ovunque) fa quindi esattamente 100.
+-- TheBoyz · votazioni pizza basate sui partecipanti
+-- Esegui questo file nel SQL Editor di Supabase anche se avevi già applicato
+-- la precedente versione con timer. Lo script aggiorna i dati esistenti ed è
+-- idempotente.
 
--- ---------------------------------------------------------------------------
--- Sessioni di voto
--- ---------------------------------------------------------------------------
+-- Le quattro categorie valgono complessivamente 93 punti:
+--   location 21 · pizza 30 · dolce 12 · prezzo 30.
+-- Il frontend media questi punti sul numero dei partecipanti. Se Fabio è tra
+-- i votanti aggiunge da 0 a 7 punti; in caso contrario i 93 sono riscalati a
+-- 100. Il risultato finale è arrotondato all'intero più vicino, con 0,5 per
+-- eccesso.
 
 create table if not exists public.pizza_sessions (
   id uuid primary key default gen_random_uuid(),
   restaurant_id uuid not null references public.pizza_restaurants(id) on delete cascade,
   opened_by uuid not null references public.profiles(id) on delete cascade,
   opened_at timestamptz not null default now(),
-  closes_at timestamptz not null default now() + interval '2 hours'
+  completed_at timestamptz,
+  -- Colonna temporanea per aggiornare le installazioni con il vecchio timer.
+  closes_at timestamptz
 );
+
+alter table public.pizza_sessions
+  add column if not exists completed_at timestamptz;
+
+alter table public.pizza_sessions
+  add column if not exists closes_at timestamptz;
+
+alter table public.pizza_sessions
+  alter column closes_at drop not null,
+  alter column closes_at drop default;
 
 create index if not exists pizza_sessions_restaurant_idx
   on public.pizza_sessions (restaurant_id, opened_at desc);
 
-create index if not exists pizza_sessions_open_idx
-  on public.pizza_sessions (closes_at desc);
+create table if not exists public.pizza_session_participants (
+  session_id uuid not null references public.pizza_sessions(id) on delete cascade,
+  voter_id uuid not null references public.profiles(id) on delete cascade,
+  voted_at timestamptz,
+  primary key (session_id, voter_id)
+);
 
-alter table public.pizza_sessions enable row level security;
-
-drop policy if exists "Membri leggono le sessioni" on public.pizza_sessions;
-create policy "Membri leggono le sessioni"
-on public.pizza_sessions for select
-to authenticated
-using (true);
-
-drop policy if exists "Membri aprono le sessioni" on public.pizza_sessions;
-create policy "Membri aprono le sessioni"
-on public.pizza_sessions for insert
-to authenticated
-with check (opened_by = auth.uid());
-
-revoke update, delete on public.pizza_sessions from anon, authenticated;
-grant select, insert on public.pizza_sessions to authenticated;
-
--- ---------------------------------------------------------------------------
--- Voti della sessione
--- ---------------------------------------------------------------------------
+create index if not exists pizza_session_participants_voter_idx
+  on public.pizza_session_participants (voter_id, session_id);
 
 create table if not exists public.pizza_session_votes (
   session_id uuid not null references public.pizza_sessions(id) on delete cascade,
@@ -61,22 +50,67 @@ create table if not exists public.pizza_session_votes (
   pizza smallint not null check (pizza between 1 and 10),
   dessert smallint not null check (dessert between 1 and 10),
   price smallint not null check (price between 1 and 10),
+  bonus_fabio smallint not null default 0 check (bonus_fabio between 0 and 7),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   primary key (session_id, voter_id)
 );
 
-create index if not exists pizza_session_votes_session_idx
-  on public.pizza_session_votes (session_id);
+alter table public.pizza_session_votes
+  add column if not exists bonus_fabio smallint not null default 0;
 
+-- Le vecchie sessioni non devono restare aperte per sempre dopo la rimozione
+-- del timer. I votanti già presenti diventano partecipanti e la sessione viene
+-- archiviata con il risultato disponibile.
+insert into public.pizza_session_participants (session_id, voter_id, voted_at)
+select vote.session_id, vote.voter_id, vote.updated_at
+from public.pizza_session_votes as vote
+join public.pizza_sessions as session on session.id = vote.session_id
+where session.closes_at is not null
+on conflict (session_id, voter_id) do update
+set voted_at = excluded.voted_at;
+
+insert into public.pizza_session_participants (session_id, voter_id, voted_at)
+select session.id, session.opened_by, null
+from public.pizza_sessions as session
+where session.closes_at is not null
+  and not exists (
+    select 1 from public.pizza_session_participants as participant
+    where participant.session_id = session.id
+  )
+on conflict (session_id, voter_id) do nothing;
+
+update public.pizza_sessions
+set completed_at = coalesce(completed_at, least(closes_at, now()))
+where closes_at is not null;
+
+drop function if exists public.open_pizza_session(uuid);
+drop policy if exists "Membri aprono le sessioni" on public.pizza_sessions;
+drop policy if exists "Voti visibili a chi ha votato" on public.pizza_session_votes;
+drop policy if exists "Ognuno vota per sé" on public.pizza_session_votes;
+drop policy if exists "Il voto si corregge finché la sessione è aperta" on public.pizza_session_votes;
+drop index if exists public.pizza_sessions_open_idx;
+
+alter table public.pizza_sessions drop column if exists closes_at;
+
+alter table public.pizza_sessions enable row level security;
+alter table public.pizza_session_participants enable row level security;
 alter table public.pizza_session_votes enable row level security;
 
--- Il cuore della regola: finché la sessione è aperta i voti degli altri si
--- vedono solo se hai votato anche tu. A timer scaduto si vedono tutti. Questo
--- sta nel database e non nell'interfaccia, altrimenti basterebbe guardare le
--- chiamate di rete per sbirciare.
-drop policy if exists "Voti visibili a chi ha votato" on public.pizza_session_votes;
-create policy "Voti visibili a chi ha votato"
+drop policy if exists "Membri leggono le sessioni" on public.pizza_sessions;
+create policy "Membri leggono le sessioni"
+on public.pizza_sessions for select
+to authenticated
+using (true);
+
+drop policy if exists "Membri leggono i partecipanti" on public.pizza_session_participants;
+create policy "Membri leggono i partecipanti"
+on public.pizza_session_participants for select
+to authenticated
+using (true);
+
+drop policy if exists "Voti visibili alla chiusura" on public.pizza_session_votes;
+create policy "Voti visibili alla chiusura"
 on public.pizza_session_votes for select
 to authenticated
 using (
@@ -84,168 +118,165 @@ using (
   or exists (
     select 1 from public.pizza_sessions as session
     where session.id = pizza_session_votes.session_id
-      and session.closes_at <= now()
-  )
-  or exists (
-    select 1 from public.pizza_session_votes as own
-    where own.session_id = pizza_session_votes.session_id
-      and own.voter_id = auth.uid()
+      and session.completed_at is not null
   )
 );
 
--- Si vota solo per sé e solo a sessione aperta.
-drop policy if exists "Ognuno vota per sé" on public.pizza_session_votes;
-create policy "Ognuno vota per sé"
-on public.pizza_session_votes for insert
-to authenticated
-with check (
-  voter_id = auth.uid()
-  and exists (
-    select 1 from public.pizza_sessions as session
-    where session.id = session_id and session.closes_at > now()
-  )
-);
+revoke insert, update, delete on public.pizza_sessions from anon, authenticated;
+revoke insert, update, delete on public.pizza_session_participants from anon, authenticated;
+revoke insert, update, delete on public.pizza_session_votes from anon, authenticated;
+grant select on public.pizza_sessions to authenticated;
+grant select on public.pizza_session_participants to authenticated;
+grant select on public.pizza_session_votes to authenticated;
 
-drop policy if exists "Il voto si corregge finché la sessione è aperta" on public.pizza_session_votes;
-create policy "Il voto si corregge finché la sessione è aperta"
-on public.pizza_session_votes for update
-to authenticated
-using (
-  voter_id = auth.uid()
-  and exists (
-    select 1 from public.pizza_sessions as session
-    where session.id = session_id and session.closes_at > now()
-  )
+create or replace function public.open_pizza_session(
+  p_name text,
+  p_place text,
+  p_participant_ids uuid[]
 )
-with check (voter_id = auth.uid());
-
-revoke delete on public.pizza_session_votes from anon, authenticated;
-grant select, insert, update on public.pizza_session_votes to authenticated;
-
--- ---------------------------------------------------------------------------
--- Badge Fabio
--- ---------------------------------------------------------------------------
--- Non è più un punteggio: è un giudizio a parte, che Fabio mette o toglie
--- quando vuole, in positivo o in negativo. Non entra nel totale.
-
-create table if not exists public.pizza_fabio_badges (
-  restaurant_id uuid primary key references public.pizza_restaurants(id) on delete cascade,
-  positive boolean not null,
-  assigned_by uuid not null references public.profiles(id) on delete cascade,
-  assigned_at timestamptz not null default now()
-);
-
-alter table public.pizza_fabio_badges enable row level security;
-
-create or replace function public.is_fabio()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
-  select lower(coalesce(auth.jwt() ->> 'email', '')) = 'fabio@theboyz.local'
-    or exists (
-      select 1 from public.profiles
-      where id = auth.uid() and lower(display_name) = 'fabio'
-    );
-$$;
-
-revoke all on function public.is_fabio() from public;
-grant execute on function public.is_fabio() to authenticated;
-
-drop policy if exists "Membri leggono i badge" on public.pizza_fabio_badges;
-create policy "Membri leggono i badge"
-on public.pizza_fabio_badges for select
-to authenticated
-using (true);
-
-drop policy if exists "Solo Fabio assegna" on public.pizza_fabio_badges;
-create policy "Solo Fabio assegna"
-on public.pizza_fabio_badges for insert
-to authenticated
-with check (public.is_fabio() and assigned_by = auth.uid());
-
-drop policy if exists "Solo Fabio cambia" on public.pizza_fabio_badges;
-create policy "Solo Fabio cambia"
-on public.pizza_fabio_badges for update
-to authenticated
-using (public.is_fabio())
-with check (public.is_fabio() and assigned_by = auth.uid());
-
-drop policy if exists "Solo Fabio toglie" on public.pizza_fabio_badges;
-create policy "Solo Fabio toglie"
-on public.pizza_fabio_badges for delete
-to authenticated
-using (public.is_fabio());
-
-grant select, insert, update, delete on public.pizza_fabio_badges to authenticated;
-
--- ---------------------------------------------------------------------------
--- Apertura di una sessione
--- ---------------------------------------------------------------------------
--- Una funzione invece di un semplice insert: serve a impedire che due persone
--- aprano due votazioni per la stessa pizzeria nello stesso momento.
-
-create or replace function public.open_pizza_session(p_restaurant_id uuid)
 returns uuid
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
 declare
-  existing_id uuid;
-  new_id uuid;
+  clean_participants uuid[];
+  new_restaurant_id uuid;
+  new_session_id uuid;
 begin
   if auth.uid() is null then
     raise exception 'Devi accedere per aprire una votazione';
   end if;
 
-  select id into existing_id
-  from public.pizza_sessions
-  where restaurant_id = p_restaurant_id and closes_at > now()
-  limit 1;
-
-  if existing_id is not null then
-    return existing_id;
+  if nullif(trim(p_name), '') is null then
+    raise exception 'Inserisci il nome della pizzeria';
   end if;
 
-  insert into public.pizza_sessions (restaurant_id, opened_by)
-  values (p_restaurant_id, auth.uid())
-  returning id into new_id;
+  select array_agg(distinct participant_id)
+  into clean_participants
+  from unnest(coalesce(p_participant_ids, array[]::uuid[])) as participant(participant_id);
 
-  return new_id;
+  if coalesce(array_length(clean_participants, 1), 0) = 0 then
+    raise exception 'Seleziona almeno un partecipante';
+  end if;
+
+  if not auth.uid() = any(clean_participants) then
+    raise exception 'Chi apre la votazione deve essere tra i partecipanti';
+  end if;
+
+  if (
+    select count(*) from public.profiles where id = any(clean_participants)
+  ) <> array_length(clean_participants, 1) then
+    raise exception 'Uno o più partecipanti non sono validi';
+  end if;
+
+  insert into public.pizza_restaurants (name, place, created_by)
+  values (trim(p_name), nullif(trim(p_place), ''), auth.uid())
+  returning id into new_restaurant_id;
+
+  insert into public.pizza_sessions (restaurant_id, opened_by)
+  values (new_restaurant_id, auth.uid())
+  returning id into new_session_id;
+
+  insert into public.pizza_session_participants (session_id, voter_id)
+  select new_session_id, participant_id
+  from unnest(clean_participants) as participant(participant_id);
+
+  return new_session_id;
 end;
 $$;
 
-revoke all on function public.open_pizza_session(uuid) from public;
-grant execute on function public.open_pizza_session(uuid) to authenticated;
-
--- ---------------------------------------------------------------------------
--- Chiunque può creare una pizzeria e votare, non più i soli tre di prima.
--- ---------------------------------------------------------------------------
-
-create or replace function public.create_pizza_restaurant(p_name text, p_place text default null)
-returns uuid
+create or replace function public.save_pizza_session_vote(
+  p_session_id uuid,
+  p_location smallint,
+  p_pizza smallint,
+  p_dessert smallint,
+  p_price smallint,
+  p_bonus_fabio smallint default 0
+)
+returns boolean
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
 declare
-  new_id uuid;
+  is_complete boolean;
+  current_name text;
 begin
   if auth.uid() is null then
-    raise exception 'Devi accedere per aggiungere una pizzeria';
+    raise exception 'Devi accedere per votare';
   end if;
 
-  insert into public.pizza_restaurants (name, place, created_by)
-  values (trim(p_name), nullif(trim(p_place), ''), auth.uid())
-  returning id into new_id;
-  return new_id;
+  perform pg_advisory_xact_lock(hashtext(p_session_id::text));
+
+  if not exists (
+    select 1 from public.pizza_sessions
+    where id = p_session_id and completed_at is null
+  ) then
+    raise exception 'La votazione è già chiusa o non esiste';
+  end if;
+
+  if not exists (
+    select 1 from public.pizza_session_participants
+    where session_id = p_session_id and voter_id = auth.uid()
+  ) then
+    raise exception 'Non sei tra i partecipanti di questa votazione';
+  end if;
+
+  if p_location not between 1 and 10
+    or p_pizza not between 1 and 10
+    or p_dessert not between 1 and 10
+    or p_price not between 1 and 10
+    or p_bonus_fabio not between 0 and 7 then
+    raise exception 'Uno o più voti non sono validi';
+  end if;
+
+  select lower(display_name) into current_name
+  from public.profiles where id = auth.uid();
+
+  if current_name <> 'fabio' and p_bonus_fabio <> 0 then
+    raise exception 'I punti Fabio possono essere assegnati solo da Fabio';
+  end if;
+
+  insert into public.pizza_session_votes (
+    session_id, voter_id, location, pizza, dessert, price, bonus_fabio
+  ) values (
+    p_session_id, auth.uid(), p_location, p_pizza, p_dessert, p_price, p_bonus_fabio
+  )
+  on conflict (session_id, voter_id) do update set
+    location = excluded.location,
+    pizza = excluded.pizza,
+    dessert = excluded.dessert,
+    price = excluded.price,
+    bonus_fabio = excluded.bonus_fabio,
+    updated_at = now();
+
+  update public.pizza_session_participants
+  set voted_at = now()
+  where session_id = p_session_id and voter_id = auth.uid();
+
+  select not exists (
+    select 1 from public.pizza_session_participants
+    where session_id = p_session_id and voted_at is null
+  ) into is_complete;
+
+  if is_complete then
+    update public.pizza_sessions
+    set completed_at = now()
+    where id = p_session_id;
+  end if;
+
+  return is_complete;
 end;
 $$;
 
-revoke all on function public.create_pizza_restaurant(text, text) from public;
-grant execute on function public.create_pizza_restaurant(text, text) to authenticated;
+revoke all on function public.open_pizza_session(text, text, uuid[]) from public;
+revoke all on function public.save_pizza_session_vote(uuid, smallint, smallint, smallint, smallint, smallint) from public;
+grant execute on function public.open_pizza_session(text, text, uuid[]) to authenticated;
+grant execute on function public.save_pizza_session_vote(uuid, smallint, smallint, smallint, smallint, smallint) to authenticated;
+
+-- Rimozione richiesta: le tabelle collegate usano ON DELETE CASCADE.
+delete from public.pizza_restaurants
+where lower(trim(name)) = lower('Fucking Spizza');
 
 notify pgrst, 'reload schema';

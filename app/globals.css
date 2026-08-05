@@ -3478,90 +3478,6 @@ button.ranking-row-blue:hover {
   text-transform: uppercase;
 }
 
-.bonus-fabio-icon {
-  border-radius: var(--radius-pill);
-  display: inline-block;
-  height: 22px;
-  margin-left: 6px;
-  object-fit: cover;
-  object-position: center top;
-  vertical-align: middle;
-  width: 22px;
-}
-
-/* Su desktop la classifica è una tabella: il giudizio di Fabio sta accanto
-   al nome. Il campo rettangolare è la versione per le card su mobile. */
-.pizza-fabio-cell {
-  display: none;
-}
-
-.fabio-badge {
-  border: 2px solid transparent;
-  border-radius: var(--radius-pill);
-  height: 24px;
-  margin-left: var(--space-2);
-  object-fit: cover;
-  object-position: center top;
-  vertical-align: -7px;
-  width: 24px;
-}
-
-.fabio-badge.is-positive {
-  border-color: var(--positive);
-  box-shadow: 0 0 0 2px rgba(41, 155, 102, 0.22);
-}
-
-.fabio-badge.is-negative {
-  border-color: var(--danger);
-  box-shadow: 0 0 0 2px rgba(217, 75, 73, 0.22);
-  filter: grayscale(0.55);
-}
-
-/* Comandi di Fabio: compaiono al passaggio sulla riga. */
-.pizza-fabio-actions {
-  display: flex;
-  gap: var(--space-1);
-  opacity: 0;
-  position: absolute;
-  right: var(--space-2);
-  top: var(--space-2);
-  transition: opacity 150ms ease;
-}
-
-.pizza-ranking-row:hover .pizza-fabio-actions,
-.pizza-fabio-actions:focus-within {
-  opacity: 1;
-}
-
-@media (hover: none) {
-  .pizza-fabio-actions {
-    opacity: 1;
-  }
-}
-
-.fabio-action {
-  background: var(--veil-2);
-  border: 0;
-  border-radius: var(--radius-pill);
-  color: var(--ink);
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 900;
-  height: 22px;
-  line-height: 1;
-  width: 22px;
-}
-
-.fabio-action.is-positive {
-  background: rgba(41, 155, 102, 0.16);
-  color: var(--positive);
-}
-
-.fabio-action.is-negative {
-  background: rgba(217, 75, 73, 0.16);
-  color: var(--danger);
-}
-
 .pizza-hero-buttons {
   display: flex;
   gap: var(--space-3);
@@ -3571,52 +3487,51 @@ button.ranking-row-blue:hover {
   flex: 1 1 auto;
 }
 
-/* Scelta della pizzeria su cui aprire la votazione. */
-.pizza-picker-list {
+.pizza-participant-picker {
+  border: 0;
+  margin: var(--space-5) 0 0;
+  padding: 0;
+}
+
+.pizza-participant-picker legend {
+  font-size: 12px;
+  font-weight: 900;
+  margin-bottom: var(--space-3);
+  text-transform: uppercase;
+}
+
+.pizza-participant-picker > div {
   display: grid;
   gap: var(--space-2);
-  max-height: 320px;
-  overflow-y: auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.pizza-picker-row {
+.pizza-participant-picker label {
   align-items: center;
   background: var(--veil-1);
-  border: 0;
+  border: 1px solid transparent;
   border-radius: var(--radius);
   cursor: pointer;
-  display: grid;
-  gap: var(--space-4);
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  padding: var(--space-4) var(--space-5);
-  text-align: left;
+  display: flex;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-3);
 }
 
-.pizza-picker-row:hover {
-  background: var(--veil-2);
+.pizza-participant-picker label.is-selected {
+  background: rgba(24, 223, 228, 0.1);
+  border-color: var(--blue-dark);
 }
 
-.pizza-picker-row b {
-  font-size: 14px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.pizza-participant-picker input {
+  height: 16px;
+  min-height: 0;
+  width: 16px;
 }
 
-.pizza-picker-row span {
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.pizza-picker-row em {
-  background: rgba(41, 155, 102, 0.16);
-  border-radius: var(--radius-sm);
-  color: var(--positive);
-  font-size: 9px;
-  font-style: normal;
+.pizza-participant-picker span {
+  font-size: 12px;
   font-weight: 900;
-  padding: 4px 7px;
-  text-transform: uppercase;
 }
 
 /* Card delle votazioni aperte, in cima alla pagina. */
@@ -3663,9 +3578,8 @@ button.ranking-row-blue:hover {
   text-transform: uppercase;
 }
 
-.pizza-session-timer {
+.pizza-session-progress {
   font-size: 26px;
-  font-variant-numeric: tabular-nums;
   font-weight: 900;
   letter-spacing: -1px;
   margin-top: var(--space-1);
@@ -3996,10 +3910,6 @@ button.pizza-ranking-row {
   color: var(--muted);
   font-size: 9px;
   margin-left: 2px;
-}
-
-.pizza-fabio-score {
-  color: var(--pizza-blue);
 }
 
 .pizza-total-score {
@@ -5463,15 +5373,6 @@ button.pizza-ranking-row {
     padding: 16px 14px;
   }
 
-  /* Con il giudizio di Fabio si aggiunge una riga fra il totale e i voti. */
-  .pizza-ranking-row.has-fabio {
-    grid-template-areas:
-      "position name total"
-      "position fabio fabio"
-      "position location pizza"
-      "position dessert price";
-  }
-
   .pizza-ranking-row > .pizza-position { grid-area: position; }
   .pizza-ranking-row > .pizza-name-cell { grid-area: name; }
   .pizza-ranking-row > .pizza-category-score:nth-child(3) { grid-area: location; }
@@ -5502,46 +5403,6 @@ button.pizza-ranking-row {
 
   .pizza-total-score small {
     color: var(--muted);
-  }
-
-  /* Nella card il giudizio di Fabio è un campo come gli altri, colorato,
-     con la sua faccia sulla destra. Quello accanto al nome sparisce. */
-  .pizza-name-cell > b .fabio-badge {
-    display: none;
-  }
-
-  .pizza-fabio-cell {
-    align-items: center;
-    border-radius: var(--radius-sm);
-    display: flex;
-    grid-area: fabio;
-    justify-content: space-between;
-    min-height: 34px;
-    padding: 4px 5px 4px 8px;
-  }
-
-  .pizza-fabio-cell b {
-    font-size: 9px;
-    font-weight: 900;
-    letter-spacing: 0.5px;
-  }
-
-  .pizza-fabio-cell img {
-    border-radius: var(--radius-pill);
-    height: 26px;
-    object-fit: cover;
-    object-position: center top;
-    width: 26px;
-  }
-
-  .pizza-fabio-cell.is-positive {
-    background: rgba(41, 155, 102, 0.16);
-    color: var(--positive);
-  }
-
-  .pizza-fabio-cell.is-negative {
-    background: rgba(217, 75, 73, 0.16);
-    color: var(--danger);
   }
 
   .pizza-category-score {

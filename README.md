@@ -35,9 +35,10 @@ ai file `.env` pubblicati, alle GitHub Actions o al codice frontend.
 1. Crea un progetto su Supabase.
 2. Apri **SQL Editor**, crea una nuova query e incolla tutto il contenuto di `supabase/schema.sql`.
 3. Esegui la query.
-4. In **Authentication → URL Configuration**, imposta **Site URL** con l’indirizzo GitHub Pages finale, per esempio:
+4. Crea una seconda query con `supabase/migration-pizza-sessioni.sql` ed eseguila. Va rilanciata anche su un progetto esistente per sostituire il vecchio timer con i partecipanti.
+5. In **Authentication → URL Configuration**, imposta **Site URL** con l’indirizzo GitHub Pages finale, per esempio:
    `https://nomeutente.github.io/nome-repository/`
-5. In **Project Settings → API**, copia:
+6. In **Project Settings → API**, copia:
    - Project URL
    - anon / publishable key
 
