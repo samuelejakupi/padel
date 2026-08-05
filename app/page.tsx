@@ -530,7 +530,7 @@ function Avatar({
   );
 }
 
-type GlyphName = "home" | "ranking" | "racket" | "pizza";
+type GlyphName = "home" | "ranking" | "racket" | "rackets" | "pizza";
 
 // Glifi in stile SF Symbols: tratto uniforme, estremi arrotondati, nessun
 // riempimento. Ereditano currentColor, così seguono lo stato della barra.
@@ -582,6 +582,20 @@ function NavGlyph({ name }: { name: GlyphName }) {
             <circle cx="9.3" cy="10.3" r="0.95" />
             <circle cx="14.7" cy="10.3" r="0.95" />
             <circle cx="12" cy="12.8" r="0.95" />
+          </g>
+        </>
+      ) : null}
+      {/* Due racchette incrociate: la coppia. Sono la stessa forma del
+          singolo, rimpicciolita e ruotata di venti gradi per lato. */}
+      {name === "rackets" ? (
+        <>
+          <g transform="rotate(-20 12 12) translate(-3.3 1.4) scale(0.72)" transform-origin="12 12">
+            <path d="M9.6 16.2C7 15 5.3 12.4 5.3 9.4 5.3 5.7 8.3 2.7 12 2.7s6.7 3 6.7 6.7c0 3-1.7 5.6-4.3 6.8Z" />
+            <path d="M10.4 16.2v3.1a1.6 1.6 0 0 0 3.2 0v-3.1" />
+          </g>
+          <g transform="rotate(20 12 12) translate(3.3 1.4) scale(0.72)" transform-origin="12 12">
+            <path d="M9.6 16.2C7 15 5.3 12.4 5.3 9.4 5.3 5.7 8.3 2.7 12 2.7s6.7 3 6.7 6.7c0 3-1.7 5.6-4.3 6.8Z" />
+            <path d="M10.4 16.2v3.1a1.6 1.6 0 0 0 3.2 0v-3.1" />
           </g>
         </>
       ) : null}
@@ -2465,6 +2479,9 @@ function AppShell({ session }: { session: Session | null }) {
   const [pizzaSessionsReady, setPizzaSessionsReady] = useState(true);
   const [votingSession, setVotingSession] = useState<PizzaSession | null>(null);
   const [showSessionPicker, setShowSessionPicker] = useState(false);
+  // Partite e classifica si aprono e si richiudono dentro la home.
+  const [allMatches, setAllMatches] = useState(false);
+  const [allRanking, setAllRanking] = useState(false);
   const [editingMatch, setEditingMatch] = useState<PadelMatch | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
@@ -2644,27 +2661,10 @@ function AppShell({ session }: { session: Session | null }) {
       .filter(Boolean) as Profile[];
   }, [season, currentYear, seasonRows, profiles]);
 
-  // I tre gradini del podio: chi è a pari punti condivide il gradino.
-  const podiumSteps = useMemo(() => {
-    const ranked = sortPadelProfiles(seasonProfiles).filter((profile) => profile.matches_played > 0);
-    const ranks = padelRanks(ranked);
-    return [1, 2, 3].map((rank) => ({
-      rank,
-      profiles: ranked.filter((_, index) => ranks[index] === rank),
-    }));
-  }, [seasonProfiles]);
-
   const teams = useMemo(
     () => buildPadelTeams(matches, profiles, teamRecords),
     [matches, profiles, teamRecords],
   );
-  const teamPodiumSteps = useMemo(() => {
-    const ranks = ranksByRating(teams);
-    return [1, 2, 3].map((rank) => ({
-      rank,
-      teams: teams.filter((_, index) => ranks[index] === rank),
-    }));
-  }, [teams]);
   const playerTeams = useMemo(
     () => teams.filter((team) => team.players.some((profile) => profile.id === selectedPlayerId)),
     [teams, selectedPlayerId],
@@ -2752,9 +2752,10 @@ function AppShell({ session }: { session: Session | null }) {
   const navDragging = useRef(false);
   const navPointerStart = useRef<number | null>(null);
 
+  // Il Padel è la home: partite e classifica si aprono lì dentro, quindi non
+  // serve più una voce separata.
   const navItems = useMemo(() => ([
-    { key: "overview", glyph: "home", label: "Home", active: view === "padel" && padelView === "overview", select: () => { setView("padel"); setPadelView("overview"); } },
-    { key: "padel", glyph: "racket", label: "Padel", active: view === "padel" && (padelView === "matches" || padelView === "ranking"), select: () => { setView("padel"); setPadelView("matches"); } },
+    { key: "padel", glyph: "racket", label: "Padel", active: view === "padel" && padelView !== "player", select: () => { setView("padel"); setPadelView("overview"); } },
     { key: "pizza", glyph: "pizza", label: "Pizza", active: view === "pizza", select: () => setView("pizza") },
     { key: "profile", glyph: "", label: "Profilo", active: isOwnCard, select: openOwnCard },
   ]), [view, padelView, isOwnCard, openOwnCard]);
@@ -3057,14 +3058,8 @@ function AppShell({ session }: { session: Session | null }) {
       <header className="topbar">
         <nav className="desktop-nav" aria-label="Navigazione principale">
           <button
-            className={view === "padel" && padelView === "overview" ? "active" : ""}
+            className={view === "padel" && padelView !== "player" ? "active" : ""}
             onClick={goHome}
-          >
-            Home
-          </button>
-          <button
-            className={view === "padel" && (padelView === "matches" || padelView === "ranking") ? "active" : ""}
-            onClick={() => { setView("padel"); setPadelView("matches"); }}
           >
             Padel
           </button>
@@ -3142,11 +3137,18 @@ function AppShell({ session }: { session: Session | null }) {
                   <div className="section-head-label"><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
                   <div className="court-actions">
                     <button className="button button-primary cta-new-match" onClick={() => setShowMatch(true)}>+ New Match</button>
-                    <button className="button button-card cta-see-all-top" aria-label="Vedi tutte le partite" onClick={() => setPadelView("matches")}>Vedi tutto</button>
+                    {matches.length > 2 ? (
+                      <button
+                        className="button button-card cta-see-all-top"
+                        onClick={() => setAllMatches((open) => !open)}
+                      >
+                        {allMatches ? "Vedi meno" : "Vedi tutto"}
+                      </button>
+                    ) : null}
                   </div>
                 </div>
                 {matches.length ? (
-                  // Su mobile le due partite e il tasto stanno in un unico
+                  // Su mobile le partite e il tasto stanno in un unico
                   // riquadro, come la classifica: vedi .match-panel.
                   <div className="match-panel">
                     {/* Titolo interno al riquadro, come "Classifica Elo".
@@ -3154,22 +3156,24 @@ function AppShell({ session }: { session: Session | null }) {
                         c'e gia sopra, fuori dal riquadro. */}
                     <div className="match-panel-head"><h2>Ultime partite</h2></div>
                     <div className="match-list">
-                      {matches.slice(0, 2).map((match, index) => (
+                      {(allMatches ? matches : matches.slice(0, 2)).map((match) => (
                         <MatchCard
                           key={match.id}
                           match={match}
-                          // Solo la prima riga apre la modifica: la seconda
-                          // porta all'elenco completo.
-                          onEdit={index === 0
-                            ? (selected) => setEditingMatch(selected)
-                            : () => setPadelView("matches")}
-                          actionLabel={index === 0 ? undefined : "Vedi tutte le partite"}
+                          onEdit={(selected) => setEditingMatch(selected)}
                           onPlayVideo={(id) => setPlayingVideo(id)}
-                      viewerId={session?.user.id}
+                          viewerId={session?.user.id}
                         />
                       ))}
                     </div>
-                    <button className="button button-ghost button-full cta-see-all-bottom" aria-label="Vedi tutte le partite" onClick={() => setPadelView("matches")}>Vedi tutto</button>
+                    {matches.length > 2 ? (
+                      <button
+                        className="button button-ghost button-full cta-see-all-bottom"
+                        onClick={() => setAllMatches((open) => !open)}
+                      >
+                        {allMatches ? "Vedi meno" : `Vedi tutte (${matches.length})`}
+                      </button>
+                    ) : null}
                   </div>
                 ) : (
                   <div className="compact-empty"><span>00</span><p>Nessuna partita registrata. La prima scriverà la storia.</p></div>
@@ -3179,9 +3183,46 @@ function AppShell({ session }: { session: Session | null }) {
               <aside className="dashboard-side">
                 <div className="side-head">
                   <div><h2>Classifica Elo</h2></div>
+                  {/* Due icone al posto di due parole: una racchetta per il
+                      singolo, due per le coppie. */}
+                  <div className="mode-switch" role="group" aria-label="Tipo di classifica">
+                    <button
+                      className={rankingMode === "single" ? "active" : ""}
+                      onClick={() => setRankingMode("single")}
+                      aria-label="Classifica singolo"
+                      title="Singolo"
+                    >
+                      <NavGlyph name="racket" />
+                    </button>
+                    <button
+                      className={rankingMode === "team" ? "active" : ""}
+                      onClick={() => setRankingMode("team")}
+                      aria-label="Classifica squadre"
+                      title="Squadra"
+                    >
+                      <NavGlyph name="rackets" />
+                    </button>
+                  </div>
                 </div>
-                <RankingList profiles={seasonProfiles} onSelect={openPlayer} />
-                <button className="button button-ghost button-full" aria-label="Vedi il ranking completo" onClick={() => setPadelView("ranking")}>Vedi tutto</button>
+                {rankingMode === "single" ? (
+                  <RankingList
+                    profiles={seasonProfiles}
+                    onSelect={openPlayer}
+                    maxRank={allRanking ? undefined : 5}
+                  />
+                ) : teams.length ? (
+                  <TeamRankingList teams={teams} maxRank={allRanking ? undefined : 5} />
+                ) : (
+                  <p className="demo-profile-note">
+                    Le coppie si formano dalle partite: registra un doppio e compariranno qui.
+                  </p>
+                )}
+                <button
+                  className="button button-ghost button-full"
+                  onClick={() => setAllRanking((open) => !open)}
+                >
+                  {allRanking ? "Vedi meno" : "Vedi tutto"}
+                </button>
               </aside>
             </section>
           </>
@@ -3204,49 +3245,25 @@ function AppShell({ session }: { session: Session | null }) {
                     onChange={setSeason}
                   />
                 </div>
-                <div className="ranking-switch" role="group" aria-label="Tipo di ranking">
+                <div className="mode-switch" role="group" aria-label="Tipo di ranking">
                   <button
                     className={rankingMode === "single" ? "active" : ""}
                     onClick={() => setRankingMode("single")}
+                    aria-label="Classifica singolo"
+                    title="Singolo"
                   >
-                    Singolo
+                    <NavGlyph name="racket" />
                   </button>
                   <button
                     className={rankingMode === "team" ? "active" : ""}
                     onClick={() => setRankingMode("team")}
+                    aria-label="Classifica squadre"
+                    title="Squadra"
                   >
-                    Squadra
+                    <NavGlyph name="rackets" />
                   </button>
                 </div>
               </div>
-              {/* Podio a tre gradini dentro il blocco scuro. Chi è a pari
-                  merito sale sullo stesso gradino, non ne occupa uno in più. */}
-              {rankingMode === "single" ? (
-                <Podium
-                  steps={podiumSteps.map(({ rank, profiles: people }) => ({
-                    rank,
-                    entries: people.map((profile) => ({
-                      key: profile.id,
-                      avatar: <Avatar profile={profile} size="lg" rank={rank} />,
-                      name: profile.display_name,
-                      detail: `${profile.rating} pt`,
-                      onSelect: () => openPlayer(profile),
-                    })),
-                  }))}
-                />
-              ) : teams.length ? (
-                <Podium
-                  steps={teamPodiumSteps.map(({ rank, teams: group }) => ({
-                    rank,
-                    entries: group.map((team) => ({
-                      key: team.id,
-                      avatar: <TeamAvatars team={team} size="lg" />,
-                      name: teamLabel(team),
-                      detail: `${team.rating} pt`,
-                    })),
-                  }))}
-                />
-              ) : null}
             </article>
             {rankingMode === "single" ? (
               <RankingList profiles={seasonProfiles} onSelect={openPlayer} />
