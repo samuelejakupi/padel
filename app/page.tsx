@@ -2778,6 +2778,92 @@ function TournamentCreateModal({
   );
 }
 
+function tournamentIsCompleted(tournament: Tournament, matches: PadelMatch[]) {
+  const matchIds = new Set(matches.map((match) => match.id));
+  return Boolean(
+    tournament.fixtures.length
+    && tournament.fixtures.every((fixture) => fixture.match_id && matchIds.has(fixture.match_id)),
+  );
+}
+
+function TournamentStandingsContent({
+  tournament,
+  profiles,
+  matches,
+  title,
+  actionLabel,
+}: {
+  tournament: Tournament;
+  profiles: Profile[];
+  matches: PadelMatch[];
+  title: string;
+  actionLabel?: string;
+}) {
+  const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
+  const standings = buildTournamentStandings(tournament, matches);
+  return (
+    <>
+      <div className="player-history-head">
+        <div><p className="eyebrow dark">CLASSIFICA</p><h2>{title}</h2></div>
+        {actionLabel ? <span className="tournament-open-label">{actionLabel} →</span> : null}
+      </div>
+      <div className="tournament-table">
+        <div className="tournament-table-head"><span>#</span><span>Squadra</span><span>G</span><span>V</span><span>SD</span><span>Game</span></div>
+        {standings.map((row, index) => (
+          <div className={`tournament-table-row${index === 0 && row.played ? " is-leader" : ""}`} key={row.team.id}>
+            <b>{index + 1}</b>
+            <span className="tournament-team-cell"><strong>{row.team.name}</strong><small>{profileMap.get(row.team.player_a)?.display_name} · {profileMap.get(row.team.player_b)?.display_name}</small></span>
+            <span>{row.played}</span><span>{row.wins}</span><span>{row.directWins}</span><span>{row.gamesWon}</span>
+          </div>
+        ))}
+      </div>
+      <p className="tournament-rule-note">Parità: scontri diretti, poi numero totale di game vinti.</p>
+    </>
+  );
+}
+
+function TournamentFixtures({
+  tournament,
+  matches,
+  onRecord,
+}: {
+  tournament: Tournament;
+  matches: PadelMatch[];
+  onRecord?: (context: TournamentMatchContext) => void;
+}) {
+  const matchMap = new Map(matches.map((match) => [match.id, match]));
+  const teamMap = new Map(tournament.teams.map((team) => [team.id, team]));
+  const playedMatches = tournament.fixtures.filter((fixture) => fixture.match_id && matchMap.has(fixture.match_id)).length;
+  return (
+    <section className="tournament-fixtures">
+      <div className="player-history-head"><div><p className="eyebrow dark">CALENDARIO</p><h2>Tutte contro tutte</h2></div><span>{playedMatches}/{tournament.fixtures.length}</span></div>
+      <div className="tournament-fixture-list">
+        {[...tournament.fixtures].sort((a, b) => a.match_number - b.match_number).map((fixture) => {
+          const team1 = teamMap.get(fixture.team1_id);
+          const team2 = teamMap.get(fixture.team2_id);
+          const match = fixture.match_id ? matchMap.get(fixture.match_id) : null;
+          if (!team1 || !team2) return null;
+          const score = match ? [...match.sets].sort((a, b) => a.set_number - b.set_number).map((set) => `${set.team1_games}-${set.team2_games}`).join("  ") : null;
+          return (
+            <article className={`tournament-fixture${match ? " is-played" : ""}`} key={fixture.id}>
+              <span className="tournament-match-number">{String(fixture.match_number).padStart(2, "0")}</span>
+              <div><b className={match?.winner_team === 1 ? "winner" : ""}>{team1.name}</b><small>vs</small><b className={match?.winner_team === 2 ? "winner" : ""}>{team2.name}</b></div>
+              {match ? <strong className="tournament-score">{score}</strong> : onRecord ? (
+                <button className="button button-dark" onClick={() => onRecord({
+                  fixtureId: fixture.id,
+                  tournamentName: tournament.name,
+                  eloMultiplier: tournament.elo_multiplier,
+                  playerIds: [team1.player_a, team1.player_b, team2.player_a, team2.player_b],
+                })}>Inserisci risultato</button>
+              ) : <span className="tournament-awaiting">Da giocare</span>}
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function TournamentsPage({
   tournaments,
   profiles,
@@ -2785,7 +2871,6 @@ function TournamentsPage({
   schemaReady,
   onCreate,
   onRecord,
-  onSelectSection,
 }: {
   tournaments: Tournament[];
   profiles: Profile[];
@@ -2793,87 +2878,119 @@ function TournamentsPage({
   schemaReady: boolean;
   onCreate: () => void;
   onRecord: (context: TournamentMatchContext) => void;
-  onSelectSection: (view: "matches" | "ranking" | "tournaments") => void;
 }) {
-  const [selectedId, setSelectedId] = useState(tournaments[0]?.id ?? "");
-  const tournament = tournaments.find((item) => item.id === selectedId) ?? tournaments[0];
-  const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
-  const matchMap = new Map(matches.map((match) => [match.id, match]));
-  const teamMap = new Map(tournament?.teams.map((team) => [team.id, team]) ?? []);
-  const standings = tournament ? buildTournamentStandings(tournament, matches) : [];
-  const playedMatches = tournament?.fixtures.filter((fixture) => fixture.match_id && matchMap.has(fixture.match_id)).length ?? 0;
-  const completed = Boolean(tournament?.fixtures.length && playedMatches === tournament.fixtures.length);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [showAllCompleted, setShowAllCompleted] = useState(false);
+  const activeTournaments = tournaments.filter((tournament) => !tournamentIsCompleted(tournament, matches));
+  const completedTournaments = tournaments.filter((tournament) => tournamentIsCompleted(tournament, matches));
+  const detailTournament = detailId ? tournaments.find((tournament) => tournament.id === detailId) ?? null : null;
+
+  if (detailTournament) {
+    const completed = tournamentIsCompleted(detailTournament, matches);
+    const playedMatches = detailTournament.fixtures.filter((fixture) => fixture.match_id && matches.some((match) => match.id === fixture.match_id)).length;
+    return (
+      <section className="page-section tournament-page tournament-detail-page">
+        <button className="tournament-back" type="button" onClick={() => setDetailId(null)}>← Tutti i tornei</button>
+        <article className="section-hero tournament-hero tournament-detail-hero">
+          <BlockMark size="lg" />
+          <div className="section-hero-head">
+            <div><p className="eyebrow">{completed ? "TORNEO COMPLETATO" : "TORNEO IN CORSO"}</p><h1>{detailTournament.name}</h1><p>{playedMatches}/{detailTournament.fixtures.length} partite · Elo ×{detailTournament.elo_multiplier}</p></div>
+          </div>
+        </article>
+        <article className="tournament-board-head">
+          <div className="tournament-prize-card"><TournamentTrophyBadge kind={detailTournament.trophy_badge} /><span><small>{completed ? "TROFEO ASSEGNATO" : "TROFEO IN PALIO"}</small><b>{detailTournament.trophy_name}</b></span></div>
+          <div className="tournament-title-card"><p className="eyebrow dark">FORMULA</p><h2>Girone all’italiana</h2><span>Vittorie · scontri diretti · game vinti</span></div>
+        </article>
+        <div className="tournament-layout">
+          <section className="tournament-standings">
+            <TournamentStandingsContent tournament={detailTournament} profiles={profiles} matches={matches} title={completed ? "Classifica finale" : "Situazione attuale"} />
+          </section>
+          <TournamentFixtures tournament={detailTournament} matches={matches} onRecord={completed ? undefined : onRecord} />
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <section className="page-section tournament-page">
-      <PadelSectionNav active="tournaments" onSelect={onSelectSection} />
+    <section className="page-section tournament-page tournament-home-page">
       <article className="section-hero tournament-hero">
         <BlockMark size="lg" />
         <div className="section-hero-head">
           <div><p className="eyebrow">THEBOYZ CUP</p><h1>Tornei</h1><p>Girone all’italiana: vittorie, scontri diretti, game vinti.</p></div>
-          <button className="button button-primary" onClick={onCreate} disabled={!schemaReady}>+ Nuovo torneo</button>
+          <button className="button button-primary tournament-new-button" onClick={onCreate} disabled={!schemaReady}>+ Nuovo torneo</button>
         </div>
       </article>
+
       {!schemaReady ? (
         <p className="demo-profile-note">Per creare i tornei esegui <code>migration-tornei.sql</code> nel SQL Editor di Supabase.</p>
-      ) : tournaments.length && tournament ? (
+      ) : (
         <>
-          {tournaments.length > 1 ? (
-            <div className="tournament-tabs" role="tablist" aria-label="Tornei">
-              {tournaments.map((item) => <button className={item.id === tournament.id ? "active" : ""} key={item.id} onClick={() => setSelectedId(item.id)}>{item.name}</button>)}
-            </div>
-          ) : null}
-          <article className="tournament-board-head">
-            <div className="tournament-prize-card"><TournamentTrophyBadge kind={tournament.trophy_badge} /><span><small>TROFEO IN PALIO</small><b>{tournament.trophy_name}</b></span></div>
-            <div className="tournament-title-card"><p className="eyebrow dark">{completed ? "TORNEO COMPLETATO" : "TORNEO IN CORSO"}</p><h2>{tournament.name}</h2><span>{playedMatches}/{tournament.fixtures.length} partite · Elo ×{tournament.elo_multiplier}</span></div>
-          </article>
-
-          <div className="tournament-layout">
-            <section className="tournament-standings">
-              <div className="player-history-head"><div><p className="eyebrow dark">CLASSIFICA</p><h2>{completed ? "Risultato finale" : "Situazione attuale"}</h2></div></div>
-              <div className="tournament-table">
-                <div className="tournament-table-head"><span>#</span><span>Squadra</span><span>G</span><span>V</span><span>SD</span><span>Game</span></div>
-                {standings.map((row, index) => (
-                  <div className={`tournament-table-row${index === 0 && row.played ? " is-leader" : ""}`} key={row.team.id}>
-                    <b>{index + 1}</b>
-                    <span className="tournament-team-cell"><strong>{row.team.name}</strong><small>{profileMap.get(row.team.player_a)?.display_name} · {profileMap.get(row.team.player_b)?.display_name}</small></span>
-                    <span>{row.played}</span><span>{row.wins}</span><span>{row.directWins}</span><span>{row.gamesWon}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="tournament-rule-note">Parità: vittorie negli scontri diretti tra le squadre appaiate, poi numero totale di game vinti.</p>
+          {activeTournaments.length ? (
+            <section className="tournament-live-section">
+              <div className="section-head tournament-section-head"><div className="section-head-label"><p className="eyebrow dark">IN CORSO</p><h2>Situazione del torneo</h2></div></div>
+              {activeTournaments.map((tournament) => {
+                const playedMatches = tournament.fixtures.filter((fixture) => fixture.match_id && matches.some((match) => match.id === fixture.match_id)).length;
+                const progress = tournament.fixtures.length ? Math.round((playedMatches / tournament.fixtures.length) * 100) : 0;
+                return (
+                  <article className="tournament-live-card" key={tournament.id}>
+                    <div className="tournament-board-head">
+                      <div className="tournament-prize-card"><TournamentTrophyBadge kind={tournament.trophy_badge} /><span><small>TROFEO IN PALIO</small><b>{tournament.trophy_name}</b></span></div>
+                      <div className="tournament-title-card">
+                        <p className="eyebrow dark">TORNEO IN CORSO</p><h2>{tournament.name}</h2><span>{playedMatches}/{tournament.fixtures.length} partite · Elo ×{tournament.elo_multiplier}</span>
+                        <span className="tournament-progress" aria-label={`${progress}% completato`}><i style={{ width: `${progress}%` }} /></span>
+                      </div>
+                    </div>
+                    <div className="tournament-layout">
+                      <div
+                        className="tournament-standings tournament-standings-link"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setDetailId(tournament.id)}
+                        onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") setDetailId(tournament.id); }}
+                      >
+                        <TournamentStandingsContent tournament={tournament} profiles={profiles} matches={matches} title="Situazione attuale" actionLabel="Dettagli" />
+                      </div>
+                      <TournamentFixtures tournament={tournament} matches={matches} onRecord={onRecord} />
+                    </div>
+                  </article>
+                );
+              })}
             </section>
+          ) : null}
 
-            <section className="tournament-fixtures">
-              <div className="player-history-head"><div><p className="eyebrow dark">CALENDARIO</p><h2>Tutte contro tutte</h2></div><span>{tournament.fixtures.length} match</span></div>
-              <div className="tournament-fixture-list">
-                {[...tournament.fixtures].sort((a, b) => a.match_number - b.match_number).map((fixture) => {
-                  const team1 = teamMap.get(fixture.team1_id);
-                  const team2 = teamMap.get(fixture.team2_id);
-                  const match = fixture.match_id ? matchMap.get(fixture.match_id) : null;
-                  if (!team1 || !team2) return null;
-                  const score = match ? [...match.sets].sort((a, b) => a.set_number - b.set_number).map((set) => `${set.team1_games}-${set.team2_games}`).join("  ") : null;
+          <section className="tournament-recent-section">
+            <div className="section-head tournament-section-head"><div className="section-head-label"><p className="eyebrow dark">ARCHIVIO</p><h2>Ultimi tornei</h2></div></div>
+            {completedTournaments.length ? (
+              <div className="tournament-recent-list">
+                {(showAllCompleted ? completedTournaments : completedTournaments.slice(0, 3)).map((tournament) => {
+                  const standings = buildTournamentStandings(tournament, matches);
+                  const winner = standings[0];
                   return (
-                    <article className={`tournament-fixture${match ? " is-played" : ""}`} key={fixture.id}>
-                      <span className="tournament-match-number">{String(fixture.match_number).padStart(2, "0")}</span>
-                      <div><b className={match?.winner_team === 1 ? "winner" : ""}>{team1.name}</b><small>vs</small><b className={match?.winner_team === 2 ? "winner" : ""}>{team2.name}</b></div>
-                      {match ? <strong className="tournament-score">{score}</strong> : (
-                        <button className="button button-dark" onClick={() => onRecord({
-                          fixtureId: fixture.id,
-                          tournamentName: tournament.name,
-                          eloMultiplier: tournament.elo_multiplier,
-                          playerIds: [team1.player_a, team1.player_b, team2.player_a, team2.player_b],
-                        })}>Inserisci risultato</button>
-                      )}
+                    <article className="tournament-recent-card" key={tournament.id}>
+                      <div className="tournament-recent-head">
+                        <TournamentTrophyBadge kind={tournament.trophy_badge} compact />
+                        <div><p className="eyebrow dark">COMPLETATO</p><h3>{tournament.name}</h3><span>{tournament.fixtures.length} partite · Elo ×{tournament.elo_multiplier}</span></div>
+                        <div className="tournament-winner"><small>VINCITORI</small><b>{winner?.team.name ?? "—"}</b></div>
+                      </div>
+                      <button className="tournament-recent-ranking" type="button" onClick={() => setDetailId(tournament.id)}>
+                        <span>CLASSIFICA FINALE</span>
+                        <div>
+                          {standings.slice(0, 3).map((row, index) => <span key={row.team.id}><b>#{index + 1}</b>{row.team.name}<strong>{row.wins}V</strong></span>)}
+                        </div>
+                        <strong>Apri dettagli →</strong>
+                      </button>
                     </article>
                   );
                 })}
               </div>
-            </section>
-          </div>
+            ) : (
+              <div className="compact-empty tournament-recent-empty"><span>00</span><p>{tournaments.length ? "Nessun torneo concluso." : "Nessun torneo creato."}</p></div>
+            )}
+            {completedTournaments.length > 3 ? (
+              <button className="button button-ghost button-full tournament-see-all" type="button" onClick={() => setShowAllCompleted((current) => !current)}>{showAllCompleted ? "Vedi gli ultimi 3" : `Vedi tutto (${completedTournaments.length})`}</button>
+            ) : null}
+          </section>
         </>
-      ) : (
-        <div className="empty-board tournament-empty"><span>00</span><h2>Nessun torneo creato</h2><p>Scegli partecipanti, componi le coppie e genera il girone.</p><button className="button button-primary" onClick={onCreate}>Crea il primo torneo</button></div>
       )}
     </section>
   );
@@ -3867,7 +3984,6 @@ function AppShell({ session }: { session: Session | null }) {
             schemaReady={tournamentSchemaReady}
             onCreate={() => setShowTournamentCreate(true)}
             onRecord={(context) => { setEditingMatch(null); setTournamentMatch(context); }}
-            onSelectSection={setPadelView}
           />
         ) : null}
 
