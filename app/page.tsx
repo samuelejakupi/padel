@@ -913,23 +913,44 @@ function BadgeList({ badges }: { badges: Badge[] }) {
             <span className="badge-laurel badge-laurel-left">❯</span>
             <span className="badge-laurel badge-laurel-right">❮</span>
           </div>
-          <div className="badge-text">
-            <span className="badge-state">{badge.unlocked ? "CONQUISTATO" : "IN CORSA"}</span>
-            <b>{badge.label}</b>
-            <span>{badge.value}</span>
-            <div className="badge-progress" aria-label={badge.progressLabel}>
-              <i style={{ width: `${badge.progress}%` }} />
-            </div>
-            <small>{badge.progressLabel}</small>
-          </div>
           <aside className="badge-tooltip" role="tooltip">
             <strong>{badge.label}</strong>
             <p>{badge.meaning}</p>
             <span>{badge.criterion}</span>
+            <small>{badge.value} · {badge.progressLabel}</small>
           </aside>
         </article>
       ))}
     </div>
+  );
+}
+
+function ProgressBook({ badges }: { badges: Badge[] }) {
+  return (
+    <article className="progress-book">
+      <header className="progress-book-cover">
+        <span>THE BOYZ / PERFORMANCE LOG</span>
+        <b>REGISTRO DI CAMPO</b>
+        <em>OBIETTIVI ATTIVI</em>
+      </header>
+      <div className="progress-book-page">
+        <div className="progress-book-stamp" aria-hidden="true">TB<br />26</div>
+        <div className="progress-book-list">
+          {badges.map((badge, index) => (
+            <div className="progress-entry" key={badge.id}>
+              <span className={`progress-entry-icon badge-${badge.tone}`} aria-hidden="true">
+                <BadgeGlyphIcon name={badge.glyph} />
+              </span>
+              <div className="progress-entry-copy">
+                <span><small>{String(index + 1).padStart(2, "0")}</small><b>{badge.label}</b><em>{badge.value}</em></span>
+                <div className="progress-entry-track"><i style={{ width: `${badge.progress}%` }} /></div>
+                <small>{badge.progressLabel}</small>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -2874,24 +2895,23 @@ function AppShell({ session }: { session: Session | null }) {
             <section className="player-trophies">
               <div className="player-history-head">
                 <div><p className="eyebrow dark">BACHECA</p><h2>Identità, badge e trofei</h2></div>
-                <span>{earnedPlayerBadges.length}/{selectedPlayerBadges.length} badge</span>
               </div>
               <CourtPass profile={selectedPlayer} rank={selectedPlayerRank} />
 
               <div className="bacheca-group-head">
                 <div><span>01</span><div><p className="eyebrow dark">EMBLEMI ATTIVI</p><h3>Badge conquistati</h3></div></div>
-                <small>{earnedPlayerBadges.length} sbloccati</small>
+                <small>Passa sopra un emblema per scoprirne il significato</small>
               </div>
               {earnedPlayerBadges.length ? <BadgeList badges={earnedPlayerBadges} /> : (
-                <div className="player-trophies-empty"><p>Nessun badge ancora conquistato. Sotto trovi i progressi verso il primo.</p></div>
+                <div className="player-trophies-empty"><p>Nessun badge ancora conquistato.</p></div>
               )}
 
               <div className="bacheca-group-head">
-                <div><span>02</span><div><p className="eyebrow dark">OBIETTIVI</p><h3>Badge in corsa</h3></div></div>
-                <small>Passa sopra un emblema per scoprire come ottenerlo</small>
+                <div><span>02</span><div><p className="eyebrow dark">PROGRESSIONE</p><h3>Registro di campo</h3></div></div>
+                <small>La distanza dai prossimi riconoscimenti</small>
               </div>
-              {pendingPlayerBadges.length ? <BadgeList badges={pendingPlayerBadges} /> : (
-                <div className="player-trophies-empty"><p>Tutti i badge disponibili sono già in bacheca.</p></div>
+              {pendingPlayerBadges.length ? <ProgressBook badges={pendingPlayerBadges} /> : (
+                <div className="player-trophies-empty"><p>Tutti gli obiettivi disponibili sono stati completati.</p></div>
               )}
 
               <div className="bacheca-group-head">
