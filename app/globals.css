@@ -5068,6 +5068,7 @@ button.pizza-ranking-row {
    Si chiude trascinandolo giù, toccando fuori o con Esc. */
 .sheet-backdrop {
   align-items: flex-end;
+  animation: sheet-veil 260ms ease-out;
   background: rgba(8, 18, 29, 0.55);
   display: flex;
   inset: 0;
@@ -5076,8 +5077,13 @@ button.pizza-ranking-row {
   z-index: 100;
 }
 
+@keyframes sheet-veil {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .sheet {
-  animation: sheet-in 300ms cubic-bezier(0.2, 0.82, 0.2, 1);
+  animation: sheet-in 520ms cubic-bezier(0.34, 1.32, 0.64, 1);
   background: var(--paper);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   box-shadow: 0 -20px 60px rgba(4, 12, 22, 0.32);
@@ -5085,12 +5091,22 @@ button.pizza-ranking-row {
   flex-direction: column;
   max-height: 88dvh;
   padding: var(--space-2) var(--space-6) 0;
+  /* La deformazione parte dal bordo dello schermo, non dal centro: è quello
+     che dà l'impressione del foglio che si appoggia. */
+  transform-origin: bottom center;
   width: min(680px, 100%);
+  will-change: transform;
 }
 
+/* In entrata sale, supera di poco il punto d'arrivo e si assesta, mentre la
+   compressione iniziale si distende. */
 @keyframes sheet-in {
-  from { transform: translate3d(0, 100%, 0); }
-  to { transform: translate3d(0, 0, 0); }
+  0% {
+    transform: translate3d(0, 100%, 0) scaleX(0.96) scaleY(0.98);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scaleX(1) scaleY(1);
+  }
 }
 
 /* La maniglia dichiara che il pannello si trascina. */

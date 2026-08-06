@@ -1552,25 +1552,77 @@ function BottomSheet({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const backdropRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const drag = useRef<{ y: number; lastY: number; lastAt: number; speed: number } | null>(null);
+  const closing = useRef(false);
+
+  // Molla: arriva svelta e supera di poco il punto d'arrivo prima di
+  // assestarsi. Una curva di Bézier invece di linear(), che su Safari meno
+  // recenti non esiste e farebbe saltare del tutto l'animazione.
+  const SPRING = "cubic-bezier(0.34, 1.32, 0.64, 1)";
+
+  // La deformazione: mentre scende si schiaccia in altezza e stringe appena,
+  // come i pannelli di sistema. transform-origin sta in basso, quindi la
+  // compressione avviene verso il bordo dello schermo.
+  function shape(offset: number) {
+    const pulled = Math.max(0, offset);
+    const squash = Math.min(pulled, 420) / 420;
+    return `translate3d(0, ${pulled}px, 0) scaleX(${1 - squash * 0.04}) scaleY(${1 - squash * 0.02})`;
+  }
+
+  const dismiss = useCallback(() => {
+    const panel = panelRef.current;
+    const backdrop = backdropRef.current;
+    if (closing.current) return;
+    closing.current = true;
+    if (!panel || !panel.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      onClose();
+      return;
+    }
+    const from = panel.style.transform || "translate3d(0, 0, 0)";
+    // In uscita si allunga un attimo prima di sparire: è la stessa elasticità
+    // dell'entrata, letta al contrario.
+    panel.animate(
+      [
+        { transform: from },
+        { transform: "translate3d(0, 6%, 0) scaleY(1.015)", offset: 0.18 },
+        { transform: "translate3d(0, 104%, 0) scaleY(0.985)" },
+      ],
+      { duration: 340, easing: "cubic-bezier(0.32, 0, 0.67, 0)", fill: "forwards" },
+    );
+    backdrop?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: "forwards" });
+    window.setTimeout(onClose, 300);
+  }, [onClose]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") dismiss();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [dismiss]);
 
-  function move(offset: number) {
+  function settle() {
     const panel = panelRef.current;
-    if (panel) panel.style.transform = `translate3d(0, ${Math.max(0, offset)}px, 0)`;
+    if (!panel) return;
+    const from = panel.style.transform || "translate3d(0, 0, 0)";
+    panel.style.transform = "";
+    if (!panel.animate) return;
+    panel.animate(
+      [{ transform: from }, { transform: "translate3d(0, 0, 0)" }],
+      { duration: 520, easing: SPRING },
+    );
   }
 
   return (
-    <div className="sheet-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <div
+      className="sheet-backdrop"
+      ref={backdropRef}
+      role="presentation"
+      onMouseDown={(event) => event.target === event.currentTarget && dismiss()}
+    >
       <section
         className="sheet"
         ref={panelRef}
@@ -1583,17 +1635,27 @@ function BottomSheet({
             return;
           }
           const touch = event.touches[0];
+          panelRef.current?.getAnimations().forEach((animation) => animation.cancel());
           drag.current = { y: touch.clientY, lastY: touch.clientY, lastAt: performance.now(), speed: 0 };
         }}
         onTouchMove={(event) => {
           const state = drag.current;
           const touch = event.touches[0];
-          if (!state || !touch) return;
+          const panel = panelRef.current;
+          if (!state || !touch || !panel) return;
           const now = performance.now();
           state.speed = (touch.clientY - state.lastY) / Math.max(1, now - state.lastAt);
           state.lastY = touch.clientY;
           state.lastAt = now;
-          move(touch.clientY - state.y);
+          const distance = touch.clientY - state.y;
+          // Verso l'alto il foglio non sale: oppone resistenza crescente e si
+          // allunga appena, come un elastico.
+          if (distance < 0) {
+            const stretch = Math.min(-distance, 160) / 160;
+            panel.style.transform = `translate3d(0, ${distance * 0.16}px, 0) scaleY(${1 + stretch * 0.012})`;
+            return;
+          }
+          panel.style.transform = shape(distance);
         }}
         onTouchEnd={(event) => {
           const state = drag.current;
@@ -1602,12 +1664,12 @@ function BottomSheet({
           if (!state || !touch) return;
           const distance = touch.clientY - state.y;
           if (distance > 110 || state.speed > 0.6) {
-            onClose();
+            dismiss();
             return;
           }
-          move(0);
+          settle();
         }}
-        onTouchCancel={() => { drag.current = null; move(0); }}
+        onTouchCancel={() => { drag.current = null; settle(); }}
       >
         <span className="sheet-handle" aria-hidden="true" />
         <div className="sheet-head">
@@ -1615,7 +1677,7 @@ function BottomSheet({
             <p className="eyebrow dark">{eyebrow}</p>
             <h2>{title}</h2>
           </div>
-          <button className="icon-button" onClick={onClose} aria-label="Chiudi">×</button>
+          <button className="icon-button" onClick={dismiss} aria-label="Chiudi">×</button>
         </div>
         <div className="sheet-body" ref={bodyRef}>{children}</div>
       </section>
