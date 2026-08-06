@@ -15,13 +15,12 @@ Ultimo aggiornamento: 6 agosto 2026
 
 ## In sospeso
 
-### Sfocatura sotto la Dynamic Island
-Richiesta: quando si apre il foglio dal basso, sfocare anche la striscia in
-alto. Oggi non è possibile: la web app dichiara la barra di stato opaca,
-quindi il contenuto parte sotto e nessun effetto CSS ci arriva. Servirebbe
-`viewport-fit: cover` più barra traslucida, che però sposta in alto tutto il
-layout (intestazioni, safe-area, schermata di caricamento). Da valutare a
-parte, non è un ritocco.
+### Tre agganci CSS morti
+`theme-dark`, `.app-shell-hub` e `.is-open` hanno regole in `globals.css` ma
+nessun JavaScript le applica più: sono avanzi di quando esisteva la schermata
+di smistamento e la classifica in home si apriva sul posto. Comprese le
+regole dentro i blocchi mobile. Non fanno danni, ma chi legge il CSS ci
+perde tempo. Da togliere in un commit a parte, quando non c'è altro in volo.
 
 ### Segnaposto da sostituire
 Le icone animate di Flaticon sono provvisorie e caricate dal loro sito:
@@ -37,6 +36,48 @@ salvata sulla schermata Home. Per ora c'è il pallino sull'icona Pizza.
 ---
 
 ## Deciso, e perché
+
+### La classifica in home è un bersaglio solo
+Erano tre cose da toccare nello stesso riquadro — lo switch player/team, le
+righe dei giocatori e il tasto "Vedi tutti" — dove ne bastava una. Ora tutta
+la card apre la classifica completa. Lo switch resta solo lì dentro e nella
+pagina del ranking; in home si passa da Player a Team con lo swipe, sinistra
+Player e destra Team, come se le due classifiche fossero affiancate.
+
+Conseguenza da tenere presente: dalla home non si apre più la scheda di un
+singolo giocatore toccandone la riga. Ci si arriva dalla classifica completa.
+Era il prezzo per avere un bersaglio solo — dentro un tasto non ci possono
+stare altri tasti, né come HTML né per chi usa VoiceOver.
+
+L'ultima riga visibile sfuma verso il basso. Non è decorazione: tolto il
+tasto "Vedi tutti", è l'unico segno che l'elenco continua.
+
+### La striscia sotto la Dynamic Island la disegniamo noi
+Era in sospeso perché sembrava una modifica di layout. Si è rivelata più
+piccola del previsto: `viewport-fit: cover` più `black-translucent` portano il
+viewport fino ai bordi fisici, e da lì il velo del foglio (`.sheet-backdrop`,
+già `inset: 0`) copre anche l'isola senza toccarlo. Lo spazio che prima
+riservava iOS lo riserva ora `env(safe-area-inset-top)` nel padding di
+`.content`.
+
+La fascia scura non sparisce, la disegna `.app-shell::before`: l'ora e le
+icone di sistema restano bianche anche con la barra traslucida, quindi sopra
+serve comunque qualcosa di scuro. È al 72% e non piena apposta — un colore
+pieno non ha niente da sfocare, e la striscia sarebbe rimasta l'unica zona
+nitida dello schermo, che era esattamente il difetto da togliere.
+
+Restano scoperti i lati in orizzontale: con `cover` il padding laterale di
+`.content` non tiene conto di `safe-area-inset-left/right`. In verticale non
+si vede, e il telefono si usa così.
+
+### Lo scorrimento laterale non muove più nulla dove non porta da nessuna parte
+Complemento della decisione qui sotto. La navigazione era stata tolta, ma il
+trascinamento restava attivo con resistenza elastica: in Padel, Pizza e
+Profilo la pagina si spostava comunque di lato scoprendo lo sfondo, e
+sembrava un difetto invece di un limite. Ora il gesto non parte proprio se
+`mobileDestination` non trova un'uscita in nessuna delle due direzioni.
+Negli archivi l'elastico resta sulla direzione cieca: lì la resistenza
+significa qualcosa, perché nell'altro verso il gesto funziona davvero.
 
 ### Vercel è l'hosting di produzione
 GitHub Pages compilava il progetto in circa trenta secondi ma diverse consegne
