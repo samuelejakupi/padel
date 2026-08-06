@@ -1161,13 +1161,15 @@ form select:focus,
 }
 
 /* Il saluto vive dentro il riquadro scuro, sopra la posizione in classifica. */
-/* Il saluto è una riga di servizio sopra all'occhiello, non un titolo: la
-   card deve restare compatta e il numero il protagonista. */
+/* Resta una riga di servizio e non un titolo — il numero è il protagonista —
+   ma a 17px spariva accanto all'occhiello. Il passo sotto è quello corto:
+   saluto e "LA TUA POSIZIONE" sono la stessa intestazione in due righe, e
+   lo stacco largo li faceva leggere come due blocchi separati. */
 .hero-greeting {
-  font-size: 17px;
+  font-size: 21px;
   letter-spacing: -0.4px;
   line-height: 1.1;
-  margin: 0 0 var(--space-5);
+  margin: 0 0 var(--space-2);
 }
 
 .hero-greeting span {
@@ -1513,6 +1515,47 @@ button.ranking-row-link:focus-visible {
 
 .dashboard-side .ranking-list {
   margin-bottom: var(--space-5);
+}
+
+/* La classifica in home è un bersaglio solo. Il tasto non deve sembrare un
+   tasto: eredita tutto dal riquadro che lo contiene e resta invisibile. */
+.ranking-preview {
+  appearance: none;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+  transition: transform 160ms ease;
+  width: 100%;
+}
+
+.ranking-preview:hover {
+  transform: scale(1.006);
+}
+
+.ranking-preview:focus-visible {
+  outline: 3px solid rgba(24, 223, 228, 0.35);
+  outline-offset: 4px;
+}
+
+/* L'ultima riga visibile sfuma verso il basso: l'elenco non finisce lì,
+   continua nella classifica completa. Da quando il tasto "Vedi tutti" non
+   c'è più, questa sfumatura è l'unico invito ad aprirla, quindi si ferma
+   presto e resta leggibile invece di cancellare la riga. */
+.ranking-preview-list {
+  mask-image: linear-gradient(to bottom, black 74%, rgba(0, 0, 0, 0.5) 90%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 74%, rgba(0, 0, 0, 0.5) 90%, transparent 100%);
+}
+
+/* Il margine sotto l'elenco serviva a staccarlo dal tasto: senza tasto
+   lascerebbe solo un dito di bianco dopo la sfumatura. */
+.ranking-preview-list .ranking-list {
+  margin-bottom: 0;
 }
 
 /* Match cards */
@@ -5563,8 +5606,11 @@ button.pizza-ranking-row {
      altro qui lasciava una fascia vuota dietro al vetro, che cosi non
      aveva nulla da sfocare. Con questo il contenuto scorre davvero
      sotto la barra. */
+  /* Il passo in alto ora comprende l'isola: con viewport-fit: cover lo
+     spazio non lo riserva piu iOS, e senza questo la prima card finirebbe
+     sotto l'orologio. */
   .content {
-    padding: 24px 14px 6px;
+    padding: calc(24px + env(safe-area-inset-top)) 14px 6px;
   }
 
   /* La pagina e una superficie unica durante lo swipe: segue il dito e
@@ -5794,6 +5840,25 @@ button.pizza-ranking-row {
      le curve restano parallele fra loro e con l'angolo dello schermo
      invece di incrociarsi. Lo stacco dal bordo evita anche che l'angolo
      tondo dell'iPhone tagli la pastiglia delle voci laterali. */
+  /* Striscia di sistema in alto, gemella della dissolvenza qui sotto.
+     Sostituisce la fascia opaca che disegnava iOS. Semitrasparente e non
+     piena apposta: cosi il contenuto che le scorre sotto resta qualcosa da
+     sfocare, e quando si apre il foglio dal basso il velo trova materia
+     anche quassu invece di lasciare l'unica zona nitida dello schermo.
+     Sta sotto al foglio (z-index 100) e sopra al contenuto, quindi la
+     sfocatura le passa sopra insieme a tutto il resto. */
+  .app-shell::before {
+    background: rgba(11, 27, 44, 0.72);
+    content: "";
+    height: env(safe-area-inset-top);
+    left: 0;
+    pointer-events: none;
+    position: fixed;
+    right: 0;
+    top: 0;
+    z-index: 45;
+  }
+
   /* Scroll edge effect: il contenuto sfuma verso il fondo mentre scorre
      sotto la barra, invece di sparirci dietro di netto. E la dissolvenza
      che iOS usa davvero, e tiene leggibili le voci del menu su qualunque
@@ -6280,15 +6345,17 @@ button.pizza-ranking-row {
   }
 
   /* La barra dei KPI e in position: absolute in fondo alla card: senza
-     riservarle spazio col padding, il testo sopra le finiva addosso. */
+     riservarle spazio col padding, il testo sopra le finiva addosso. Il
+     padding vale l'altezza della barra (66px) piu il passo base: quello che
+     avanzava oltre si leggeva come un buco sopra la linea. */
   .hero-stat {
     grid-template-columns: minmax(0, 1fr);
     min-height: 0;
-    padding: 30px 25px 84px;
+    padding: 30px 25px 76px;
   }
 
   .hero-greeting {
-    margin-bottom: 18px;
+    margin-bottom: var(--space-2);
   }
 
   .hero-player .avatar-xl {
@@ -6853,15 +6920,18 @@ button.pizza-ranking-row {
     letter-spacing: -1.8px;
   }
 
+  /* Come sopra: 62px di barra piu il passo base. */
   .hero-stat {
     gap: 10px;
     grid-template-columns: minmax(0, 1fr);
     min-height: 0;
-    padding: 24px 18px 78px;
+    padding: 24px 18px 72px;
   }
 
+  /* Niente margine sotto: lo stacco dalla linea lo porta gia il padding
+     della card, e sommati facevano il doppio del passo. */
   .hero-stat-copy > p:not(.eyebrow) {
-    margin: 18px 0 8px;
+    margin: 18px 0 0;
   }
 
   .position {
@@ -7147,6 +7217,7 @@ button.pizza-ranking-row {
   .hub-card:hover,
   .match-card-link:hover,
   .match-video-preview:hover,
+  .ranking-preview:hover,
   .play-card:hover {
     box-shadow: none;
     transform: none;

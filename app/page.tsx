@@ -3274,6 +3274,12 @@ function AppShell({ session }: { session: Session | null }) {
   // teniamo fermo il punto di riferimento — lo switch — spostando lo
   // scorrimento della stessa quantità di cui si è mosso lui.
   const rankingAnchorRef = useRef<HTMLDivElement | null>(null);
+  // Lo swipe sulla card della classifica: si decide tutto al touchend, senza
+  // preventDefault, così lo scorrimento verticale della pagina resta intatto.
+  const rankingSwipeStart = useRef<{ x: number; y: number } | null>(null);
+  // Vive dal touchend al touchstart successivo: serve solo a far ignorare il
+  // click che il browser manda comunque in coda a uno swipe.
+  const rankingSwipeHandled = useRef(false);
   // Partite e classifica complete si aprono in un foglio dal basso invece di
   // portare su un'altra schermata.
   const [sheet, setSheet] = useState<null | "matches" | "ranking">(null);
@@ -4117,6 +4123,16 @@ function AppShell({ session }: { session: Session | null }) {
             pageSwipeStart.current = null;
             return;
           }
+          // Dove non si va da nessuna parte la pagina non si muove nemmeno di
+          // un pixel. La resistenza elastica ha senso solo se dietro c'è una
+          // destinazione che si rifiuta di aprire: in Padel, Pizza e Profilo
+          // non c'è, e l'unico effetto era scoprire lo sfondo di lato, che
+          // sembra un difetto. Il gesto qui resta quindi del tutto inerte,
+          // coerente con quanto decide mobileDestination.
+          if (!mobileDestination("left") && !mobileDestination("right")) {
+            pageSwipeStart.current = null;
+            return;
+          }
           const touch = event.touches[0];
           if (touch.clientX < 24 || touch.clientX > window.innerWidth - 24) {
             pageSwipeStart.current = null;
@@ -4334,50 +4350,68 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
 
               <aside className="dashboard-side">
-                <div className="side-head">
-                  <div><h2>Classifica Elo</h2></div>
-                  {/* Due icone al posto di due parole: una racchetta per il
-                      singolo, due per le coppie. */}
-                  <div className="mode-switch" role="group" aria-label="Tipo di classifica" ref={rankingAnchorRef}>
-                    <button
-                      className={rankingMode === "single" ? "active" : ""}
-                      onClick={() => keepScroll(() => setRankingMode("single"))}
-                      aria-label="Classifica singolo"
-                      title="Singolo"
-                    >
-                      <NavGlyph name="person" />
-                    </button>
-                    <button
-                      className={rankingMode === "team" ? "active" : ""}
-                      onClick={() => keepScroll(() => setRankingMode("team"))}
-                      aria-label="Classifica squadre"
-                      title="Squadra"
-                    >
-                      <NavGlyph name="people" />
-                    </button>
+                {/* Tutta la card è il tasto: lo switch e il "Vedi tutti"
+                    facevano tre bersagli dove ne bastava uno. Lo switch resta
+                    nella classifica completa, qui si cambia con lo swipe. */}
+                <button
+                  type="button"
+                  className="ranking-preview"
+                  onClick={() => {
+                    // Uno swipe finisce comunque con un click: senza questa
+                    // guardia cambiare classifica aprirebbe anche il foglio.
+                    if (rankingSwipeHandled.current) return;
+                    setSheet("ranking");
+                  }}
+                  aria-label={`Apri la classifica Elo ${rankingMode === "single" ? "player" : "team"} completa (${rankingRows})`}
+                  onTouchStart={(event) => {
+                    rankingSwipeHandled.current = false;
+                    if (event.touches.length !== 1) {
+                      rankingSwipeStart.current = null;
+                      return;
+                    }
+                    const touch = event.touches[0];
+                    rankingSwipeStart.current = { x: touch.clientX, y: touch.clientY };
+                  }}
+                  onTouchEnd={(event) => {
+                    const start = rankingSwipeStart.current;
+                    rankingSwipeStart.current = null;
+                    const touch = event.changedTouches[0];
+                    if (!start || !touch) return;
+                    const distanceX = touch.clientX - start.x;
+                    const distanceY = touch.clientY - start.y;
+                    // Stessa soglia del gesto di pagina: sotto i 44px, o se il
+                    // dito è sceso più di quanto sia andato di lato, era uno
+                    // scorrimento verticale o un tocco storto.
+                    if (Math.abs(distanceX) < 44 || Math.abs(distanceX) < Math.abs(distanceY) * 1.2) return;
+                    rankingSwipeHandled.current = true;
+                    // Player sta a sinistra, Team a destra: trascinando verso
+                    // sinistra si va avanti, verso destra si torna indietro.
+                    keepScroll(() => setRankingMode(distanceX < 0 ? "team" : "single"));
+                  }}
+                  onTouchCancel={() => {
+                    rankingSwipeStart.current = null;
+                  }}
+                >
+                  <div className="side-head" ref={rankingAnchorRef}>
+                    <div><h2>{rankingMode === "single" ? "Classifica Elo Player" : "Classifica Elo Team"}</h2></div>
                   </div>
-                </div>
-                {rankingMode === "single" ? (
-                  <RankingList
-                    profiles={seasonProfiles}
-                    onSelect={openPlayer}
-                    limit={HOME_ROWS}
-                  />
-                ) : teams.length ? (
-                  <TeamRankingList teams={teams} limit={HOME_ROWS} />
-                ) : (
-                  <p className="demo-profile-note">
-                    Le coppie si formano dalle partite: registra un doppio e compariranno qui.
-                  </p>
-                )}
-                {rankingRows ? (
-                  <button
-                    className="button button-ghost button-full"
-                    onClick={() => setSheet("ranking")}
-                  >
-                    {`Vedi tutti (${rankingRows})`}
-                  </button>
-                ) : null}
+                  {/* La sfumatura in fondo dice che l'elenco continua: è il
+                      motivo per cui la card si apre. */}
+                  <div className="ranking-preview-list">
+                    {rankingMode === "single" ? (
+                      <RankingList
+                        profiles={seasonProfiles}
+                        limit={HOME_ROWS}
+                      />
+                    ) : teams.length ? (
+                      <TeamRankingList teams={teams} limit={HOME_ROWS} />
+                    ) : (
+                      <p className="demo-profile-note">
+                        Le coppie si formano dalle partite: registra un doppio e compariranno qui.
+                      </p>
+                    )}
+                  </div>
+                </button>
               </aside>
             </section>
           </>

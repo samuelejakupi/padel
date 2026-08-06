@@ -19,6 +19,13 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  // La pagina arriva fino ai bordi fisici dello schermo, Dynamic Island
+  // compresa. Serve perche un effetto CSS puo agire solo su quello che sta
+  // dentro il viewport: con la barra di stato opaca il viewport iniziava
+  // sotto l'isola e li nessuna sfocatura poteva arrivare. Da qui in poi lo
+  // spazio dell'isola non lo riserva piu il sistema, lo riserviamo noi con
+  // env(safe-area-inset-top).
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
@@ -43,7 +50,13 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "TheBoyz",
-    statusBarStyle: "black",
+    // Traslucida, non opaca: e la meta dello stesso interruttore di
+    // viewport-fit. Con "black" iOS disegnava lui una fascia piena e il
+    // contenuto partiva sotto; cosi invece la fascia la disegna la pagina
+    // (.app-shell::before) e quello che ci passa sotto e sfocabile.
+    // L'ora e le icone restano bianche: qualunque cosa sta in cima deve
+    // restare scura, altrimenti diventano illeggibili.
+    statusBarStyle: "black-translucent",
   },
   icons: {
     icon: `${basePath}/theboyz-mark.png?v=${iconVersion}`,
