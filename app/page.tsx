@@ -1595,10 +1595,62 @@ function BottomSheet({
     return `translate3d(0, ${pulled}px, 0) scaleX(${1 - squash * 0.04}) scaleY(${1 - squash * 0.02})`;
   }
 
+  // La fascia in cima allo schermo, quella dietro la Dynamic Island, non è
+  // figlia del velo e quindi non può leggerne il valore. La stessa manopola
+  // vive perciò anche sulla radice del documento, e da qui la teniamo
+  // allineata al velo passo per passo: si ritirano e rientrano insieme,
+  // invece di lasciare una tacca scura in cima quando il foglio se n'è andato.
+  const islandAnimation = useRef<Animation | null>(null);
+
+  const setIsland = useCallback((value: number) => {
+    islandAnimation.current?.cancel();
+    islandAnimation.current = null;
+    document.documentElement.style.setProperty("--island", String(Math.max(0, Math.min(1, value))));
+  }, []);
+
+  const animateIsland = useCallback((to: number, duration: number, easing: string) => {
+    const root = document.documentElement;
+    const from = root.style.getPropertyValue("--island") || String(1 - to);
+    islandAnimation.current?.cancel();
+    islandAnimation.current = null;
+    if (!root.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      root.style.setProperty("--island", String(to));
+      return;
+    }
+    const animation = root.animate(
+      [{ "--island": from } as Keyframe, { "--island": String(to) } as Keyframe],
+      { duration, easing, fill: "forwards" },
+    );
+    islandAnimation.current = animation;
+    // Arrivata in fondo, il valore si fissa sullo stile e l'animazione si
+    // scioglie: lasciarla appesa con fill forwards congelerebbe la proprietà
+    // e il foglio dopo non riuscirebbe più a muoverla.
+    animation.finished.then(
+      () => {
+        root.style.setProperty("--island", String(to));
+        animation.cancel();
+        if (islandAnimation.current === animation) islandAnimation.current = null;
+      },
+      () => {},
+    );
+  }, []);
+
+  // La fascia si ritira mentre il foglio sale e rientra quando se ne va.
+  useEffect(() => {
+    animateIsland(1, 340, "ease-out");
+    return () => {
+      islandAnimation.current?.cancel();
+      islandAnimation.current = null;
+      document.documentElement.style.removeProperty("--island");
+    };
+  }, [animateIsland]);
+
   // Sfocatura e scurimento sono comandati da un solo numero, così scendono
   // insieme al foglio mentre lo trascini.
   function setVeil(value: number) {
-    backdropRef.current?.style.setProperty("--veil", String(Math.max(0, Math.min(1, value))));
+    const clamped = Math.max(0, Math.min(1, value));
+    backdropRef.current?.style.setProperty("--veil", String(clamped));
+    setIsland(clamped);
   }
 
   const dismiss = useCallback(() => {
@@ -1623,8 +1675,11 @@ function BottomSheet({
       [{ "--veil": veilNow } as Keyframe, { "--veil": "0" } as Keyframe],
       { duration: 300, easing: "ease-in", fill: "forwards" },
     );
+    // Stesso tempo e stessa curva per la fascia in cima: torna del colore
+    // della pagina mentre la sfocatura svanisce, non un istante dopo.
+    animateIsland(0, 300, "ease-in");
     window.setTimeout(onClose, 290);
-  }, [onClose]);
+  }, [onClose, animateIsland]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -1696,6 +1751,8 @@ function BottomSheet({
       [{ "--veil": veilNow } as Keyframe, { "--veil": "1" } as Keyframe],
       { duration: 420, easing: "ease-out" },
     );
+    // E con lei la fascia in cima si rifa da parte.
+    animateIsland(1, 420, "ease-out");
   }
 
   return (
@@ -3274,12 +3331,32 @@ function AppShell({ session }: { session: Session | null }) {
   // teniamo fermo il punto di riferimento — lo switch — spostando lo
   // scorrimento della stessa quantità di cui si è mosso lui.
   const rankingAnchorRef = useRef<HTMLDivElement | null>(null);
-  // Lo swipe sulla card della classifica: si decide tutto al touchend, senza
-  // preventDefault, così lo scorrimento verticale della pagina resta intatto.
-  const rankingSwipeStart = useRef<{ x: number; y: number } | null>(null);
-  // Vive dal touchend al touchstart successivo: serve solo a far ignorare il
-  // click che il browser manda comunque in coda a uno swipe.
+  // Sta qui e non in mezzo agli altri stati perché il gesto qui sotto ha
+  // bisogno di sapere quale delle due classifiche è in scena.
+  const [rankingMode, setRankingMode] = useState<"single" | "team">("single");
+  // Lo swipe sulla card della classifica. L'elenco resta agganciato al dito
+  // come la pastiglia della barra: mentre trascini si sposta davvero, e al
+  // rilascio o completa il cambio o torna al suo posto.
+  // I gestori stanno su listener nativi (vedi l'effetto più sotto) e non sugli
+  // attributi onTouch di React: React registra touchmove come passivo, e lì
+  // dentro preventDefault non ha alcun effetto. Senza preventDefault non c'è
+  // modo di impedire alla pagina di scorrere su e giù mentre si scorre di lato.
+  const rankingCardRef = useRef<HTMLButtonElement | null>(null);
+  const rankingTrackRef = useRef<HTMLDivElement | null>(null);
+  const rankingSwipe = useRef<{
+    x: number;
+    y: number;
+    lastX: number;
+    lastAt: number;
+    velocityX: number;
+    axis: "pending" | "horizontal" | "vertical";
+  } | null>(null);
+  // Vive dal touchend al click che il browser manda comunque in coda a uno
+  // swipe: serve solo a non aprire il foglio quando il gesto era un cambio.
   const rankingSwipeHandled = useRef(false);
+  // Da quale lato deve entrare l'elenco nuovo quando il cambio è andato a buon
+  // fine. Null quando non c'è nessun cambio in corso.
+  const rankingEnterFrom = useRef<number | null>(null);
   // Partite e classifica complete si aprono in un foglio dal basso invece di
   // portare su un'altra schermata.
   const [sheet, setSheet] = useState<null | "matches" | "ranking">(null);
@@ -3295,11 +3372,189 @@ function AppShell({ session }: { session: Session | null }) {
     });
   }, []);
 
+  // Il gesto orizzontale sulla card della classifica. Fa tre cose: decide una
+  // volta sola su che asse sta andando il dito, blocca lo scorrimento
+  // verticale appena ha deciso che è orizzontale, e tiene l'elenco attaccato
+  // al dito finché non lo si lascia.
+  useEffect(() => {
+    const card = rankingCardRef.current;
+    if (!card) return;
+
+    const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // Dove si va scorrendo in quella direzione. Player sta a sinistra e team a
+    // destra: oltre i due estremi non c'è niente, e lì il dito incontra la
+    // resistenza elastica invece di trascinare via l'elenco.
+    function destination(direction: "left" | "right"): "single" | "team" | null {
+      if (direction === "left") return rankingMode === "single" ? "team" : null;
+      return rankingMode === "team" ? "single" : null;
+    }
+
+    // La stessa resistenza dei fogli che si trascinano: all'inizio segue quasi
+    // il dito, poi si arrende sempre di più e si ferma.
+    function rubber(distance: number, limit = 220) {
+      return (1 - 1 / (distance / limit + 1)) * limit;
+    }
+
+    function cardWidth() {
+      return Math.max(card?.getBoundingClientRect().width ?? 1, 1);
+    }
+
+    function paint(offset: number) {
+      const track = rankingTrackRef.current;
+      if (!track) return;
+      const progress = Math.min(1, Math.abs(offset) / cardWidth());
+      track.style.transition = "none";
+      track.style.transform = `translate3d(${offset}px, 0, 0)`;
+      // Sbiadisce mentre esce: senza, l'elenco vecchio resta squillante fino al
+      // bordo e il cambio sembra uno scatto invece di una dissolvenza.
+      track.style.opacity = String(1 - progress * 0.45);
+    }
+
+    function restore() {
+      const track = rankingTrackRef.current;
+      if (!track || !track.style.transform) return;
+      const fromTransform = track.style.transform;
+      const fromOpacity = track.style.opacity || "1";
+      track.style.transform = "";
+      track.style.opacity = "";
+      if (!track.animate || reduceMotion()) return;
+      track.animate(
+        [
+          { transform: fromTransform, opacity: fromOpacity },
+          { transform: "translate3d(0, 0, 0)", opacity: 1 },
+        ],
+        { duration: 420, easing: "cubic-bezier(0.34, 1.32, 0.64, 1)" },
+      );
+    }
+
+    function onStart(event: TouchEvent) {
+      rankingSwipeHandled.current = false;
+      if (event.touches.length !== 1 || !window.matchMedia("(max-width: 780px)").matches) {
+        rankingSwipe.current = null;
+        return;
+      }
+      rankingTrackRef.current?.getAnimations().forEach((animation) => animation.cancel());
+      const touch = event.touches[0];
+      rankingSwipe.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        lastX: touch.clientX,
+        lastAt: performance.now(),
+        velocityX: 0,
+        axis: "pending",
+      };
+    }
+
+    function onMove(event: TouchEvent) {
+      const swipe = rankingSwipe.current;
+      const touch = event.touches[0];
+      if (!swipe || !touch) return;
+      const distanceX = touch.clientX - swipe.x;
+      const distanceY = touch.clientY - swipe.y;
+      // L'asse si decide una volta sola, agli otto pixel: prima di allora il
+      // gesto è ancora di tutti e due, dopo non cambia più idea a metà strada.
+      if (swipe.axis === "pending") {
+        if (Math.max(Math.abs(distanceX), Math.abs(distanceY)) < 8) return;
+        swipe.axis = Math.abs(distanceX) > Math.abs(distanceY) * 1.15 ? "horizontal" : "vertical";
+      }
+      if (swipe.axis !== "horizontal") return;
+      // È per questa riga che i listener sono nativi e non passivi: da qui in
+      // poi la pagina non scorre più su e giù finché il dito non si stacca.
+      if (event.cancelable) event.preventDefault();
+
+      const now = performance.now();
+      const elapsed = Math.max(1, now - swipe.lastAt);
+      swipe.velocityX = (touch.clientX - swipe.lastX) / elapsed;
+      swipe.lastX = touch.clientX;
+      swipe.lastAt = now;
+
+      const direction = distanceX < 0 ? "left" : "right";
+      const free = Boolean(destination(direction));
+      paint(free ? distanceX : Math.sign(distanceX) * rubber(Math.abs(distanceX)));
+    }
+
+    function onEnd(event: TouchEvent) {
+      const swipe = rankingSwipe.current;
+      rankingSwipe.current = null;
+      const track = rankingTrackRef.current;
+      if (!swipe || !track || swipe.axis !== "horizontal") return;
+      const touch = event.changedTouches[0];
+      const distanceX = touch ? touch.clientX - swipe.x : 0;
+      const direction = distanceX < 0 ? "left" : "right";
+      const next = destination(direction);
+      const width = cardWidth();
+      // Due modi di convincerlo: portarlo oltre un terzo della card, oppure un
+      // colpo secco. Il secondo è per i pollici veloci, che non arrivano mai
+      // lontano ma sono decisi.
+      const enoughDistance = Math.abs(distanceX) >= Math.max(56, width * 0.3);
+      const enoughMomentum = Math.abs(distanceX) >= 28 && Math.abs(swipe.velocityX) >= 0.4;
+      if (!next || !(enoughDistance || enoughMomentum)) {
+        restore();
+        return;
+      }
+      // Il click che il browser manda dopo il gesto non deve aprire il foglio.
+      rankingSwipeHandled.current = true;
+      const exit = direction === "left" ? -width : width;
+      // L'elenco nuovo entrerà dal lato opposto: il gesto portato a termine.
+      rankingEnterFrom.current = -exit;
+      const finish = () => keepScroll(() => setRankingMode(next));
+      if (!track.animate || reduceMotion()) {
+        finish();
+        return;
+      }
+      track
+        .animate(
+          [
+            { transform: track.style.transform || "translate3d(0, 0, 0)", opacity: track.style.opacity || "1" },
+            { transform: `translate3d(${exit}px, 0, 0)`, opacity: 0 },
+          ],
+          { duration: 170, easing: "cubic-bezier(0.4, 0, 0.9, 0.35)", fill: "forwards" },
+        )
+        .finished.then(finish, finish);
+    }
+
+    function onCancel() {
+      rankingSwipe.current = null;
+      restore();
+    }
+
+    card.addEventListener("touchstart", onStart, { passive: true });
+    card.addEventListener("touchmove", onMove, { passive: false });
+    card.addEventListener("touchend", onEnd);
+    card.addEventListener("touchcancel", onCancel);
+    return () => {
+      card.removeEventListener("touchstart", onStart);
+      card.removeEventListener("touchmove", onMove);
+      card.removeEventListener("touchend", onEnd);
+      card.removeEventListener("touchcancel", onCancel);
+    };
+  }, [rankingMode, keepScroll]);
+
+  // Cambiata la classifica, l'elenco nuovo entra dal lato opposto a quello da
+  // cui è uscito il vecchio: il gesto continua invece di ricominciare.
+  useEffect(() => {
+    const track = rankingTrackRef.current;
+    const from = rankingEnterFrom.current;
+    rankingEnterFrom.current = null;
+    if (!track || from === null) return;
+    track.getAnimations().forEach((animation) => animation.cancel());
+    track.style.transform = "";
+    track.style.opacity = "";
+    if (!track.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    track.animate(
+      [
+        { transform: `translate3d(${from}px, 0, 0)`, opacity: 0 },
+        { transform: "translate3d(0, 0, 0)", opacity: 1 },
+      ],
+      { duration: 340, easing: "cubic-bezier(0.32, 0.9, 0.28, 1)" },
+    );
+  }, [rankingMode]);
+
   const [editingMatch, setEditingMatch] = useState<PadelMatch | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const avatarFileRef = useRef<HTMLInputElement>(null);
-  const [rankingMode, setRankingMode] = useState<"single" | "team">("single");
   const [pizzaRankingMode, setPizzaRankingMode] = useState<PizzaRankingMode>("contemporary");
   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
@@ -4118,7 +4373,10 @@ function AppShell({ session }: { session: Session | null }) {
         onTouchStart={(event) => {
           const page = contentRef.current;
           const target = event.target instanceof Element ? event.target : null;
-          const ignored = target?.closest("input, select, textarea, label, iframe, video, [role='slider'], [role='dialog'], .tournament-tabs, .badge-grid");
+          // La card della classifica ha un gesto orizzontale suo: se il dito
+          // parte da lì, la pagina non si muove. Senza questa esclusione i due
+          // gesti partirebbero insieme e si contenderebbero lo stesso dito.
+          const ignored = target?.closest("input, select, textarea, label, iframe, video, [role='slider'], [role='dialog'], .tournament-tabs, .badge-grid, .ranking-preview");
           if (!page || pageTransitioning.current || event.touches.length !== 1 || ignored || !window.matchMedia("(max-width: 780px)").matches) {
             pageSwipeStart.current = null;
             return;
@@ -4356,6 +4614,7 @@ function AppShell({ session }: { session: Session | null }) {
                 <button
                   type="button"
                   className="ranking-preview"
+                  ref={rankingCardRef}
                   onClick={() => {
                     // Uno swipe finisce comunque con un click: senza questa
                     // guardia cambiare classifica aprirebbe anche il foglio.
@@ -4363,53 +4622,28 @@ function AppShell({ session }: { session: Session | null }) {
                     setSheet("ranking");
                   }}
                   aria-label={`Apri la classifica Elo ${rankingMode === "single" ? "player" : "team"} completa (${rankingRows})`}
-                  onTouchStart={(event) => {
-                    rankingSwipeHandled.current = false;
-                    if (event.touches.length !== 1) {
-                      rankingSwipeStart.current = null;
-                      return;
-                    }
-                    const touch = event.touches[0];
-                    rankingSwipeStart.current = { x: touch.clientX, y: touch.clientY };
-                  }}
-                  onTouchEnd={(event) => {
-                    const start = rankingSwipeStart.current;
-                    rankingSwipeStart.current = null;
-                    const touch = event.changedTouches[0];
-                    if (!start || !touch) return;
-                    const distanceX = touch.clientX - start.x;
-                    const distanceY = touch.clientY - start.y;
-                    // Stessa soglia del gesto di pagina: sotto i 44px, o se il
-                    // dito è sceso più di quanto sia andato di lato, era uno
-                    // scorrimento verticale o un tocco storto.
-                    if (Math.abs(distanceX) < 44 || Math.abs(distanceX) < Math.abs(distanceY) * 1.2) return;
-                    rankingSwipeHandled.current = true;
-                    // Player sta a sinistra, Team a destra: trascinando verso
-                    // sinistra si va avanti, verso destra si torna indietro.
-                    keepScroll(() => setRankingMode(distanceX < 0 ? "team" : "single"));
-                  }}
-                  onTouchCancel={() => {
-                    rankingSwipeStart.current = null;
-                  }}
                 >
                   <div className="side-head" ref={rankingAnchorRef}>
                     <div><h2>{rankingMode === "single" ? "Classifica Elo Player" : "Classifica Elo Team"}</h2></div>
                   </div>
                   {/* La sfumatura in fondo dice che l'elenco continua: è il
-                      motivo per cui la card si apre. */}
+                      motivo per cui la card si apre. La finestra ritaglia,
+                      il nastro dentro è quello che si muove col dito. */}
                   <div className="ranking-preview-list">
-                    {rankingMode === "single" ? (
-                      <RankingList
-                        profiles={seasonProfiles}
-                        limit={HOME_ROWS}
-                      />
-                    ) : teams.length ? (
-                      <TeamRankingList teams={teams} limit={HOME_ROWS} />
-                    ) : (
-                      <p className="demo-profile-note">
-                        Le coppie si formano dalle partite: registra un doppio e compariranno qui.
-                      </p>
-                    )}
+                    <div className="ranking-preview-track" ref={rankingTrackRef}>
+                      {rankingMode === "single" ? (
+                        <RankingList
+                          profiles={seasonProfiles}
+                          limit={HOME_ROWS}
+                        />
+                      ) : teams.length ? (
+                        <TeamRankingList teams={teams} limit={HOME_ROWS} />
+                      ) : (
+                        <p className="demo-profile-note">
+                          Le coppie si formano dalle partite: registra un doppio e compariranno qui.
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </button>
               </aside>

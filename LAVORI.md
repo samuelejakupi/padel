@@ -52,6 +52,26 @@ stare altri tasti, né come HTML né per chi usa VoiceOver.
 L'ultima riga visibile sfuma verso il basso. Non è decorazione: tolto il
 tasto "Vedi tutti", è l'unico segno che l'elenco continua.
 
+**Lo swipe poi è stato rifatto perché segua il dito.** Prima decideva tutto al
+`touchend`: fino al rilascio non si muoveva niente e la pagina intanto
+continuava a scorrere su e giù, che era la cosa fastidiosa. Ora l'elenco è
+dentro una finestra che ritaglia (`.ranking-preview-list`) e su un nastro che
+si sposta (`.ranking-preview-track`), scritto direttamente sullo stile e non
+passando da uno stato React: un valore di stato per ogni pixel di dito
+ridisegnerebbe la schermata a ogni frame.
+
+Due cose che non erano evidenti prima di farlo:
+
+- i gestori sono **listener nativi non passivi**, non gli `onTouch` di React.
+  React registra `touchmove` come passivo, e lì dentro `preventDefault` non fa
+  niente: senza, non c'è modo di impedire alla pagina di scorrere. L'asse si
+  decide una volta sola agli otto pixel e da lì non cambia più idea;
+- `.ranking-preview` è finita fra i selettori esclusi dallo swipe di pagina.
+  Altrimenti i due gesti partono insieme e si contendono lo stesso dito.
+
+Oltre i due estremi — destra da Player, sinistra da Team — il nastro incontra
+la stessa resistenza elastica dei fogli invece di scorrere nel vuoto.
+
 ### La striscia sotto la Dynamic Island la disegniamo noi
 Era in sospeso perché sembrava una modifica di layout. Si è rivelata più
 piccola del previsto: `viewport-fit: cover` più `black-translucent` portano il
@@ -60,11 +80,36 @@ già `inset: 0`) copre anche l'isola senza toccarlo. Lo spazio che prima
 riservava iOS lo riserva ora `env(safe-area-inset-top)` nel padding di
 `.content`.
 
-La fascia scura non sparisce, la disegna `.app-shell::before`: l'ora e le
-icone di sistema restano bianche anche con la barra traslucida, quindi sopra
-serve comunque qualcosa di scuro. È al 72% e non piena apposta — un colore
-pieno non ha niente da sfocare, e la striscia sarebbe rimasta l'unica zona
-nitida dello schermo, che era esattamente il difetto da togliere.
+La fascia scura la disegnava `.app-shell::before` al 72%, perché con
+`black-translucent` l'ora e le icone di sistema restano bianche e sopra serve
+comunque qualcosa di scuro. Chiuso il foglio, però, quel rettangolo restava lì
+su una pagina chiara e si leggeva come una tacca appiccicata in cima.
+
+**Poi rifatto al contrario.** L'unica leva sul colore delle scritte di sistema
+è `apple-mobile-web-app-status-bar-style`, che iOS legge all'avvio: la pagina
+non può cambiarlo in corsa, e nemmeno invertirlo, perché quelle scritte iOS le
+disegna sopra la web view, fuori dalla portata del CSS. Restava quindi solo la
+scelta fra tenere scuro il fondo o scurire le scritte. Abbiamo scurito le
+scritte (`statusBarStyle: "default"`), e da lì discende tutto il resto:
+
+- la fascia prende `var(--scroll-edge)`, cioè il colore della pagina, e a
+  riposo semplicemente non si vede;
+- si ritira e rientra insieme al foglio, comandata da `--island` sulla radice
+  del documento — gemella di `--veil`, che vive sul velo e che la fascia, non
+  essendone figlia, non potrebbe leggere. Le muove lo stesso codice, quindi non
+  si sfasano;
+- il velo dei fogli **schiarisce** invece di scurire (velatura color carta più
+  `brightness`): con le scritte scure, tutto quello che passa sotto di loro
+  deve restare chiaro, foglio aperto compreso.
+
+Il patto vale per tutta l'app. `.modal-backdrop` è ancora scuro al 72% e non è
+stato convertito: finché resta così, con un modale aperto l'ora si legge male.
+Da sistemare quando si tocca quella parte.
+
+Su un telefono tenuto in modalità scura iOS rimette le scritte bianche e la
+fascia chiara torna a essere il fondo sbagliato. Finché il tema scuro dell'app
+non esiste davvero (vedi `theme-dark` fra gli agganci morti), è un caso che
+accettiamo.
 
 Restano scoperti i lati in orizzontale: con `cover` il padding laterale di
 `.content` non tiene conto di `safe-area-inset-left/right`. In verticale non

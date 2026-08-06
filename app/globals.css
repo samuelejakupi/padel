@@ -1550,6 +1550,18 @@ button.ranking-row-link:focus-visible {
 .ranking-preview-list {
   mask-image: linear-gradient(to bottom, black 74%, rgba(0, 0, 0, 0.5) 90%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, black 74%, rgba(0, 0, 0, 0.5) 90%, transparent 100%);
+  /* La finestra da cui si guarda l'elenco: quello che esce di lato mentre lo
+     si trascina viene tagliato qui invece di sbordare sulla card. */
+  overflow: hidden;
+}
+
+/* Il nastro che si muove col dito. Sta dentro la finestra qui sopra ed è
+   l'unica cosa che viene spostata: la sfumatura e il ritaglio restano fermi,
+   altrimenti si trascinerebbero via anche loro. La posizione la scrive il
+   gesto direttamente sullo stile, non passa da React: un valore di stato per
+   ogni pixel di dito ridisegnerebbe tutta la schermata a ogni frame. */
+.ranking-preview-track {
+  will-change: transform;
 }
 
 /* Il margine sotto l'elenco serviva a staccarlo dal tasto: senza tasto
@@ -5160,12 +5172,31 @@ button.pizza-ranking-row {
   initial-value: 1;
 }
 
+/* Gemella di --veil, ma vive sull'elemento radice invece che sul velo, perché
+   deve poter comandare anche la fascia in cima allo schermo, che del velo non
+   è figlia. Vale 0 a foglio chiuso e 1 a foglio aperto, e la muove lo stesso
+   codice che muove il velo: così le due cose entrano ed escono insieme invece
+   di sfasarsi. Eredita, altrimenti .app-shell non la vedrebbe. */
+@property --island {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
 .sheet-backdrop {
   --veil: 1;
   align-items: flex-end;
   animation: veil-in 340ms ease-out;
-  backdrop-filter: blur(calc(var(--veil) * 16px)) saturate(calc(100% + var(--veil) * 20%));
-  background: rgba(8, 18, 29, calc(var(--veil) * 0.58));
+  /* Il velo schiarisce invece di scurire. Non è una preferenza estetica: le
+     scritte di sistema in cima allo schermo ora sono scure, e sono le uniche
+     che il CSS non può toccare. Tutto quello che passa sotto di loro deve
+     restare chiaro, sempre, foglio aperto compreso. Da qui brightness oltre
+     alla sfocatura, e la velatura color carta al posto di quella d'inchiostro. */
+  backdrop-filter:
+    blur(calc(var(--veil) * 16px))
+    saturate(calc(100% + var(--veil) * 20%))
+    brightness(calc(1 + var(--veil) * 0.3));
+  background: rgba(243, 245, 241, calc(var(--veil) * 0.62));
   display: flex;
   inset: 0;
   justify-content: center;
@@ -5173,7 +5204,10 @@ button.pizza-ranking-row {
   overscroll-behavior: none;
   position: fixed;
   touch-action: none;
-  -webkit-backdrop-filter: blur(calc(var(--veil) * 16px)) saturate(calc(100% + var(--veil) * 20%));
+  -webkit-backdrop-filter:
+    blur(calc(var(--veil) * 16px))
+    saturate(calc(100% + var(--veil) * 20%))
+    brightness(calc(1 + var(--veil) * 0.3));
   z-index: 100;
 }
 
@@ -5841,14 +5875,19 @@ button.pizza-ranking-row {
      invece di incrociarsi. Lo stacco dal bordo evita anche che l'angolo
      tondo dell'iPhone tagli la pastiglia delle voci laterali. */
   /* Striscia di sistema in alto, gemella della dissolvenza qui sotto.
-     Sostituisce la fascia opaca che disegnava iOS. Semitrasparente e non
-     piena apposta: cosi il contenuto che le scorre sotto resta qualcosa da
-     sfocare, e quando si apre il foglio dal basso il velo trova materia
-     anche quassu invece di lasciare l'unica zona nitida dello schermo.
-     Sta sotto al foglio (z-index 100) e sopra al contenuto, quindi la
-     sfocatura le passa sopra insieme a tutto il resto. */
+     Sostituisce la fascia opaca che disegnava iOS.
+     Prende il colore della pagina, non un grigio scuro suo: a riposo deve
+     essere invisibile, non una tacca sopra la Dynamic Island. Nasconde
+     comunque quello che le scorre sotto, esattamente come faceva la fascia
+     di sistema, solo che lo fa senza farsi notare.
+     Quando si apre il foglio dal basso si ritira del tutto (--island va a 1):
+     il contenuto torna a passarle sotto e il velo del foglio, che sta piu in
+     alto, lo sfoca insieme al resto dello schermo invece di trovare qui una
+     campitura piatta. Alla chiusura rientra con lo stesso tempo, quindi la
+     fascia e la sfocatura vanno e vengono insieme. */
   .app-shell::before {
-    background: rgba(11, 27, 44, 0.72);
+    background: var(--scroll-edge);
+    opacity: calc(1 - var(--island));
     content: "";
     height: env(safe-area-inset-top);
     left: 0;

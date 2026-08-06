@@ -54,9 +54,19 @@ export const metadata: Metadata = {
     // viewport-fit. Con "black" iOS disegnava lui una fascia piena e il
     // contenuto partiva sotto; cosi invece la fascia la disegna la pagina
     // (.app-shell::before) e quello che ci passa sotto e sfocabile.
-    // L'ora e le icone restano bianche: qualunque cosa sta in cima deve
-    // restare scura, altrimenti diventano illeggibili.
-    statusBarStyle: "black-translucent",
+    //
+    // "default" e non "black-translucent": con quest'ultimo l'ora e le icone
+    // di sistema restano bianche per sempre, e allora sotto serve per forza
+    // una fascia scura, che su una pagina chiara si vede come una tacca. Con
+    // "default" le scritte le colora iOS secondo l'aspetto del telefono —
+    // scure in chiaro — e la fascia puo finalmente sparire nello sfondo.
+    // Il patto che ne segue vale per tutta l'app: quello che passa sotto le
+    // scritte di sistema deve restare chiaro. Per questo il velo dei fogli
+    // schiarisce invece di scurire (vedi .sheet-backdrop).
+    // Su un telefono tenuto in modalita scura iOS le rimette bianche: li la
+    // fascia chiara torna a essere il fondo sbagliato. Finche il tema scuro
+    // dell'app non esiste davvero, e un caso che accettiamo.
+    statusBarStyle: "default",
   },
   icons: {
     icon: `${basePath}/theboyz-mark.png?v=${iconVersion}`,
