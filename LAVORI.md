@@ -49,8 +49,27 @@ singolo giocatore toccandone la riga. Ci si arriva dalla classifica completa.
 Era il prezzo per avere un bersaglio solo — dentro un tasto non ci possono
 stare altri tasti, né come HTML né per chi usa VoiceOver.
 
-L'ultima riga visibile sfuma verso il basso. Non è decorazione: tolto il
-tasto "Vedi tutti", è l'unico segno che l'elenco continua.
+**La sfumatura sotto è stata tolta.** Doveva dire "l'elenco continua", ma
+nell'anteprima le righe sono tre e finiscono lì: sfumare un'intera riga per
+promettere un seguito che in quella card non c'è la rendeva soltanto più
+difficile da leggere. L'invito ad aprire ora è la card stessa, che si alterna
+da sola e chiede di essere toccata.
+
+**Si alterna da sola ogni cinque secondi.** Singolo e Squadra si scambiano
+all'infinito con lo stesso movimento del dito — la home mostra tutte e due le
+classifiche senza che nessuno la tocchi. Si ferma dove girare a vuoto non
+avrebbe senso: fuori dalla home, con un foglio aperto, a scheda nascosta, o
+quando il sistema chiede meno animazioni. E si ferma **per sempre** al primo
+gesto sulla card: da lì comanda il dito, e continuare a cambiargliela sotto
+sarebbe solo fastidioso.
+
+Il riflesso sugli anelli del podio (`medal-sheen`) è agganciato all'arrivo, non
+al momento del cambio: mentre l'elenco scivola dentro resta in pausa
+(`.is-ranking-entering`) e riparte quando la classifica è al suo posto. Acceso
+a metà corsa passerebbe inosservato, ed è lì proprio per dire "ecco la
+classifica".
+
+Le due si chiamano **Singolo** e **Squadra**, non più Player e Team.
 
 **Lo swipe poi è stato rifatto perché segua il dito.** Prima decideva tutto al
 `touchend`: fino al rilascio non si muoveva niente e la pagina intanto

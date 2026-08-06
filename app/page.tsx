@@ -3334,6 +3334,9 @@ function AppShell({ session }: { session: Session | null }) {
   // Sta qui e non in mezzo agli altri stati perché il gesto qui sotto ha
   // bisogno di sapere quale delle due classifiche è in scena.
   const [rankingMode, setRankingMode] = useState<"single" | "team">("single");
+  // La card si alterna da sola finché nessuno la tocca. Al primo gesto questo
+  // diventa false e non torna più vero: da lì in poi comanda il dito.
+  const [rankingAuto, setRankingAuto] = useState(true);
   // Lo swipe sulla card della classifica. L'elenco resta agganciato al dito
   // come la pastiglia della barra: mentre trascini si sposta davvero, e al
   // rilascio o completa il cambio o torna al suo posto.
@@ -3371,6 +3374,68 @@ function AppShell({ session }: { session: Session | null }) {
       window.scrollBy({ top: after - before, behavior: "instant" as ScrollBehavior });
     });
   }, []);
+
+  // Il cambio vero e proprio: l'elenco esce da un lato e quello nuovo entra
+  // dall'altro. Lo chiamano sia il dito sia il timer, così il cambio a mano e
+  // quello automatico sono esattamente lo stesso movimento.
+  const slideRanking = useCallback((next: "single" | "team", direction: "left" | "right") => {
+    const track = rankingTrackRef.current;
+    const width = Math.max(rankingCardRef.current?.getBoundingClientRect().width ?? 1, 1);
+    const exit = direction === "left" ? -width : width;
+    const finish = () => keepScroll(() => setRankingMode(next));
+    if (!track || !track.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      rankingEnterFrom.current = null;
+      finish();
+      return;
+    }
+    // L'elenco nuovo entrerà dal lato opposto: il gesto portato a termine.
+    rankingEnterFrom.current = -exit;
+    track
+      .animate(
+        [
+          { transform: track.style.transform || "translate3d(0, 0, 0)", opacity: track.style.opacity || "1" },
+          { transform: `translate3d(${exit}px, 0, 0)`, opacity: 0 },
+        ],
+        { duration: 170, easing: "cubic-bezier(0.4, 0, 0.9, 0.35)", fill: "forwards" },
+      )
+      .finished.then(finish, finish);
+  }, [keepScroll]);
+
+  // Il cambio automatico: le due classifiche si alternano da sole ogni cinque
+  // secondi, così la home le mostra tutte e due senza che nessuno la tocchi.
+  // Si ferma dove non avrebbe senso girare a vuoto: fuori dalla home, con un
+  // foglio aperto, a scheda nascosta, o quando il telefono chiede meno
+  // animazioni. E si ferma per sempre appena la card viene toccata.
+  useEffect(() => {
+    if (!rankingAuto || sheet || view !== "padel" || padelView !== "overview") return;
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let timer = 0;
+    function schedule() {
+      timer = window.setTimeout(() => {
+        // Alterna: da singolo si va a squadra scorrendo verso sinistra, da
+        // squadra si torna indietro verso destra. Le stesse direzioni del dito.
+        const next = rankingMode === "single" ? "team" : "single";
+        slideRanking(next, next === "team" ? "left" : "right");
+      }, 5000);
+    }
+
+    // A scheda nascosta il timer non parte nemmeno: un'animazione che gira
+    // dietro le quinte consuma batteria e non la guarda nessuno. Quando la
+    // pagina torna in vista il conto ricomincia da capo.
+    function sync() {
+      window.clearTimeout(timer);
+      if (document.visibilityState === "visible") schedule();
+    }
+
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, [rankingAuto, rankingMode, sheet, view, padelView, slideRanking]);
 
   // Il gesto orizzontale sulla card della classifica. Fa tre cose: decide una
   // volta sola su che asse sta andando il dito, blocca lo scorrimento
@@ -3430,6 +3495,9 @@ function AppShell({ session }: { session: Session | null }) {
 
     function onStart(event: TouchEvent) {
       rankingSwipeHandled.current = false;
+      // Da qui in poi la card non si alterna più da sola: il comando è passato
+      // al dito, e continuare a cambiargliela sotto sarebbe solo fastidioso.
+      setRankingAuto(false);
       if (event.touches.length !== 1 || !window.matchMedia("(max-width: 780px)").matches) {
         rankingSwipe.current = null;
         return;
@@ -3495,23 +3563,7 @@ function AppShell({ session }: { session: Session | null }) {
       }
       // Il click che il browser manda dopo il gesto non deve aprire il foglio.
       rankingSwipeHandled.current = true;
-      const exit = direction === "left" ? -width : width;
-      // L'elenco nuovo entrerà dal lato opposto: il gesto portato a termine.
-      rankingEnterFrom.current = -exit;
-      const finish = () => keepScroll(() => setRankingMode(next));
-      if (!track.animate || reduceMotion()) {
-        finish();
-        return;
-      }
-      track
-        .animate(
-          [
-            { transform: track.style.transform || "translate3d(0, 0, 0)", opacity: track.style.opacity || "1" },
-            { transform: `translate3d(${exit}px, 0, 0)`, opacity: 0 },
-          ],
-          { duration: 170, easing: "cubic-bezier(0.4, 0, 0.9, 0.35)", fill: "forwards" },
-        )
-        .finished.then(finish, finish);
+      slideRanking(next, direction);
     }
 
     function onCancel() {
@@ -3529,10 +3581,13 @@ function AppShell({ session }: { session: Session | null }) {
       card.removeEventListener("touchend", onEnd);
       card.removeEventListener("touchcancel", onCancel);
     };
-  }, [rankingMode, keepScroll]);
+  }, [rankingMode, slideRanking]);
 
   // Cambiata la classifica, l'elenco nuovo entra dal lato opposto a quello da
   // cui è uscito il vecchio: il gesto continua invece di ricominciare.
+  // Finché sta entrando porta addosso "is-ranking-entering", che tiene fermo
+  // il bagliore sugli anelli del podio: quel riflesso deve accendersi quando
+  // la classifica è arrivata, non mentre sta ancora scivolando dentro.
   useEffect(() => {
     const track = rankingTrackRef.current;
     const from = rankingEnterFrom.current;
@@ -3541,13 +3596,22 @@ function AppShell({ session }: { session: Session | null }) {
     track.getAnimations().forEach((animation) => animation.cancel());
     track.style.transform = "";
     track.style.opacity = "";
-    if (!track.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    track.animate(
+    if (!track.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      track.classList.remove("is-ranking-entering");
+      return;
+    }
+    track.classList.add("is-ranking-entering");
+    const entrance = track.animate(
       [
         { transform: `translate3d(${from}px, 0, 0)`, opacity: 0 },
         { transform: "translate3d(0, 0, 0)", opacity: 1 },
       ],
       { duration: 340, easing: "cubic-bezier(0.32, 0.9, 0.28, 1)" },
+    );
+    // Arrivata: il riflesso riparte da capo, in tempo con la classifica nuova.
+    entrance.finished.then(
+      () => track.classList.remove("is-ranking-entering"),
+      () => track.classList.remove("is-ranking-entering"),
     );
   }, [rankingMode]);
 
@@ -4616,19 +4680,21 @@ function AppShell({ session }: { session: Session | null }) {
                   className="ranking-preview"
                   ref={rankingCardRef}
                   onClick={() => {
+                    // Anche il solo tocco basta a prendersi il comando: da qui
+                    // in poi la card non si alterna più da sola.
+                    setRankingAuto(false);
                     // Uno swipe finisce comunque con un click: senza questa
                     // guardia cambiare classifica aprirebbe anche il foglio.
                     if (rankingSwipeHandled.current) return;
                     setSheet("ranking");
                   }}
-                  aria-label={`Apri la classifica Elo ${rankingMode === "single" ? "player" : "team"} completa (${rankingRows})`}
+                  aria-label={`Apri la classifica Elo ${rankingMode === "single" ? "singolo" : "squadra"} completa (${rankingRows})`}
                 >
                   <div className="side-head" ref={rankingAnchorRef}>
-                    <div><h2>{rankingMode === "single" ? "Classifica Elo Player" : "Classifica Elo Team"}</h2></div>
+                    <div><h2>{rankingMode === "single" ? "Classifica Elo Singolo" : "Classifica Elo Squadra"}</h2></div>
                   </div>
-                  {/* La sfumatura in fondo dice che l'elenco continua: è il
-                      motivo per cui la card si apre. La finestra ritaglia,
-                      il nastro dentro è quello che si muove col dito. */}
+                  {/* La finestra ritaglia, il nastro dentro è quello che si
+                      muove: col dito o da solo, ogni cinque secondi. */}
                   <div className="ranking-preview-list">
                     <div className="ranking-preview-track" ref={rankingTrackRef}>
                       {rankingMode === "single" ? (

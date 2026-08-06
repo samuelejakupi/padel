@@ -1543,15 +1543,13 @@ button.ranking-row-link:focus-visible {
   outline-offset: 4px;
 }
 
-/* L'ultima riga visibile sfuma verso il basso: l'elenco non finisce lì,
-   continua nella classifica completa. Da quando il tasto "Vedi tutti" non
-   c'è più, questa sfumatura è l'unico invito ad aprirla, quindi si ferma
-   presto e resta leggibile invece di cancellare la riga. */
+/* La finestra da cui si guarda l'elenco: quello che esce di lato, col dito o
+   da solo, viene tagliato qui invece di sbordare sulla card.
+   Sotto non sfuma più. C'era una dissolvenza sull'ultima riga che diceva
+   "l'elenco continua", ma le righe sono tre e finiscono lì: sfumare una riga
+   intera per suggerire un seguito che nell'anteprima non c'è la rendeva solo
+   più difficile da leggere. */
 .ranking-preview-list {
-  mask-image: linear-gradient(to bottom, black 74%, rgba(0, 0, 0, 0.5) 90%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, black 74%, rgba(0, 0, 0, 0.5) 90%, transparent 100%);
-  /* La finestra da cui si guarda l'elenco: quello che esce di lato mentre lo
-     si trascina viene tagliato qui invece di sbordare sulla card. */
   overflow: hidden;
 }
 
@@ -1562,6 +1560,15 @@ button.ranking-row-link:focus-visible {
    ogni pixel di dito ridisegnerebbe tutta la schermata a ogni frame. */
 .ranking-preview-track {
   will-change: transform;
+}
+
+/* Il riflesso sugli anelli del podio resta fermo al punto di partenza mentre
+   l'elenco nuovo sta ancora scivolando dentro, e riparte quando è arrivato.
+   Acceso a metà corsa passerebbe inosservato: è lì per dire "ecco la
+   classifica", e per dirlo deve accendersi quando la classifica c'è. */
+.ranking-preview-track.is-ranking-entering .avatar::after,
+.ranking-preview-track.is-ranking-entering .team-image::after {
+  animation-play-state: paused;
 }
 
 /* Il margine sotto l'elenco serviva a staccarlo dal tasto: senza tasto
