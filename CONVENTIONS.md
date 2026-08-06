@@ -5,7 +5,7 @@ Documento di riferimento per chiunque (persona o assistente AI) modifichi questa
 ## Stack e vincoli
 
 - Next.js 16 (App Router) in modalita static export (`output: "export"` in `next.config.ts`): niente API route, server actions, middleware o ISR, tutto gira lato client.
-- Il sito e pubblicato automaticamente su GitHub Pages a ogni push su `main` (vedi `.github/workflows/deploy-pages.yml`). Ogni push su main e una release in produzione.
+- Il sito e pubblicato automaticamente su Vercel a ogni push su `main`; gli altri branch ricevono un URL di anteprima. Ogni push su main e una release in produzione. Il workflow GitHub Pages (`.github/workflows/deploy-pages.yml`) resta come fallback eseguibile a mano, ma non parte piu a ogni push.
 - Dati e logica di business vivono in Supabase (Postgres + Auth + Storage), non nel frontend.
 - TypeScript in modalita strict, React 19, Tailwind 4 importato in `globals.css` ma non usato con classi utility in JSX: lo stile e tutto CSS custom (vedi sotto).
 
