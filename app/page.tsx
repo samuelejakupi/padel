@@ -1425,12 +1425,17 @@ function TeamEditor({
 function SeasonPicker({
   value,
   options,
+  current,
   onChange,
 }: {
   value: number;
   options: number[];
+  // L'anno in corso non si chiama con il suo numero ma "stagione attuale":
+  // è l'unica che cambia mentre la guardi.
+  current?: number;
   onChange: (season: number) => void;
 }) {
+  const label = (year: number) => (year === current ? "Stagione attuale" : `Stagione ${year}`);
   const [open, setOpen] = useState(false);
   const holder = useRef<HTMLDivElement>(null);
 
@@ -1459,7 +1464,7 @@ function SeasonPicker({
         aria-expanded={open}
         aria-haspopup="listbox"
       >
-        Stagione {value}
+        {label(value)}
         <i aria-hidden="true">▾</i>
       </button>
       {open ? (
@@ -1473,7 +1478,7 @@ function SeasonPicker({
                 className={year === value ? "active" : ""}
                 onClick={() => { onChange(year); setOpen(false); }}
               >
-                Stagione {year}
+                {label(year)}
               </button>
             </li>
           ))}
@@ -1487,10 +1492,13 @@ function TeamRankingList({
   teams,
   limit,
   expanded = false,
+  showTrend = true,
   bare = false,
 }: {
   teams: PadelTeam[];
   limit?: number;
+  // Come per il singolo: nelle stagioni archiviate le frecce non hanno senso.
+  showTrend?: boolean;
   // Come per il singolo: in home la lista è compatta, nella pagina del
   // ranking diventa tabella. Senza questo le due classifiche in home si
   // presentavano con due impaginazioni diverse.
@@ -1526,8 +1534,8 @@ function TeamRankingList({
                 </span>
               </>
             ) : (
-              <span className={`trend ${team.current_streak >= 0 ? "up" : "down"}`}>
-                {team.current_streak >= 0 ? "↑" : "↓"}
+              <span className={`trend ${showTrend ? (team.current_streak >= 0 ? "up" : "down") : ""}`}>
+                {showTrend ? (team.current_streak >= 0 ? "↑" : "↓") : ""}
               </span>
             )}
             <span className="ranking-points">
@@ -1553,12 +1561,14 @@ function BottomSheet({
   children,
 }: {
   title: string;
-  eyebrow: string;
+  // Riga sopra al titolo: di solito un'etichetta, ma può essere un comando.
+  eyebrow: ReactNode;
   // Comando nell'angolo dell'intestazione, al posto della crocetta.
   action?: ReactNode;
   onClose: () => void;
   children: ReactNode;
 }) {
+  const backdropRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const drag = useRef<{ y: number; lastY: number; lastAt: number; speed: number } | null>(null);
@@ -1585,8 +1595,15 @@ function BottomSheet({
     return `translate3d(0, ${pulled}px, 0) scaleX(${1 - squash * 0.04}) scaleY(${1 - squash * 0.02})`;
   }
 
+  // Sfocatura e scurimento sono comandati da un solo numero, così scendono
+  // insieme al foglio mentre lo trascini.
+  function setVeil(value: number) {
+    backdropRef.current?.style.setProperty("--veil", String(Math.max(0, Math.min(1, value))));
+  }
+
   const dismiss = useCallback(() => {
     const panel = panelRef.current;
+    const backdrop = backdropRef.current;
     if (closing.current) return;
     closing.current = true;
     if (!panel || !panel.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -1599,6 +1616,12 @@ function BottomSheet({
     panel.animate(
       [{ transform: from }, { transform: "translate3d(0, 102%, 0)" }],
       { duration: 300, easing: "cubic-bezier(0.4, 0, 0.9, 0.35)", fill: "forwards" },
+    );
+    // La sfocatura si spegne insieme, non di colpo alla scomparsa.
+    const veilNow = backdrop?.style.getPropertyValue("--veil") || "1";
+    backdrop?.animate(
+      [{ "--veil": veilNow } as Keyframe, { "--veil": "0" } as Keyframe],
+      { duration: 300, easing: "ease-in", fill: "forwards" },
     );
     window.setTimeout(onClose, 290);
   }, [onClose]);
@@ -1657,19 +1680,28 @@ function BottomSheet({
 
   function settle() {
     const panel = panelRef.current;
+    const backdrop = backdropRef.current;
     if (!panel) return;
     const from = panel.style.transform || "translate3d(0, 0, 0)";
+    const veilNow = backdrop?.style.getPropertyValue("--veil") || "1";
     panel.style.transform = "";
+    backdrop?.style.removeProperty("--veil");
     if (!panel.animate) return;
     panel.animate(
       [{ transform: from }, { transform: "translate3d(0, 0, 0)" }],
       { duration: 520, easing: SPRING },
+    );
+    // Tornando su, la sfocatura si riforma con la stessa molla.
+    backdrop?.animate(
+      [{ "--veil": veilNow } as Keyframe, { "--veil": "1" } as Keyframe],
+      { duration: 420, easing: "ease-out" },
     );
   }
 
   return (
     <div
       className="sheet-backdrop"
+      ref={backdropRef}
       role="presentation"
       onMouseDown={(event) => event.target === event.currentTarget && dismiss()}
     >
@@ -1706,6 +1738,9 @@ function BottomSheet({
             return;
           }
           panel.style.transform = shape(distance);
+          // La sfocatura cala man mano che il foglio scende: a metà corsa
+          // la pagina sotto ricomincia a leggersi.
+          setVeil(1 - Math.min(distance / 420, 1) * 0.85);
         }}
         onTouchEnd={(event) => {
           const state = drag.current;
@@ -1724,7 +1759,7 @@ function BottomSheet({
         <span className="sheet-handle" aria-hidden="true" />
         <div className="sheet-head">
           <div>
-            <p className="eyebrow dark">{eyebrow}</p>
+            {typeof eyebrow === "string" ? <p className="eyebrow dark">{eyebrow}</p> : eyebrow}
             <h2>{title}</h2>
           </div>
           {action}
@@ -1750,11 +1785,15 @@ function RankingList({
   expanded = false,
   onSelect,
   limit,
+  showTrend = true,
   bare = false,
 }: {
   profiles: Profile[];
   expanded?: boolean;
   onSelect?: (profile: Profile) => void;
+  // Le frecce dicono come sta andando adesso: in una stagione archiviata non
+  // significano niente, perché quella classifica è ferma.
+  showTrend?: boolean;
   // Numero massimo di righe da mostrare. Si conta per righe e non per
   // posizione: con dei parimerito una soglia sulla posizione mostrerebbe un
   // numero di persone diverso da quello promesso.
@@ -1790,8 +1829,8 @@ function RankingList({
                 </span>
               </>
             ) : (
-              <span className={`trend ${isRanked ? (profile.current_streak >= 0 ? "up" : "down") : ""}`}>
-                {isRanked ? (profile.current_streak >= 0 ? "↑" : "↓") : "—"}
+              <span className={`trend ${showTrend && isRanked ? (profile.current_streak >= 0 ? "up" : "down") : ""}`}>
+                {showTrend ? (isRanked ? (profile.current_streak >= 0 ? "↑" : "↓") : "—") : ""}
               </span>
             )}
             <span className="ranking-points">
@@ -3457,7 +3496,16 @@ function AppShell({ session }: { session: Session | null }) {
     () => buildPadelTeams(matches, profiles, teamRecords),
     [matches, profiles, teamRecords],
   );
-  const rankingRows = rankingMode === "single" ? seasonProfiles.length : teams.length;
+  const isCurrentSeason = season === currentYear;
+  // Le coppie di una stagione passata si ricostruiscono dalle partite di
+  // quell'anno: l'archivio conserva le posizioni dei singoli, non quelle
+  // delle squadre.
+  const seasonTeams = useMemo(() => {
+    if (isCurrentSeason) return teams;
+    const own = matches.filter((match) => new Date(match.played_at).getFullYear() === season);
+    return buildPadelTeams(own, profiles, teamRecords);
+  }, [isCurrentSeason, teams, matches, profiles, teamRecords, season]);
+  const rankingRows = rankingMode === "single" ? seasonProfiles.length : seasonTeams.length;
   const playerTeams = useMemo(
     () => teams.filter((team) => team.players.some((profile) => profile.id === selectedPlayerId)),
     [teams, selectedPlayerId],
@@ -4346,6 +4394,7 @@ function AppShell({ session }: { session: Session | null }) {
                   {/* La stagione si sceglie qui, non piu in home. */}
                   <SeasonPicker
                     value={season}
+                    current={currentYear}
                     options={[currentYear, ...archivedSeasons.filter((year) => year !== currentYear)]}
                     onChange={setSeason}
                   />
@@ -4870,14 +4919,23 @@ function AppShell({ session }: { session: Session | null }) {
       ) : null}
       {sheet === "ranking" ? (
         <BottomSheet
-          eyebrow="THEBOYZ PADEL"
+          eyebrow={(
+            <SeasonPicker
+              value={season}
+              current={currentYear}
+              options={[currentYear, ...archivedSeasons.filter((year) => year !== currentYear)]}
+              onChange={setSeason}
+            />
+          )}
           title={rankingMode === "single" ? "Classifica singolo" : "Classifica squadre"}
           onClose={() => setSheet(null)}
           action={(
             <div className="mode-switch" role="group" aria-label="Tipo di classifica">
               <button
                 className={rankingMode === "single" ? "active" : ""}
-                onClick={() => setRankingMode("single")}
+                // Cambiando tipo di classifica si torna sempre alla stagione
+                // in corso: un anno archiviato è un contesto suo.
+                onClick={() => { setRankingMode("single"); setSeason(currentYear); }}
                 aria-label="Classifica singolo"
                 title="Singolo"
               >
@@ -4885,7 +4943,7 @@ function AppShell({ session }: { session: Session | null }) {
               </button>
               <button
                 className={rankingMode === "team" ? "active" : ""}
-                onClick={() => setRankingMode("team")}
+                onClick={() => { setRankingMode("team"); setSeason(currentYear); }}
                 aria-label="Classifica squadre"
                 title="Squadra"
               >
@@ -4897,10 +4955,11 @@ function AppShell({ session }: { session: Session | null }) {
           {rankingMode === "single" ? (
             <RankingList
               profiles={seasonProfiles}
+              showTrend={isCurrentSeason}
               onSelect={(profile) => { setSheet(null); openPlayer(profile); }}
             />
           ) : (
-            <TeamRankingList teams={teams} />
+            <TeamRankingList teams={seasonTeams} showTrend={isCurrentSeason} />
           )}
         </BottomSheet>
       ) : null}

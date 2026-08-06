@@ -2429,36 +2429,83 @@ button.podium-person {
   border-width: 2px;
 }
 
+/* L'anello non è una tinta piatta ma un metallo: il gradiente passa dal
+   chiaro allo scuro e poi risale, come la luce su una superficie curva.
+   Si ottiene con due sfondi e border-box: il primo riempie solo l'interno,
+   il secondo occupa anche il bordo e resta visibile lì attorno. */
+.medal-gold .avatar,
+.medal-silver .avatar,
+.medal-bronze .avatar,
+.medal-gold .team-image,
+.medal-silver .team-image,
+.medal-bronze .team-image {
+  background-clip: padding-box, border-box;
+  background-origin: border-box;
+  border-color: transparent;
+}
+
+/* Lo strato interno resta quello di partenza: l'azzurro dell'avatar, che si
+   vede quando non c'è una foto, e il bianco sotto l'immagine di squadra. */
 .medal-gold .avatar {
-  border-color: #d7a125;
-  box-shadow: 0 0 0 1.5px #d7a125;
+  background-image:
+    linear-gradient(145deg, #d8e7ff, #8eb2ee),
+    linear-gradient(140deg, #f6dd8a 0%, #d19a1c 32%, #8f6410 55%, #e7c25e 78%, #f9e9a8 100%);
 }
 
 .medal-silver .avatar {
-  border-color: #a3adb6;
-  box-shadow: 0 0 0 1.5px #a3adb6;
+  background-image:
+    linear-gradient(145deg, #d8e7ff, #8eb2ee),
+    linear-gradient(140deg, #f2f5f7 0%, #b3bcc4 32%, #78838d 55%, #cdd5db 78%, #ffffff 100%);
 }
 
 .medal-bronze .avatar {
-  border-color: #bd7740;
-  box-shadow: 0 0 0 1.5px #bd7740;
+  background-image:
+    linear-gradient(145deg, #d8e7ff, #8eb2ee),
+    linear-gradient(140deg, #eaae7d 0%, #bd7740 32%, #7d4a22 55%, #d99a63 78%, #f2c99f 100%);
+}
+
+.medal-gold .team-image {
+  background-image:
+    linear-gradient(var(--white), var(--white)),
+    linear-gradient(140deg, #f6dd8a 0%, #d19a1c 32%, #8f6410 55%, #e7c25e 78%, #f9e9a8 100%);
+}
+
+.medal-silver .team-image {
+  background-image:
+    linear-gradient(var(--white), var(--white)),
+    linear-gradient(140deg, #f2f5f7 0%, #b3bcc4 32%, #78838d 55%, #cdd5db 78%, #ffffff 100%);
+}
+
+.medal-bronze .team-image {
+  background-image:
+    linear-gradient(var(--white), var(--white)),
+    linear-gradient(140deg, #eaae7d 0%, #bd7740 32%, #7d4a22 55%, #d99a63 78%, #f2c99f 100%);
+}
+
+/* Un filo d'ombra nella tinta scura del metallo stacca l'anello dal fondo. */
+.medal-gold .avatar,
+.medal-gold .team-image {
+  box-shadow: 0 0 0 1px rgba(143, 100, 16, 0.4);
+}
+
+.medal-silver .avatar,
+.medal-silver .team-image {
+  box-shadow: 0 0 0 1px rgba(120, 131, 141, 0.4);
+}
+
+.medal-bronze .avatar,
+.medal-bronze .team-image {
+  box-shadow: 0 0 0 1px rgba(125, 74, 34, 0.4);
 }
 
 /* L'anello vale per tutto ciò che rappresenta chi è sul podio: le foto dei
    giocatori, entrambe nelle coppie, e l'immagine della squadra quando c'è. */
-.medal-gold .team-image {
-  border: 2px solid #d7a125;
-  box-shadow: 0 0 0 1.5px #d7a125;
-}
-
-.medal-silver .team-image {
-  border: 2px solid #a3adb6;
-  box-shadow: 0 0 0 1.5px #a3adb6;
-}
-
+/* L'immagine di squadra non ha il bordo dell'avatar: glielo diamo qui, poi
+   il gradiente lo colora insieme a quello dei giocatori. */
+.medal-gold .team-image,
+.medal-silver .team-image,
 .medal-bronze .team-image {
-  border: 2px solid #bd7740;
-  box-shadow: 0 0 0 1.5px #bd7740;
+  border: 2px solid transparent;
 }
 
 /* Il riflesso che attraversa l'anello, come sul tasto della nuova partita.
@@ -5076,13 +5123,22 @@ button.pizza-ranking-row {
 
 /* Foglio che sale dal basso: elenco completo senza cambiare schermata.
    Si chiude trascinandolo giù, toccando fuori o con Esc. */
-/* Nessuna dissolvenza: il velo c'è da subito e resta pieno fino alla fine.
-   La sfocatura serve a non far leggere la pagina sotto, che in trasparenza
-   si accavallava ai testi del foglio. */
+/* Il velo ha una sola manopola, --veil, che va da 0 a 1 e comanda insieme
+   sfocatura e scurimento. Registrarla come numero permette di animarla:
+   senza @property il browser la tratterebbe come testo e salterebbe di colpo
+   da un valore all'altro. */
+@property --veil {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
+
 .sheet-backdrop {
+  --veil: 1;
   align-items: flex-end;
-  backdrop-filter: blur(14px) saturate(120%);
-  background: rgba(8, 18, 29, 0.58);
+  animation: veil-in 340ms ease-out;
+  backdrop-filter: blur(calc(var(--veil) * 16px)) saturate(calc(100% + var(--veil) * 20%));
+  background: rgba(8, 18, 29, calc(var(--veil) * 0.58));
   display: flex;
   inset: 0;
   justify-content: center;
@@ -5090,8 +5146,14 @@ button.pizza-ranking-row {
   overscroll-behavior: none;
   position: fixed;
   touch-action: none;
-  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(calc(var(--veil) * 16px)) saturate(calc(100% + var(--veil) * 20%));
   z-index: 100;
+}
+
+/* La sfocatura entra insieme al foglio invece di essere già lì. */
+@keyframes veil-in {
+  from { --veil: 0; }
+  to { --veil: 1; }
 }
 
 .sheet {
@@ -5101,7 +5163,9 @@ button.pizza-ranking-row {
   box-shadow: 0 -20px 60px rgba(4, 12, 22, 0.32);
   display: flex;
   flex-direction: column;
-  max-height: 88dvh;
+  /* Altezza fissa e non "quanto serve": tutti i fogli si fermano alla stessa
+     quota, e quelli con poche voci lasciano semplicemente spazio sotto. */
+  height: 84dvh;
   padding: var(--space-2) var(--space-6) 0;
   /* La deformazione parte dal bordo dello schermo, non dal centro: è quello
      che dà l'impressione del foglio che si appoggia. */
@@ -5112,16 +5176,18 @@ button.pizza-ranking-row {
 }
 
 /* Prolunga il fondo del foglio oltre il bordo dello schermo: tirandolo verso
-   l'alto non si apre uno spiraglio sul velo sottostante. */
+   l'alto non si apre uno spiraglio sul velo sottostante. Parte due pixel più
+   in su del bordo perché durante l'allungamento elastico le altezze cadono su
+   frazioni di pixel, e sul confine esatto compariva e spariva una riga. */
 .sheet::after {
   background: var(--paper);
   content: "";
-  height: 160px;
+  height: 200px;
   left: 0;
   pointer-events: none;
   position: absolute;
   right: 0;
-  top: 100%;
+  top: calc(100% - 2px);
 }
 
 /* In entrata sale, supera di poco il punto d'arrivo e si assesta, mentre la
@@ -5157,10 +5223,27 @@ button.pizza-ranking-row {
   margin: 0;
 }
 
+/* Il selettore di stagione prende il posto dell'occhiello: stessa taglia e
+   stessa spaziatura di un'etichetta, ma è un comando. */
+.sheet-head .season-picker {
+  margin-bottom: var(--space-1);
+}
+
+.sheet-head .season {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.9px;
+  padding: 0;
+  text-transform: uppercase;
+}
+
 /* Solo questa parte scorre: il trascinamento del foglio parte quando è
    già in cima, altrimenti leggere l'elenco lo chiuderebbe. */
 .sheet-body {
   -webkit-overflow-scrolling: touch;
+  /* Occupa tutto lo spazio rimasto: con poche voci resta vuoto in fondo
+     invece di far accorciare il foglio. */
+  flex: 1 1 auto;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
