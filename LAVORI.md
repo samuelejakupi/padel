@@ -87,6 +87,62 @@ con un ref i listener del gesto restavano appesi a quello vecchio e la card
 tornava muta — non rispondeva più nemmeno allo swipe fatto a mano. Con lo
 stato l'effetto si riesegue e li riattacca.
 
+### In home la classifica mostra le tre righe attorno a te
+Non più le prime tre. Primo in classifica vedi comunque 1-2-3 perché sopra non
+c'è niente, quinto vedi 4-5-6, ultimo vedi gli ultimi tre. La finestra la
+calcola `rankingWindowStart`, e la posizione va letta sull'elenco intero
+(`ranks[start + index]`): sulla finestra la prima riga direbbe sempre "1".
+
+Per le squadre il centro non è ovvio, perché di coppie se ne può avere più
+d'una in corso e nessuna è "la propria". Il riferimento è **l'ultima con cui
+si è scesi in campo**: si scorrono le partite dalla più recente, si prende la
+prima in cui compare chi guarda, e si cerca la squadra formata da quei due.
+Le partite in singolo si saltano — non dicono niente sulle coppie.
+
+### La card delle partite in home è un'anteprima, non un elenco
+Due partite su una riga sola: data, le due coppie coi nomi in linea separati
+da virgola, punteggio in mezzo. Cadono miniatura del video, campo e punti Elo,
+che a quella misura sono segni e non informazioni. Il contorno dell'avatar
+dice com'è finita — verde chi vince, rosso chi perde — al posto del bianco e
+della scritta VITTORIA, che su una riga sola non ci stava.
+
+Come per la classifica, tutto il riquadro è un bersaglio solo e apre il
+foglio: le singole partite non portano più in modifica, ci si passa da lì.
+Il tasto "Nuova partita" è uscito dal riquadro e sta fra la classifica e le
+partite. Attenzione ai suoi margini: `.cta-in-panel` ne porta di suoi, che
+servivano quando stava dentro al riquadro e qui si sommavano al gap della
+colonna — da cui `.cta-in-panel.cta-between`, due classi per poterli azzerare.
+
+**Vale solo sotto i 780px.** Su computer la card resta com'era, comprese le
+anteprime e la modifica al tocco. La differenza non è solo di stile ma di
+comportamento, e il CSS da solo non basta: da qui `useIsPhone`, che parte da
+`false` e si corregge al primo effetto — durante la generazione statica non
+c'è finestra da misurare, e la home compare comunque solo dopo i dati.
+
+### Il foglio delle partite si apre sui mesi
+Le partite si accumulano, e scorrerne cento per arrivare a maggio non è
+cercare, è rassegnarsi. Il foglio si apre quindi con dei raccoglitori — un
+mese ciascuno, col numero di partite dentro — tutti chiusi. Se ne apre uno per
+volta: aprendone un altro il primo si chiude.
+
+L'altezza è animata a mano perché da `0` ad `auto` il browser non sa
+interpolare: si misura il contenuto, si va da una misura all'altra, e appena
+arrivati si torna ad `auto`, se no un elenco che cambia resterebbe tagliato
+sulla misura vecchia. Aperture più lente delle chiusure (420ms contro 280ms):
+entrando c'è qualcosa da guardare arrivare, uscendo si toglie di mezzo.
+
+In alto a destra lo switch fra tutte le partite e le proprie, con la faccia di
+chi guarda al posto del secondo glifo. Cambiando insieme cambiano mesi e
+conteggi, quindi si riparte da tutti chiusi.
+
+### Il riflesso sugli anelli del podio gira invece di attraversare
+Era una diagonale che scorreva, con una sosta fra un passaggio e l'altro. Su
+una cosa tonda un riflesso in linea retta si vede per quello che è: una
+striscia passata sopra. Ora è una maschera conica che ruota (`medal-orbit`,
+7s lineari): l'arco acceso segue il bordo. Niente soste — un riflesso che
+accelera, frena e aspetta richiama l'occhio a ogni ripartenza, mentre così
+resta un fondo che si muove.
+
 ### Il foglio della classifica è stato alleggerito
 Via il selettore di stagione: il foglio mostra la stagione in corso e basta,
 lo storico troverà casa nel profilo. Via anche la maniglia in cima — diceva

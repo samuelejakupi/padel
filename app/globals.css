@@ -2574,40 +2574,41 @@ button.podium-person {
   border: 2px solid transparent;
 }
 
-/* Il riflesso che attraversa l'anello, come sul tasto della nuova partita.
-   È un secondo anello bianco sopra il primo, coperto da una maschera stretta
-   che scorre: si illumina solo il bordo, la foto sotto resta intatta. */
+/* Il riflesso che gira attorno all'anello. È un secondo anello bianco sopra
+   il primo, coperto da una maschera conica: resta acceso solo l'arco dove la
+   maschera è piena, e ruotando l'elemento quell'arco fa il giro del cerchio.
+   La foto sotto non viene toccata.
+   Una maschera conica e non più una diagonale che scorre: su una cosa tonda
+   un riflesso che attraversa in linea retta si vede per quello che è, cioè
+   una striscia passata sopra. Girando invece segue la forma.
+   Il moto è lineare e senza soste — un riflesso che accelera, frena e aspetta
+   attira l'occhio ogni volta che riparte; così invece resta un fondo che si
+   muove e basta. */
 .medal-gold .avatar::after,
 .medal-silver .avatar::after,
 .medal-bronze .avatar::after,
 .medal-gold .team-image::after,
 .medal-silver .team-image::after,
 .medal-bronze .team-image::after {
-  animation: medal-sheen 5s ease-in-out infinite;
+  animation: medal-orbit 7s linear infinite;
   border: 2px solid rgba(255, 255, 255, 0.9);
   border-radius: 50%;
   content: "";
   inset: -2px;
-  mask-image: linear-gradient(104deg, transparent 42%, black 50%, transparent 58%);
-  mask-repeat: no-repeat;
-  mask-size: 300% 100%;
+  mask-image: conic-gradient(from 0deg, transparent 0deg, #000 34deg, transparent 76deg, transparent 360deg);
   pointer-events: none;
   position: absolute;
-  -webkit-mask-image: linear-gradient(104deg, transparent 42%, black 50%, transparent 58%);
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-size: 300% 100%;
+  -webkit-mask-image: conic-gradient(from 0deg, transparent 0deg, #000 34deg, transparent 76deg, transparent 360deg);
 }
 
-/* Scorre la maschera, non l'anello: l'anello resta al suo posto. */
-@keyframes medal-sheen {
-  0% {
-    mask-position: 200% 0;
-    -webkit-mask-position: 200% 0;
+/* Gira l'anello mascherato: l'arco acceso percorre il bordo, il resto resta
+   dov'è. */
+@keyframes medal-orbit {
+  from {
+    transform: rotate(0deg);
   }
-  45%,
-  100% {
-    mask-position: -100% 0;
-    -webkit-mask-position: -100% 0;
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -6320,8 +6321,14 @@ button.pizza-ranking-row {
     padding: 0 14px var(--space-3);
   }
 
-  /* Il tasto è uscito dal riquadro e sta fra la classifica e le partite. */
-  .cta-between {
+  /* Il tasto è uscito dal riquadro e sta fra la classifica e le partite.
+     Due classi e non una perché deve battere i margini che .cta-in-panel
+     porta con sé: servivano quando il tasto stava dentro al riquadro, qui si
+     sommano al gap della colonna e lo staccano più del dovuto — e in modo
+     diverso sopra e sotto, che è la cosa che si nota. Lo spazio attorno lo
+     deve dare solo il gap, lo stesso che separa due card. */
+  .cta-in-panel.cta-between {
+    margin: 0;
     order: 3;
   }
 

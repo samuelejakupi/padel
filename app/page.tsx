@@ -1604,12 +1604,17 @@ function SeasonPicker({
 function TeamRankingList({
   teams,
   limit,
+  focusId,
   expanded = false,
   showTrend = true,
   bare = false,
 }: {
   teams: PadelTeam[];
   limit?: number;
+  // Come per il singolo, ma qui la coppia su cui centrarsi è una sola: si può
+  // far parte di più squadre insieme, e quella che interessa è l'ultima con
+  // cui si è scesi in campo.
+  focusId?: string | null;
   // Come per il singolo: nelle stagioni archiviate le frecce non hanno senso.
   showTrend?: boolean;
   // Come per il singolo: in home la lista è compatta, nella pagina del
@@ -1619,11 +1624,14 @@ function TeamRankingList({
   bare?: boolean;
 }) {
   const ranks = ranksByRating(teams);
-  const visible = limit === undefined ? teams : teams.slice(0, limit);
+  const start = limit === undefined
+    ? 0
+    : rankingWindowStart(teams.length, limit, teams.findIndex((team) => team.id === focusId));
+  const visible = limit === undefined ? teams : teams.slice(start, start + limit);
   return (
     <div className={`${expanded ? "ranking-table ranking-table-team" : "ranking-list ranking-list-team"}${bare ? " ranking-table-bare" : ""}`}>
       {visible.map((team, index) => {
-        const rank = ranks[index];
+        const rank = ranks[start + index];
         const winRate = team.matches_played ? Math.round((team.wins / team.matches_played) * 100) : 0;
         return (
           <div className={`ranking-row ${medalClass(rank)}`} key={team.id}>
@@ -1966,11 +1974,23 @@ function medalClass(rank: number) {
   return "";
 }
 
+// Da quale riga far partire la finestra quando l'elenco è più lungo dello
+// spazio. Centrata su chi guarda invece che sempre in cima: il primo vede
+// comunque 1-2-3 perché sopra di lui non c'è niente, il quinto vede 4-5-6,
+// l'ultimo vede gli ultimi tre. Senza qualcuno su cui centrarsi si resta in
+// testa, che è il comportamento di prima.
+function rankingWindowStart(total: number, size: number, focusIndex: number) {
+  if (focusIndex < 0 || total <= size) return 0;
+  const start = focusIndex - Math.floor((size - 1) / 2);
+  return Math.max(0, Math.min(start, total - size));
+}
+
 function RankingList({
   profiles,
   expanded = false,
   onSelect,
   limit,
+  focusId,
   showTrend = true,
   bare = false,
 }: {
@@ -1984,16 +2004,25 @@ function RankingList({
   // posizione: con dei parimerito una soglia sulla posizione mostrerebbe un
   // numero di persone diverso da quello promesso.
   limit?: number;
+  // Su chi centrare la finestra quando c'è un limite. In home è chi guarda:
+  // le tre righe che contano sono la sua e quelle che ha davanti e dietro,
+  // non le prime tre di una classifica in cui magari non compare.
+  focusId?: string | null;
   bare?: boolean;
 }) {
   const sorted = sortPadelProfiles(profiles);
   const ranks = padelRanks(sorted);
-  const visible = limit === undefined ? sorted : sorted.slice(0, limit);
+  const start = limit === undefined
+    ? 0
+    : rankingWindowStart(sorted.length, limit, sorted.findIndex((profile) => profile.id === focusId));
+  const visible = limit === undefined ? sorted : sorted.slice(start, start + limit);
   return (
     <div className={`${expanded ? "ranking-table" : "ranking-list"}${bare ? " ranking-table-bare" : ""}`}>
       {visible.map((profile, index) => {
         const isRanked = profile.matches_played > 0;
-        const rank = ranks[index];
+        // La posizione va letta sull'elenco intero, non sulla finestra:
+        // altrimenti la prima riga visibile direbbe sempre "1".
+        const rank = ranks[start + index];
         const winRate = profile.matches_played ? Math.round((profile.wins / profile.matches_played) * 100) : 0;
         const content = (
           <>
@@ -4084,6 +4113,29 @@ function AppShell({ session }: { session: Session | null }) {
   const currentUserId = currentUser?.id ?? null;
   const currentUserName = currentUser?.display_name ?? "";
 
+  // L'ultima coppia con cui si è scesi in campo. Di squadre se ne può avere
+  // più d'una in corso contemporaneamente, e nessuna è "la propria" in senso
+  // stretto: quella che vale come punto di riferimento è l'ultima giocata.
+  // Le partite arrivano già dalla più recente, quindi la prima che ci
+  // riguarda è anche l'ultima disputata.
+  const lastTeamId = useMemo(() => {
+    if (!currentUserId) return null;
+    for (const match of matches) {
+      const mine = match.players.find((player) => player.profile_id === currentUserId);
+      if (!mine) continue;
+      const mates = match.players
+        .filter((player) => player.team === mine.team)
+        .map((player) => player.profile_id);
+      // Un singolo non forma una coppia: quella partita non dice niente sulle
+      // squadre e si passa a quella prima.
+      if (mates.length < 2) continue;
+      const played = teams.find((team) => team.players.length === 2
+        && team.players.every((profile) => mates.includes(profile.id)));
+      if (played) return played.id;
+    }
+    return null;
+  }, [matches, teams, currentUserId]);
+
   // Le partite del foglio, divise per mese. Il filtro "personale" agisce
   // prima del raggruppamento, così i conteggi sui raccoglitori dicono quante
   // partite ci sono davvero dentro e non quante ce ne sarebbero in totale.
@@ -4896,9 +4948,10 @@ function AppShell({ session }: { session: Session | null }) {
                         <RankingList
                           profiles={seasonProfiles}
                           limit={HOME_ROWS}
+                          focusId={currentUserId}
                         />
                       ) : teams.length ? (
-                        <TeamRankingList teams={teams} limit={HOME_ROWS} />
+                        <TeamRankingList teams={teams} limit={HOME_ROWS} focusId={lastTeamId} />
                       ) : (
                         <p className="demo-profile-note">
                           Le coppie si formano dalle partite: registra un doppio e compariranno qui.
