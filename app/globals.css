@@ -284,6 +284,31 @@ button {
   position: relative;
 }
 
+/* Lo stesso azzurro, ma con un po' di luce addosso: schiarito appena in alto
+   e appena scurito in fondo, come se la superficie fosse leggermente curva.
+   Le due estremità restano mescolate al colore di partenza, non sono tinte
+   nuove: il tasto deve sembrare lo stesso di prima, solo meno stampato.
+   Prima la versione piatta, per chi non ha color-mix. */
+.cta-new-match.button-primary {
+  background: var(--blue);
+  background: linear-gradient(
+    172deg,
+    color-mix(in srgb, var(--blue) 86%, #ffffff) 0%,
+    var(--blue) 54%,
+    color-mix(in srgb, var(--blue) 93%, var(--ink)) 100%
+  );
+}
+
+.cta-new-match.button-primary:hover {
+  background: var(--blue-dark);
+  background: linear-gradient(
+    172deg,
+    color-mix(in srgb, var(--blue-dark) 86%, #ffffff) 0%,
+    var(--blue-dark) 54%,
+    color-mix(in srgb, var(--blue-dark) 93%, var(--ink)) 100%
+  );
+}
+
 /* Bagliore che attraversa l'azzurro ogni tanto. Sta sopra al testo di
    proposito: e una luce che passa sul tasto, non una decorazione dietro.
    Volutamente sobrio e con una pausa lunga fra un passaggio e l'altro:
