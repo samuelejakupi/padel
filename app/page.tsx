@@ -1559,7 +1559,6 @@ function BottomSheet({
   onClose: () => void;
   children: ReactNode;
 }) {
-  const backdropRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const drag = useRef<{ y: number; lastY: number; lastAt: number; speed: number } | null>(null);
@@ -1588,7 +1587,6 @@ function BottomSheet({
 
   const dismiss = useCallback(() => {
     const panel = panelRef.current;
-    const backdrop = backdropRef.current;
     if (closing.current) return;
     closing.current = true;
     if (!panel || !panel.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -1596,16 +1594,11 @@ function BottomSheet({
       return;
     }
     const from = panel.style.transform || "translate3d(0, 0, 0)";
-    // Esce scivolando in basso e basta: nessuna dissolvenza sul pannello, che
-    // sfumando lasciava intravedere la pagina attraverso il foglio.
+    // Esce scivolando in basso e basta. Nessuna opacità in movimento: il
+    // pannello che sfumava lasciava intravedere la pagina attraverso di sé.
     panel.animate(
       [{ transform: from }, { transform: "translate3d(0, 102%, 0)" }],
       { duration: 300, easing: "cubic-bezier(0.4, 0, 0.9, 0.35)", fill: "forwards" },
-    );
-    // Il velo si spegne un po' dopo, così il pannello non sparisce nel vuoto.
-    backdrop?.animate(
-      [{ opacity: 1 }, { opacity: 1, offset: 0.35 }, { opacity: 0 }],
-      { duration: 300, easing: "ease-in", fill: "forwards" },
     );
     window.setTimeout(onClose, 290);
   }, [onClose]);
@@ -1677,7 +1670,6 @@ function BottomSheet({
   return (
     <div
       className="sheet-backdrop"
-      ref={backdropRef}
       role="presentation"
       onMouseDown={(event) => event.target === event.currentTarget && dismiss()}
     >

@@ -5076,10 +5076,13 @@ button.pizza-ranking-row {
 
 /* Foglio che sale dal basso: elenco completo senza cambiare schermata.
    Si chiude trascinandolo giù, toccando fuori o con Esc. */
+/* Nessuna dissolvenza: il velo c'è da subito e resta pieno fino alla fine.
+   La sfocatura serve a non far leggere la pagina sotto, che in trasparenza
+   si accavallava ai testi del foglio. */
 .sheet-backdrop {
   align-items: flex-end;
-  animation: sheet-veil 260ms ease-out;
-  background: rgba(8, 18, 29, 0.55);
+  backdrop-filter: blur(14px) saturate(120%);
+  background: rgba(8, 18, 29, 0.58);
   display: flex;
   inset: 0;
   justify-content: center;
@@ -5087,12 +5090,8 @@ button.pizza-ranking-row {
   overscroll-behavior: none;
   position: fixed;
   touch-action: none;
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
   z-index: 100;
-}
-
-@keyframes sheet-veil {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 .sheet {
