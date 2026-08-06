@@ -1161,11 +1161,13 @@ form select:focus,
 }
 
 /* Il saluto vive dentro il riquadro scuro, sopra la posizione in classifica. */
+/* Il saluto è una riga di servizio sopra all'occhiello, non un titolo: la
+   card deve restare compatta e il numero il protagonista. */
 .hero-greeting {
-  font-size: clamp(28px, 2.6vw, 40px);
-  letter-spacing: -1.8px;
-  line-height: 1;
-  margin: 0 0 26px;
+  font-size: 17px;
+  letter-spacing: -0.4px;
+  line-height: 1.1;
+  margin: 0 0 var(--space-5);
 }
 
 .hero-greeting span {
@@ -1230,31 +1232,13 @@ form select:focus,
 .hero-stat-copy > p:not(.eyebrow) {
   color: rgba(255, 255, 255, 0.72);
   font-size: 12px;
-  margin: var(--space-7) 0 var(--space-3);
+  margin: var(--space-3) 0 0;
 }
 
 .hero-stat-copy > p b {
   color: var(--white);
 }
 
-.progress-track {
-  background: rgba(16, 29, 43, 0.27);
-  height: 5px;
-  max-width: 260px;
-}
-
-.progress-track span {
-  background: var(--lime);
-  display: block;
-  height: 100%;
-}
-
-.hero-stat-copy > small {
-  color: rgba(255, 255, 255, 0.58);
-  display: block;
-  font-size: 10px;
-  margin-top: var(--space-3);
-}
 
 .hero-player {
   align-items: center;

@@ -62,11 +62,9 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
         with:
-          # L'azione si arrende dopo dieci minuti di attesa, e su questo
-          # repository la consegna a Pages ci mette regolarmente di più: il
-          # sito veniva compilato bene e poi buttato via sul traguardo.
-          # Venti minuti di pazienza, e un controllo ogni dieci secondi invece
-          # che ogni cinque per non tempestare l'API di richieste.
-          timeout: 1200000
+          # Dieci minuti è il massimo consentito: valori più alti vengono
+          # riportati d'ufficio a questo. Restano il controllo diradato e la
+          # maggior tolleranza agli errori temporanei dell'API.
+          timeout: 600000
           reporting_interval: 10000
           error_count: 20

@@ -4219,6 +4219,9 @@ function AppShell({ session }: { session: Session | null }) {
                         <Avatar profile={currentUser} size="xl" rank={currentRank || undefined} />
                       </div>
                     </div>
+                    {/* Una riga sola sotto il numero: la barra di avanzamento
+                        e la frase lunga allungavano la card senza aggiungere
+                        niente che il numero non dicesse già. */}
                     <p>
                       {currentRank === 0
                         ? "Gioca la prima partita per entrare nella classifica."
@@ -4226,8 +4229,6 @@ function AppShell({ session }: { session: Session | null }) {
                           ? "Sei in testa alla classifica."
                           : <>Sei a <b>{pointsToNext} punti</b> dal prossimo posto.</>}
                     </p>
-                    <div className="progress-track"><span style={{ width: `${currentRank ? Math.min(92, 48 + winRate / 2) : 0}%` }} /></div>
-                    <small>{heroGreeting.rest}</small>
                   </div>
                   <div className="hero-kpis">
                     <span><b>{currentRank ? currentUser.rating : "N/C"}</b><small>ELO PT</small></span>
