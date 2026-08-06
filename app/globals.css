@@ -6426,14 +6426,20 @@ button.pizza-ranking-row {
      punteggio in mezzo. Niente miniatura, niente campo, niente punti Elo —
      nell'anteprima sarebbero segni troppo piccoli per leggerli davvero, e
      per quelli si apre il foglio. */
-  .match-card-compact {
+  /* Due classi e non una: la regola generale di .match-card qui sotto mette
+     la data su una riga sua ("head head" / "main video") e vale quanto questa,
+     quindi vinceva per posizione e la data restava sopra a tutto invece che
+     accanto. Con .match-card in più la specificità sale e la riga unica tiene:
+     data, coppia, punteggio, coppia, tutto sulla stessa mezzeria. */
+  .match-card.match-card-compact {
+    align-items: center;
     grid-template-areas: "head main";
     grid-template-columns: auto minmax(0, 1fr);
     min-height: 0;
     padding: 10px 14px;
   }
 
-  .match-card-compact .match-head {
+  .match-card.match-card-compact .match-head {
     display: block;
     flex: 0 0 auto;
   }
@@ -6446,7 +6452,7 @@ button.pizza-ranking-row {
      stesso punto, come una data scritta a margine. Centrarli faceva ballare
      il mese sotto il numero, che è più largo. In altezza resta invece al
      centro, sulla stessa mezzeria di avatar e punteggio. */
-  .match-card-compact .match-date {
+  .match-card.match-card-compact .match-date {
     align-items: flex-start;
     flex-direction: column;
     gap: 0;
@@ -6454,7 +6460,7 @@ button.pizza-ranking-row {
     text-align: left;
   }
 
-  .match-card-compact .match-date span {
+  .match-card.match-card-compact .match-date span {
     font-size: 10px;
     line-height: 1.2;
     text-transform: uppercase;
@@ -6462,25 +6468,25 @@ button.pizza-ranking-row {
 
   /* I due compagni sulla stessa riga separati da una virgola, invece che uno
      sotto l'altro: la riga è bassa e in verticale non ci starebbero. */
-  .match-card-compact .match-team-players {
+  .match-card.match-card-compact .match-team-players {
     flex-direction: row;
     flex-wrap: wrap;
     gap: 0 3px;
     justify-content: center;
   }
 
-  .match-card-compact .match-team-player:not(:last-child)::after {
+  .match-card.match-card-compact .match-team-player:not(:last-child)::after {
     content: ",";
   }
 
   /* Il contorno dell'avatar dice com'è finita: verde chi ha vinto, rosso chi
      ha perso. Prende il posto del bianco e della scritta VITTORIA, che su una
      riga sola non ci stava. */
-  .match-card-compact .match-team .avatar {
+  .match-card.match-card-compact .match-team .avatar {
     border-color: var(--danger);
   }
 
-  .match-card-compact .match-team.winner .avatar {
+  .match-card.match-card-compact .match-team.winner .avatar {
     border-color: var(--positive);
   }
 
