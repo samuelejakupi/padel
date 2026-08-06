@@ -10,12 +10,9 @@ permissions:
   pages: write
   id-token: write
 
-# Se arriva un push nuovo mentre il precedente sta ancora compilando, quello
-# vecchio viene annullato: non ha senso pubblicare una versione già superata,
-# e si smette di fare la coda.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -26,18 +23,6 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      # La cache di compilazione di Next: senza, ogni build ricompila tutto da
-      # zero. La chiave cambia quando cambiano i sorgenti, ma il ripristino
-      # parziale permette comunque di riusare il lavoro precedente.
-      - name: Riusa la cache di compilazione
-        uses: actions/cache@v4
-        with:
-          path: .next/cache
-          key: next-${{ hashFiles('package-lock.json') }}-${{ hashFiles('app/**', 'lib/**') }}
-          restore-keys: |
-            next-${{ hashFiles('package-lock.json') }}-
-            next-
-
       - name: Configura il percorso del sito
         shell: bash
         run: |
