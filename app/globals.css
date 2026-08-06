@@ -6442,11 +6442,16 @@ button.pizza-ranking-row {
      abbreviato sotto. In riga occupava larghezza che serve ai nomi, e
      soprattutto restava l'unico elemento steso mentre tutti gli altri sono
      impilati: bastava lei a far sembrare la riga storta. */
+  /* Incolonnata e a filo del bordo sinistro: numero e mese partono dallo
+     stesso punto, come una data scritta a margine. Centrarli faceva ballare
+     il mese sotto il numero, che è più largo. In altezza resta invece al
+     centro, sulla stessa mezzeria di avatar e punteggio. */
   .match-card-compact .match-date {
-    align-items: center;
+    align-items: flex-start;
     flex-direction: column;
     gap: 0;
     justify-content: center;
+    text-align: left;
   }
 
   .match-card-compact .match-date span {
