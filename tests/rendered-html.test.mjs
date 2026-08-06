@@ -59,7 +59,11 @@ test("include configurazione Supabase e pubblicazione Pages", async () => {
   assert.match(page, /Contemporanea/);
   assert.match(page, /Nostalgica/);
   assert.match(page, /key: "padel", glyph: "racket", label: "Padel"/);
-  assert.match(page, /function PadelSectionNav/);
+  // La navigazione interna al Padel non esiste piu: partite e ranking si
+  // aprono nel foglio dal basso, quindi la voce nella barra e una sola.
+  // Il presidio si sposta sul componente che ha preso quel ruolo.
+  assert.match(page, /function BottomSheet/);
+  assert.doesNotMatch(page, /function PadelSectionNav/);
   assert.match(pizzaMigration, /pizza_session_participants/);
   assert.match(pizzaMigration, /save_pizza_session_vote/);
   assert.match(pizzaMigration, /completed_at is null/);
