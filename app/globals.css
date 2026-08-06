@@ -5275,8 +5275,11 @@ button.pizza-ranking-row {
   }
 }
 
+/* Titolo e selettore sulla stessa linea di mezzeria. Da quando il titolo è
+   un'etichetta bassa e maiuscola, allinearli in alto lo lasciava appeso
+   sopra i due tasti invece che accanto. */
 .sheet-head {
-  align-items: flex-start;
+  align-items: center;
   display: flex;
   justify-content: space-between;
   padding-bottom: var(--space-4);
@@ -6483,6 +6486,20 @@ button.pizza-ranking-row {
 
   .dashboard-side {
     order: 2;
+    /* Qui la home non è una griglia ma una colonna flex, e in una colonna
+       align-self guarda il lato corto: cioè la larghezza. Lasciarlo a "start",
+       che su desktop serve solo a non far allungare la card, qui la faceva
+       restringere sul suo contenuto. */
+    align-self: stretch;
+    /* Sotto l'ultima riga basta un respiro: la card si chiudeva con quasi due
+       dita di bianco. I fianchi restano come sono. */
+    padding-bottom: var(--space-3);
+  }
+
+  /* Nell'anteprima l'elenco è l'ultima cosa della card: il margine sotto si
+     sommava al padding e faceva parte dello stesso vuoto. */
+  .ranking-preview-list .ranking-list {
+    margin-bottom: 0;
   }
 
   /* Le intestazioni di sezione su mobile contenevano solo il tasto, che ora
@@ -7053,7 +7070,7 @@ button.pizza-ranking-row {
   }
 
   .dashboard-side {
-    padding: 20px 16px;
+    padding: 20px 16px var(--space-3);
   }
 
   /* La struttura della card resta quella del breakpoint 780px: qui si

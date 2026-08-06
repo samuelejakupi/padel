@@ -98,6 +98,18 @@ finché in fondo alla card c'era il tasto "Vedi tutti" spinto giù da
 `margin-top: auto` quello spazio era occupato; tolto il tasto restava mezzo
 riquadro di bianco sotto la terza riga.
 
+**Attenzione a quella riga su mobile**, e ci siamo cascati: sotto i 780px la
+home non è una griglia ma una colonna flex (`.dashboard-grid` diventa
+`display: flex`), e in una colonna `align-self` guarda il lato corto, cioè la
+larghezza. La card si è ristretta sul suo contenuto finché non l'abbiamo
+rimessa a `stretch` nel blocco mobile. Il vuoto in fondo lì non veniva dalla
+griglia — l'altezza era già quella del contenuto — ma dal padding inferiore
+della card sommato al margine dell'elenco: ora sono `--space-3` e zero.
+
+Il titolo del foglio e i due tasti dello switch stanno sulla stessa mezzeria
+(`.sheet-head` è `align-items: center`): da quando il titolo è un'etichetta
+bassa e maiuscola, allineare in alto lo lasciava appeso sopra i tasti.
+
 ### La barra del menu non somma più la safe area
 Stava a `calc(11px + env(safe-area-inset-bottom))`. Con la barra di stato
 opaca quel valore era zero e non si notava; da quando c'è `viewport-fit:
