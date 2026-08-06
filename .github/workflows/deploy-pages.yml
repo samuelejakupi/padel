@@ -1,8 +1,8 @@
 name: Pubblica Padel House su GitHub Pages
 
 on:
-  push:
-    branches: ["main"]
+  # Vercel e ora l'hosting di produzione. Pages resta disponibile soltanto
+  # come fallback manuale e non parte piu a ogni push su main.
   workflow_dispatch:
 
 permissions:

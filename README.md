@@ -13,7 +13,7 @@ Il sito di gruppo dei TheBoyz. La prima versione include:
 - classifica, win rate, serie positiva/negativa e storico;
 - scheda giocatore con andamento Elo e storico personale;
 - layout responsive per telefono e desktop;
-- pubblicazione automatica su GitHub Pages.
+- pubblicazione automatica su Vercel.
 
 Il progetto non contiene dati dimostrativi: senza credenziali Supabase mostra una
 schermata di configurazione e non simula utenti o partite.
@@ -37,8 +37,8 @@ ai file `.env` pubblicati, alle GitHub Actions o al codice frontend.
 3. Esegui la query.
 4. Crea una seconda query con `supabase/migration-pizza-sessioni.sql` ed eseguila. Va rilanciata anche su un progetto esistente per sostituire il vecchio timer con i partecipanti.
 5. Esegui anche `supabase/migration-tornei.sql` per abilitare tornei, calendario e moltiplicatore Elo.
-6. In **Authentication → URL Configuration**, imposta **Site URL** con l’indirizzo GitHub Pages finale, per esempio:
-   `https://nomeutente.github.io/nome-repository/`
+6. In **Authentication → URL Configuration**, imposta **Site URL** con l’indirizzo Vercel finale, per esempio:
+   `https://nome-progetto.vercel.app/`
 7. In **Project Settings → API**, copia:
    - Project URL
    - anon / publishable key
@@ -63,18 +63,16 @@ npm install
 npm run dev
 ```
 
-## 3. Pubblica su GitHub Pages
+## 3. Pubblica su Vercel
 
-1. Crea un repository GitHub e carica questo progetto sul branch `main`.
-2. Nel repository apri **Settings → Secrets and variables → Actions → Variables**.
-3. Aggiungi:
-   - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
-4. Apri **Settings → Pages** e seleziona **GitHub Actions** come origine.
-5. Il workflow incluso pubblica automaticamente il sito a ogni aggiornamento del branch `main`.
+1. Importa il repository GitHub in un nuovo progetto Vercel con preset **Next.js**.
+2. In **Project Settings → Environment Variables** aggiungi per Production e Preview:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_SITE_URL`, con il dominio Vercel di produzione.
+3. Ogni aggiornamento del branch `main` viene pubblicato automaticamente; gli altri branch ricevono un URL di anteprima.
 
-Il percorso del repository viene rilevato automaticamente, quindi il sito funziona sia su
-`nomeutente.github.io` sia su `nomeutente.github.io/nome-repository`.
+Il vecchio workflow GitHub Pages resta eseguibile manualmente come fallback, ma non parte più a ogni push.
 
 ## Comandi utili
 

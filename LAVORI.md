@@ -15,28 +15,6 @@ Ultimo aggiornamento: 6 agosto 2026
 
 ## In sospeso
 
-### Pubblicazione bloccata su GitHub Pages
-Da metà giornata la compilazione riesce sempre (27-31 secondi) ma la consegna
-a Pages resta appesa e viene interrotta dopo dieci minuti — `Timeout reached,
-aborting!`. Dieci minuti sono il massimo consentito dall'azione: alzarlo non
-serve, il valore viene riportato d'ufficio a quello.
-
-Cosa è già stato escluso:
-- non è il codice: l'artefatto viene prodotto correttamente ogni volta;
-- non è la coda fra esecuzioni: è fallita anche una run che era sola;
-- non è un guasto dichiarato: la pagina di stato di GitHub è verde.
-
-Cosa resta da verificare, e serve l'account di Samuele (proprietario):
-- **Settings → Pages**: la sorgente deve essere "GitHub Actions", non un branch;
-- **Settings → Environments → github-pages**: nessuna regola di protezione né
-  approvazione richiesta. Un'approvazione in attesa produce esattamente questo
-  sintomo.
-
-Ipotesi ancora in piedi: il limite di circa dieci pubblicazioni all'ora per
-sito. Combacia con il fatto che stamattina funzionava e ha smesso dopo una
-decina di push ravvicinati. Cura: pubblicare meno spesso, accumulando le
-modifiche.
-
 ### Sfocatura sotto la Dynamic Island
 Richiesta: quando si apre il foglio dal basso, sfocare anche la striscia in
 alto. Oggi non è possibile: la web app dichiara la barra di stato opaca,
@@ -59,6 +37,12 @@ salvata sulla schermata Home. Per ora c'è il pallino sull'icona Pizza.
 ---
 
 ## Deciso, e perché
+
+### Vercel è l'hosting di produzione
+GitHub Pages compilava il progetto in circa trenta secondi ma diverse consegne
+restavano bloccate fino al limite rigido di dieci minuti. Il 6 agosto 2026 il
+progetto è stato migrato su Vercel, che pubblica automaticamente `main` e crea
+anteprime per gli altri branch. Pages rimane solo come fallback manuale.
 
 ### Il Padel è la home
 Non c'è più una schermata di smistamento: si entra nel court. Partite e
