@@ -5106,9 +5106,23 @@ button.pizza-ranking-row {
   padding: var(--space-2) var(--space-6) 0;
   /* La deformazione parte dal bordo dello schermo, non dal centro: è quello
      che dà l'impressione del foglio che si appoggia. */
+  position: relative;
   transform-origin: bottom center;
   width: min(680px, 100%);
   will-change: transform;
+}
+
+/* Prolunga il fondo del foglio oltre il bordo dello schermo: tirandolo verso
+   l'alto non si apre uno spiraglio sul velo sottostante. */
+.sheet::after {
+  background: var(--paper);
+  content: "";
+  height: 160px;
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
 }
 
 /* In entrata sale, supera di poco il punto d'arrivo e si assesta, mentre la

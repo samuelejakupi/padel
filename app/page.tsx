@@ -1548,11 +1548,14 @@ function TeamRankingList({
 function BottomSheet({
   title,
   eyebrow,
+  action,
   onClose,
   children,
 }: {
   title: string;
   eyebrow: string;
+  // Comando nell'angolo dell'intestazione, al posto della crocetta.
+  action?: ReactNode;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -1593,18 +1596,18 @@ function BottomSheet({
       return;
     }
     const from = panel.style.transform || "translate3d(0, 0, 0)";
-    // In uscita si allunga un attimo prima di sparire: è la stessa elasticità
-    // dell'entrata, letta al contrario.
+    // Esce scivolando in basso e basta: nessuna dissolvenza sul pannello, che
+    // sfumando lasciava intravedere la pagina attraverso il foglio.
     panel.animate(
-      [
-        { transform: from },
-        { transform: "translate3d(0, 6%, 0) scaleY(1.015)", offset: 0.18 },
-        { transform: "translate3d(0, 104%, 0) scaleY(0.985)" },
-      ],
-      { duration: 340, easing: "cubic-bezier(0.32, 0, 0.67, 0)", fill: "forwards" },
+      [{ transform: from }, { transform: "translate3d(0, 102%, 0)" }],
+      { duration: 300, easing: "cubic-bezier(0.4, 0, 0.9, 0.35)", fill: "forwards" },
     );
-    backdrop?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: "forwards" });
-    window.setTimeout(onClose, 300);
+    // Il velo si spegne un po' dopo, così il pannello non sparisce nel vuoto.
+    backdrop?.animate(
+      [{ opacity: 1 }, { opacity: 1, offset: 0.35 }, { opacity: 0 }],
+      { duration: 300, easing: "ease-in", fill: "forwards" },
+    );
+    window.setTimeout(onClose, 290);
   }, [onClose]);
 
   useEffect(() => {
@@ -1732,7 +1735,7 @@ function BottomSheet({
             <p className="eyebrow dark">{eyebrow}</p>
             <h2>{title}</h2>
           </div>
-          <button className="icon-button" onClick={dismiss} aria-label="Chiudi">×</button>
+          {action}
         </div>
         <div className="sheet-body" ref={bodyRef}>{children}</div>
       </section>
@@ -4878,6 +4881,26 @@ function AppShell({ session }: { session: Session | null }) {
           eyebrow="THEBOYZ PADEL"
           title={rankingMode === "single" ? "Classifica singolo" : "Classifica squadre"}
           onClose={() => setSheet(null)}
+          action={(
+            <div className="mode-switch" role="group" aria-label="Tipo di classifica">
+              <button
+                className={rankingMode === "single" ? "active" : ""}
+                onClick={() => setRankingMode("single")}
+                aria-label="Classifica singolo"
+                title="Singolo"
+              >
+                <NavGlyph name="person" />
+              </button>
+              <button
+                className={rankingMode === "team" ? "active" : ""}
+                onClick={() => setRankingMode("team")}
+                aria-label="Classifica squadre"
+                title="Squadra"
+              >
+                <NavGlyph name="people" />
+              </button>
+            </div>
+          )}
         >
           {rankingMode === "single" ? (
             <RankingList
