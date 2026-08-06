@@ -10,14 +10,13 @@ permissions:
   pages: write
   id-token: write
 
-# Una sola pubblicazione in volo alla volta. Con false le esecuzioni si
-# incolonnavano e GitHub Pages, trovandosene due in coda per lo stesso
-# ambiente, ne lasciava morire una per timeout dopo dieci minuti: metà dei
-# deploy andava persa. Annullando subito quella superata ne resta una sola,
-# che è anche quella giusta — la più recente.
+# Le pubblicazioni restano in fila e non si annullano a metà: interrompere una
+# consegna già avviata lascia l'ambiente occupato da un deployment fantasma, e
+# quello dopo aspetta invano finché non scade. È anche ciò che GitHub consiglia
+# per Pages.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -56,7 +55,18 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
+    # Il lavoro non resta appeso all'infinito se Pages non risponde affatto.
+    timeout-minutes: 30
     steps:
       - name: Pubblica
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # L'azione si arrende dopo dieci minuti di attesa, e su questo
+          # repository la consegna a Pages ci mette regolarmente di più: il
+          # sito veniva compilato bene e poi buttato via sul traguardo.
+          # Venti minuti di pazienza, e un controllo ogni dieci secondi invece
+          # che ogni cinque per non tempestare l'API di richieste.
+          timeout: 1200000
+          reporting_interval: 10000
+          error_count: 20
