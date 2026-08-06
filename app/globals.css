@@ -2190,6 +2190,20 @@ button.podium-person {
   opacity: 0.42;
 }
 
+/* Nello switch delle partite una delle due voci è la faccia di chi guarda,
+   non un glifo: va rimpicciolita al passo dei tracciati e spenta con la
+   stessa opacità, altrimenti la voce non scelta resterebbe più viva
+   dell'altra. */
+.mode-switch .avatar {
+  border-width: 1.5px;
+  height: 22px;
+  width: 22px;
+}
+
+.mode-switch button:not(.active) .avatar {
+  opacity: 0.42;
+}
+
 .mode-switch button.active {
   background: var(--white);
   box-shadow: 0 1px 3px rgba(11, 27, 44, 0.12);
@@ -5341,6 +5355,83 @@ button.pizza-ranking-row {
   border-bottom: 0;
 }
 
+/* Raccoglitori per mese dentro al foglio delle partite. */
+.month-groups {
+  display: flex;
+  flex-direction: column;
+}
+
+.month-group {
+  border-bottom: 1px solid var(--veil-2);
+}
+
+.month-group:last-child {
+  border-bottom: 0;
+}
+
+.month-head {
+  align-items: center;
+  appearance: none;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  gap: 10px;
+  /* Il fondo del tocco arriva ai bordi del foglio invece di fermarsi sul
+     testo, come nelle righe della classifica. */
+  margin-inline: -10px;
+  padding: 16px 10px;
+  text-align: left;
+  width: calc(100% + 20px);
+}
+
+.month-head b {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+/* Quante partite ci sono dentro: la pastiglia risponde alla domanda prima
+   che il raccoglitore si apra. */
+.month-count {
+  background: var(--veil-2);
+  border-radius: var(--radius-pill);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+  margin-right: auto;
+  min-width: 22px;
+  padding: 2px 7px;
+  text-align: center;
+}
+
+/* Freccia che ruota: dice da sola se il raccoglitore è aperto o chiuso, e
+   ruotando racconta il passaggio fra i due stati invece di saltarci. */
+.month-chevron {
+  border-right: 2px solid var(--ink-45);
+  border-bottom: 2px solid var(--ink-45);
+  height: 8px;
+  transform: rotate(45deg);
+  transition: transform 280ms cubic-bezier(0.32, 0.9, 0.28, 1);
+  width: 8px;
+}
+
+.month-group.is-open .month-chevron {
+  transform: rotate(-135deg);
+}
+
+/* L'altezza la scrive il JavaScript, qui serve solo che quello che esce dal
+   riquadro venga tagliato invece di sbordare sul raccoglitore dopo. */
+.month-body {
+  height: 0;
+  overflow: hidden;
+}
+
+.month-body-inner {
+  padding-bottom: var(--space-4);
+}
+
 .modal {
   background: var(--paper);
   border-radius: var(--radius);
@@ -6224,7 +6315,14 @@ button.pizza-ranking-row {
     border-radius: var(--radius-lg);
     display: block;
     overflow: hidden;
-    padding: 0 14px 14px;
+    /* In fondo bastava un respiro: senza più il tasto "Vedi tutte" quei 14px
+       diventavano un vuoto, come era successo nella card della classifica. */
+    padding: 0 14px var(--space-3);
+  }
+
+  /* Il tasto è uscito dal riquadro e sta fra la classifica e le partite. */
+  .cta-between {
+    order: 3;
   }
 
   .match-panel-head {
@@ -6272,8 +6370,64 @@ button.pizza-ranking-row {
     transform: none;
   }
 
-  .match-panel .cta-see-all-bottom {
-    margin-top: 4px;
+  /* Tutto il riquadro è un bersaglio solo, come la card della classifica:
+     eredita dal contenitore e non deve sembrare un tasto. */
+  .match-panel-open {
+    appearance: none;
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    display: block;
+    font: inherit;
+    padding: 0;
+    text-align: left;
+    width: 100%;
+  }
+
+  .match-panel-open:focus-visible {
+    outline: 3px solid rgba(24, 223, 228, 0.35);
+    outline-offset: 4px;
+  }
+
+  /* Anteprima in home: una riga sola. Data a sinistra, poi le due coppie col
+     punteggio in mezzo. Niente miniatura, niente campo, niente punti Elo —
+     nell'anteprima sarebbero segni troppo piccoli per leggerli davvero, e
+     per quelli si apre il foglio. */
+  .match-card-compact {
+    grid-template-areas: "head main";
+    grid-template-columns: auto minmax(0, 1fr);
+    min-height: 0;
+    padding: 10px 14px;
+  }
+
+  .match-card-compact .match-head {
+    display: block;
+    flex: 0 0 auto;
+  }
+
+  /* I due compagni sulla stessa riga separati da una virgola, invece che uno
+     sotto l'altro: la riga è bassa e in verticale non ci starebbero. */
+  .match-card-compact .match-team-players {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0 3px;
+    justify-content: center;
+  }
+
+  .match-card-compact .match-team-player:not(:last-child)::after {
+    content: ",";
+  }
+
+  /* Il contorno dell'avatar dice com'è finita: verde chi ha vinto, rosso chi
+     ha perso. Prende il posto del bianco e della scritta VITTORIA, che su una
+     riga sola non ci stava. */
+  .match-card-compact .match-team .avatar {
+    border-color: var(--danger);
+  }
+
+  .match-card-compact .match-team.winner .avatar {
+    border-color: var(--positive);
   }
 
   /* Nel ranking bastano i primi quattro: per gli altri c'e "Vedi tutto".
@@ -6520,11 +6674,11 @@ button.pizza-ranking-row {
   }
 
   .match-panel {
-    order: 3;
+    order: 4;
   }
 
   .tournament-panel {
-    order: 4;
+    order: 5;
   }
 
   .tournament-row-main {

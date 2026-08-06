@@ -1225,12 +1225,109 @@ function parseClock(value: string) {
   return null;
 }
 
+// Un raccoglitore che si apre e si chiude. L'altezza si anima a mano perché
+// da "0" a "auto" il browser non sa interpolare: si misura il contenuto, si
+// va da una misura all'altra, e appena arrivati si torna ad "auto" — se
+// restasse un numero fisso, un elenco che cambia resterebbe tagliato.
+function MonthGroup({
+  label,
+  count,
+  open,
+  onToggle,
+  children,
+}: {
+  label: string;
+  count: number;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body) return;
+    // Al primo disegno nessuna animazione: il foglio si apre già con tutti i
+    // raccoglitori chiusi, e vederli richiudersi sarebbe un movimento di
+    // troppo.
+    if (!mounted.current) {
+      mounted.current = true;
+      body.style.height = open ? "auto" : "0px";
+      return;
+    }
+    const from = body.getBoundingClientRect().height;
+    const to = open ? body.scrollHeight : 0;
+    body.style.height = `${to}px`;
+    if (!body.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      if (open) body.style.height = "auto";
+      return;
+    }
+    const animation = body.animate(
+      [
+        { height: `${from}px`, opacity: open ? 0.4 : 1 },
+        { height: `${to}px`, opacity: open ? 1 : 0.4 },
+      ],
+      {
+        // Aperture più lente delle chiusure: entrando c'è qualcosa da
+        // guardare arrivare, uscendo si toglie di mezzo e basta. È il passo
+        // dei pannelli di sistema.
+        duration: open ? 420 : 280,
+        easing: open ? "cubic-bezier(0.32, 0.9, 0.28, 1)" : "cubic-bezier(0.4, 0, 0.9, 0.35)",
+      },
+    );
+    animation.finished.then(
+      () => { if (open) body.style.height = "auto"; },
+      () => {},
+    );
+  }, [open]);
+
+  return (
+    <div className={`month-group${open ? " is-open" : ""}`}>
+      <button
+        type="button"
+        className="month-head"
+        onClick={onToggle}
+        aria-expanded={open}
+      >
+        <b>{label}</b>
+        <span className="month-count">{count}</span>
+        <i className="month-chevron" aria-hidden="true" />
+      </button>
+      <div className="month-body" ref={bodyRef}>
+        <div className="month-body-inner">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// Vero sotto i 780px, cioè dove vale l'impaginazione mobile. Serve nei punti
+// in cui telefono e computer non si distinguono solo per stile ma per
+// comportamento, e il CSS da solo non basta: in home la card delle partite è
+// un bersaglio unico che apre il foglio sul telefono, mentre su computer ogni
+// partita continua ad aprirsi in modifica.
+// Parte da false e si corregge al primo effetto: durante la generazione
+// statica non esiste una finestra da misurare, e la home vera compare
+// comunque solo dopo che i dati sono arrivati, quindi nessuno vede lo scarto.
+function useIsPhone() {
+  const [isPhone, setIsPhone] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 780px)");
+    const sync = () => setIsPhone(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
+  return isPhone;
+}
+
 function MatchCard({
   match,
   onEdit,
   onPlayVideo,
   viewerId,
   actionLabel,
+  compact = false,
 }: {
   match: PadelMatch;
   onEdit?: (match: PadelMatch) => void;
@@ -1240,6 +1337,11 @@ function MatchCard({
   // usa puo dirlo, altrimenti chi naviga con lo screen reader sentirebbe
   // annunciata un'azione che non avviene.
   actionLabel?: string;
+  // Versione ridotta, quella dell'anteprima in home: una riga sola con data,
+  // le due coppie e il punteggio. Cadono la miniatura del video, il campo e i
+  // punti Elo — nell'anteprima sarebbero numeri troppo piccoli per essere
+  // letti davvero, e per quelli c'e il foglio.
+  compact?: boolean;
 }) {
   // Chi guarda vede sempre la propria squadra a sinistra, a prescindere da
   // come è stata registrata la partita.
@@ -1259,10 +1361,15 @@ function MatchCard({
         const delta = player.rating_delta ?? 0;
         return (
           <span key={player.profile_id} className="match-team-player">
-            {player.profile.display_name}{" "}
-            <b className={`elo-delta ${delta >= 0 ? "up" : "down"}`}>
-              {delta > 0 ? "+" : ""}{delta}
-            </b>
+            {player.profile.display_name}
+            {compact ? null : (
+              <>
+                {" "}
+                <b className={`elo-delta ${delta >= 0 ? "up" : "down"}`}>
+                  {delta > 0 ? "+" : ""}{delta}
+                </b>
+              </>
+            )}
           </span>
         );
       })}
@@ -1271,7 +1378,7 @@ function MatchCard({
 
   return (
     <article
-      className={`match-card${onEdit ? " match-card-link" : ""}`}
+      className={`match-card${onEdit ? " match-card-link" : ""}${compact ? " match-card-compact" : ""}`}
       onClick={onEdit ? () => onEdit(match) : undefined}
       onKeyDown={onEdit ? (event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -1293,7 +1400,11 @@ function MatchCard({
           <b>{new Intl.DateTimeFormat("it-IT", { day: "2-digit" }).format(new Date(match.played_at))}</b>
           <span>{new Intl.DateTimeFormat("it-IT", { month: "short" }).format(new Date(match.played_at)).replace(".", "")}</span>
         </div>
-        {match.court ? <p className="match-court" title={match.court}>{match.court}</p> : <p className="match-court" aria-hidden="true" />}
+        {compact
+          ? null
+          : match.court
+            ? <p className="match-court" title={match.court}>{match.court}</p>
+            : <p className="match-court" aria-hidden="true" />}
       </div>
       <div className="match-main">
         <div className={`match-team ${match.winner_team === leftSide ? "winner" : ""}`}>
@@ -1318,6 +1429,7 @@ function MatchCard({
           {match.winner_team === rightSide ? <em>VITTORIA</em> : null}
         </div>
       </div>
+      {compact ? null : (
       <div className="match-video">
         {videoId ? (
           <button
@@ -1339,6 +1451,7 @@ function MatchCard({
           </span>
         )}
       </div>
+      )}
     </article>
   );
 }
@@ -3350,6 +3463,12 @@ function AppShell({ session }: { session: Session | null }) {
   // Sta qui e non in mezzo agli altri stati perché il gesto qui sotto ha
   // bisogno di sapere quale delle due classifiche è in scena.
   const [rankingMode, setRankingMode] = useState<"single" | "team">("single");
+  const isPhone = useIsPhone();
+  // Quali partite mostra il foglio: tutte, oppure solo quelle di chi guarda.
+  const [matchesMode, setMatchesMode] = useState<"all" | "mine">("all");
+  // Quale raccoglitore del mese è aperto, uno solo per volta. Null vuol dire
+  // tutti chiusi, che è come si presenta il foglio appena sale.
+  const [openMonth, setOpenMonth] = useState<string | null>(null);
   // Quando la card è stata toccata l'ultima volta. Il cambio automatico non si
   // spegne per sempre: si fa da parte mentre il dito è lì e riprende cinque
   // secondi dopo l'ultimo tocco, come se il conto ripartisse da capo.
@@ -3964,6 +4083,30 @@ function AppShell({ session }: { session: Session | null }) {
   const [saluteSeed] = useState(() => Math.random());
   const currentUserId = currentUser?.id ?? null;
   const currentUserName = currentUser?.display_name ?? "";
+
+  // Le partite del foglio, divise per mese. Il filtro "personale" agisce
+  // prima del raggruppamento, così i conteggi sui raccoglitori dicono quante
+  // partite ci sono davvero dentro e non quante ce ne sarebbero in totale.
+  const matchMonths = useMemo(() => {
+    const source = matchesMode === "mine" && currentUserId
+      ? matches.filter((match) => match.players.some((player) => player.profile_id === currentUserId))
+      : matches;
+    const groups = new Map<string, { key: string; label: string; matches: PadelMatch[] }>();
+    source.forEach((match) => {
+      const date = new Date(match.played_at);
+      // La chiave è ordinabile come testo, quindi il riordino qui sotto non
+      // ha bisogno di ricostruire nessuna data.
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      let group = groups.get(key);
+      if (!group) {
+        const name = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(date);
+        group = { key, label: name.charAt(0).toUpperCase() + name.slice(1), matches: [] };
+        groups.set(key, group);
+      }
+      group.matches.push(match);
+    });
+    return [...groups.values()].sort((a, b) => (a.key < b.key ? 1 : -1));
+  }, [matches, matchesMode, currentUserId]);
 
   // Profilo e scheda giocatore sono la stessa pagina: la propria è solo la
   // scheda di sé stessi, con in più i campi modificabili. Memoizzata perche
@@ -4622,37 +4765,56 @@ function AppShell({ session }: { session: Session | null }) {
                     ) : null}
                   </div>
                 </div>
+                {/* Il tasto è uscito dal riquadro e sta fra la classifica e
+                    le partite: è il gesto che le collega, non un comando che
+                    appartiene all'elenco. Su desktop resta invisibile, lì
+                    comanda quello nell'intestazione di sezione. */}
+                <button className="button button-primary cta-new-match cta-in-panel cta-between" onClick={() => setShowMatch(true)}>+ Nuova partita</button>
                 <div className="match-panel">
-                  {/* Su mobile il tasto sta in cima al riquadro; su desktop
-                      resta quello nell'intestazione di sezione qui sopra. */}
-                  <button className="button button-primary cta-new-match cta-in-panel" onClick={() => setShowMatch(true)}>+ Nuova partita</button>
                   {/* Titolo interno al riquadro, come "Classifica Elo".
                       Su desktop resta nascosto: li il titolo di sezione
                       c'e gia sopra, fuori dal riquadro. */}
-                  <div className="match-panel-head"><h2>Ultime partite</h2></div>
+                  <div className="match-panel-head"><h2>{isPhone ? "Partite - Tutti" : "Ultime partite"}</h2></div>
                   {matches.length ? (
-                    <div className="match-list">
-                      {matches.slice(0, HOME_MATCHES).map((match) => (
-                        <MatchCard
-                          key={match.id}
-                          match={match}
-                          onEdit={(selected) => setEditingMatch(selected)}
-                          onPlayVideo={(id) => setPlayingVideo(id)}
-                          viewerId={session?.user.id}
-                        />
-                      ))}
-                    </div>
+                    isPhone ? (
+                      /* Come la classifica: tutta la card è il bersaglio e
+                         apre il foglio. Le singole partite non portano più in
+                         modifica — dentro un tasto non ci possono stare altri
+                         tasti, e per correggere un risultato si passa dal
+                         foglio, dove le card sono per esteso. */
+                      <button
+                        type="button"
+                        className="match-panel-open"
+                        onClick={() => setSheet("matches")}
+                        aria-label={`Apri tutte le partite (${matches.length})`}
+                      >
+                        <div className="match-list">
+                          {matches.slice(0, HOME_MATCHES).map((match) => (
+                            <MatchCard
+                              key={match.id}
+                              match={match}
+                              viewerId={session?.user.id}
+                              compact
+                            />
+                          ))}
+                        </div>
+                      </button>
+                    ) : (
+                      <div className="match-list">
+                        {matches.slice(0, HOME_MATCHES).map((match) => (
+                          <MatchCard
+                            key={match.id}
+                            match={match}
+                            onEdit={(selected) => setEditingMatch(selected)}
+                            onPlayVideo={(id) => setPlayingVideo(id)}
+                            viewerId={session?.user.id}
+                          />
+                        ))}
+                      </div>
+                    )
                   ) : (
                     <div className="compact-empty panel-empty"><span>00</span><p>Nessuna partita registrata. La prima scriverà la storia.</p></div>
                   )}
-                  {matches.length ? (
-                    <button
-                      className="button button-ghost button-full cta-see-all-bottom"
-                      onClick={() => setSheet("matches")}
-                    >
-                      {`Vedi tutte (${matches.length})`}
-                    </button>
-                  ) : null}
                 </div>
 
                 {/* Tornei: stessa impaginazione delle partite, tasto di
@@ -5268,20 +5430,66 @@ function AppShell({ session }: { session: Session | null }) {
 
       {sheet === "matches" ? (
         <BottomSheet
-          eyebrow="ARCHIVIO THEBOYZ PADEL"
-          title={`Tutte le partite (${matches.length})`}
+          title={matchesMode === "all" ? "Partite - Tutti" : "Partite - Personale"}
           onClose={() => setSheet(null)}
+          action={(
+            <div className="mode-switch" role="group" aria-label="Quali partite">
+              <button
+                className={matchesMode === "all" ? "active" : ""}
+                // Cambiando insieme cambiano i mesi e i conteggi: si riparte
+                // da tutti chiusi invece di lasciare aperto un raccoglitore
+                // che ora contiene altro.
+                onClick={() => { setMatchesMode("all"); setOpenMonth(null); }}
+                aria-label="Tutte le partite"
+                title="Tutti"
+              >
+                <NavGlyph name="people" />
+              </button>
+              <button
+                className={matchesMode === "mine" ? "active" : ""}
+                onClick={() => { setMatchesMode("mine"); setOpenMonth(null); }}
+                aria-label="Solo le mie partite"
+                title="Personale"
+              >
+                {/* La faccia di chi guarda al posto di un glifo: dice "queste
+                    sono le tue" senza bisogno di una parola. */}
+                {currentUser
+                  ? <Avatar profile={currentUser} size="sm" />
+                  : <NavGlyph name="person" />}
+              </button>
+            </div>
+          )}
         >
-          <div className="match-list">
-            {matches.map((match) => (
-              <MatchCard
-                key={match.id}
-                match={match}
-                onEdit={(selected) => { setSheet(null); setEditingMatch(selected); }}
-                onPlayVideo={(id) => setPlayingVideo(id)}
-                viewerId={session?.user.id}
-              />
-            ))}
+          {/* Un raccoglitore per mese invece di un elenco unico: le partite
+              si accumulano, e scorrerne cento per arrivare a maggio non è
+              cercare, è rassegnarsi. Aperto uno, gli altri si chiudono. */}
+          <div className="month-groups">
+            {matchMonths.length ? matchMonths.map((group) => (
+              <MonthGroup
+                key={group.key}
+                label={group.label}
+                count={group.matches.length}
+                open={openMonth === group.key}
+                onToggle={() => setOpenMonth((current) => (current === group.key ? null : group.key))}
+              >
+                <div className="match-list">
+                  {group.matches.map((match) => (
+                    <MatchCard
+                      key={match.id}
+                      match={match}
+                      onEdit={(selected) => { setSheet(null); setEditingMatch(selected); }}
+                      onPlayVideo={(id) => setPlayingVideo(id)}
+                      viewerId={session?.user.id}
+                    />
+                  ))}
+                </div>
+              </MonthGroup>
+            )) : (
+              <div className="compact-empty panel-empty">
+                <span>00</span>
+                <p>{matchesMode === "mine" ? "Non hai ancora giocato nessuna partita." : "Nessuna partita registrata."}</p>
+              </div>
+            )}
           </div>
         </BottomSheet>
       ) : null}
