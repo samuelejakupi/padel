@@ -2434,13 +2434,71 @@ button.podium-person {
   box-shadow: 0 0 0 1.5px #bd7740;
 }
 
-/* Nelle coppie gli avatar si sovrappongono: l'anello va solo sul primo,
-   altrimenti il secondo taglia quello di sotto. */
-.medal-gold .team-avatars .avatar + .avatar,
-.medal-silver .team-avatars .avatar + .avatar,
-.medal-bronze .team-avatars .avatar + .avatar {
-  border-color: var(--white);
-  box-shadow: none;
+/* L'anello vale per tutto ciò che rappresenta chi è sul podio: le foto dei
+   giocatori, entrambe nelle coppie, e l'immagine della squadra quando c'è. */
+.medal-gold .team-image {
+  border: 2px solid #d7a125;
+  box-shadow: 0 0 0 1.5px #d7a125;
+}
+
+.medal-silver .team-image {
+  border: 2px solid #a3adb6;
+  box-shadow: 0 0 0 1.5px #a3adb6;
+}
+
+.medal-bronze .team-image {
+  border: 2px solid #bd7740;
+  box-shadow: 0 0 0 1.5px #bd7740;
+}
+
+/* Il riflesso che attraversa l'anello, come sul tasto della nuova partita.
+   È un secondo anello bianco sopra il primo, coperto da una maschera stretta
+   che scorre: si illumina solo il bordo, la foto sotto resta intatta. */
+.medal-gold .avatar::after,
+.medal-silver .avatar::after,
+.medal-bronze .avatar::after,
+.medal-gold .team-image::after,
+.medal-silver .team-image::after,
+.medal-bronze .team-image::after {
+  animation: medal-sheen 5s ease-in-out infinite;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  content: "";
+  inset: -2px;
+  mask-image: linear-gradient(104deg, transparent 42%, black 50%, transparent 58%);
+  mask-repeat: no-repeat;
+  mask-size: 300% 100%;
+  pointer-events: none;
+  position: absolute;
+  -webkit-mask-image: linear-gradient(104deg, transparent 42%, black 50%, transparent 58%);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 300% 100%;
+}
+
+/* Scorre la maschera, non l'anello: l'anello resta al suo posto. */
+@keyframes medal-sheen {
+  0% {
+    mask-position: 200% 0;
+    -webkit-mask-position: 200% 0;
+  }
+  45%,
+  100% {
+    mask-position: -100% 0;
+    -webkit-mask-position: -100% 0;
+  }
+}
+
+/* Il riflesso ha bisogno di un contenitore posizionato e non ritagliato:
+   il ritaglio tondo passa quindi all'immagine. */
+.medal-gold .team-image,
+.medal-silver .team-image,
+.medal-bronze .team-image {
+  overflow: visible;
+  position: relative;
+}
+
+.team-image img {
+  border-radius: 50%;
 }
 
 .medal-gold .rank-number {
@@ -5006,6 +5064,70 @@ button.pizza-ranking-row {
   z-index: 100;
 }
 
+/* Foglio che sale dal basso: elenco completo senza cambiare schermata.
+   Si chiude trascinandolo giù, toccando fuori o con Esc. */
+.sheet-backdrop {
+  align-items: flex-end;
+  background: rgba(8, 18, 29, 0.55);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 100;
+}
+
+.sheet {
+  animation: sheet-in 300ms cubic-bezier(0.2, 0.82, 0.2, 1);
+  background: var(--paper);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: 0 -20px 60px rgba(4, 12, 22, 0.32);
+  display: flex;
+  flex-direction: column;
+  max-height: 88dvh;
+  padding: var(--space-2) var(--space-6) 0;
+  width: min(680px, 100%);
+}
+
+@keyframes sheet-in {
+  from { transform: translate3d(0, 100%, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+/* La maniglia dichiara che il pannello si trascina. */
+.sheet-handle {
+  background: var(--veil-3);
+  border-radius: var(--radius-pill);
+  height: 4px;
+  margin: 0 auto var(--space-3);
+  width: 42px;
+}
+
+.sheet-head {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: var(--space-4);
+}
+
+.sheet-head h2 {
+  font-size: 22px;
+  letter-spacing: -0.8px;
+  margin: 0;
+}
+
+/* Solo questa parte scorre: il trascinamento del foglio parte quando è
+   già in cima, altrimenti leggere l'elenco lo chiuderebbe. */
+.sheet-body {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+}
+
+.sheet-body .ranking-list .ranking-row:last-child {
+  border-bottom: 0;
+}
+
 .modal {
   background: var(--paper);
   border-radius: var(--radius);
@@ -6949,8 +7071,18 @@ button.pizza-ranking-row {
     animation: none;
   }
 
-  .cta-new-match::after {
+  .cta-new-match::after,
+  .medal-gold .avatar::after,
+  .medal-silver .avatar::after,
+  .medal-bronze .avatar::after,
+  .medal-gold .team-image::after,
+  .medal-silver .team-image::after,
+  .medal-bronze .team-image::after {
     animation: none;
     opacity: 0;
+  }
+
+  .sheet {
+    animation: none;
   }
 }

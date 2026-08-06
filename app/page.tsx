@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { FormEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { FormEvent, ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import {
   hasSupabaseConfig,
@@ -1537,6 +1537,92 @@ function TeamRankingList({
   );
 }
 
+// Foglio che sale dal basso, come i pannelli di sistema di iOS. Si chiude
+// trascinandolo verso il basso, toccando fuori o con Esc. Il trascinamento
+// parte solo quando l'elenco dentro è già in cima: altrimenti scorrere il
+// contenuto chiuderebbe il pannello.
+function BottomSheet({
+  title,
+  eyebrow,
+  onClose,
+  children,
+}: {
+  title: string;
+  eyebrow: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const drag = useRef<{ y: number; lastY: number; lastAt: number; speed: number } | null>(null);
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  function move(offset: number) {
+    const panel = panelRef.current;
+    if (panel) panel.style.transform = `translate3d(0, ${Math.max(0, offset)}px, 0)`;
+  }
+
+  return (
+    <div className="sheet-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section
+        className="sheet"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onTouchStart={(event) => {
+          if ((bodyRef.current?.scrollTop ?? 0) > 0 || event.touches.length !== 1) {
+            drag.current = null;
+            return;
+          }
+          const touch = event.touches[0];
+          drag.current = { y: touch.clientY, lastY: touch.clientY, lastAt: performance.now(), speed: 0 };
+        }}
+        onTouchMove={(event) => {
+          const state = drag.current;
+          const touch = event.touches[0];
+          if (!state || !touch) return;
+          const now = performance.now();
+          state.speed = (touch.clientY - state.lastY) / Math.max(1, now - state.lastAt);
+          state.lastY = touch.clientY;
+          state.lastAt = now;
+          move(touch.clientY - state.y);
+        }}
+        onTouchEnd={(event) => {
+          const state = drag.current;
+          drag.current = null;
+          const touch = event.changedTouches[0];
+          if (!state || !touch) return;
+          const distance = touch.clientY - state.y;
+          if (distance > 110 || state.speed > 0.6) {
+            onClose();
+            return;
+          }
+          move(0);
+        }}
+        onTouchCancel={() => { drag.current = null; move(0); }}
+      >
+        <span className="sheet-handle" aria-hidden="true" />
+        <div className="sheet-head">
+          <div>
+            <p className="eyebrow dark">{eyebrow}</p>
+            <h2>{title}</h2>
+          </div>
+          <button className="icon-button" onClick={onClose} aria-label="Chiudi">×</button>
+        </div>
+        <div className="sheet-body" ref={bodyRef}>{children}</div>
+      </section>
+    </div>
+  );
+}
+
 // Il podio si legge dall'anello attorno alla foto: oro, argento, bronzo.
 // Prima era il fondo della riga a cambiare colore, ma con le righe adiacenti
 // tre fondi diversi spezzavano l'elenco invece di ordinarlo.
@@ -3037,6 +3123,9 @@ function AppShell({ session }: { session: Session | null }) {
   // teniamo fermo il punto di riferimento — lo switch — spostando lo
   // scorrimento della stessa quantità di cui si è mosso lui.
   const rankingAnchorRef = useRef<HTMLDivElement | null>(null);
+  // Partite e classifica complete si aprono in un foglio dal basso invece di
+  // portare su un'altra schermata.
+  const [sheet, setSheet] = useState<null | "matches" | "ranking">(null);
 
   const keepScroll = useCallback((change: () => void) => {
     const before = rankingAnchorRef.current?.getBoundingClientRect().top ?? null;
@@ -3700,25 +3789,14 @@ function AppShell({ session }: { session: Session | null }) {
 
   type MobileDestination = "padel" | "pizza" | "profile";
 
-  // Le tre schermate principali formano una sequenza, come le pagine di
-  // un'app: Padel <-> Pizza <-> Profilo. Dagli archivi si puo invece solo
-  // tornare indietro verso la home Padel.
+  // Fra Padel, Pizza e Profilo si passa solo dalla barra: lo scorrimento
+  // laterale faceva cambiare sezione per sbaglio mentre si leggeva. Resta
+  // solo il ritorno indietro dagli archivi, che è un gesto senza ambiguità.
   function mobileDestination(direction: "left" | "right"): MobileDestination | null {
     const isPadelArchive = view === "padel"
       && (padelView === "matches" || padelView === "ranking" || padelView === "tournaments");
     if (isPadelArchive) return direction === "right" ? "padel" : null;
-
-    const mainPages: MobileDestination[] = ["padel", "pizza", "profile"];
-    const currentPage: MobileDestination | null = view === "pizza"
-      ? "pizza"
-      : isOwnCard
-        ? "profile"
-        : view === "padel" && padelView === "overview"
-          ? "padel"
-          : null;
-    if (!currentPage) return null;
-    const nextIndex = mainPages.indexOf(currentPage) + (direction === "left" ? 1 : -1);
-    return mainPages[nextIndex] ?? null;
+    return null;
   }
 
   function openMobileDestination(destination: MobileDestination) {
@@ -4005,7 +4083,7 @@ function AppShell({ session }: { session: Session | null }) {
                     {matches.length ? (
                       <button
                         className="button button-card cta-see-all-top"
-                        onClick={() => openPadelPage("matches")}
+                        onClick={() => setSheet("matches")}
                       >
                         {`Vedi tutto (${matches.length})`}
                       </button>
@@ -4038,7 +4116,7 @@ function AppShell({ session }: { session: Session | null }) {
                   {matches.length ? (
                     <button
                       className="button button-ghost button-full cta-see-all-bottom"
-                      onClick={() => openPadelPage("matches")}
+                      onClick={() => setSheet("matches")}
                     >
                       {`Vedi tutte (${matches.length})`}
                     </button>
@@ -4134,7 +4212,7 @@ function AppShell({ session }: { session: Session | null }) {
                 {rankingRows ? (
                   <button
                     className="button button-ghost button-full"
-                    onClick={() => openPadelPage("ranking")}
+                    onClick={() => setSheet("ranking")}
                   >
                     {`Vedi tutti (${rankingRows})`}
                   </button>
@@ -4659,6 +4737,41 @@ function AppShell({ session }: { session: Session | null }) {
         </div>
       ) : null}
 
+      {sheet === "matches" ? (
+        <BottomSheet
+          eyebrow="ARCHIVIO THEBOYZ PADEL"
+          title={`Tutte le partite (${matches.length})`}
+          onClose={() => setSheet(null)}
+        >
+          <div className="match-list">
+            {matches.map((match) => (
+              <MatchCard
+                key={match.id}
+                match={match}
+                onEdit={(selected) => { setSheet(null); setEditingMatch(selected); }}
+                onPlayVideo={(id) => setPlayingVideo(id)}
+                viewerId={session?.user.id}
+              />
+            ))}
+          </div>
+        </BottomSheet>
+      ) : null}
+      {sheet === "ranking" ? (
+        <BottomSheet
+          eyebrow="THEBOYZ PADEL"
+          title={rankingMode === "single" ? "Classifica singolo" : "Classifica squadre"}
+          onClose={() => setSheet(null)}
+        >
+          {rankingMode === "single" ? (
+            <RankingList
+              profiles={seasonProfiles}
+              onSelect={(profile) => { setSheet(null); openPlayer(profile); }}
+            />
+          ) : (
+            <TeamRankingList teams={teams} />
+          )}
+        </BottomSheet>
+      ) : null}
       {showMatch || editingMatch || tournamentMatch ? (
         <NewMatchModal
           profiles={profiles}
