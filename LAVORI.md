@@ -69,7 +69,49 @@ al momento del cambio: mentre l'elenco scivola dentro resta in pausa
 a metà corsa passerebbe inosservato, ed è lì proprio per dire "ecco la
 classifica".
 
-Le due si chiamano **Singolo** e **Squadra**, non più Player e Team.
+Le due si chiamano **Classifica Elo - Singolo** e **Classifica Elo - Squadra**,
+non più Player e Team, e la stessa etichetta con lo stesso stile fa da titolo
+al foglio: aprendolo il testo non deve cambiare faccia, deve sembrare lo
+stesso che si è ingrandito. `.sheet-head h2` segue perciò la regola di
+`.side-head h2` invece di averne una sua.
+
+**Il cambio automatico si mette in pausa, non si spegne.** Prima bastava un
+tocco e la card restava ferma per sempre; ora aspetta cinque secondi dopo
+l'ultimo tocco e riprende. Se il dito è ancora appoggiato mentre scade il
+timer, il giro si rimanda: strappare la classifica di mano a metà gesto era
+il difetto da evitare.
+
+Il nodo della card sta in uno `useState` e non in un `useRef`. Cambiando
+sezione dalla barra la card viene smontata, e al ritorno è un elemento nuovo:
+con un ref i listener del gesto restavano appesi a quello vecchio e la card
+tornava muta — non rispondeva più nemmeno allo swipe fatto a mano. Con lo
+stato l'effetto si riesegue e li riattacca.
+
+### Il foglio della classifica è stato alleggerito
+Via il selettore di stagione: il foglio mostra la stagione in corso e basta,
+lo storico troverà casa nel profilo. Via anche la maniglia in cima — diceva
+"questo pannello si trascina", ma lo dicono già la forma e il fatto che si
+muova appena lo tocchi.
+
+`.dashboard-side` ora è `align-self: start`. La griglia allunga le celle, e
+finché in fondo alla card c'era il tasto "Vedi tutti" spinto giù da
+`margin-top: auto` quello spazio era occupato; tolto il tasto restava mezzo
+riquadro di bianco sotto la terza riga.
+
+### La barra del menu non somma più la safe area
+Stava a `calc(11px + env(safe-area-inset-bottom))`. Con la barra di stato
+opaca quel valore era zero e non si notava; da quando c'è `viewport-fit:
+cover` è diventato l'altezza della zona dell'indicatore Home e la barra si era
+alzata di una trentina di pixel da sola. Ora sono 11px fissi, gli stessi che
+ha ai lati: è una pastiglia che galleggia e deve stare staccata dello stesso
+tanto da tutte le parti.
+
+### Rotazione bloccata in verticale
+`"orientation": "portrait"` nel manifest. Vale dove il manifest viene
+rispettato, cioè le web app su Android. **iOS lo ignora**: dal web non c'è
+modo di bloccare la rotazione su iPhone, né col manifest né con
+`screen.orientation.lock`, che Safari non implementa. Lì l'unica leva è il
+blocco rotazione del telefono, dal Centro di Controllo.
 
 **Lo swipe poi è stato rifatto perché segua il dito.** Prima decideva tutto al
 `touchend`: fino al rilascio non si muoveva niente e la pagina intanto

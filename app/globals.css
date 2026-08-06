@@ -1313,6 +1313,12 @@ form select:focus,
 }
 
 .dashboard-side {
+  /* Alta quanto il suo contenuto, non quanto la colonna accanto. La griglia
+     allunga le celle (align-items: stretch) e finché in fondo alla card
+     c'era il tasto "Vedi tutti", spinto giù da margin-top: auto, quello
+     spazio era occupato e la cosa funzionava. Tolto il tasto restava mezzo
+     riquadro di bianco sotto la terza riga, che è il difetto da togliere. */
+  align-self: start;
   background: var(--white);
   border-radius: var(--radius);
   box-shadow: 0 8px 30px rgba(16, 29, 43, 0.04);
@@ -5269,15 +5275,6 @@ button.pizza-ranking-row {
   }
 }
 
-/* La maniglia dichiara che il pannello si trascina. */
-.sheet-handle {
-  background: var(--veil-3);
-  border-radius: var(--radius-pill);
-  height: 4px;
-  margin: 0 auto var(--space-3);
-  width: 42px;
-}
-
 .sheet-head {
   align-items: flex-start;
   display: flex;
@@ -5285,9 +5282,12 @@ button.pizza-ranking-row {
   padding-bottom: var(--space-4);
 }
 
+/* Stessa etichetta della card che apre il foglio, quindi stesso corpo e
+   stessa spaziatura: aprendo il pannello il titolo non deve cambiare faccia,
+   deve sembrare lo stesso testo che si è ingrandito. */
 .sheet-head h2 {
-  font-size: 22px;
-  letter-spacing: -0.8px;
+  font-size: 24px;
+  letter-spacing: -1px;
   margin: 0;
 }
 
@@ -5958,7 +5958,14 @@ button.pizza-ranking-row {
     /* Filo di contorno sottilissimo, non un bordo disegnato. */
     border: 0.5px solid rgba(255, 255, 255, 0.5);
     border-radius: var(--radius-pill);
-    bottom: calc(11px + env(safe-area-inset-bottom));
+    /* Undici pixel dal bordo, gli stessi che ha ai lati: la barra è una
+       pastiglia che galleggia, e deve stare staccata dallo schermo della
+       stessa misura da tutte le parti.
+       Non somma più env(safe-area-inset-bottom): finché la barra di stato era
+       opaca quel valore era zero e non si notava, ma con viewport-fit: cover
+       è diventato l'altezza della zona dell'indicatore Home e la barra si era
+       alzata di una trentina di pixel senza che nessuno l'avesse chiesto. */
+    bottom: 11px;
     box-shadow:
       0 0 0 0.5px rgba(11, 27, 44, 0.05),
       0 10px 30px rgba(11, 27, 44, 0.14),
@@ -6225,7 +6232,10 @@ button.pizza-ranking-row {
   /* Titoli dei riquadri: piccoli e maiuscoli, cosi fanno da etichetta e
      non competono con i numeri e i nomi che stanno sotto. */
   .match-panel-head h2,
-  .dashboard-side .side-head h2 {
+  .dashboard-side .side-head h2,
+  /* Il titolo del foglio è la stessa etichetta della card da cui si apre:
+     segue la stessa regola invece di averne una sua. */
+  .sheet-head h2 {
     font-size: 12px;
     letter-spacing: 1.4px;
     margin: 0;

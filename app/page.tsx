@@ -1562,7 +1562,8 @@ function BottomSheet({
 }: {
   title: string;
   // Riga sopra al titolo: di solito un'etichetta, ma può essere un comando.
-  eyebrow: ReactNode;
+  // Facoltativa: il foglio della classifica non ne ha più bisogno.
+  eyebrow?: ReactNode;
   // Comando nell'angolo dell'intestazione, al posto della crocetta.
   action?: ReactNode;
   onClose: () => void;
@@ -1826,10 +1827,12 @@ function BottomSheet({
         }}
         onTouchCancel={() => { drag.current = null; settle(); }}
       >
-        <span className="sheet-handle" aria-hidden="true" />
+        {/* La maniglia non c'è più. Diceva "questo pannello si trascina", ma
+            lo dicono già la forma e il fatto che si muova appena lo tocchi:
+            era un'istruzione per una cosa che nessuno sbaglia. */}
         <div className="sheet-head">
           <div>
-            {typeof eyebrow === "string" ? <p className="eyebrow dark">{eyebrow}</p> : eyebrow}
+            {eyebrow ? (typeof eyebrow === "string" ? <p className="eyebrow dark">{eyebrow}</p> : eyebrow) : null}
             <h2>{title}</h2>
           </div>
           {action}
@@ -3347,9 +3350,16 @@ function AppShell({ session }: { session: Session | null }) {
   // Sta qui e non in mezzo agli altri stati perché il gesto qui sotto ha
   // bisogno di sapere quale delle due classifiche è in scena.
   const [rankingMode, setRankingMode] = useState<"single" | "team">("single");
-  // La card si alterna da sola finché nessuno la tocca. Al primo gesto questo
-  // diventa false e non torna più vero: da lì in poi comanda il dito.
-  const [rankingAuto, setRankingAuto] = useState(true);
+  // Quando la card è stata toccata l'ultima volta. Il cambio automatico non si
+  // spegne per sempre: si fa da parte mentre il dito è lì e riprende cinque
+  // secondi dopo l'ultimo tocco, come se il conto ripartisse da capo.
+  const [rankingTouchedAt, setRankingTouchedAt] = useState(0);
+  // Il nodo della card sta in uno stato e non in un ref, perché serve a
+  // riagganciare i listener. Cambiando sezione dalla barra la card viene
+  // smontata, e al ritorno è un elemento nuovo: con un ref i listener
+  // sarebbero rimasti appesi a quello vecchio e la card tornava muta — non
+  // rispondeva più nemmeno allo swipe fatto a mano.
+  const [rankingCard, setRankingCard] = useState<HTMLButtonElement | null>(null);
   // Lo swipe sulla card della classifica. L'elenco resta agganciato al dito
   // come la pastiglia della barra: mentre trascini si sposta davvero, e al
   // rilascio o completa il cambio o torna al suo posto.
@@ -3357,7 +3367,6 @@ function AppShell({ session }: { session: Session | null }) {
   // attributi onTouch di React: React registra touchmove come passivo, e lì
   // dentro preventDefault non ha alcun effetto. Senza preventDefault non c'è
   // modo di impedire alla pagina di scorrere su e giù mentre si scorre di lato.
-  const rankingCardRef = useRef<HTMLButtonElement | null>(null);
   const rankingTrackRef = useRef<HTMLDivElement | null>(null);
   const rankingSwipe = useRef<{
     x: number;
@@ -3393,7 +3402,7 @@ function AppShell({ session }: { session: Session | null }) {
   // quello automatico sono esattamente lo stesso movimento.
   const slideRanking = useCallback((next: "single" | "team", direction: "left" | "right") => {
     const track = rankingTrackRef.current;
-    const width = Math.max(rankingCardRef.current?.getBoundingClientRect().width ?? 1, 1);
+    const width = Math.max(rankingCard?.getBoundingClientRect().width ?? 1, 1);
     const exit = direction === "left" ? -width : width;
     const finish = () => keepScroll(() => setRankingMode(next));
     if (!track || !track.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -3412,21 +3421,29 @@ function AppShell({ session }: { session: Session | null }) {
         { duration: 170, easing: "cubic-bezier(0.4, 0, 0.9, 0.35)", fill: "forwards" },
       )
       .finished.then(finish, finish);
-  }, [keepScroll]);
+  }, [keepScroll, rankingCard]);
 
   // Il cambio automatico: le due classifiche si alternano da sole ogni cinque
   // secondi, così la home le mostra tutte e due senza che nessuno la tocchi.
   // Si ferma dove non avrebbe senso girare a vuoto: fuori dalla home, con un
   // foglio aperto, a scheda nascosta, o quando il telefono chiede meno
-  // animazioni. E si ferma per sempre appena la card viene toccata.
+  // animazioni. Toccando la card si fa da parte e riprende cinque secondi
+  // dopo l'ultimo tocco: rankingTouchedAt cambia, l'effetto riparte e il
+  // conto ricomincia da zero.
   useEffect(() => {
-    if (!rankingAuto || sheet || view !== "padel" || padelView !== "overview") return;
+    if (sheet || view !== "padel" || padelView !== "overview") return;
     if (typeof window === "undefined") return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let timer = 0;
     function schedule() {
       timer = window.setTimeout(() => {
+        // Dito ancora appoggiato sulla card: si rimanda invece di strappargli
+        // la classifica di mano a metà gesto.
+        if (rankingSwipe.current) {
+          schedule();
+          return;
+        }
         // Alterna: da singolo si va a squadra scorrendo verso sinistra, da
         // squadra si torna indietro verso destra. Le stesse direzioni del dito.
         const next = rankingMode === "single" ? "team" : "single";
@@ -3448,14 +3465,14 @@ function AppShell({ session }: { session: Session | null }) {
       window.clearTimeout(timer);
       document.removeEventListener("visibilitychange", sync);
     };
-  }, [rankingAuto, rankingMode, sheet, view, padelView, slideRanking]);
+  }, [rankingTouchedAt, rankingMode, sheet, view, padelView, slideRanking]);
 
   // Il gesto orizzontale sulla card della classifica. Fa tre cose: decide una
   // volta sola su che asse sta andando il dito, blocca lo scorrimento
   // verticale appena ha deciso che è orizzontale, e tiene l'elenco attaccato
   // al dito finché non lo si lascia.
   useEffect(() => {
-    const card = rankingCardRef.current;
+    const card = rankingCard;
     if (!card) return;
 
     const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -3508,9 +3525,9 @@ function AppShell({ session }: { session: Session | null }) {
 
     function onStart(event: TouchEvent) {
       rankingSwipeHandled.current = false;
-      // Da qui in poi la card non si alterna più da sola: il comando è passato
-      // al dito, e continuare a cambiargliela sotto sarebbe solo fastidioso.
-      setRankingAuto(false);
+      // Il cambio automatico si fa da parte e riparte cinque secondi dopo che
+      // il dito se n'è andato: mentre la card è sotto le dita comanda lei.
+      setRankingTouchedAt(Date.now());
       if (event.touches.length !== 1 || !window.matchMedia("(max-width: 780px)").matches) {
         rankingSwipe.current = null;
         return;
@@ -3558,6 +3575,8 @@ function AppShell({ session }: { session: Session | null }) {
     function onEnd(event: TouchEvent) {
       const swipe = rankingSwipe.current;
       rankingSwipe.current = null;
+      // I cinque secondi si contano dall'ultimo tocco, che è questo.
+      setRankingTouchedAt(Date.now());
       const track = rankingTrackRef.current;
       if (!swipe || !track || swipe.axis !== "horizontal") return;
       const touch = event.changedTouches[0];
@@ -3581,6 +3600,7 @@ function AppShell({ session }: { session: Session | null }) {
 
     function onCancel() {
       rankingSwipe.current = null;
+      setRankingTouchedAt(Date.now());
       restore();
     }
 
@@ -3594,7 +3614,7 @@ function AppShell({ session }: { session: Session | null }) {
       card.removeEventListener("touchend", onEnd);
       card.removeEventListener("touchcancel", onCancel);
     };
-  }, [rankingMode, slideRanking]);
+  }, [rankingCard, rankingMode, slideRanking]);
 
   // Cambiata la classifica, l'elenco nuovo entra dal lato opposto a quello da
   // cui è uscito il vecchio: il gesto continua invece di ricominciare.
@@ -4691,11 +4711,11 @@ function AppShell({ session }: { session: Session | null }) {
                 <button
                   type="button"
                   className="ranking-preview"
-                  ref={rankingCardRef}
+                  ref={setRankingCard}
                   onClick={() => {
-                    // Anche il solo tocco basta a prendersi il comando: da qui
-                    // in poi la card non si alterna più da sola.
-                    setRankingAuto(false);
+                    // Anche il solo tocco rimanda il cambio automatico:
+                    // riparte cinque secondi dopo che l'hai lasciata stare.
+                    setRankingTouchedAt(Date.now());
                     // Uno swipe finisce comunque con un click: senza questa
                     // guardia cambiare classifica aprirebbe anche il foglio.
                     if (rankingSwipeHandled.current) return;
@@ -4704,7 +4724,7 @@ function AppShell({ session }: { session: Session | null }) {
                   aria-label={`Apri la classifica Elo ${rankingMode === "single" ? "singolo" : "squadra"} completa (${rankingRows})`}
                 >
                   <div className="side-head" ref={rankingAnchorRef}>
-                    <div><h2>{rankingMode === "single" ? "Classifica Elo Singolo" : "Classifica Elo Squadra"}</h2></div>
+                    <div><h2>{rankingMode === "single" ? "Classifica Elo - Singolo" : "Classifica Elo - Squadra"}</h2></div>
                   </div>
                   {/* La finestra ritaglia, il nastro dentro è quello che si
                       muove: col dito o da solo, ogni cinque secondi. */}
@@ -5267,15 +5287,9 @@ function AppShell({ session }: { session: Session | null }) {
       ) : null}
       {sheet === "ranking" ? (
         <BottomSheet
-          eyebrow={(
-            <SeasonPicker
-              value={season}
-              current={currentYear}
-              options={[currentYear, ...archivedSeasons.filter((year) => year !== currentYear)]}
-              onChange={setSeason}
-            />
-          )}
-          title={rankingMode === "single" ? "Classifica singolo" : "Classifica squadre"}
+          // Niente selettore di stagione qui dentro: il foglio mostra la
+          // stagione in corso e basta. Lo storico troverà casa nel profilo.
+          title={rankingMode === "single" ? "Classifica Elo - Singolo" : "Classifica Elo - Squadra"}
           onClose={() => setSheet(null)}
           action={(
             <div className="mode-switch" role="group" aria-label="Tipo di classifica">
