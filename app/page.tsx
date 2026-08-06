@@ -1537,52 +1537,6 @@ function TeamRankingList({
   );
 }
 
-// Podio a tre gradini: un gradino per posizione, non per persona. Con dei
-// parimerito sullo stesso gradino salgono in due, e i gradini restano tre.
-type PodiumEntry = {
-  key: string;
-  avatar: ReactNode;
-  name: string;
-  detail: string;
-  onSelect?: () => void;
-};
-
-function Podium({ steps }: { steps: { rank: number; entries: PodiumEntry[] }[] }) {
-  const byRank = new Map(steps.map((step) => [step.rank, step.entries]));
-  // Ordine di lettura del podio: secondo, primo, terzo.
-  return (
-    <div className="podium">
-      {[2, 1, 3].map((rank) => {
-        const entries = byRank.get(rank) ?? [];
-        if (!entries.length) return null;
-        return (
-          <div className={`podium-step podium-step-${rank}`} key={rank}>
-            <div className="podium-people">
-              {entries.map((entry) => {
-                const content = (
-                  <>
-                    {entry.avatar}
-                    <b>{entry.name}</b>
-                    <span>{entry.detail}</span>
-                  </>
-                );
-                return entry.onSelect ? (
-                  <button className="podium-person" key={entry.key} type="button" onClick={entry.onSelect}>
-                    {content}
-                  </button>
-                ) : (
-                  <div className="podium-person" key={entry.key}>{content}</div>
-                );
-              })}
-            </div>
-            <div className="podium-bar"><span>#{rank}</span></div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 // Il podio si legge dall'anello attorno alla foto: oro, argento, bronzo.
 // Prima era il fondo della riga a cambiare colore, ma con le righe adiacenti
 // tre fondi diversi spezzavano l'elenco invece di ordinarlo.
