@@ -6413,6 +6413,23 @@ button.pizza-ranking-row {
     flex: 0 0 auto;
   }
 
+  /* La data torna incolonnata come sulla card grande: numero sopra, mese
+     abbreviato sotto. In riga occupava larghezza che serve ai nomi, e
+     soprattutto restava l'unico elemento steso mentre tutti gli altri sono
+     impilati: bastava lei a far sembrare la riga storta. */
+  .match-card-compact .match-date {
+    align-items: center;
+    flex-direction: column;
+    gap: 0;
+    justify-content: center;
+  }
+
+  .match-card-compact .match-date span {
+    font-size: 10px;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
   /* I due compagni sulla stessa riga separati da una virgola, invece che uno
      sotto l'altro: la riga è bassa e in verticale non ci starebbero. */
   .match-card-compact .match-team-players {
