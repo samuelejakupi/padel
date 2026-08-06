@@ -5398,6 +5398,26 @@ button.pizza-ranking-row {
     pointer-events: none;
   }
 
+  /* Copia congelata della pagina precedente. Rimane sopra al nuovo main ma
+     sotto alla tab bar, cosi le due schermate scorrono insieme senza che la
+     navigazione mobile si muova o sparisca. */
+  .page-transition-layer {
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    position: fixed;
+    z-index: 44;
+  }
+
+  .page-transition-layer > .content.is-page-outgoing {
+    left: 0;
+    margin: 0 auto;
+    position: absolute;
+    right: 0;
+    transform-origin: center center;
+    will-change: transform, opacity;
+  }
+
   /* Stesso passo verticale del resto del sito. */
   .hub-page {
     gap: 10px;

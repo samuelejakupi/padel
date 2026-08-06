@@ -3765,40 +3765,71 @@ function AppShell({ session }: { session: Session | null }) {
 
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const exitSign = direction === "left" ? -1 : 1;
-    if (!reduceMotion && page.animate) {
-      const fromTransform = page.style.transform || "translate3d(0, 0, 0) scale(1)";
-      const fromOpacity = page.style.opacity || "1";
-      const exit = page.animate(
-        [
-          { transform: fromTransform, opacity: fromOpacity },
-          { transform: `translate3d(${exitSign * 108}vw, 0, 0) scale(0.975)`, opacity: "0.82" },
-        ],
-        { duration: 190, easing: "cubic-bezier(0.45, 0, 0.75, 0.3)", fill: "forwards" },
-      );
-      try { await exit.finished; } catch { /* la navigazione puo cancellarla */ }
-    }
+    let transitionLayer: HTMLDivElement | null = null;
 
-    openMobileDestination(destination);
-    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+    try {
+      if (reduceMotion || !page.animate) {
+        openMobileDestination(destination);
+        window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+        return;
+      }
 
-    // Due frame lasciano a React il tempo di montare il contenuto nuovo;
-    // poi la nuova pagina entra dal lato opposto a quello di uscita.
-    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-    if (!reduceMotion && page.animate) {
+      // React riusa lo stesso <main> per tutte le sezioni. Ne congeliamo una
+      // copia solo per la durata della transizione: cosi il vecchio contenuto
+      // puo uscire mentre quello nuovo, gia montato sotto, entra in parallelo.
+      const outgoing = page.cloneNode(true) as HTMLElement;
+      outgoing.setAttribute("aria-hidden", "true");
+      outgoing.classList.remove("is-page-transitioning");
+      outgoing.classList.add("is-page-outgoing");
+      outgoing.style.top = `${page.offsetTop - window.scrollY}px`;
+
+      transitionLayer = document.createElement("div");
+      transitionLayer.className = "page-transition-layer";
+      transitionLayer.setAttribute("aria-hidden", "true");
+      transitionLayer.appendChild(outgoing);
+      document.body.appendChild(transitionLayer);
+
+      // Il main vivo resta invisibile mentre React sostituisce i dati: evita
+      // un singolo frame della nuova pagina gia ferma al centro.
       page.getAnimations().forEach((animation) => animation.cancel());
-      page.style.transform = `translate3d(${-exitSign * 34}vw, 0, 0) scale(0.985)`;
-      page.style.opacity = "0.88";
+      page.style.opacity = "0";
+      page.style.filter = "none";
+      openMobileDestination(destination);
+      window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+
+      const incomingTransform = `translate3d(${-exitSign * 100}vw, 0, 0) scale(0.985)`;
+      page.style.transform = incomingTransform;
+      page.style.opacity = "1";
+
+      const outgoingTransform = outgoing.style.transform || "translate3d(0, 0, 0) scale(1)";
+      const outgoingOpacity = outgoing.style.opacity || "1";
+      const timing: KeyframeAnimationOptions = {
+        duration: 340,
+        easing: "cubic-bezier(0.2, 0.82, 0.2, 1)",
+        fill: "forwards",
+      };
+      const exit = outgoing.animate(
+        [
+          { transform: outgoingTransform, opacity: outgoingOpacity },
+          { transform: `translate3d(${exitSign * 108}vw, 0, 0) scale(0.975)`, opacity: "0.9" },
+        ],
+        timing,
+      );
       const enter = page.animate(
         [
-          { transform: page.style.transform, opacity: page.style.opacity },
+          { transform: incomingTransform, opacity: "1" },
           { transform: "translate3d(0, 0, 0) scale(1)", opacity: "1" },
         ],
-        { duration: 320, easing: "cubic-bezier(0.2, 0.82, 0.2, 1)" },
+        timing,
       );
-      try { await enter.finished; } catch { /* nessun assestamento se cambia pagina */ }
+      try { await Promise.all([exit.finished, enter.finished]); } catch { /* una nuova navigazione puo interromperle */ }
+    } finally {
+      transitionLayer?.remove();
+      clearPageMotion();
+      pageTransitioning.current = false;
     }
-    clearPageMotion();
-    pageTransitioning.current = false;
   }
 
 
