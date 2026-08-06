@@ -1715,8 +1715,21 @@ function BottomSheet({
     function block(event: TouchEvent) {
       const list = bodyRef.current;
       const target = event.target instanceof Node ? event.target : null;
+      const inside = Boolean(list && target && list.contains(target));
+      const scrollable = Boolean(list && list.scrollHeight > list.clientHeight);
       // Dentro l'elenco lo scorrimento serve: si blocca solo il resto.
-      if (list && target && list.contains(target) && list.scrollHeight > list.clientHeight) return;
+      if (inside && scrollable) {
+        // Ma solo finché c'è elenco sopra da recuperare. Arrivati in cima e
+        // col dito che scende comanda il foglio, e lo scorrimento nativo va
+        // zittito: altrimenti il rimbalzo elastico di iOS si somma al
+        // trascinamento e il pannello si muove a strappi invece di scendere.
+        // È la differenza che si vedeva fra la classifica squadre — corta,
+        // quindi mai scorrevole, e infatti già a posto — e quella singolo.
+        if ((list?.scrollTop ?? 0) > 0) return;
+        const touch = event.touches[0];
+        const state = drag.current;
+        if (!state || !touch || touch.clientY <= state.y) return;
+      }
       if (event.cancelable) event.preventDefault();
     }
     document.addEventListener("touchmove", block, { passive: false });

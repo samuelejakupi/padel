@@ -5313,10 +5313,25 @@ button.pizza-ranking-row {
      invece di far accorciare il foglio. */
   flex: 1 1 auto;
   overflow-y: auto;
+  /* Quando le righe sono tasti sbordano di 10px per lato, per dare respiro al
+     riquadro dell'hover. Fuori da un contenitore che scorre non si notava;
+     qui quei 10px a destra diventavano una barra di scorrimento orizzontale
+     accanto a quella verticale. Il padding se li riprende e il margine
+     negativo rimette le colonne dove erano, quindi non sporge più niente. */
+  margin-inline: -10px;
+  padding-inline: 10px;
+  overflow-x: hidden;
   overscroll-behavior: contain;
   padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  /* Nessuna barra in vista: il foglio si scorre e si chiude col dito, e una
+     barra di sistema in mezzo a un pannello che si trascina è solo rumore. */
+  scrollbar-width: none;
   /* L'elenco è l'unico punto in cui il dito può scorrere. */
   touch-action: pan-y;
+}
+
+.sheet-body::-webkit-scrollbar {
+  display: none;
 }
 
 .sheet-body .ranking-list .ranking-row:last-child {
