@@ -1567,11 +1567,18 @@ function BottomSheet({
   // recenti non esiste e farebbe saltare del tutto l'animazione.
   const SPRING = "cubic-bezier(0.34, 1.32, 0.64, 1)";
 
+  // Elastico: il foglio non segue il dito uno a uno, oppone una resistenza
+  // che cresce. All'inizio si muove quasi quanto il dito, poi rallenta e si
+  // ferma. È la stessa sensazione degli elenchi di iOS quando finiscono.
+  function rubber(distance: number, limit = 460) {
+    return (1 - 1 / (distance / limit + 1)) * limit;
+  }
+
   // La deformazione: mentre scende si schiaccia in altezza e stringe appena,
   // come i pannelli di sistema. transform-origin sta in basso, quindi la
   // compressione avviene verso il bordo dello schermo.
   function shape(offset: number) {
-    const pulled = Math.max(0, offset);
+    const pulled = rubber(Math.max(0, offset));
     const squash = Math.min(pulled, 420) / 420;
     return `translate3d(0, ${pulled}px, 0) scaleX(${1 - squash * 0.04}) scaleY(${1 - squash * 0.02})`;
   }
@@ -1609,26 +1616,45 @@ function BottomSheet({
   }, [dismiss]);
 
   // La pagina sotto non deve scorrere mentre il foglio è aperto. Su iOS non
-  // basta overflow: hidden, il corpo va bloccato alla posizione corrente e
-  // rimesso dov'era alla chiusura.
+  // basta overflow: hidden: il corpo va bloccato alla posizione corrente e
+  // rimesso dov'era alla chiusura. In più il touchmove che non nasce dentro
+  // l'elenco va fermato a mano, altrimenti Safari lo passa comunque alla
+  // pagina.
   useEffect(() => {
     const top = window.scrollY;
-    const { body } = document;
+    const { body, documentElement } = document;
     const previous = {
       position: body.style.position,
       top: body.style.top,
-      width: body.style.width,
+      left: body.style.left,
+      right: body.style.right,
       overflow: body.style.overflow,
+      htmlOverflow: documentElement.style.overflow,
     };
     body.style.position = "fixed";
     body.style.top = `-${top}px`;
-    body.style.width = "100%";
+    body.style.left = "0";
+    body.style.right = "0";
     body.style.overflow = "hidden";
+    documentElement.style.overflow = "hidden";
+
+    function block(event: TouchEvent) {
+      const list = bodyRef.current;
+      const target = event.target instanceof Node ? event.target : null;
+      // Dentro l'elenco lo scorrimento serve: si blocca solo il resto.
+      if (list && target && list.contains(target) && list.scrollHeight > list.clientHeight) return;
+      if (event.cancelable) event.preventDefault();
+    }
+    document.addEventListener("touchmove", block, { passive: false });
+
     return () => {
+      document.removeEventListener("touchmove", block);
       body.style.position = previous.position;
       body.style.top = previous.top;
-      body.style.width = previous.width;
+      body.style.left = previous.left;
+      body.style.right = previous.right;
       body.style.overflow = previous.overflow;
+      documentElement.style.overflow = previous.htmlOverflow;
       window.scrollTo({ top, behavior: "instant" as ScrollBehavior });
     };
   }, []);
@@ -1681,7 +1707,7 @@ function BottomSheet({
           // allunga appena, come un elastico.
           if (distance < 0) {
             const stretch = Math.min(-distance, 160) / 160;
-            panel.style.transform = `translate3d(0, ${distance * 0.16}px, 0) scaleY(${1 + stretch * 0.012})`;
+            panel.style.transform = `translate3d(0, ${-rubber(-distance, 90)}px, 0) scaleY(${1 + stretch * 0.012})`;
             return;
           }
           panel.style.transform = shape(distance);

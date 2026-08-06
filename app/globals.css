@@ -5083,7 +5083,10 @@ button.pizza-ranking-row {
   display: flex;
   inset: 0;
   justify-content: center;
+  /* Nessuno scorrimento passa alla pagina sotto. */
+  overscroll-behavior: none;
   position: fixed;
+  touch-action: none;
   z-index: 100;
 }
 
@@ -5148,6 +5151,8 @@ button.pizza-ranking-row {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  /* L'elenco è l'unico punto in cui il dito può scorrere. */
+  touch-action: pan-y;
 }
 
 .sheet-body .ranking-list .ranking-row:last-child {
