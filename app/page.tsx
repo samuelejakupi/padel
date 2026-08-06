@@ -3495,9 +3495,12 @@ function AppShell({ session }: { session: Session | null }) {
   const isPhone = useIsPhone();
   // Quali partite mostra il foglio: tutte, oppure solo quelle di chi guarda.
   const [matchesMode, setMatchesMode] = useState<"all" | "mine">("all");
-  // Quale raccoglitore del mese è aperto, uno solo per volta. Null vuol dire
-  // tutti chiusi, che è come si presenta il foglio appena sale.
-  const [openMonth, setOpenMonth] = useState<string | null>(null);
+  // Quale raccoglitore del mese è aperto, uno solo per volta. Tre stati e non
+  // due: undefined vuol dire "nessuna scelta ancora", e allora vale il mese
+  // più recente; null vuol dire chiuso perché è stato chiuso apposta. Senza
+  // questa distinzione non si potrebbe distinguere "non ho ancora deciso" da
+  // "li voglio tutti chiusi".
+  const [chosenMonth, setChosenMonth] = useState<string | null | undefined>(undefined);
   // Quando la card è stata toccata l'ultima volta. Il cambio automatico non si
   // spegne per sempre: si fa da parte mentre il dito è lì e riprende cinque
   // secondi dopo l'ultimo tocco, come se il conto ripartisse da capo.
@@ -4160,6 +4163,18 @@ function AppShell({ session }: { session: Session | null }) {
     return [...groups.values()].sort((a, b) => (a.key < b.key ? 1 : -1));
   }, [matches, matchesMode, currentUserId]);
 
+  // Il mese più recente è già aperto quando il foglio sale, e torna ad
+  // aprirsi passando fra tutte le partite e le proprie: è quello che si va a
+  // guardare quasi sempre, e farlo aprire a mano ogni volta era un tocco
+  // chiesto per abitudine.
+  // Il valore si ricava invece di essere scritto in uno stato: chi apre il
+  // foglio o cambia insieme azzera la scelta, e da lì il mese giusto si
+  // rilegge da solo. Tenerlo in uno stato da sincronizzare vorrebbe dire
+  // riscriverlo a ogni ricarica dei dati, e il raccoglitore che stavi
+  // leggendo si richiuderebbe mentre lo guardi.
+  const latestMonthKey = matchMonths[0]?.key ?? null;
+  const openMonth = chosenMonth === undefined ? latestMonthKey : chosenMonth;
+
   // Profilo e scheda giocatore sono la stessa pagina: la propria è solo la
   // scheda di sé stessi, con in più i campi modificabili. Memoizzata perche
   // finisce fra le voci della barra mobile, che altrimenti verrebbero
@@ -4810,7 +4825,7 @@ function AppShell({ session }: { session: Session | null }) {
                     {matches.length ? (
                       <button
                         className="button button-card cta-see-all-top"
-                        onClick={() => setSheet("matches")}
+                        onClick={() => { setChosenMonth(undefined); setSheet("matches"); }}
                       >
                         {`Vedi tutto (${matches.length})`}
                       </button>
@@ -4837,7 +4852,7 @@ function AppShell({ session }: { session: Session | null }) {
                       <button
                         type="button"
                         className="match-panel-open"
-                        onClick={() => setSheet("matches")}
+                        onClick={() => { setChosenMonth(undefined); setSheet("matches"); }}
                         aria-label={`Apri tutte le partite (${matches.length})`}
                       >
                         <div className="match-list">
@@ -5489,10 +5504,10 @@ function AppShell({ session }: { session: Session | null }) {
             <div className="mode-switch" role="group" aria-label="Quali partite">
               <button
                 className={matchesMode === "all" ? "active" : ""}
-                // Cambiando insieme cambiano i mesi e i conteggi: si riparte
-                // da tutti chiusi invece di lasciare aperto un raccoglitore
-                // che ora contiene altro.
-                onClick={() => { setMatchesMode("all"); setOpenMonth(null); }}
+                // Il raccoglitore da aprire lo decide l'effetto qui sopra:
+                // cambiando insieme cambiano i mesi, e va riaperto il più
+                // recente di quelli nuovi.
+                onClick={() => { setMatchesMode("all"); setChosenMonth(undefined); }}
                 aria-label="Tutte le partite"
                 title="Tutti"
               >
@@ -5500,7 +5515,7 @@ function AppShell({ session }: { session: Session | null }) {
               </button>
               <button
                 className={matchesMode === "mine" ? "active" : ""}
-                onClick={() => { setMatchesMode("mine"); setOpenMonth(null); }}
+                onClick={() => { setMatchesMode("mine"); setChosenMonth(undefined); }}
                 aria-label="Solo le mie partite"
                 title="Personale"
               >
@@ -5523,7 +5538,7 @@ function AppShell({ session }: { session: Session | null }) {
                 label={group.label}
                 count={group.matches.length}
                 open={openMonth === group.key}
-                onToggle={() => setOpenMonth((current) => (current === group.key ? null : group.key))}
+                onToggle={() => setChosenMonth(openMonth === group.key ? null : group.key)}
               >
                 <div className="match-list">
                   {group.matches.map((match) => (
