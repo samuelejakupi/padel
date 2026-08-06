@@ -1428,9 +1428,6 @@ form select:focus,
   font-weight: 900;
 }
 
-.rank-1 {
-  color: var(--blue);
-}
 
 .ranking-name {
   display: flex;
@@ -2413,91 +2410,49 @@ button.podium-person {
   padding: 0;
 }
 
-/* Il colore della card è l'unica cosa che distingue le posizioni. Le righe
-   colorate diventano blocchi staccati, quindi perdono il filo di separazione
-   e prendono il loro respiro. */
-.ranking-row-gold,
-.ranking-row-silver,
-.ranking-row-bronze {
-  border-bottom: 0;
-  border-radius: var(--radius);
-  margin-bottom: 10px;
-  padding: 0 20px;
+/* Il podio si legge dall'anello attorno alla foto, non dal fondo della riga:
+   con le righe adiacenti tre fondi diversi spezzavano l'elenco. L'anello è
+   fatto di bordo più ombra, così resta netto anche sopra una foto. */
+.medal-gold .avatar,
+.medal-silver .avatar,
+.medal-bronze .avatar {
+  border-width: 2px;
 }
 
-/* I colori del podio. Tinte piene e chiare, cosi il testo scuro sopra
-   resta leggibile come sulle righe normali. */
-.ranking-row-gold {
-  background: linear-gradient(135deg, #f4d970 0%, #e2b93f 100%);
-  color: var(--ink);
+.medal-gold .avatar {
+  border-color: #d7a125;
+  box-shadow: 0 0 0 1.5px #d7a125;
 }
 
-.ranking-row-silver {
-  background: linear-gradient(135deg, #e4eaee 0%, #bfcad3 100%);
-  color: var(--ink);
+.medal-silver .avatar {
+  border-color: #a3adb6;
+  box-shadow: 0 0 0 1.5px #a3adb6;
 }
 
-.ranking-row-bronze {
-  background: linear-gradient(135deg, #eab98b 0%, #cd8f55 100%);
-  color: var(--ink);
+.medal-bronze .avatar {
+  border-color: #bd7740;
+  box-shadow: 0 0 0 1.5px #bd7740;
 }
 
-/* Su fondo pieno il grigio delle etichette e dei numeri non si legge. */
-.ranking-row-gold .rank-number,
-.ranking-row-silver .rank-number,
-.ranking-row-bronze .rank-number,
-.ranking-row-gold .ranking-points b,
-.ranking-row-silver .ranking-points b,
-.ranking-row-bronze .ranking-points b,
-.ranking-row-gold .table-stat b,
-.ranking-row-silver .table-stat b,
-.ranking-row-bronze .table-stat b {
-  color: var(--ink);
+/* Nelle coppie gli avatar si sovrappongono: l'anello va solo sul primo,
+   altrimenti il secondo taglia quello di sotto. */
+.medal-gold .team-avatars .avatar + .avatar,
+.medal-silver .team-avatars .avatar + .avatar,
+.medal-bronze .team-avatars .avatar + .avatar {
+  border-color: var(--white);
+  box-shadow: none;
 }
 
-.ranking-row-gold .ranking-name span,
-.ranking-row-silver .ranking-name span,
-.ranking-row-bronze .ranking-name span,
-.ranking-row-gold .table-stat small,
-.ranking-row-silver .table-stat small,
-.ranking-row-bronze .table-stat small,
-.ranking-row-gold .ranking-points small,
-.ranking-row-silver .ranking-points small,
-.ranking-row-bronze .ranking-points small {
-  color: rgba(11, 27, 44, 0.62);
+.medal-gold .rank-number {
+  color: #d7a125;
 }
 
-.ranking-row-gold .streak,
-.ranking-row-silver .streak,
-.ranking-row-bronze .streak {
-  background: rgba(11, 27, 44, 0.12);
-  color: var(--ink);
+.medal-silver .rank-number {
+  color: #8b949c;
 }
 
-.ranking-row-gold .avatar,
-.ranking-row-silver .avatar,
-.ranking-row-bronze .avatar {
-  border-color: rgba(255, 255, 255, 0.85);
-}
-
-/* Senza questo l'hover generico delle righe schiarirebbe la card colorata.
-   Il fondo resta quello del podio: si scurisce appena. */
-button.ranking-row-gold:hover,
-button.ranking-row-silver:hover,
-button.ranking-row-bronze:hover {
-  filter: brightness(0.95);
-}
-
-button.ranking-row-gold:hover {
-  background: linear-gradient(135deg, #f4d970 0%, #e2b93f 100%);
-}
-
-button.ranking-row-silver:hover {
-  background: linear-gradient(135deg, #e4eaee 0%, #bfcad3 100%);
-}
-
-button.ranking-row-bronze:hover {
-  background: linear-gradient(135deg, #eab98b 0%, #cd8f55 100%);
+.medal-bronze .rank-number {
+  color: #bd7740;
 }
 
 .ranking-table .ranking-row {
@@ -6354,21 +6309,6 @@ button.pizza-ranking-row {
     margin-bottom: 10px;
     min-height: 0;
     padding: 14px;
-  }
-
-  .ranking-table .ranking-row.ranking-row-gold {
-    background: linear-gradient(135deg, #f4d970 0%, #e2b93f 100%);
-    color: var(--ink);
-  }
-
-  .ranking-table .ranking-row.ranking-row-silver {
-    background: linear-gradient(135deg, #e4eaee 0%, #bfcad3 100%);
-    color: var(--ink);
-  }
-
-  .ranking-table .ranking-row.ranking-row-bronze {
-    background: linear-gradient(135deg, #eab98b 0%, #cd8f55 100%);
-    color: var(--ink);
   }
 
   .ranking-table .ranking-row > .table-stat,

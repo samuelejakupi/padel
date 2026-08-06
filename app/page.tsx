@@ -1482,11 +1482,14 @@ function SeasonPicker({
 function TeamRankingList({
   teams,
   limit,
+  expanded = false,
   bare = false,
   expanded = false,
 }: {
   teams: PadelTeam[];
   limit?: number;
+  // Come per il singolo: compatta in home, tabellare nella pagina intera.
+  expanded?: boolean;
   bare?: boolean;
   // Come per il singolo: in home la lista e compatta, nella pagina del
   // ranking diventa tabella. Senza questo le due classifiche in home si
@@ -1501,7 +1504,7 @@ function TeamRankingList({
         const rank = ranks[index];
         const winRate = team.matches_played ? Math.round((team.wins / team.matches_played) * 100) : 0;
         return (
-          <div className={`ranking-row ${rankTone(rank)}`} key={team.id}>
+          <div className={`ranking-row ${medalClass(rank)}`} key={team.id}>
             <span className={`rank-number rank-${rank}`}>{rank}</span>
             <TeamAvatars team={team} />
             <div className="ranking-name">
@@ -1512,12 +1515,20 @@ function TeamRankingList({
                   : teamSides(team) ?? `${team.matches_played} partite`}
               </span>
             </div>
-            <span className="table-stat"><b>{team.matches_played}</b><small>Partite</small></span>
-            <span className="table-stat"><b>{team.wins}</b><small>Vinte</small></span>
-            <span className="table-stat"><b>{winRate}%</b><small>Win rate</small></span>
-            <span className={`streak ${team.current_streak >= 0 ? "up" : "down"}`}>
-              {`${team.current_streak >= 0 ? "↗" : "↘"} ${Math.abs(team.current_streak)}`}
-            </span>
+            {expanded ? (
+              <>
+                <span className="table-stat"><b>{team.matches_played}</b><small>Partite</small></span>
+                <span className="table-stat"><b>{team.wins}</b><small>Vinte</small></span>
+                <span className="table-stat"><b>{winRate}%</b><small>Win rate</small></span>
+                <span className={`streak ${team.current_streak >= 0 ? "up" : "down"}`}>
+                  {`${team.current_streak >= 0 ? "↗" : "↘"} ${Math.abs(team.current_streak)}`}
+                </span>
+              </>
+            ) : (
+              <span className={`trend ${team.current_streak >= 0 ? "up" : "down"}`}>
+                {team.current_streak >= 0 ? "↑" : "↓"}
+              </span>
+            )}
             <span className="ranking-points">
               <b>{team.rating}</b>
               <small>PT</small>
@@ -1529,15 +1540,59 @@ function TeamRankingList({
   );
 }
 
-// Il colore della card dice la posizione, e basta quello: giallo il primo
-// (o i primi, se sono a pari punti), azzurro secondo e terzo, chiaro il
-// resto. Tutte le righe portano le stesse informazioni.
-// Le prime tre posizioni prendono i colori del podio. Vale per entrambe le
-// classifiche, singolo e squadre.
-function rankTone(rank: number) {
-  if (rank === 1) return "ranking-row-gold";
-  if (rank === 2) return "ranking-row-silver";
-  if (rank === 3) return "ranking-row-bronze";
+// Podio a tre gradini: un gradino per posizione, non per persona. Con dei
+// parimerito sullo stesso gradino salgono in due, e i gradini restano tre.
+type PodiumEntry = {
+  key: string;
+  avatar: ReactNode;
+  name: string;
+  detail: string;
+  onSelect?: () => void;
+};
+
+function Podium({ steps }: { steps: { rank: number; entries: PodiumEntry[] }[] }) {
+  const byRank = new Map(steps.map((step) => [step.rank, step.entries]));
+  // Ordine di lettura del podio: secondo, primo, terzo.
+  return (
+    <div className="podium">
+      {[2, 1, 3].map((rank) => {
+        const entries = byRank.get(rank) ?? [];
+        if (!entries.length) return null;
+        return (
+          <div className={`podium-step podium-step-${rank}`} key={rank}>
+            <div className="podium-people">
+              {entries.map((entry) => {
+                const content = (
+                  <>
+                    {entry.avatar}
+                    <b>{entry.name}</b>
+                    <span>{entry.detail}</span>
+                  </>
+                );
+                return entry.onSelect ? (
+                  <button className="podium-person" key={entry.key} type="button" onClick={entry.onSelect}>
+                    {content}
+                  </button>
+                ) : (
+                  <div className="podium-person" key={entry.key}>{content}</div>
+                );
+              })}
+            </div>
+            <div className="podium-bar"><span>#{rank}</span></div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Il podio si legge dall'anello attorno alla foto: oro, argento, bronzo.
+// Prima era il fondo della riga a cambiare colore, ma con le righe adiacenti
+// tre fondi diversi spezzavano l'elenco invece di ordinarlo.
+function medalClass(rank: number) {
+  if (rank === 1) return "medal-gold";
+  if (rank === 2) return "medal-silver";
+  if (rank === 3) return "medal-bronze";
   return "";
 }
 
@@ -1596,7 +1651,7 @@ function RankingList({
             </span>
           </>
         );
-        const tone = isRanked ? rankTone(rank) : "";
+        const tone = isRanked ? medalClass(rank) : "";
         return onSelect ? (
           <button
             type="button"
