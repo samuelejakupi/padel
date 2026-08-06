@@ -1484,17 +1484,14 @@ function TeamRankingList({
   limit,
   expanded = false,
   bare = false,
-  expanded = false,
 }: {
   teams: PadelTeam[];
   limit?: number;
-  // Come per il singolo: compatta in home, tabellare nella pagina intera.
-  expanded?: boolean;
-  bare?: boolean;
-  // Come per il singolo: in home la lista e compatta, nella pagina del
+  // Come per il singolo: in home la lista è compatta, nella pagina del
   // ranking diventa tabella. Senza questo le due classifiche in home si
   // presentavano con due impaginazioni diverse.
   expanded?: boolean;
+  bare?: boolean;
 }) {
   const ranks = ranksByRating(teams);
   const visible = limit === undefined ? teams : teams.slice(0, limit);
