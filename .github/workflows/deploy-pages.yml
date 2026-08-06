@@ -10,9 +10,14 @@ permissions:
   pages: write
   id-token: write
 
+# Una sola pubblicazione in volo alla volta. Con false le esecuzioni si
+# incolonnavano e GitHub Pages, trovandosene due in coda per lo stesso
+# ambiente, ne lasciava morire una per timeout dopo dieci minuti: metà dei
+# deploy andava persa. Annullando subito quella superata ne resta una sola,
+# che è anche quella giusta — la più recente.
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
