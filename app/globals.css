@@ -2189,14 +2189,25 @@ button.podium-person {
   width: 100%;
 }
 
+/* Stessa misura dell'avatar di un giocatore: la squadra occupa una colonna
+   sola, come il singolo. */
 .team-image-sm {
-  height: 40px;
-  width: 40px;
+  height: 36px;
+  width: 36px;
 }
 
 .team-image-lg {
   height: 84px;
   width: 84px;
+}
+
+/* Squadra senza foto: un cerchio con le iniziali dei due giocatori. */
+.team-initials {
+  letter-spacing: 0.5px;
+}
+
+.team-initials.avatar-lg {
+  font-size: 26px;
 }
 
 /* Sotto al punteggio del podio: chi compone la squadra, in piccolo. */
@@ -2333,11 +2344,10 @@ button.podium-person {
   grid-template-columns: 40px 66px minmax(140px, 1fr) 76px 76px 84px 80px 70px;
 }
 
-/* Versione compatta della classifica squadre: stessa impaginazione di
-   quella del singolo, con la sola colonna degli avatar allargata perche
-   qui ce ne stanno due affiancati. */
+/* La classifica squadre usa esattamente le colonne del singolo: da quando la
+   coppia è un cerchio solo, non serve più spazio in più. */
 .ranking-list-team .ranking-row {
-  grid-template-columns: 26px 62px minmax(0, 1fr) 20px 44px;
+  grid-template-columns: 26px 38px minmax(0, 1fr) 20px 44px;
 }
 
 .podium-avatars {

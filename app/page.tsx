@@ -1352,12 +1352,16 @@ function TeamAvatars({ team, size = "sm" }: { team: PadelTeam; size?: "sm" | "lg
       </span>
     );
   }
+  // Senza una foto di squadra la coppia è un cerchio solo con le iniziali dei
+  // due giocatori: due avatar sovrapposti occupavano il doppio dello spazio e
+  // rompevano l'allineamento con la classifica del singolo.
+  const marks = team.players
+    .map((profile) => profile.display_name.trim().charAt(0).toUpperCase())
+    .join("");
   return (
-    <div className={size === "lg" ? "podium-avatars" : "team-avatars"}>
-      {team.players.map((profile) => (
-        <Avatar key={profile.id} profile={profile} size={size} />
-      ))}
-    </div>
+    <span className={`avatar avatar-${size} team-initials`} aria-label={teamLabel(team)}>
+      <span>{marks}</span>
+    </span>
   );
 }
 
@@ -1603,6 +1607,31 @@ function BottomSheet({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [dismiss]);
+
+  // La pagina sotto non deve scorrere mentre il foglio è aperto. Su iOS non
+  // basta overflow: hidden, il corpo va bloccato alla posizione corrente e
+  // rimesso dov'era alla chiusura.
+  useEffect(() => {
+    const top = window.scrollY;
+    const { body } = document;
+    const previous = {
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    };
+    body.style.position = "fixed";
+    body.style.top = `-${top}px`;
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+    return () => {
+      body.style.position = previous.position;
+      body.style.top = previous.top;
+      body.style.width = previous.width;
+      body.style.overflow = previous.overflow;
+      window.scrollTo({ top, behavior: "instant" as ScrollBehavior });
+    };
+  }, []);
 
   function settle() {
     const panel = panelRef.current;
