@@ -406,7 +406,18 @@ type PadelTeam = {
   current_streak: number;
   name?: string | null;
   imageUrl?: string | null;
+  // Una coppia entra in classifica solo quando uno dei due le ha dato un
+  // nome dal proprio profilo, in "le mie squadre". Finche resta senza nome
+  // esiste comunque — le partite le ha giocate — ma vive solo nella scheda
+  // dei due giocatori, dove la si puo battezzare.
+  isRanked: boolean;
 };
+
+// Le coppie da mettere in classifica: quelle battezzate. Le altre restano
+// nella scheda del giocatore, che e il posto da cui si danno i nomi.
+function rankedPadelTeams(teams: PadelTeam[]) {
+  return teams.filter((team) => team.isRanked);
+}
 
 function teamLabel(team: PadelTeam) {
   return team.name?.trim() || team.players.map((profile) => profile.display_name).join(" · ");
@@ -459,6 +470,7 @@ function buildPadelTeams(
           current_streak: won ? 1 : -1,
           name: record?.name ?? null,
           imageUrl: record?.image_url ?? null,
+          isRanked: Boolean(record?.name?.trim()),
         });
       }
     });
@@ -676,6 +688,17 @@ function NavGlyph({ name }: { name: GlyphName }) {
 // l'avvio dell'app sia il caricamento dei dati, cosi il passaggio da una
 // all'altra non si vede.
 function LoadingScreen() {
+  // Il velo di attesa e fissato al viewport, ma sotto resta la pagina: su
+  // mobile il body tiene 88px di spazio per la barra inferiore e html e
+  // chiaro, quindi in fondo si vedeva una striscia bianca finche i dati non
+  // arrivavano. Mentre la schermata e a video vestiamo di scuro anche la
+  // pagina, riusando l'interruttore che la home usa gia.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add("theme-dark");
+    return () => root.classList.remove("theme-dark");
+  }, []);
+
   return (
     <main className="splash" role="status" aria-label="Caricamento in corso">
       <div className="splash-mark">
@@ -4030,7 +4053,12 @@ function AppShell({ session }: { session: Session | null }) {
     seasonProfiles.forEach((profile) => frozen.set(profile.id, profile));
     return buildPadelTeams(own, [...frozen.values()], teamRecords);
   }, [isCurrentSeason, teams, matches, profiles, seasonProfiles, teamRecords, season]);
-  const rankingRows = rankingMode === "single" ? seasonProfiles.length : seasonTeams.length;
+  // Da qui in giu si parla di classifica, quindi solo coppie battezzate.
+  // "teams" resta la lista completa: serve alla scheda del giocatore, dove
+  // le squadre senza nome sono proprio quelle da sistemare.
+  const rankedTeams = useMemo(() => rankedPadelTeams(teams), [teams]);
+  const rankedSeasonTeams = useMemo(() => rankedPadelTeams(seasonTeams), [seasonTeams]);
+  const rankingRows = rankingMode === "single" ? seasonProfiles.length : rankedSeasonTeams.length;
   const playerTeams = useMemo(
     () => teams.filter((team) => team.players.some((profile) => profile.id === selectedPlayerId)),
     [teams, selectedPlayerId],
@@ -4510,7 +4538,15 @@ function AppShell({ session }: { session: Session | null }) {
       { onConflict: "player_a,player_b" },
     );
 
-    setNotice(error ? error.message : "Squadra aggiornata.");
+    // Il nome non e un vezzo: e quello che fa entrare la coppia in
+    // classifica. Meglio dirlo qui, dove si sceglie, che lasciarlo scoprire.
+    setNotice(
+      error
+        ? error.message
+        : name.trim()
+          ? "Squadra salvata: da ora è in classifica."
+          : "Squadra senza nome: resta fuori dalla classifica.",
+    );
     if (!error) await loadData();
   }
 
@@ -4906,7 +4942,7 @@ function AppShell({ session }: { session: Session | null }) {
                   <div className="section-head-label"><p className="eyebrow dark">THEBOYZ CUP</p><h2>I tornei</h2></div>
                   <div className="court-actions">
                     <button
-                      className="button button-lime cta-new-match"
+                      className="button button-lime cta-new-match cta-aurora"
                       onClick={() => setShowTournamentCreate(true)}
                       disabled={!tournamentSchemaReady}
                     >
@@ -4916,7 +4952,7 @@ function AppShell({ session }: { session: Session | null }) {
                 </div>
                 <div className="match-panel tournament-panel">
                   <button
-                    className="button button-lime cta-new-match cta-in-panel"
+                    className="button button-lime cta-new-match cta-in-panel cta-aurora"
                     onClick={() => setShowTournamentCreate(true)}
                     disabled={!tournamentSchemaReady}
                   >
@@ -4970,6 +5006,15 @@ function AppShell({ session }: { session: Session | null }) {
                 >
                   <div className="side-head" ref={rankingAnchorRef}>
                     <div><h2>{rankingMode === "single" ? "Classifica Elo - Singolo" : "Classifica Elo - Squadra"}</h2></div>
+                    {/* I pallini del carosello: dicono che la card ha due
+                        facce e quale delle due stai guardando. Sono muti per
+                        i lettori di schermo — l'etichetta del tasto dice gia
+                        quale classifica e a video — e non si toccano: dentro
+                        un tasto non ci possono stare altri tasti. */}
+                    <span className="ranking-dots" aria-hidden="true">
+                      <i className={rankingMode === "single" ? "is-current" : ""} />
+                      <i className={rankingMode === "team" ? "is-current" : ""} />
+                    </span>
                   </div>
                   {/* La finestra ritaglia, il nastro dentro è quello che si
                       muove: col dito o da solo, ogni cinque secondi. */}
@@ -4981,11 +5026,12 @@ function AppShell({ session }: { session: Session | null }) {
                           limit={HOME_ROWS}
                           focusId={currentUserId}
                         />
-                      ) : teams.length ? (
-                        <TeamRankingList teams={teams} limit={HOME_ROWS} focusId={lastTeamId} />
+                      ) : rankedTeams.length ? (
+                        <TeamRankingList teams={rankedTeams} limit={HOME_ROWS} focusId={lastTeamId} />
                       ) : (
                         <p className="demo-profile-note">
-                          Le coppie si formano dalle partite: registra un doppio e compariranno qui.
+                          Una coppia entra qui quando le date un nome: apri la tua scheda, sezione
+                          &ldquo;le mie squadre&rdquo;.
                         </p>
                       )}
                     </div>
@@ -5035,13 +5081,16 @@ function AppShell({ session }: { session: Session | null }) {
             </article>
             {rankingMode === "single" ? (
               <RankingList profiles={seasonProfiles} onSelect={openPlayer} />
-            ) : teams.length ? (
-              <TeamRankingList teams={teams} expanded />
+            ) : rankedTeams.length ? (
+              <TeamRankingList teams={rankedTeams} expanded />
             ) : (
               <div className="empty-board">
                 <span>00</span>
                 <h2>Nessuna squadra in classifica</h2>
-                <p>Le coppie si formano da sole: registra un match e compariranno qui.</p>
+                <p>
+                  Le coppie si formano da sole con le partite, ma entrano in classifica solo quando
+                  uno dei due le da un nome: apri la tua scheda, sezione &ldquo;le mie squadre&rdquo;.
+                </p>
               </div>
             )}
           </section>
@@ -5613,7 +5662,7 @@ function AppShell({ session }: { session: Session | null }) {
               onSelect={(profile) => { setSheet(null); openPlayer(profile); }}
             />
           ) : (
-            <TeamRankingList teams={seasonTeams} showTrend={isCurrentSeason} />
+            <TeamRankingList teams={rankedSeasonTeams} showTrend={isCurrentSeason} />
           )}
         </BottomSheet>
       ) : null}

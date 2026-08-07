@@ -24,6 +24,10 @@
   --veil-3: rgba(11, 27, 44, 0.1);
   --ink-30: rgba(11, 27, 44, 0.3);
   --ink-45: rgba(11, 27, 44, 0.45);
+  /* Il gradino piu leggero: serve alle etichette dei riquadri, che sono
+     insegne e non titoli. In pieno --ink pesavano quanto i nomi e i numeri
+     sotto, che sono il contenuto vero. */
+  --ink-70: rgba(11, 27, 44, 0.7);
 
   /* Categorie della pizza: rappresentano un dato, non l'interfaccia, quindi
      stanno fuori dalla palette del marchio. Restano comunque qui. */
@@ -337,6 +341,84 @@ button {
   45%,
   100% {
     transform: translateX(130%);
+  }
+}
+
+/* Tasto "nuovo torneo": vetro chiaro con un filo di luce che gira intorno.
+   L'idea arriva dai tasti scuri con lo stroke a gradiente, ma li il vetro e
+   una lastra scura schiarita dai bordi; qui il fondo pagina e chiaro, quindi
+   il vetro e bianco e il contrasto lo fa il filo, non la lastra. I colori
+   sono quelli di casa — azzurro e lime, il lime e gia la tinta dei tornei —
+   e non tinte nuove al neon.
+   L'angolo del gradiente e una proprieta registrata perche un valore
+   personalizzato, senza tipo, non si puo animare: il browser passerebbe da
+   0deg a 360deg di scatto invece di girare. */
+@property --a {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.button-lime.cta-aurora,
+.button-lime.cta-aurora:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.96),
+    rgba(255, 255, 255, 0.74)
+  );
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  backdrop-filter: blur(14px) saturate(180%);
+  color: var(--ink);
+  /* Il filo di luce interno in alto, poi l'alone: due ombre colorate molto
+     larghe e molto diluite, una per tinta. Su fondo chiaro un alone forte
+     sporcherebbe la pagina invece di illuminarla. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 30px rgba(24, 223, 228, 0.28),
+    0 10px 30px rgba(239, 255, 0, 0.16),
+    0 6px 18px rgba(11, 27, 44, 0.08);
+}
+
+/* Il bagliore che attraversa gli altri CTA qui non si vedrebbe: e bianco, e
+   passerebbe sopra a un tasto gia bianco. */
+.cta-aurora::after {
+  display: none;
+}
+
+/* Il filo: un cerchio di colore grande quanto il tasto, di cui resta visibile
+   solo la cornice di 1.5px. La maschera tiene il bordo e cancella il pieno —
+   due strati identici sovrapposti, uno fermo al contenuto e uno a tutto il
+   riquadro, di cui si sottrae l'intersezione. */
+.cta-aurora::before {
+  --a: 0deg;
+  animation: cta-aurora-spin 6s linear infinite;
+  background: conic-gradient(
+    from var(--a),
+    var(--blue),
+    var(--lime),
+    var(--blue-dark),
+    var(--lime),
+    var(--blue)
+  );
+  border-radius: inherit;
+  content: "";
+  inset: 0;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  padding: 1.5px;
+  pointer-events: none;
+  position: absolute;
+}
+
+@keyframes cta-aurora-spin {
+  to {
+    --a: 360deg;
   }
 }
 
@@ -1335,6 +1417,28 @@ form select:focus,
 .section-head .eyebrow,
 .side-head .eyebrow {
   margin-bottom: var(--space-1);
+}
+
+/* Pallini del carosello, come sotto le foto di un profilo Instagram: sono li
+   per dire che la card ha due facce — singolo e squadre — e quale delle due
+   e a video. Stanno nell'angolo in alto a destra, centrati sull'etichetta,
+   perche e li che si guarda per capire cosa si sta leggendo. */
+.ranking-dots {
+  align-self: center;
+  display: flex;
+  gap: 5px;
+}
+
+.ranking-dots i {
+  background: var(--ink-30);
+  border-radius: var(--radius-pill);
+  height: 6px;
+  transition: background 200ms ease;
+  width: 6px;
+}
+
+.ranking-dots i.is-current {
+  background: var(--ink-70);
 }
 
 .dashboard-side {
@@ -5584,7 +5688,13 @@ button.pizza-ranking-row {
   inset: 0;
   justify-content: center;
   min-height: 100dvh;
-  padding: env(safe-area-inset-top) 24px env(safe-area-inset-bottom);
+  /* Padding simmetrico di proposito. Con env(safe-area-inset-top) sopra ed
+     env(safe-area-inset-bottom) sotto i due valori sono diversi (su iPhone
+     ~59 contro ~34) e il centro del riquadro scendeva di una decina di
+     pixel: il logo sembrava scentrato verso il basso. Un marchio di 150px
+     al centro dello schermo non arriva comunque vicino ne all'isola ne alla
+     barra di sistema, quindi le aree sicure qui non servono. */
+  padding: 24px;
   position: fixed;
   z-index: 90;
 }
@@ -6369,6 +6479,9 @@ button.pizza-ranking-row {
   /* Il titolo del foglio è la stessa etichetta della card da cui si apre:
      segue la stessa regola invece di averne una sua. */
   .sheet-head h2 {
+    /* Meno nere del testo: sono insegne del riquadro, non titoli da
+       leggere. In pieno --ink tiravano l'occhio piu delle righe sotto. */
+    color: var(--ink-70);
     font-size: 12px;
     letter-spacing: 1.4px;
     margin: 0;
@@ -7513,6 +7626,17 @@ button.pizza-ranking-row {
    non si tocca da un'altra parte: senza questo, alzato il dito, la riga o
    il tasto restavano evidenziati come se fossero ancora selezionati. */
 @media (hover: none) {
+  /* La macchia grigia che iOS e Android disegnano da soli sopra qualunque
+     cosa sia toccabile. Compare gia mentre appoggi il dito per scorrere,
+     prima ancora che il tocco sia un tocco, ed e quella che fa sembrare il
+     tasto "selezionato". Il ritorno visivo lo diamo noi, e solo quando il
+     dito preme davvero (:active). */
+  a,
+  button,
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   .button:hover,
   .hero-stat-link:hover,
   .hub-profile:hover,
@@ -7523,6 +7647,15 @@ button.pizza-ranking-row {
   .play-card:hover {
     box-shadow: none;
     transform: none;
+  }
+
+  /* Al posto della macchia, una pressione: il tasto rientra appena mentre lo
+     tieni premuto e torna su quando lo lasci. Il dito appoggiato per
+     scorrere non la fa scattare, il tocco vero si. Sta dopo la riga qui
+     sopra di proposito: al tocco il browser accende anche :hover, e a parita
+     di peso vince l'ultima regola scritta. */
+  .button:active {
+    transform: scale(0.985);
   }
 
   button.ranking-row-link:hover,
@@ -7536,12 +7669,48 @@ button.pizza-ranking-row {
     background: var(--blue);
   }
 
+  /* Il tasto della nuova partita ha una regola sua, piu specifica di
+     .button-primary: senza ripeterla qui restava l'unico a scurirsi sotto
+     il dito, ed e proprio quello che si tocca per sbaglio scorrendo la
+     home. Ripete il fondo a riposo, gradiente compreso. */
+  .cta-new-match.button-primary:hover {
+    background: var(--blue);
+    background: linear-gradient(
+      172deg,
+      color-mix(in srgb, var(--blue) 86%, #ffffff) 0%,
+      var(--blue) 54%,
+      color-mix(in srgb, var(--blue) 93%, var(--ink)) 100%
+    );
+  }
+
   .button-ghost:hover {
     background: var(--veil-2);
   }
 
   .button-card:hover {
     background: var(--white);
+  }
+
+  .button-lime:hover {
+    background: var(--lime);
+  }
+
+  .pizza-info-trigger:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .pizza-ranking-interactive:hover {
+    background: transparent;
+  }
+
+  .tournament-standings-link:hover {
+    box-shadow: none;
+    outline: none;
+    transform: none;
+  }
+
+  .tournament-recent-ranking:hover {
+    transform: none;
   }
 }
 
@@ -7552,6 +7721,12 @@ button.pizza-ranking-row {
   }
 
   .splash-mark {
+    animation: none;
+  }
+
+  /* Il filo resta, smette solo di girare: e il bordo del tasto, non un
+     effetto, e senza di lui il tasto perderebbe il contorno. */
+  .cta-aurora::before {
     animation: none;
   }
 
