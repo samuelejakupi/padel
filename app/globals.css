@@ -3067,11 +3067,6 @@ button.podium-person {
   width: 94px;
 }
 
-.tournament-trophy-art {
-  height: 100%;
-  object-fit: contain;
-  width: 100%;
-}
 
 .tournament-trophy.is-compact {
   height: 46px;
@@ -3884,6 +3879,104 @@ button.podium-person {
 .player-trophies .badge-bronze { --badge-accent: #b97743; }
 .player-trophies .badge-steel { --badge-accent: #8ea5bc; }
 
+/* Emblemi vettoriali. Il disegno arriva dal JSX, i colori da qui: cosi
+   restano dentro alla palette invece di essere scritti dentro alla forma.
+   Il riquadro lo danno le regole di chi li ospita — la bacheca, la card del
+   torneo, la sala trofei — e l'emblema ci si adatta dentro. */
+.emblem {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.emblem-art {
+  fill: var(--ink);
+}
+
+.emblem-stroke {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+/* Il numero e testo vero e non un tracciato: si cambia senza ridisegnare
+   l'emblema. Il carattere e quello della pagina, che l'SVG inlineato vede
+   come qualunque altro elemento. */
+.emblem-rank {
+  fill: var(--lime);
+  font-family: "Inter", Arial, Helvetica, sans-serif;
+  font-size: 28px;
+  font-style: italic;
+  font-weight: 800;
+}
+
+/* La luce che gira. Ogni fermata del gradiente fa lo stesso giro di colore,
+   ma sfalsata di un quinto: quello che si vede e un riflesso che scorre
+   lungo l'emblema, non cinque fermate che si accendono insieme.
+   Dentro domina il lime — e il colore dei premi — e l'azzurro passa e va.
+   Sul filo del bordo le due tinte si alternano davvero, come sui tasti. */
+@keyframes emblem-sweep {
+  0%,
+  100% {
+    stop-color: var(--lime);
+  }
+
+  14% {
+    stop-color: var(--blue);
+  }
+
+  34% {
+    stop-color: var(--lime);
+  }
+}
+
+@keyframes emblem-ring-sweep {
+  0%,
+  100% {
+    stop-color: var(--blue);
+  }
+
+  33% {
+    stop-color: var(--lime);
+  }
+
+  66% {
+    stop-color: var(--blue-dark);
+  }
+}
+
+.emblem-fill stop {
+  animation: emblem-sweep 7s linear infinite;
+  stop-color: var(--lime);
+}
+
+.emblem-ring stop {
+  animation: emblem-ring-sweep 7s linear infinite;
+  stop-color: var(--blue);
+}
+
+/* Ritardi negativi: l'animazione parte gia a meta corsa invece di aspettare,
+   cosi il riflesso e in viaggio fin dal primo fotogramma. */
+.emblem-fill stop:nth-child(2),
+.emblem-ring stop:nth-child(2) {
+  animation-delay: -1.4s;
+}
+
+.emblem-fill stop:nth-child(3),
+.emblem-ring stop:nth-child(3) {
+  animation-delay: -2.8s;
+}
+
+.emblem-fill stop:nth-child(4),
+.emblem-ring stop:nth-child(4) {
+  animation-delay: -4.2s;
+}
+
+.emblem-fill stop:nth-child(5),
+.emblem-ring stop:nth-child(5) {
+  animation-delay: -5.6s;
+}
+
 .badge-emblem {
   align-items: center;
   display: flex;
@@ -4186,7 +4279,6 @@ button.podium-person {
   width: 58px;
 }
 
-.trophy-room-empty-art { height: 100%; object-fit: contain; width: 100%; }
 .trophy-room-empty span { display: flex; flex-direction: column; gap: 6px; }
 .trophy-room-empty b { font-size: 13px; }
 .trophy-room-empty small { color: var(--muted); font-size: 10px; }
@@ -7836,6 +7928,11 @@ button.pizza-ranking-row {
   /* Il filo resta, smette solo di girare: e il bordo del tasto, non un
      effetto, e senza di lui il tasto perderebbe il contorno. */
   .button.cta-aurora {
+    animation: none;
+  }
+
+  .emblem-fill stop,
+  .emblem-ring stop {
     animation: none;
   }
 

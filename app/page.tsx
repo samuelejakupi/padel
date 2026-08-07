@@ -1022,18 +1022,88 @@ function clampProgress(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
-// Gli emblemi rifatti stanno in public/SVG e sono vettoriali. Restano
-// immagini come gli altri: il filo di luce che li attraversa e scritto
-// dentro al file, quindi non serve inlinearli nel JSX per animarli. Quelli
-// non ancora rifatti continuano a pescare il webp di partenza.
-const EMBLEM_ART: Partial<Record<BadgeGlyph, string>> = {
-  goat: "/SVG/goat.svg",
-  "goat-slayer": "/SVG/kraken.svg",
-  trophy: "/SVG/trophy1.svg",
+// Gli emblemi rifatti sono disegnati qui e non caricati da public/SVG come
+// immagini. Dentro a un <img> un SVG e un documento chiuso in se stesso: non
+// vede i caratteri della pagina — il "#1" ricadeva su un font di sistema — e
+// le sue animazioni su iOS non partono. Inlineato, il colore lo scrive il
+// CSS di globals.css come per ogni altra cosa, il filo di luce si muove
+// davvero, e il numero resta testo, quindi si cambia senza ridisegnare
+// niente. Quelli non ancora rifatti continuano a pescare il webp.
+type EmblemName = "goat" | "kraken" | "trophy";
+
+const EMBLEM_COMPONENT: Partial<Record<BadgeGlyph, EmblemName>> = {
+  goat: "goat",
+  "goat-slayer": "kraken",
+  trophy: "trophy",
 };
 
-function emblemArt(glyph: BadgeGlyph) {
-  return `${basePath}${EMBLEM_ART[glyph] ?? `/emblems/${glyph}.webp`}`;
+// Il contorno esterno e quello interno sono gli stessi per tutti: cambia
+// solo il disegno in mezzo.
+const EMBLEM_HEX_INNER = "64 12.64 114.59 35.56 100 96.24 64 115.02 28 96.24 13.41 35.56";
+const EMBLEM_HEX_OUTER = "64 0 0 29 18.03 104.03 64 128 109.97 104.03 128 29";
+const EMBLEM_FRAME =
+  "M64,12.64l50.59,22.92-14.58,60.68-36,18.78-36-18.78-14.58-60.68L64,12.64h0ZM64,0L0,29l18.03,75.03,45.97,23.97,45.97-23.97,18.03-75.03L64,0h0Z";
+
+function Emblem({ name, rank = "#1", className }: { name: EmblemName; rank?: string; className?: string }) {
+  // I due gradienti sono riferiti per id, e lo stesso emblema compare piu
+  // volte nella stessa pagina: senza un identificatore unico tutte le copie
+  // pescherebbero dal primo.
+  const id = useId();
+  const fillId = `${id}-fill`;
+  const ringId = `${id}-ring`;
+  const stops = [0, 0.25, 0.5, 0.75, 1];
+
+  return (
+    <svg
+      className={`emblem${className ? ` ${className}` : ""}`}
+      viewBox="-4 -4 136 136"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <defs>
+        {/* Le fermate non hanno colore qui: glielo da il CSS, che le anima
+            una sfalsata dall'altra. E cosi che la luce sembra viaggiare
+            lungo il gradiente invece di accendersi tutta insieme. */}
+        <linearGradient className="emblem-fill" id={fillId} x1="0" y1="0" x2="1" y2="1">
+          {stops.map((offset) => <stop key={offset} offset={offset} />)}
+        </linearGradient>
+        <linearGradient className="emblem-ring" id={ringId} x1="0" y1="0" x2="1" y2="1">
+          {stops.map((offset) => <stop key={offset} offset={offset} />)}
+        </linearGradient>
+      </defs>
+
+      <polygon fill={`url(#${fillId})`} points={EMBLEM_HEX_INNER} />
+
+      <g className="emblem-art">
+        <path
+          d={name === "kraken"
+            ? "M64,12.64l50.59,22.92-14.58,60.68-36,18.78-36-18.78-14.58-60.68,50.59-22.92h0ZM64,0L0,29l18.03,75.03,45.97,23.97,45.97-23.97,18.03-75.03L64,0h0Z"
+            : EMBLEM_FRAME}
+        />
+        {name === "goat" ? (
+          <>
+            <polygon points="27.52 66.61 22.31 66.61 27.52 71.82 27.52 66.61" />
+            <polygon points="100.48 71.82 105.69 66.61 100.48 66.61 100.48 71.82" />
+            <polygon points="84.85 35.33 74.42 35.33 64 45.76 53.58 35.33 43.15 35.33 22.31 56.18 22.31 66.61 43.15 45.76 48.36 45.76 53.58 50.97 48.36 56.18 48.36 50.97 43.15 56.18 48.36 61.39 53.58 61.39 58.79 66.61 58.79 71.82 53.58 66.61 53.58 77.03 58.79 82.24 58.79 87.45 64 92.67 69.21 87.45 69.21 82.24 74.42 77.03 74.42 66.61 69.21 71.82 69.21 66.61 74.42 61.39 79.64 61.39 84.85 56.18 79.64 50.97 79.64 56.18 74.42 50.97 79.64 45.76 84.85 45.76 105.69 66.61 105.69 56.18 84.85 35.33" />
+          </>
+        ) : null}
+        {name === "kraken" ? (
+          <polygon points="97.43 50.63 84.06 50.63 77.37 50.63 70.69 57.32 77.37 57.32 90.74 64 97.43 70.69 97.43 84.06 90.74 90.75 84.06 90.75 77.37 84.06 77.37 77.38 84.06 77.38 77.37 84.06 90.74 84.06 90.74 77.37 84.06 70.69 70.69 70.69 57.31 84.06 57.31 90.75 64 97.43 70.69 90.75 70.69 84.06 64 90.75 64 84.06 70.69 84.06 77.37 90.75 70.69 97.43 64 104.12 57.31 97.43 50.63 90.75 50.63 77.38 57.31 64 43.94 70.69 37.26 77.37 37.26 90.75 43.94 84.06 43.94 90.75 37.26 90.75 30.57 84.06 30.57 70.69 37.26 64 50.63 57.32 57.31 57.32 50.63 50.63 30.57 50.64 37.26 57.32 37.26 57.32 30.57 57.32 30.57 50.64 37.26 43.95 43.94 43.95 50.63 50.63 43.94 30.57 64 23.88 84.06 30.57 77.37 50.63 84.06 43.95 90.74 43.95 97.43 50.63 97.43 57.32 90.74 57.32 90.74 57.32 97.43 50.63" />
+        ) : null}
+        {name === "trophy" ? (
+          <path d="M86.25,45.87l.82-19.24-23.08,11.55-23.08-11.56.82,19.26h-20.19l4,23.08,30.74,15.39-15.36,5.7,1,7.38,22.08,11,22.07-11,1-7.38-15.36-5.7,30.76-15.39,4-23.08h-20.21ZM30.05,66.27l-2-16.18h13.86l.96,22.6-12.82-6.42ZM85.11,72.69l.96-22.6h13.86l-2,16.18-12.82,6.42Z" />
+        ) : null}
+      </g>
+
+      {/* Ancorato al centro e non al bordo sinistro: il numero puo crescere
+          — #2, #10 — e resta comunque in mezzo alla coppa. */}
+      {name === "trophy" ? (
+        <text className="emblem-rank" x="64" y="71.49" textAnchor="middle">{rank}</text>
+      ) : null}
+
+      <polygon className="emblem-stroke" points={EMBLEM_HEX_OUTER} stroke={`url(#${ringId})`} />
+    </svg>
+  );
 }
 
 // TEMPORANEO — da togliere. Tiene accesi questi badge per chiunque apra la
@@ -1198,7 +1268,9 @@ function BadgeGlyphIcon({ name }: { name: BadgeGlyph }) {
 function BadgeList({ badges }: { badges: Badge[] }) {
   return (
     <div className="badge-grid">
-      {badges.map((badge) => (
+      {badges.map((badge) => {
+        const emblem = EMBLEM_COMPONENT[badge.glyph];
+        return (
         <article
           className={`badge badge-${badge.tone} ${badge.unlocked ? "is-unlocked" : "is-locked"}`}
           key={badge.id}
@@ -1206,7 +1278,11 @@ function BadgeList({ badges }: { badges: Badge[] }) {
           aria-label={`${badge.label}. ${badge.meaning} ${badge.progressLabel}`}
         >
           <div className="badge-emblem" aria-hidden="true">
-            <Image className="badge-art" src={emblemArt(badge.glyph)} alt="" width={128} height={168} />
+            {emblem ? (
+              <Emblem name={emblem} className="badge-art" />
+            ) : (
+              <Image className="badge-art" src={`${basePath}/emblems/${badge.glyph}.webp`} alt="" width={128} height={168} />
+            )}
           </div>
           <aside className="badge-tooltip" role="tooltip">
             <strong>{badge.label}</strong>
@@ -1215,7 +1291,8 @@ function BadgeList({ badges }: { badges: Badge[] }) {
             <small>{badge.value} · {badge.progressLabel}</small>
           </aside>
         </article>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -3047,13 +3124,7 @@ type TournamentStanding = {
 function TournamentTrophyBadge({ kind, compact = false }: { kind: TournamentTrophyKind; compact?: boolean }) {
   return (
     <div className={`tournament-trophy tournament-trophy-${kind}${compact ? " is-compact" : ""}`} aria-hidden="true">
-      <Image
-        className="tournament-trophy-art"
-        src={`${basePath}/SVG/trophy1.svg`}
-        alt=""
-        width={128}
-        height={128}
-      />
+      <Emblem name="trophy" className="tournament-trophy-art" />
     </div>
   );
 }
@@ -5220,13 +5291,7 @@ function AppShell({ session }: { session: Session | null }) {
               ) : (
                 <div className="trophy-room-empty">
                   <div aria-hidden="true">
-                    <Image
-                      className="trophy-room-empty-art"
-                      src={`${basePath}/SVG/trophy1.svg`}
-                      alt=""
-                      width={128}
-                      height={128}
-                    />
+                    <Emblem name="trophy" className="trophy-room-empty-art" />
                   </div>
                   <span><b>La prima coppa aspetta il suo torneo.</b><small>Comparirà qui quando una coppia completerà il girone al primo posto.</small></span>
                 </div>
