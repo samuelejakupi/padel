@@ -450,10 +450,9 @@ function buildPadelTeams(
         teams.set(key, {
           id: key,
           players,
-          // Media dei punteggi attuali dei due componenti.
-          rating: players.length
-            ? Math.round(players.reduce((sum, profile) => sum + profile.rating, 0) / players.length)
-            : 0,
+          // Segnaposto: la media si calcola dopo il giro sulle partite, cosi
+          // non dipende da quando la coppia e stata incontrata la prima volta.
+          rating: 0,
           matches_played: 1,
           wins: won ? 1 : 0,
           losses: won ? 0 : 1,
@@ -465,8 +464,18 @@ function buildPadelTeams(
     });
   });
 
+  // La forza di una coppia e sempre la media dei punteggi dei due componenti
+  // nel momento in cui la si guarda: la calcoliamo qui, sui profili appena
+  // ricevuti, e non dentro il giro sulle partite. Cosi la classifica squadre
+  // segue l'Elo dei singoli invece di restare ferma alla prima partita.
   return [...teams.values()]
     .filter((team) => team.players.length === 2)
+    .map((team) => ({
+      ...team,
+      rating: Math.round(
+        team.players.reduce((sum, profile) => sum + profile.rating, 0) / team.players.length,
+      ),
+    }))
     .sort(
       (a, b) =>
         b.rating - a.rating ||
@@ -4009,11 +4018,18 @@ function AppShell({ session }: { session: Session | null }) {
   // Le coppie di una stagione passata si ricostruiscono dalle partite di
   // quell'anno: l'archivio conserva le posizioni dei singoli, non quelle
   // delle squadre.
+  // Le coppie di una stagione chiusa vanno lette con i punteggi di quella
+  // stagione, non con quelli di oggi: altrimenti la classifica del singolo
+  // resta ferma nell'archivio mentre quella delle squadre continua a
+  // muoversi. Chi non compare nell'archivio tiene il profilo vivo, cosi la
+  // coppia non sparisce dall'elenco.
   const seasonTeams = useMemo(() => {
     if (isCurrentSeason) return teams;
     const own = matches.filter((match) => new Date(match.played_at).getFullYear() === season);
-    return buildPadelTeams(own, profiles, teamRecords);
-  }, [isCurrentSeason, teams, matches, profiles, teamRecords, season]);
+    const frozen = new Map(profiles.map((profile) => [profile.id, profile]));
+    seasonProfiles.forEach((profile) => frozen.set(profile.id, profile));
+    return buildPadelTeams(own, [...frozen.values()], teamRecords);
+  }, [isCurrentSeason, teams, matches, profiles, seasonProfiles, teamRecords, season]);
   const rankingRows = rankingMode === "single" ? seasonProfiles.length : seasonTeams.length;
   const playerTeams = useMemo(
     () => teams.filter((team) => team.players.some((profile) => profile.id === selectedPlayerId)),
