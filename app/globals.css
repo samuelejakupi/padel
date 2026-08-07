@@ -3055,12 +3055,11 @@ button.podium-person {
   border-color: var(--blue);
 }
 
+/* Il cerchio lime col bordo scuro non serve piu: l'emblema esagonale porta
+   con se la sua cornice, e incastonarlo in un altro contorno faceva due
+   bordi uno dentro l'altro. Resta solo il riquadro che ne fissa la misura. */
 .tournament-trophy {
   align-items: center;
-  background: var(--lime);
-  border: 4px solid var(--ink);
-  border-radius: 50%;
-  color: var(--ink);
   display: flex;
   flex: 0 0 auto;
   height: 94px;
@@ -3068,20 +3067,15 @@ button.podium-person {
   width: 94px;
 }
 
-.tournament-trophy svg {
-  height: 58px;
-  width: 58px;
+.tournament-trophy-art {
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
 }
 
 .tournament-trophy.is-compact {
-  border-width: 2px;
   height: 46px;
   width: 46px;
-}
-
-.tournament-trophy.is-compact svg {
-  height: 29px;
-  width: 29px;
 }
 
 .tournament-elo-choice {
@@ -3170,7 +3164,7 @@ button.podium-person {
 }
 
 .tournament-prize-card .tournament-trophy {
-  background: var(--white);
+  background: none;
 }
 
 .tournament-prize-card small {
@@ -4179,18 +4173,20 @@ button.podium-person {
   padding: 22px;
 }
 
+/* Come sulle card dei tornei: l'emblema ha gia il suo contorno, il cerchio
+   attorno ne faceva un secondo. Qui pero il trofeo non c'e ancora, quindi
+   resta spento — e un posto vuoto, non un premio. */
 .trophy-room-empty > div {
   align-items: center;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  color: var(--muted);
   display: flex;
+  filter: grayscale(0.85);
   height: 58px;
   justify-content: center;
+  opacity: 0.5;
   width: 58px;
 }
 
-.trophy-room-empty svg { height: 27px; width: 27px; }
+.trophy-room-empty-art { height: 100%; object-fit: contain; width: 100%; }
 .trophy-room-empty span { display: flex; flex-direction: column; gap: 6px; }
 .trophy-room-empty b { font-size: 13px; }
 .trophy-room-empty small { color: var(--muted); font-size: 10px; }
@@ -4215,11 +4211,6 @@ button.podium-person {
 .trophy-room-card .tournament-trophy {
   height: 78px;
   width: 78px;
-}
-
-.trophy-room-card .tournament-trophy svg {
-  height: 47px;
-  width: 47px;
 }
 
 .trophy-room-card > span {

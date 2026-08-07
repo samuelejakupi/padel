@@ -1022,7 +1022,34 @@ function clampProgress(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+// Gli emblemi rifatti stanno in public/SVG e sono vettoriali. Restano
+// immagini come gli altri: il filo di luce che li attraversa e scritto
+// dentro al file, quindi non serve inlinearli nel JSX per animarli. Quelli
+// non ancora rifatti continuano a pescare il webp di partenza.
+const EMBLEM_ART: Partial<Record<BadgeGlyph, string>> = {
+  goat: "/SVG/goat.svg",
+  "goat-slayer": "/SVG/kraken.svg",
+  trophy: "/SVG/trophy1.svg",
+};
+
+function emblemArt(glyph: BadgeGlyph) {
+  return `${basePath}${EMBLEM_ART[glyph] ?? `/emblems/${glyph}.webp`}`;
+}
+
+// TEMPORANEO — da togliere. Tiene accesi questi badge per chiunque apra la
+// propria scheda, cosi si vedono i tre emblemi nuovi senza doverseli
+// guadagnare. Svuotare l'insieme fa tornare tutto ai criteri veri, che
+// restano quelli scritti in playerBadges: qui non si tocca la logica, solo
+// il risultato finale.
+const FORCED_BADGES = new Set(["goat", "goat-slayer", "trophy"]);
+
 function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch[]): Badge[] {
+  return buildPlayerBadges(profile, profiles, matches).map((badge) =>
+    FORCED_BADGES.has(badge.id) ? { ...badge, unlocked: true } : badge,
+  );
+}
+
+function buildPlayerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch[]): Badge[] {
   const { metrics, topPairRate } = buildBadgeMetrics(profiles, matches);
   const own = metrics.get(profile.id) ?? emptyBadgeMetrics();
   const all = [...metrics.values()];
@@ -1105,6 +1132,15 @@ function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch
     },
     recordBadge("goat-slayer", "red", "goat-slayer", "AMMAZZA-GOAT", "Chi ha battuto più volte il numero uno.", "Conta solo quando l'avversario era GOAT prima dell'inizio della partita.", own.winsAgainstGoat, maxOf((item) => item.winsAgainstGoat), "GOAT battuti"),
     {
+      id: "trophy", tone: "gold", glyph: "trophy", label: "CAMPIONE",
+      meaning: "Chi ha vinto almeno un torneo del gruppo.",
+      criterion: "Si conquista alzando il trofeo di una THEBOYZ CUP conclusa.",
+      value: "Sala trofei",
+      progress: 0,
+      progressLabel: "Vinci un torneo",
+      unlocked: false,
+    },
+    {
       id: "centurion", tone: "steel", glyph: "centurion", label: "CENTURIONE",
       meaning: "Il riconoscimento personale per chi ha raggiunto 20 presenze.",
       criterion: "Si conquista disputando almeno 20 partite e non dipende dai risultati degli altri.",
@@ -1170,7 +1206,7 @@ function BadgeList({ badges }: { badges: Badge[] }) {
           aria-label={`${badge.label}. ${badge.meaning} ${badge.progressLabel}`}
         >
           <div className="badge-emblem" aria-hidden="true">
-            <Image className="badge-art" src={`${basePath}/emblems/${badge.glyph}.webp`} alt="" width={128} height={168} />
+            <Image className="badge-art" src={emblemArt(badge.glyph)} alt="" width={128} height={168} />
           </div>
           <aside className="badge-tooltip" role="tooltip">
             <strong>{badge.label}</strong>
@@ -3002,35 +3038,22 @@ type TournamentStanding = {
   directWins: number;
 };
 
+// Il simbolo del trofeo e ora l'emblema esagonale, lo stesso della bacheca:
+// i quattro glifi a tratto — coppa, corona, scudo, stella — erano disegnati
+// qui a mano e non c'entravano piu niente con il resto.
+// La forma resta nel prop e nella colonna trophy_badge del database: cambia
+// solo quello che si vede, cosi i tornei gia creati non perdono il loro
+// valore e si puo tornare indietro senza migrazioni.
 function TournamentTrophyBadge({ kind, compact = false }: { kind: TournamentTrophyKind; compact?: boolean }) {
   return (
     <div className={`tournament-trophy tournament-trophy-${kind}${compact ? " is-compact" : ""}`} aria-hidden="true">
-      <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-        {kind === "cup" ? (
-          <>
-            <path d="M20 12h24v15c0 10-5 17-12 17s-12-7-12-17V12Z" />
-            <path d="M20 17h-8v6c0 7 4 11 10 11M44 17h8v6c0 7-4 11-10 11M32 44v8M22 56h20" />
-          </>
-        ) : null}
-        {kind === "crown" ? (
-          <>
-            <path d="m10 20 11 9 11-17 11 17 11-9-5 27H15l-5-27Z" />
-            <path d="M15 47h34v8H15z" />
-          </>
-        ) : null}
-        {kind === "shield" ? (
-          <>
-            <path d="M32 8 52 16v16c0 12-8 20-20 25C20 52 12 44 12 32V16l20-8Z" />
-            <path d="m22 32 7 7 14-15" />
-          </>
-        ) : null}
-        {kind === "star" ? (
-          <>
-            <path d="m32 7 7 16 18 2-13 12 4 18-16-9-16 9 4-18L7 25l18-2 7-16Z" />
-            <circle cx="32" cy="34" r="6" />
-          </>
-        ) : null}
-      </svg>
+      <Image
+        className="tournament-trophy-art"
+        src={`${basePath}/SVG/trophy1.svg`}
+        alt=""
+        width={128}
+        height={128}
+      />
     </div>
   );
 }
@@ -5196,7 +5219,15 @@ function AppShell({ session }: { session: Session | null }) {
                 </div>
               ) : (
                 <div className="trophy-room-empty">
-                  <div aria-hidden="true"><BadgeGlyphIcon name="trophy" /></div>
+                  <div aria-hidden="true">
+                    <Image
+                      className="trophy-room-empty-art"
+                      src={`${basePath}/SVG/trophy1.svg`}
+                      alt=""
+                      width={128}
+                      height={128}
+                    />
+                  </div>
                   <span><b>La prima coppa aspetta il suo torneo.</b><small>Comparirà qui quando una coppia completerà il girone al primo posto.</small></span>
                 </div>
               )}
