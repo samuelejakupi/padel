@@ -49,6 +49,13 @@
   --space-7: 28px;
   --space-8: 40px;
 
+  /* Fondo dell'avatar quando la foto non c'e e resta la sola iniziale.
+     Grigio neutro: l'azzurro di prima somigliava troppo a una scelta di
+     stile della persona, e chi non aveva ancora messo la foto sembrava
+     averne una. Sta qui perche lo ripetono anche i tre avatar con la
+     medaglia, che lo devono sovrapporre al metallo. */
+  --avatar-fill: linear-gradient(145deg, var(--line), var(--muted));
+
   /* Altezza di una riga di classifica. Sta qui perche non la usa solo la
      riga: l'anteprima in home ci calcola la propria altezza minima, cosi la
      card resta ferma anche quando dentro c'e un messaggio invece
@@ -368,8 +375,26 @@ button {
    mask-composite — bastava che una scorciatoia webkit rimettesse a posto il
    valore di composizione e la ruota tornava piena, coprendo anche la
    scritta. Questa strada non ha scorciatoie che si pestano i piedi. */
-.button-lime.cta-aurora,
-.button-lime.cta-aurora:hover {
+/* Le due tinte del filo. Il tasto delle partite gira sull'azzurro, quello
+   dei tornei sul lime: e la stessa distinzione che avevano da pieni, solo
+   spostata dal fondo al bordo. Senza, i due tasti diventerebbero identici e
+   in home ce li si trova uno sotto l'altro. */
+.button.cta-aurora {
+  --aurora-main: var(--blue);
+  --aurora-accent: var(--lime);
+}
+
+.button-lime.cta-aurora {
+  --aurora-main: var(--lime);
+  --aurora-accent: var(--blue);
+}
+
+.button.cta-aurora,
+.button.cta-aurora:hover,
+/* Il tasto della nuova partita ha gia una regola sua a tre classi per il
+   fondo azzurro: per scavalcarla ne serve una di peso almeno pari. */
+.cta-new-match.button-primary.cta-aurora,
+.cta-new-match.button-primary.cta-aurora:hover {
   --a: 0deg;
   animation: cta-aurora-spin 6s linear infinite;
   background:
@@ -380,11 +405,11 @@ button {
     ) padding-box,
     conic-gradient(
       from var(--a),
-      var(--blue),
-      var(--lime),
-      var(--blue-dark),
-      var(--lime),
-      var(--blue)
+      var(--aurora-main),
+      var(--aurora-accent),
+      var(--aurora-main),
+      var(--aurora-accent),
+      var(--aurora-main)
     ) border-box;
   border: 1.5px solid transparent;
   color: var(--ink);
@@ -412,9 +437,9 @@ button {
 
 .avatar {
   align-items: center;
-  background: linear-gradient(145deg, #d8e7ff, #8eb2ee);
+  background: var(--avatar-fill);
   /* Il fondo si ferma al bordo: sull'anello semitrasparente dell'hero
-     altrimenti traspariva l'azzurro e sembrava un alone. */
+     altrimenti traspariva il grigio e sembrava un alone. */
   background-clip: padding-box;
   border: 2px solid var(--white);
   border-radius: 50%;
@@ -1420,7 +1445,7 @@ form select:focus,
 /* Spenti molto piu chiari dell'acceso: i pallini stanno accanto
    all'etichetta e non devono pesare quanto lei. */
 .ranking-dots i {
-  background: var(--veil-3);
+  background: var(--veil-2);
   border-radius: var(--radius-pill);
   height: 6px;
   transition: background 200ms ease;
@@ -1430,7 +1455,7 @@ form select:focus,
 /* L'acceso e esattamente del colore dell'etichetta: sono la stessa riga di
    servizio, letta in due modi. */
 .ranking-dots i.is-current {
-  background: var(--ink-45);
+  background: var(--ink-30);
 }
 
 .dashboard-side {
@@ -2642,23 +2667,23 @@ button.podium-person {
   border-color: transparent;
 }
 
-/* Lo strato interno resta quello di partenza: l'azzurro dell'avatar, che si
+/* Lo strato interno resta quello di partenza: il grigio dell'avatar, che si
    vede quando non c'è una foto, e il bianco sotto l'immagine di squadra. */
 .medal-gold .avatar {
   background-image:
-    linear-gradient(145deg, #d8e7ff, #8eb2ee),
+    var(--avatar-fill),
     linear-gradient(140deg, #f6dd8a 0%, #d19a1c 32%, #8f6410 55%, #e7c25e 78%, #f9e9a8 100%);
 }
 
 .medal-silver .avatar {
   background-image:
-    linear-gradient(145deg, #d8e7ff, #8eb2ee),
+    var(--avatar-fill),
     linear-gradient(140deg, #f2f5f7 0%, #b3bcc4 32%, #78838d 55%, #cdd5db 78%, #ffffff 100%);
 }
 
 .medal-bronze .avatar {
   background-image:
-    linear-gradient(145deg, #d8e7ff, #8eb2ee),
+    var(--avatar-fill),
     linear-gradient(140deg, #eaae7d 0%, #bd7740 32%, #7d4a22 55%, #d99a63 78%, #f2c99f 100%);
 }
 
@@ -6502,7 +6527,7 @@ button.pizza-ranking-row {
     /* Molto piu chiare del testo: sono insegne del riquadro, non titoli da
        leggere. In pieno --ink tiravano l'occhio piu dei nomi e dei numeri
        sotto, che sono il contenuto vero. */
-    color: var(--ink-45);
+    color: var(--ink-30);
     font-size: 12px;
     letter-spacing: 1.4px;
     margin: 0;
@@ -7727,37 +7752,23 @@ button.pizza-ranking-row {
   }
 }
 
-/* Il rimbalzo alla pressione. Vale per tutto quello che si tocca: rientra
-   sotto il dito e torna su con un piccolo scatto oltre la misura, che e la
-   curva qui sotto a darlo. Sta in fondo al file di proposito — al tocco il
-   browser accende anche :hover, e piu su ci sono regole che azzerano la
-   trasformazione: a parita di peso vince l'ultima scritta, e deve essere
-   questa. */
-.button:active:not(:disabled),
-.hero-stat-link:active,
-.hub-card:active,
-.hub-profile:active,
-.match-card-link:active,
-.match-panel-open:active,
-.match-video-preview:active,
-.play-card:active,
-.ranking-preview:active,
-.tournament-standings-link:active,
-button.ranking-row-link:active {
+/* Il rimbalzo alla pressione: rientra sotto il dito e torna su con un
+   piccolo scatto oltre la misura, che e la curva qui sotto a darlo.
+   Solo i due tasti che aggiungono qualcosa — nuova partita e nuovo torneo.
+   Sulle card no: una card e una superficie da leggere, e vederla rimbalzare
+   mentre la si sfiora per scorrere fa sembrare che si sia premuto qualcosa
+   quando invece non si e fatto niente.
+   Sta in fondo al file di proposito — al tocco il browser accende anche
+   :hover, e piu su ci sono regole che azzerano la trasformazione: a parita
+   di peso vince l'ultima scritta, e deve essere questa. */
+.cta-new-match:active:not(:disabled),
+.tournament-new-button:active:not(:disabled) {
   transform: scale(0.965);
   transition-duration: 90ms;
 }
 
-.button,
-.hero-stat-link,
-.hub-card,
-.hub-profile,
-.match-card-link,
-.match-panel-open,
-.match-video-preview,
-.play-card,
-.ranking-preview,
-button.ranking-row-link {
+.cta-new-match,
+.tournament-new-button {
   transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -7794,7 +7805,7 @@ button.ranking-row-link {
 
   /* Il filo resta, smette solo di girare: e il bordo del tasto, non un
      effetto, e senza di lui il tasto perderebbe il contorno. */
-  .button-lime.cta-aurora {
+  .button.cta-aurora {
     animation: none;
   }
 

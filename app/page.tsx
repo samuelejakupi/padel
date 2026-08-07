@@ -4883,7 +4883,7 @@ function AppShell({ session }: { session: Session | null }) {
                 <div className="section-head">
                   <div className="section-head-label"><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
                   <div className="court-actions">
-                    <button className="button button-primary cta-new-match" onClick={() => setShowMatch(true)}>+ Nuova partita</button>
+                    <button className="button button-primary cta-new-match cta-aurora" onClick={() => setShowMatch(true)}>+ Nuova partita</button>
                     {matches.length ? (
                       <button
                         className="button button-card cta-see-all-top"
@@ -4898,7 +4898,7 @@ function AppShell({ session }: { session: Session | null }) {
                     le partite: è il gesto che le collega, non un comando che
                     appartiene all'elenco. Su desktop resta invisibile, lì
                     comanda quello nell'intestazione di sezione. */}
-                <button className="button button-primary cta-new-match cta-in-panel cta-between" onClick={() => setShowMatch(true)}>+ Nuova partita</button>
+                <button className="button button-primary cta-new-match cta-in-panel cta-between cta-aurora" onClick={() => setShowMatch(true)}>+ Nuova partita</button>
                 <div className="match-panel">
                   {/* Titolo interno al riquadro, come "Classifica Elo".
                       Su desktop resta nascosto: li il titolo di sezione
