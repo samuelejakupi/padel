@@ -24,10 +24,6 @@
   --veil-3: rgba(11, 27, 44, 0.1);
   --ink-30: rgba(11, 27, 44, 0.3);
   --ink-45: rgba(11, 27, 44, 0.45);
-  /* Il gradino piu leggero: serve alle etichette dei riquadri, che sono
-     insegne e non titoli. In pieno --ink pesavano quanto i nomi e i numeri
-     sotto, che sono il contenuto vero. */
-  --ink-70: rgba(11, 27, 44, 0.7);
 
   /* Categorie della pizza: rappresentano un dato, non l'interfaccia, quindi
      stanno fuori dalla palette del marchio. Restano comunque qui. */
@@ -52,6 +48,12 @@
   --space-6: 22px;
   --space-7: 28px;
   --space-8: 40px;
+
+  /* Altezza di una riga di classifica. Sta qui perche non la usa solo la
+     riga: l'anteprima in home ci calcola la propria altezza minima, cosi la
+     card resta ferma anche quando dentro c'e un messaggio invece
+     dell'elenco. */
+  --ranking-row-h: 68px;
 }
 
 * {
@@ -359,15 +361,32 @@ button {
   inherits: false;
 }
 
+/* Il filo si fa con due fondi sovrapposti, non con una maschera: il bianco
+   riempie fino al bordo interno (padding-box), la ruota di colore riempie
+   fino a quello esterno (border-box), e il bordo trasparente lascia vedere
+   solo la striscia di colore che avanza. Con la maschera — due strati e
+   mask-composite — bastava che una scorciatoia webkit rimettesse a posto il
+   valore di composizione e la ruota tornava piena, coprendo anche la
+   scritta. Questa strada non ha scorciatoie che si pestano i piedi. */
 .button-lime.cta-aurora,
 .button-lime.cta-aurora:hover {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.96),
-    rgba(255, 255, 255, 0.74)
-  );
-  -webkit-backdrop-filter: blur(14px) saturate(180%);
-  backdrop-filter: blur(14px) saturate(180%);
+  --a: 0deg;
+  animation: cta-aurora-spin 6s linear infinite;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.98),
+      rgba(255, 255, 255, 0.88)
+    ) padding-box,
+    conic-gradient(
+      from var(--a),
+      var(--blue),
+      var(--lime),
+      var(--blue-dark),
+      var(--lime),
+      var(--blue)
+    ) border-box;
+  border: 1.5px solid transparent;
   color: var(--ink);
   /* Il filo di luce interno in alto, poi l'alone: due ombre colorate molto
      larghe e molto diluite, una per tinta. Su fondo chiaro un alone forte
@@ -383,37 +402,6 @@ button {
    passerebbe sopra a un tasto gia bianco. */
 .cta-aurora::after {
   display: none;
-}
-
-/* Il filo: un cerchio di colore grande quanto il tasto, di cui resta visibile
-   solo la cornice di 1.5px. La maschera tiene il bordo e cancella il pieno —
-   due strati identici sovrapposti, uno fermo al contenuto e uno a tutto il
-   riquadro, di cui si sottrae l'intersezione. */
-.cta-aurora::before {
-  --a: 0deg;
-  animation: cta-aurora-spin 6s linear infinite;
-  background: conic-gradient(
-    from var(--a),
-    var(--blue),
-    var(--lime),
-    var(--blue-dark),
-    var(--lime),
-    var(--blue)
-  );
-  border-radius: inherit;
-  content: "";
-  inset: 0;
-  mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  padding: 1.5px;
-  pointer-events: none;
-  position: absolute;
 }
 
 @keyframes cta-aurora-spin {
@@ -1429,16 +1417,20 @@ form select:focus,
   gap: 5px;
 }
 
+/* Spenti molto piu chiari dell'acceso: i pallini stanno accanto
+   all'etichetta e non devono pesare quanto lei. */
 .ranking-dots i {
-  background: var(--ink-30);
+  background: var(--veil-3);
   border-radius: var(--radius-pill);
   height: 6px;
   transition: background 200ms ease;
   width: 6px;
 }
 
+/* L'acceso e esattamente del colore dell'etichetta: sono la stessa riga di
+   servizio, letta in due modi. */
 .ranking-dots i.is-current {
-  background: var(--ink-70);
+  background: var(--ink-45);
 }
 
 .dashboard-side {
@@ -1540,7 +1532,14 @@ form select:focus,
   display: grid;
   gap: 12px;
   grid-template-columns: 26px 38px minmax(0, 1fr) 20px 44px;
-  min-height: 68px;
+  min-height: var(--ranking-row-h);
+}
+
+/* Lo slot che resta quando le squadre in classifica sono meno delle righe
+   dell'anteprima: tiene il posto e basta, senza nemmeno la riga di fondo,
+   che segnerebbe una divisione fra due vuoti. */
+.ranking-row-empty {
+  border-bottom-color: transparent;
 }
 
 .rank-number {
@@ -1685,6 +1684,10 @@ button.ranking-row-link:focus-visible {
    intera per suggerire un seguito che nell'anteprima non c'è la rendeva solo
    più difficile da leggere. */
 .ranking-preview-list {
+  /* Tre righe sempre, anche quando dentro non c'e un elenco ma il messaggio
+     che spiega come entrare in classifica: cambiando fra singolo e squadre
+     la card non deve crescere e calare sotto il dito. */
+  min-height: calc(var(--ranking-row-h) * 3);
   overflow: hidden;
 }
 
@@ -6138,10 +6141,27 @@ button.pizza-ranking-row {
      campitura piatta. Alla chiusura rientra con lo stesso tempo, quindi la
      fascia e la sfocatura vanno e vengono insieme. */
   .app-shell::before {
-    background: var(--scroll-edge);
+    /* Piena fin sotto l'isola, poi si dissolve. Il patto scritto in
+       layout.tsx vale ancora — sotto le scritte di sistema deve restare
+       chiaro — quindi la parte che le sta dietro resta a tinta unita: a
+       sfumare e solo la coda, quei venti pixel sotto l'isola dove prima il
+       colore finiva di netto e si vedeva il gradino mentre il contenuto
+       scorreva. La coda scende oltre l'area sicura per avere lo spazio in
+       cui spegnersi.
+       Prima la versione a due fermate, per chi non ha color-mix: resta
+       comunque una dissolvenza invece di una banda. */
+    background: linear-gradient(to bottom, var(--scroll-edge) 0%, transparent 100%);
+    background: linear-gradient(
+      to bottom,
+      var(--scroll-edge) 0%,
+      var(--scroll-edge) env(safe-area-inset-top),
+      color-mix(in srgb, var(--scroll-edge) 55%, transparent)
+        calc(env(safe-area-inset-top) + 9px),
+      transparent 100%
+    );
     opacity: calc(1 - var(--island));
     content: "";
-    height: env(safe-area-inset-top);
+    height: calc(env(safe-area-inset-top) + 24px);
     left: 0;
     pointer-events: none;
     position: fixed;
@@ -6479,9 +6499,10 @@ button.pizza-ranking-row {
   /* Il titolo del foglio è la stessa etichetta della card da cui si apre:
      segue la stessa regola invece di averne una sua. */
   .sheet-head h2 {
-    /* Meno nere del testo: sono insegne del riquadro, non titoli da
-       leggere. In pieno --ink tiravano l'occhio piu delle righe sotto. */
-    color: var(--ink-70);
+    /* Molto piu chiare del testo: sono insegne del riquadro, non titoli da
+       leggere. In pieno --ink tiravano l'occhio piu dei nomi e dei numeri
+       sotto, che sono il contenuto vero. */
+    color: var(--ink-45);
     font-size: 12px;
     letter-spacing: 1.4px;
     margin: 0;
@@ -7649,14 +7670,6 @@ button.pizza-ranking-row {
     transform: none;
   }
 
-  /* Al posto della macchia, una pressione: il tasto rientra appena mentre lo
-     tieni premuto e torna su quando lo lasci. Il dito appoggiato per
-     scorrere non la fa scattare, il tocco vero si. Sta dopo la riga qui
-     sopra di proposito: al tocco il browser accende anche :hover, e a parita
-     di peso vince l'ultima regola scritta. */
-  .button:active {
-    transform: scale(0.985);
-  }
 
   button.ranking-row-link:hover,
   .match-panel .match-card-link:hover,
@@ -7714,6 +7727,61 @@ button.pizza-ranking-row {
   }
 }
 
+/* Il rimbalzo alla pressione. Vale per tutto quello che si tocca: rientra
+   sotto il dito e torna su con un piccolo scatto oltre la misura, che e la
+   curva qui sotto a darlo. Sta in fondo al file di proposito — al tocco il
+   browser accende anche :hover, e piu su ci sono regole che azzerano la
+   trasformazione: a parita di peso vince l'ultima scritta, e deve essere
+   questa. */
+.button:active:not(:disabled),
+.hero-stat-link:active,
+.hub-card:active,
+.hub-profile:active,
+.match-card-link:active,
+.match-panel-open:active,
+.match-video-preview:active,
+.play-card:active,
+.ranking-preview:active,
+.tournament-standings-link:active,
+button.ranking-row-link:active {
+  transform: scale(0.965);
+  transition-duration: 90ms;
+}
+
+.button,
+.hero-stat-link,
+.hub-card,
+.hub-profile,
+.match-card-link,
+.match-panel-open,
+.match-video-preview,
+.play-card,
+.ranking-preview,
+button.ranking-row-link {
+  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* La pastiglia della barra non puo usare ne transform ne transition: il
+   primo lo scrive il gesto per posizionarla, il secondo viene azzerato a
+   mano prima di ogni spostamento. Restano la proprieta scale, che si
+   combina con la traslazione invece di sostituirla, e un'animazione, che
+   non passa da transition. Va e torna da sola: cosi il rimbalzo dura
+   sempre uguale, che il dito lo si alzi subito o si resti premuti. */
+@keyframes nav-pill-press {
+  0%,
+  100% {
+    scale: 1;
+  }
+
+  45% {
+    scale: 0.92;
+  }
+}
+
+.mobile-nav:has(button:active) .mobile-nav-pill {
+  animation: nav-pill-press 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     scroll-behavior: auto !important;
@@ -7726,7 +7794,11 @@ button.pizza-ranking-row {
 
   /* Il filo resta, smette solo di girare: e il bordo del tasto, non un
      effetto, e senza di lui il tasto perderebbe il contorno. */
-  .cta-aurora::before {
+  .button-lime.cta-aurora {
+    animation: none;
+  }
+
+  .mobile-nav:has(button:active) .mobile-nav-pill {
     animation: none;
   }
 

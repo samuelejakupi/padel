@@ -1698,6 +1698,16 @@ function TeamRankingList({
           </div>
         );
       })}
+      {/* Righe vuote a pareggio. In anteprima la card deve restare alta
+          uguale sia che si guardi il singolo sia le squadre: con due sole
+          coppie in classifica si accorciava, e passando da una all'altra la
+          home si muoveva sotto il dito. Gli slot sono muti per i lettori di
+          schermo, non c'e niente da leggere. */}
+      {limit !== undefined && visible.length < limit
+        ? Array.from({ length: limit - visible.length }, (_, index) => (
+            <div className="ranking-row ranking-row-empty" key={`empty-${index}`} aria-hidden="true" />
+          ))
+        : null}
     </div>
   );
 }
