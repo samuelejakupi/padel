@@ -6166,27 +6166,47 @@ button.pizza-ranking-row {
      campitura piatta. Alla chiusura rientra con lo stesso tempo, quindi la
      fascia e la sfocatura vanno e vengono insieme. */
   .app-shell::before {
-    /* Piena fin sotto l'isola, poi si dissolve. Il patto scritto in
-       layout.tsx vale ancora — sotto le scritte di sistema deve restare
-       chiaro — quindi la parte che le sta dietro resta a tinta unita: a
-       sfumare e solo la coda, quei venti pixel sotto l'isola dove prima il
-       colore finiva di netto e si vedeva il gradino mentre il contenuto
-       scorreva. La coda scende oltre l'area sicura per avere lo spazio in
-       cui spegnersi.
-       Prima la versione a due fermate, per chi non ha color-mix: resta
-       comunque una dissolvenza invece di una banda. */
+    /* Vetro smerigliato invece di una fascia: quello che passa sotto non
+       viene coperto, viene sfocato, e la sfocatura si spegne scendendo
+       insieme al colore. La tinta unita dura solo il primo terzo dell'area
+       sicura — quanto basta a tenere leggibili l'ora e le icone di sistema,
+       che e il patto scritto in layout.tsx — e da li in giu e tutta
+       dissolvenza, che scende anche oltre l'area sicura per avere lo spazio
+       in cui finire.
+       La maschera serve alla sfocatura: senza, il vetro si interromperebbe
+       di netto sul bordo basso, che e esattamente il gradino da togliere.
+       Spegne anche il colore, quindi le due fermate qui sotto vanno lette
+       come una dissolvenza dentro l'altra.
+       Prima la versione a due fermate, per chi non ha color-mix. */
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
     background: linear-gradient(to bottom, var(--scroll-edge) 0%, transparent 100%);
     background: linear-gradient(
       to bottom,
       var(--scroll-edge) 0%,
-      var(--scroll-edge) env(safe-area-inset-top),
-      color-mix(in srgb, var(--scroll-edge) 55%, transparent)
-        calc(env(safe-area-inset-top) + 9px),
+      var(--scroll-edge) calc(env(safe-area-inset-top) * 0.34),
+      color-mix(in srgb, var(--scroll-edge) 58%, transparent)
+        calc(env(safe-area-inset-top) * 0.72),
+      color-mix(in srgb, var(--scroll-edge) 22%, transparent) env(safe-area-inset-top),
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      black 0%,
+      black calc(env(safe-area-inset-top) * 0.34),
+      rgba(0, 0, 0, 0.45) calc(env(safe-area-inset-top) * 0.78),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      black 0%,
+      black calc(env(safe-area-inset-top) * 0.34),
+      rgba(0, 0, 0, 0.45) calc(env(safe-area-inset-top) * 0.78),
       transparent 100%
     );
     opacity: calc(1 - var(--island));
     content: "";
-    height: calc(env(safe-area-inset-top) + 24px);
+    height: calc(env(safe-area-inset-top) + 34px);
     left: 0;
     pointer-events: none;
     position: fixed;
@@ -6499,6 +6519,25 @@ button.pizza-ranking-row {
     /* In fondo bastava un respiro: senza più il tasto "Vedi tutte" quei 14px
        diventavano un vuoto, come era successo nella card della classifica. */
     padding: 0 14px var(--space-3);
+  }
+
+  /* Le card stanno sopra agli aloni dei tasti. I tasti sono posizionati —
+     serve al bagliore che li attraversa — e un elemento posizionato si
+     dipinge sopra a uno che non lo e, per quanto lo si scriva prima: l'alone
+     del tasto nuova partita finiva quindi sul riquadro delle partite. Con un
+     piano dichiarato per entrambi l'ordine torna quello che si vede in
+     pagina, e le ombre restano dietro alle superfici che dovrebbero
+     illuminare. */
+  .dashboard-side,
+  .match-panel,
+  .tournament-panel,
+  .hero-stat {
+    position: relative;
+    z-index: 1;
+  }
+
+  .cta-new-match {
+    z-index: 0;
   }
 
   /* Il tasto è uscito dal riquadro e sta fra la classifica e le partite.
