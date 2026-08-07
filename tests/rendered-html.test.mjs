@@ -13,11 +13,10 @@ test("genera un sito statico pronto per GitHub Pages", async () => {
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
 });
 
-test("include configurazione Supabase e pubblicazione Pages", async () => {
-  const [schema, pizzaMigration, workflow, page] = await Promise.all([
+test("include configurazione Supabase e funzioni della webapp", async () => {
+  const [schema, pizzaMigration, page] = await Promise.all([
     readFile(new URL("supabase/schema.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pizza-sessioni.sql", root), "utf8"),
-    readFile(new URL(".github/workflows/deploy-pages.yml", root), "utf8"),
     readFile(new URL("app/page.tsx", root), "utf8"),
   ]);
   assert.match(schema, /record_match/);
@@ -35,7 +34,6 @@ test("include configurazione Supabase e pubblicazione Pages", async () => {
   assert.match(schema, /samu@theboyz\.local/);
   assert.match(schema, /mattia@theboyz\.local/);
   assert.match(schema, /manu@theboyz\.local/);
-  assert.match(workflow, /deploy-pages/);
   assert.match(page, /signInWithPassword/);
   assert.match(page, /"Mattia", "Manu"/);
   // L'eliminazione manuale della partita non esiste piu come azione a se:
@@ -47,6 +45,7 @@ test("include configurazione Supabase e pubblicazione Pages", async () => {
   assert.match(page, /function EloChart/);
   assert.match(page, /ANDAMENTO ELO/);
   assert.match(page, /STORICO PERSONALE/);
+  assert.doesNotMatch(page, /FORCED_BADGES/);
   assert.match(page, /0 PARTITE/);
   assert.match(page, /Gioca la prima partita per entrare nella classifica/);
   assert.doesNotMatch(page, /signUp\s*\(/);

@@ -1106,20 +1106,7 @@ function Emblem({ name, rank = "#1", className }: { name: EmblemName; rank?: str
   );
 }
 
-// TEMPORANEO — da togliere. Tiene accesi questi badge per chiunque apra la
-// propria scheda, cosi si vedono i tre emblemi nuovi senza doverseli
-// guadagnare. Svuotare l'insieme fa tornare tutto ai criteri veri, che
-// restano quelli scritti in playerBadges: qui non si tocca la logica, solo
-// il risultato finale.
-const FORCED_BADGES = new Set(["goat", "goat-slayer", "trophy"]);
-
 function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch[]): Badge[] {
-  return buildPlayerBadges(profile, profiles, matches).map((badge) =>
-    FORCED_BADGES.has(badge.id) ? { ...badge, unlocked: true } : badge,
-  );
-}
-
-function buildPlayerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch[]): Badge[] {
   const { metrics, topPairRate } = buildBadgeMetrics(profiles, matches);
   const own = metrics.get(profile.id) ?? emptyBadgeMetrics();
   const all = [...metrics.values()];
