@@ -66,7 +66,15 @@ export const metadata: Metadata = {
     // Su un telefono tenuto in modalita scura iOS le rimette bianche: li la
     // fascia chiara torna a essere il fondo sbagliato. Finche il tema scuro
     // dell'app non esiste davvero, e un caso che accettiamo.
-    statusBarStyle: "default",
+    // PROVA DEL 8 AGOSTO: rimesso "black-translucent" perche con "default"
+    // la pagina non passa sotto l'orologio, e .system-blur non ha niente da
+    // sfocare — il vetro in cima c'e ma sta sotto una striscia di sistema.
+    // Era gia stato provato oggi e sembrava non cambiare niente, ma quel test
+    // era sporco: c'era ancora il guscio alto 100dvh a tenere la barra in
+    // alto, e la bocciatura ha riguardato il sintomo sbagliato.
+    // Se l'ora bianca su fondo chiaro risulta illeggibile si torna a
+    // "default": e questa riga sola.
+    statusBarStyle: "black-translucent",
   },
   icons: {
     icon: `${basePath}/theboyz-mark.png?v=${iconVersion}`,
