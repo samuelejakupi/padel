@@ -15,6 +15,20 @@ Ultimo aggiornamento: 8 agosto 2026
 
 ## In sospeso
 
+### `migration-pareggi.sql` va eseguita prima che i pareggi funzionino
+Finché non gira nel SQL Editor, il sito continua a funzionare come prima: le
+colonne `incomplete` e `draws` non esistono, le query che le cercano falliscono
+da sole senza portarsi dietro il resto, e provare a salvare un 1-1 dà errore
+dal database. La migrazione finisce con un `recalculate_padel_ratings()`: i
+risultati già registrati non cambiano — i pareggi non esistevano — serve solo a
+riempire `draws`.
+
+Nota emersa scrivendola: `record_match` in produzione accetta `p_video_url`, ma
+quella firma non era in nessun file di `supabase/`. Qualcuno l'ha modificata
+direttamente nel SQL Editor senza portarsi dietro il file. La migrazione la
+riscrive per intero, quindi da qui in avanti torniamo allineati — ma vale la
+pena ricordarsi che era successo.
+
 ### I dati di prova vanno tolti a mano da Supabase
 `supabase/pulizia-dati-di-prova.sql` toglie tutti i tornei e tutte le partite
 tranne le prime due registrate, poi rilancia `recalculate_padel_ratings()`.
@@ -44,6 +58,30 @@ salvata sulla schermata Home. Per ora c'è il pallino sull'icona Pizza.
 ---
 
 ## Deciso, e perché
+
+### Un set a testa è un pareggio, e il terzo interrotto si scrive lo stesso
+Si gioca al meglio dei tre set, ma il campo scade prima della fine più spesso
+di quanto ci piaccia ammettere. Prima quel risultato non si poteva registrare:
+o si inventava un vincitore, o la partita spariva. Ora un 1-1 nei set è un
+pareggio — `winner_team = 0`, contorno giallo invece che verde e rosso — e il
+terzo set interrotto si inserisce comunque, marcato `incomplete`.
+
+Quel set non assegna il set a nessuno, ma i suoi giochi non sono buttati: il
+pareggio parte da mezzo punto e si sposta al massimo di 0,15 verso chi ha
+vinto più giochi in tutta la partita (`padel_draw_tilt`). Con 7-6 6-3 2-1 fra
+squadre pari sono tre punti a chi conduceva, contro i diciannove della stessa
+partita chiusa 6-2 al terzo: i giochi contano, ma un pareggio resta un
+pareggio. Il tetto a 0,15 è lì apposta — senza, un pareggio molto sbilanciato
+avrebbe pagato quanto una vittoria di misura.
+
+Il pareggio non spezza le serie: le mette in pausa. Chi aveva tre vittorie di
+fila se le ritrova alla prossima vinta. E nel win rate vale mezza vittoria,
+perché contarlo come sconfitta punirebbe chi non ha perso e tenerlo fuori dal
+totale premierebbe chi non ha vinto.
+
+I tornei restano fuori: il girone all'italiana assegna i punti sulle vittorie,
+quindi `assign_tournament_match` rifiuta i pareggi finché non decidiamo quanto
+valgono là dentro.
 
 ### Il campo non deve ereditare il carattere dell'etichetta
 `form label` è maiuscolo, in peso 900 e spaziato, e `input`/`select` hanno

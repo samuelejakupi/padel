@@ -15,6 +15,11 @@
   --muted: #72808c;
   --danger: #d94b49;
   --positive: #299b66;
+  /* Il terzo esito, il pareggio: sta fra il verde della vittoria e il rosso
+     della sconfitta anche come colore. Nasce impastando due tinte che
+     abbiamo gia invece di aggiungere un giallo nuovo: il lime da solo su
+     fondo bianco non si legge, e comunque e gia impegnato dal primo posto. */
+  --drawn: color-mix(in srgb, var(--lime) 55%, var(--danger));
   --shadow: 0 18px 50px rgba(16, 29, 43, 0.09);
 
   /* Veli sul blu scuro: sostituiscono i grigi e i bianchi sporchi scritti a
@@ -1929,6 +1934,34 @@ button.ranking-row-link:focus-visible {
   margin-top: -7px;
 }
 
+.match-team.drawn em {
+  color: var(--drawn);
+}
+
+/* I giochi del set interrotto restano scritti — servono all'Elo e alle
+   statistiche — ma sbiaditi, perche quel set non ha assegnato niente. */
+.match-score-unfinished {
+  color: var(--ink-45);
+}
+
+/* L'esito annunciato dentro al modulo, prima di salvare. Non e un errore:
+   e il giallo del pareggio, appoggiato su un velo dello stesso colore. */
+.match-verdict {
+  background: color-mix(in srgb, var(--drawn) 14%, transparent);
+  border-radius: var(--radius-md);
+  color: var(--ink-soft);
+  font-size: 12px;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.match-verdict b {
+  color: color-mix(in srgb, var(--drawn) 70%, var(--ink));
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
 .team-right {
   direction: rtl;
   grid-template-columns: 55px 1fr;
@@ -3809,6 +3842,12 @@ button.podium-person {
   gap: 12px;
   grid-template-columns: repeat(4, 1fr);
   margin: 14px 0 24px;
+}
+
+/* Con i pareggi i riquadri diventano cinque: restano su una riga sola invece
+   di lasciarne uno spaiato sotto agli altri quattro. */
+.player-kpis-drawn {
+  grid-template-columns: repeat(5, 1fr);
 }
 
 .player-kpis article {
@@ -7019,6 +7058,11 @@ button.pizza-ranking-row {
 
   .match-card.match-card-compact .match-team.winner .avatar {
     border-color: var(--positive);
+  }
+
+  /* Il pareggio non e ne l'uno ne l'altro: giallo su tutti e quattro. */
+  .match-card.match-card-compact .match-team.drawn .avatar {
+    border-color: var(--drawn);
   }
 
   /* Nel ranking bastano i primi quattro: per gli altri c'e "Vedi tutto".

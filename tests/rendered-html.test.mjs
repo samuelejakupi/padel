@@ -14,9 +14,10 @@ test("genera un sito statico pronto per GitHub Pages", async () => {
 });
 
 test("include configurazione Supabase e funzioni della webapp", async () => {
-  const [schema, pizzaMigration, page] = await Promise.all([
+  const [schema, pizzaMigration, drawMigration, page] = await Promise.all([
     readFile(new URL("supabase/schema.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pizza-sessioni.sql", root), "utf8"),
+    readFile(new URL("supabase/migration-pareggi.sql", root), "utf8"),
     readFile(new URL("app/page.tsx", root), "utf8"),
   ]);
   assert.match(schema, /record_match/);
@@ -69,4 +70,23 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(pizzaMigration, /name ilike '%spizza%'/);
   assert.doesNotMatch(page, /remainingLabel|closes_at|due ore per votare/i);
   assert.doesNotMatch(page, /Pizzium/i);
+
+  // Pareggio: un set a testa con il terzo lasciato a meta. Il set interrotto
+  // non assegna il set ma i suoi giochi entrano nell'Elo, quindi le due cose
+  // che non devono sparire sono il winner_team a zero e padel_draw_tilt.
+  assert.match(drawMigration, /winner_team in \(0, 1, 2\)/);
+  assert.match(drawMigration, /padel_draw_tilt/);
+  assert.match(drawMigration, /ELO V4/);
+  assert.match(drawMigration, /add column if not exists incomplete/);
+  assert.match(drawMigration, /add column if not exists draws/);
+  assert.match(drawMigration, /incomplete or team1_games <> team2_games/);
+  // Il tetto dello spostamento: oltre 0.15 il pareggio smetterebbe di essere
+  // tale e diventerebbe una mezza vittoria.
+  assert.match(drawMigration, /0\.15::numeric/);
+  // Nel torneo serve sempre un vincitore: il girone assegna i punti sulle
+  // vittorie e un pareggio lo lascerebbe senza.
+  assert.match(drawMigration, /non puo finire in pareggio/);
+  assert.match(page, /function setIsComplete/);
+  assert.match(page, /function readMatchScore/);
+  assert.match(page, /PAREGGIO/);
 });

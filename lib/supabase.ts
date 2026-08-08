@@ -24,6 +24,8 @@ export type Profile = {
   matches_played: number;
   wins: number;
   losses: number;
+  // Facoltativo finche migration-pareggi.sql non e stata eseguita.
+  draws?: number;
   current_streak: number;
   created_at?: string;
   handedness?: string | null;
@@ -34,6 +36,9 @@ export type PadelSet = {
   set_number: number;
   team1_games: number;
   team2_games: number;
+  // Il set lasciato a meta: e l'unico che puo finire in parita e l'unico
+  // che non assegna un set vinto. I suoi giochi contano lo stesso.
+  incomplete?: boolean;
 };
 
 export type MatchPlayer = {
@@ -72,7 +77,8 @@ export type PadelMatch = {
   lineage_id?: string | null;
   created_at?: string;
   created_by?: string;
-  winner_team: 1 | 2;
+  // 0 = pareggio: un set a testa con il terzo interrotto.
+  winner_team: 0 | 1 | 2;
   notes?: string | null;
   video_url?: string | null;
   // Etichetta libera: nome del campo o del circolo dove si e giocato.

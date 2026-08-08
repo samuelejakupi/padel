@@ -280,6 +280,44 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+// Un set finito ha un vincitore: sei giochi con due di scarto, oppure il 7-6
+// del tie-break. Tutto il resto — 2-1, 4-4, 5-3 — e un set lasciato a meta
+// perche il campo e scaduto. Serve a distinguere il terzo set interrotto,
+// che non assegna un set vinto ma i cui giochi contano lo stesso.
+function setIsComplete(team1Games: number, team2Games: number) {
+  const high = Math.max(team1Games, team2Games);
+  const low = Math.min(team1Games, team2Games);
+  return (high >= 6 && high - low >= 2) || (high === 7 && low === 6);
+}
+
+// In lettura ci si fida solo del flag salvato: le partite registrate prima
+// della migrazione hanno tutti i set completi per costruzione, e ricalcolare
+// la regola su quei dati vecchi rischierebbe di riscrivere risultati chiusi.
+function setIsIncomplete(set: PadelSet) {
+  return set.incomplete === true;
+}
+
+function matchIsDraw(match: PadelMatch) {
+  return match.winner_team === 0;
+}
+
+// Il pareggio vale mezza vittoria: contarlo come sconfitta punirebbe chi non
+// ha perso, tenerlo fuori dal totale premierebbe chi non ha vinto.
+//
+// Prende tre numeri e non il profilo intero di proposito: passare l'oggetto
+// fa credere al compilatore di React che la funzione possa modificarlo, e i
+// memo che lo usano smettono di essere ottimizzati.
+function padelWinRate(wins: number, draws: number, matchesPlayed: number) {
+  if (!matchesPlayed) return 0;
+  return Math.round(((wins + draws * 0.5) / matchesPlayed) * 100);
+}
+
+// I set che assegnano un punto: quello interrotto non conta, ne per chi lo
+// stava conducendo ne per l'altro.
+function decidedSets(sets: PadelSet[]) {
+  return sets.filter((set) => !setIsIncomplete(set));
+}
+
 function sortPadelProfiles(profiles: Profile[]) {
   return [...profiles].sort((a, b) => {
     const aRanked = a.matches_played > 0;
@@ -403,6 +441,7 @@ type PadelTeam = {
   matches_played: number;
   wins: number;
   losses: number;
+  draws: number;
   current_streak: number;
   name?: string | null;
   imageUrl?: string | null;
@@ -445,16 +484,22 @@ function buildPadelTeams(
 
       const ids = members.map((member) => member.profile_id).sort();
       const key = ids.join("|");
-      const won = match.winner_team === side;
+      // Il pareggio non e una sconfitta e non spezza la serie: la mette in
+      // pausa, come per i singoli giocatori.
+      const drawn = matchIsDraw(match);
+      const won = !drawn && match.winner_team === side;
       const team = teams.get(key);
 
       if (team) {
         team.matches_played += 1;
         team.wins += won ? 1 : 0;
-        team.losses += won ? 0 : 1;
-        team.current_streak = won
-          ? Math.max(1, team.current_streak + 1)
-          : Math.min(-1, team.current_streak - 1);
+        team.losses += drawn || won ? 0 : 1;
+        team.draws += drawn ? 1 : 0;
+        team.current_streak = drawn
+          ? team.current_streak
+          : won
+            ? Math.max(1, team.current_streak + 1)
+            : Math.min(-1, team.current_streak - 1);
       } else {
         const players = ids.map((id) => byId.get(id)).filter(Boolean) as Profile[];
         const record = meta.get(key);
@@ -466,8 +511,9 @@ function buildPadelTeams(
           rating: 0,
           matches_played: 1,
           wins: won ? 1 : 0,
-          losses: won ? 0 : 1,
-          current_streak: won ? 1 : -1,
+          losses: drawn || won ? 0 : 1,
+          draws: drawn ? 1 : 0,
+          current_streak: drawn ? 0 : won ? 1 : -1,
           name: record?.name ?? null,
           imageUrl: record?.image_url ?? null,
           isRanked: Boolean(record?.name?.trim()),
@@ -925,16 +971,23 @@ function buildBadgeMetrics(profiles: Profile[], matches: PadelMatch[]) {
         .filter((profile) => (ratings.get(profile.id) ?? 1000) === leaderRatingBefore)
         .map((profile) => profile.id),
     );
-    const losingGoat = match.players.some(
+    const drawn = matchIsDraw(match);
+    const losingGoat = !drawn && match.players.some(
       (player) => goatsBefore.has(player.profile_id) && player.team !== match.winner_team,
     );
 
     match.players.forEach((player) => {
       const item = metrics.get(player.profile_id);
       if (!item) return;
-      const won = player.team === match.winner_team;
-      const winRun = won ? (currentWinRuns.get(player.profile_id) ?? 0) + 1 : 0;
-      const loseRun = won ? 0 : (currentLoseRuns.get(player.profile_id) ?? 0) + 1;
+      const won = !drawn && player.team === match.winner_team;
+      // Le serie di vittorie e di sconfitte restano com'erano: un pareggio
+      // non le allunga e non le azzera, esattamente come nel database.
+      const winRun = drawn
+        ? currentWinRuns.get(player.profile_id) ?? 0
+        : won ? (currentWinRuns.get(player.profile_id) ?? 0) + 1 : 0;
+      const loseRun = drawn
+        ? currentLoseRuns.get(player.profile_id) ?? 0
+        : won ? 0 : (currentLoseRuns.get(player.profile_id) ?? 0) + 1;
       currentWinRuns.set(player.profile_id, winRun);
       currentLoseRuns.set(player.profile_id, loseRun);
       item.bestWinStreak = Math.max(item.bestWinStreak, winRun);
@@ -942,7 +995,9 @@ function buildBadgeMetrics(profiles: Profile[], matches: PadelMatch[]) {
       item.matchesPlayed += 1;
       if (won && losingGoat) item.winsAgainstGoat += 1;
 
-      const sets = [...match.sets].sort((a, b) => a.set_number - b.set_number);
+      // Il set interrotto sta fuori da tutti i conteggi sui set: non e stato
+      // vinto da nessuno dei due, e contarlo come perso falserebbe la serie.
+      const sets = decidedSets(match.sets).sort((a, b) => a.set_number - b.set_number);
       const setResults = sets.map((set) => player.team === 1
         ? set.team1_games > set.team2_games
         : set.team2_games > set.team1_games);
@@ -986,7 +1041,9 @@ function buildBadgeMetrics(profiles: Profile[], matches: PadelMatch[]) {
     const key = ids.join("|");
     const pair = pairs.get(key) ?? { ids, matches: 0, wins: 0 };
     pair.matches += 1;
-    pair.wins += match.winner_team === side ? 1 : 0;
+    // Mezzo punto per il pareggio: e il modo piu onesto di tenerlo dentro a
+    // una percentuale di vittorie senza farlo pesare come una sconfitta.
+    pair.wins += matchIsDraw(match) ? 0.5 : match.winner_team === side ? 1 : 0;
     pairs.set(key, pair);
   }));
 
@@ -1871,6 +1928,7 @@ function MatchCard({
 
   const team1 = match.players.filter((player) => player.team === leftSide);
   const team2 = match.players.filter((player) => player.team === rightSide);
+  const draw = matchIsDraw(match);
   const videoId = youtubeId(match.video_url);
   const formatTeam = (players: typeof team1) => (
     <span className="match-team-players">
@@ -1928,26 +1986,31 @@ function MatchCard({
             : <p className="match-court" aria-hidden="true" />}
       </div>
       <div className="match-main">
-        <div className={`match-team ${match.winner_team === leftSide ? "winner" : ""}`}>
+        {/* Nel pareggio nessuna delle due squadre e "winner": il segno sta
+            sul terzo elemento, la classe drawn, che tinge i due contorni di
+            giallo invece che di verde e rosso. */}
+        <div className={`match-team ${draw ? "drawn" : match.winner_team === leftSide ? "winner" : ""}`}>
           <div className="mini-avatars">{team1.map((player) => <Avatar key={player.profile_id} profile={player.profile} size="sm" />)}</div>
           {formatTeam(team1)}
-          {match.winner_team === leftSide ? <em>VITTORIA</em> : null}
+          {draw ? <em>PAREGGIO</em> : match.winner_team === leftSide ? <em>VITTORIA</em> : null}
         </div>
         <div className="match-score">
           {match.sets
             .sort((a, b) => a.set_number - b.set_number)
             .map((set) => (
-              <span key={set.set_number}>
+              // Il set interrotto si scrive fra parentesi: dice a colpo
+              // d'occhio che quei giochi non hanno assegnato il set.
+              <span key={set.set_number} className={setIsIncomplete(set) ? "match-score-unfinished" : undefined}>
                 <b>{flipped ? set.team2_games : set.team1_games}</b>
                 <i>—</i>
                 <b>{flipped ? set.team1_games : set.team2_games}</b>
               </span>
             ))}
         </div>
-        <div className={`match-team team-right ${match.winner_team === rightSide ? "winner" : ""}`}>
+        <div className={`match-team team-right ${draw ? "drawn" : match.winner_team === rightSide ? "winner" : ""}`}>
           <div className="mini-avatars">{team2.map((player) => <Avatar key={player.profile_id} profile={player.profile} size="sm" />)}</div>
           {formatTeam(team2)}
-          {match.winner_team === rightSide ? <em>VITTORIA</em> : null}
+          {draw ? <em>PAREGGIO</em> : match.winner_team === rightSide ? <em>VITTORIA</em> : null}
         </div>
       </div>
       {compact ? null : (
@@ -2569,7 +2632,7 @@ function RankingList({
         // La posizione va letta sull'elenco intero, non sulla finestra:
         // altrimenti la prima riga visibile direbbe sempre "1".
         const rank = ranks[start + index];
-        const winRate = profile.matches_played ? Math.round((profile.wins / profile.matches_played) * 100) : 0;
+        const winRate = padelWinRate(profile.wins, profile.draws ?? 0, profile.matches_played);
         const content = (
           <>
             <span className={`rank-number ${isRanked ? `rank-${rank}` : "rank-nc"}`}>
@@ -2726,8 +2789,48 @@ function matchSummary(profiles: Profile[], playerIds: string[], sets: PadelSet[]
   const name = (id: string) => profiles.find((profile) => profile.id === id)?.display_name ?? "?";
   const team1 = playerIds.slice(0, 2).map(name).join(" · ");
   const team2 = playerIds.slice(2, 4).map(name).join(" · ");
-  const score = sets.map((set) => `${set.team1_games}-${set.team2_games}`).join(" ");
+  const score = sets
+    .map((set) => `${set.team1_games}-${set.team2_games}${setIsIncomplete(set) ? " (interrotto)" : ""}`)
+    .join(" ");
   return `${team1} vs ${team2} · ${score}`;
+}
+
+// Legge il tabellone scritto nel modulo. Il terzo set vale come set vinto
+// solo se e finito: se il campo e scaduto sul 2-1 quel set non lo ha vinto
+// nessuno, e con un set a testa la partita e un pareggio.
+function readMatchScore(scores: string[][]) {
+  const filled = scores
+    .map(([team1, team2], index) => ({ index, team1, team2 }))
+    .filter((row) => row.team1 !== "" && row.team2 !== "");
+  const lastIndex = filled.length - 1;
+  const sets: PadelSet[] = filled.map((row, position) => {
+    const team1Games = Number(row.team1);
+    const team2Games = Number(row.team2);
+    return {
+      set_number: position + 1,
+      team1_games: team1Games,
+      team2_games: team2Games,
+      // Solo l'ultimo set puo essere interrotto: una partita non riprende
+      // dopo essersi fermata.
+      incomplete: position === lastIndex && !setIsComplete(team1Games, team2Games),
+    };
+  });
+  const decided = decidedSets(sets);
+  const team1Sets = decided.filter((set) => set.team1_games > set.team2_games).length;
+  const team2Sets = decided.filter((set) => set.team2_games > set.team1_games).length;
+  const valid = sets.length >= 2
+    && sets.every((set) => Number.isInteger(set.team1_games) && Number.isInteger(set.team2_games)
+      && set.team1_games >= 0 && set.team2_games >= 0
+      && set.team1_games <= 20 && set.team2_games <= 20)
+    && (Math.max(team1Sets, team2Sets) === 2 || (team1Sets === 1 && team2Sets === 1));
+  return {
+    sets,
+    team1Sets,
+    team2Sets,
+    valid,
+    draw: valid && team1Sets === 1 && team2Sets === 1,
+    unfinishedSet: sets.find(setIsIncomplete) ?? null,
+  };
 }
 
 function NewMatchModal({
@@ -2814,6 +2917,10 @@ function NewMatchModal({
     );
   }
 
+  // Lo stesso conteggio che poi finisce nel salvataggio: qui serve solo a
+  // dire come sta finendo la partita mentre la si scrive.
+  const preview = readMatchScore(scores);
+
   async function save(event: FormEvent) {
     event.preventDefault();
     setError("");
@@ -2822,13 +2929,15 @@ function NewMatchModal({
       return;
     }
 
-    const sets: PadelSet[] = scores
-      .filter(([a, b]) => a !== "" && b !== "")
-      .map(([a, b], index) => ({ set_number: index + 1, team1_games: Number(a), team2_games: Number(b) }));
-    const wins1 = sets.filter((set) => set.team1_games > set.team2_games).length;
-    const wins2 = sets.filter((set) => set.team2_games > set.team1_games).length;
-    if (sets.length < 2 || Math.max(wins1, wins2) < 2 || wins1 === wins2) {
-      setError("Inserisci almeno due set e indica una squadra vincitrice.");
+    const { sets, valid, draw } = readMatchScore(scores);
+    if (!valid) {
+      setError("Inserisci almeno due set: due vinti da una squadra, oppure uno a testa se avete smesso a metà.");
+      return;
+    }
+    // Il girone all'italiana assegna i punti sulle vittorie: finche non
+    // decidiamo quanto vale un pareggio li dentro, il torneo lo rifiuta.
+    if (draw && tournamentContext) {
+      setError("Una partita di torneo non può finire in pareggio: serve una squadra vincitrice.");
       return;
     }
 
@@ -2973,6 +3082,17 @@ function NewMatchModal({
               </div>
             ))}
           </div>
+          {/* L'esito si legge da solo dal tabellone, ma un pareggio nasce da
+              un set lasciato a metà: scritto qui sopra al tasto, un 2-1
+              battuto per sbaglio si vede prima di salvarlo e non dopo. */}
+          {preview.draw ? (
+            <p className="match-verdict">
+              <b>Pareggio</b>
+              {preview.unfinishedSet
+                ? ` · un set a testa, il terzo si è fermato sul ${preview.unfinishedSet.team1_games}-${preview.unfinishedSet.team2_games}. I suoi giochi contano nell'Elo, ma non assegnano il set.`
+                : " · un set a testa e partita finita lì."}
+            </p>
+          ) : null}
           <label>
             Campo <span className="optional-label">facoltativo</span>
             <input
@@ -4178,6 +4298,7 @@ function AppShell({ session }: { session: Session | null }) {
       pizzaSessionVotesResult,
       tournamentsResult,
       courtsResult,
+      setFlagsResult,
     ] = await Promise.all([
       client.from("profiles").select("*").order("rating", { ascending: false }),
       client
@@ -4215,6 +4336,10 @@ function AppShell({ session }: { session: Session | null }) {
       // stata eseguita questa fallisce da sola, senza portarsi dietro il
       // caricamento delle partite.
       client.from("matches").select("id, court"),
+      // Stesso motivo per il set interrotto: finche migration-pareggi.sql
+      // non e stata eseguita la colonna non esiste e i set risultano tutti
+      // completi, che e esattamente com'erano prima.
+      client.from("match_sets").select("match_id, set_number, incomplete"),
     ]);
 
     if (profilesResult.error || matchesResult.error) {
@@ -4243,10 +4368,22 @@ function AppShell({ session }: { session: Session | null }) {
           ? []
           : ((courtsResult.data ?? []) as { id: string; court: string | null }[]).map((row) => [row.id, row.court]),
       );
+      // Vuota finche la migrazione dei pareggi non e stata eseguita.
+      const incompleteSets = new Set(
+        setFlagsResult.error
+          ? []
+          : ((setFlagsResult.data ?? []) as { match_id: string; set_number: number; incomplete: boolean }[])
+              .filter((row) => row.incomplete)
+              .map((row) => `${row.match_id}|${row.set_number}`),
+      );
       const normalized = (matchesResult.data ?? []).map((match) => ({
         ...match,
         court: courtMap.get(match.id) ?? null,
         tournament_fixture_id: fixtureByMatch.get(match.id) ?? null,
+        sets: (match.sets ?? []).map((set) => ({
+          ...set,
+          incomplete: incompleteSets.has(`${match.id}|${set.set_number}`),
+        })),
         players: (match.players ?? []).map((player) => ({
           ...player,
           profile: profileMap.get(player.profile_id) ?? player.profile,
@@ -4702,8 +4839,12 @@ function AppShell({ session }: { session: Session | null }) {
       rest: pool[Math.floor(greetingSeed * pool.length)] ?? pool[0] ?? "",
     };
   }, [currentRank, isLastRanked, hasNarrowLead, currentUserName, greetingSeed, saluteSeed]);
+  // Stessa formula di padelWinRate, scritta a mano solo qui: una chiamata a
+  // funzione in questo punto del componente fa rinunciare il compilatore di
+  // React a tutte le memoizzazioni manuali della pagina (lo dice `npm run
+  // lint`). Se la formula cambia, cambiala in tutti e due i posti.
   const winRate = currentUser?.matches_played
-    ? Math.round((currentUser.wins / currentUser.matches_played) * 100)
+    ? Math.round(((currentUser.wins + (currentUser.draws ?? 0) * 0.5) / currentUser.matches_played) * 100)
     : 0;
   const missingDatabaseSchema =
     notice.includes("public.profiles") ||
@@ -5545,11 +5686,16 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
             </article>
 
-            <div className="player-kpis">
+            {/* Il riquadro dei pareggi compare solo a chi ne ha: finche non
+                se ne registra uno la fila resta di quattro, com'era. */}
+            <div className={`player-kpis${(selectedPlayer.draws ?? 0) > 0 ? " player-kpis-drawn" : ""}`}>
               <article><b>{selectedPlayer.matches_played}</b><small>Partite</small></article>
               <article><b>{selectedPlayer.wins}</b><small>Vittorie</small></article>
               <article><b>{selectedPlayer.losses}</b><small>Sconfitte</small></article>
-              <article><b>{selectedPlayer.matches_played ? Math.round((selectedPlayer.wins / selectedPlayer.matches_played) * 100) : 0}%</b><small>Win rate</small></article>
+              {(selectedPlayer.draws ?? 0) > 0
+                ? <article><b>{selectedPlayer.draws}</b><small>Pareggi</small></article>
+                : null}
+              <article><b>{padelWinRate(selectedPlayer.wins, selectedPlayer.draws ?? 0, selectedPlayer.matches_played)}%</b><small>Win rate</small></article>
             </div>
 
             <section className="player-trophies">
