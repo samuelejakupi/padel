@@ -1461,6 +1461,31 @@ function useIsPhone() {
 // vede senza che il gesto perda il controllo della posizione.
 const NAV_PILL_TRANSITION = "scale 140ms cubic-bezier(0.34, 1.56, 0.64, 1)";
 
+// Su mobile la pagina non scorre da sola: scorre il contenuto, dentro a un
+// contenitore alto quanto lo schermo. Serve perche il rimbalzo elastico
+// avvenga li dentro invece che su tutta la pagina — quando rimbalza la
+// pagina, iOS trascina anche gli elementi fissi, e la barra in basso si
+// staccava dal fondo a ogni estremo.
+// Chi deve leggere o spostare lo scorrimento deve percio chiedere a lui e non
+// alla finestra. Su desktop il contenitore non scorre e si torna alla
+// finestra: lo si riconosce dall'overflow calcolato, non da un breakpoint
+// ripetuto anche qui.
+function pageScroller(): HTMLElement | null {
+  if (typeof document === "undefined") return null;
+  const content = document.querySelector<HTMLElement>("main.content");
+  if (!content) return null;
+  const overflow = getComputedStyle(content).overflowY;
+  return overflow === "auto" || overflow === "scroll" ? content : null;
+}
+
+function scrollPageTo(top: number, behavior: ScrollBehavior) {
+  (pageScroller() ?? window).scrollTo({ top, behavior });
+}
+
+function scrollPageBy(top: number) {
+  (pageScroller() ?? window).scrollBy({ top, behavior: "instant" as ScrollBehavior });
+}
+
 // Le facce dei due caroselli della home, nell'ordine in cui si incontrano
 // scorrendo verso sinistra — lo stesso ordine dei pallini sotto la card.
 // Stanno fuori dal componente perche sono liste fisse: dentro verrebbero
@@ -1550,7 +1575,7 @@ function useCardCarousel<T extends string>({
     requestAnimationFrame(() => {
       const after = card?.getBoundingClientRect().top;
       if (after === undefined) return;
-      window.scrollBy({ top: after - before, behavior: "instant" as ScrollBehavior });
+      scrollPageBy(after - before);
     });
   }, [card]);
 
@@ -2317,29 +2342,10 @@ function BottomSheet({
     return () => window.removeEventListener("keydown", onKey);
   }, [dismiss]);
 
-  // La pagina sotto non deve scorrere mentre il foglio è aperto. Su iOS non
-  // basta overflow: hidden: il corpo va bloccato alla posizione corrente e
-  // rimesso dov'era alla chiusura. In più il touchmove che non nasce dentro
-  // l'elenco va fermato a mano, altrimenti Safari lo passa comunque alla
-  // pagina.
+  // La pagina sotto non deve scorrere mentre il foglio è aperto. In più il
+  // touchmove che non nasce dentro l'elenco va fermato a mano, altrimenti
+  // Safari lo passa comunque alla pagina.
   useEffect(() => {
-    const top = window.scrollY;
-    const { body, documentElement } = document;
-    const previous = {
-      position: body.style.position,
-      top: body.style.top,
-      left: body.style.left,
-      right: body.style.right,
-      overflow: body.style.overflow,
-      htmlOverflow: documentElement.style.overflow,
-    };
-    body.style.position = "fixed";
-    body.style.top = `-${top}px`;
-    body.style.left = "0";
-    body.style.right = "0";
-    body.style.overflow = "hidden";
-    documentElement.style.overflow = "hidden";
-
     function block(event: TouchEvent) {
       const list = bodyRef.current;
       const target = event.target instanceof Node ? event.target : null;
@@ -2360,6 +2366,40 @@ function BottomSheet({
       }
       if (event.cancelable) event.preventDefault();
     }
+
+    // Dove scorre il contenuto in un contenitore suo — cioe su mobile —
+    // fermarlo e una riga sola: gli si toglie l'overflow e resta dov'era, la
+    // posizione non la perde.
+    const scroller = pageScroller();
+    if (scroller) {
+      const previousOverflow = scroller.style.overflowY;
+      scroller.style.overflowY = "hidden";
+      document.addEventListener("touchmove", block, { passive: false });
+      return () => {
+        document.removeEventListener("touchmove", block);
+        scroller.style.overflowY = previousOverflow;
+      };
+    }
+
+    // Dove invece scorre la pagina intera serve la ginnastica di sempre: su
+    // iOS overflow: hidden non basta, il corpo va bloccato alla posizione
+    // corrente e rimesso dov'era alla chiusura.
+    const top = window.scrollY;
+    const { body, documentElement } = document;
+    const previous = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      overflow: body.style.overflow,
+      htmlOverflow: documentElement.style.overflow,
+    };
+    body.style.position = "fixed";
+    body.style.top = `-${top}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.overflow = "hidden";
+    documentElement.style.overflow = "hidden";
     document.addEventListener("touchmove", block, { passive: false });
 
     return () => {
@@ -4539,7 +4579,7 @@ function AppShell({ session }: { session: Session | null }) {
     const item = navItems[index];
     if (!item) return;
     if (item.active) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      scrollPageTo(0, "smooth");
       return;
     }
     item.select();
@@ -4837,7 +4877,7 @@ function AppShell({ session }: { session: Session | null }) {
   function openPadelPage(next: "matches" | "ranking" | "tournaments") {
     setView("padel");
     setPadelView(next);
-    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+    scrollPageTo(0, "instant" as ScrollBehavior);
   }
 
   type MobileDestination = "padel" | "pizza" | "profile";
@@ -4907,7 +4947,7 @@ function AppShell({ session }: { session: Session | null }) {
     try {
       if (reduceMotion || !page.animate) {
         openMobileDestination(destination);
-        window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+        scrollPageTo(0, "instant" as ScrollBehavior);
         return;
       }
 
@@ -4918,13 +4958,21 @@ function AppShell({ session }: { session: Session | null }) {
       outgoing.setAttribute("aria-hidden", "true");
       outgoing.classList.remove("is-page-transitioning");
       outgoing.classList.add("is-page-outgoing");
-      outgoing.style.top = `${page.offsetTop - window.scrollY}px`;
+      // Dove si trova adesso il bordo alto della pagina, letto a video: vale
+      // sia quando a scorrere e la finestra sia quando scorre il contenuto,
+      // e in quel caso offsetTop non direbbe niente di utile.
+      const pageTop = page.getBoundingClientRect().top;
+      const pageScrolled = page.scrollTop;
+      outgoing.style.top = `${pageTop}px`;
 
       transitionLayer = document.createElement("div");
       transitionLayer.className = "page-transition-layer";
       transitionLayer.setAttribute("aria-hidden", "true");
       transitionLayer.appendChild(outgoing);
       document.body.appendChild(transitionLayer);
+      // La copia nasce in cima: senza questo la pagina che esce ripartirebbe
+      // dall'inizio invece che dal punto in cui la si stava leggendo.
+      outgoing.scrollTop = pageScrolled;
 
       // Il main vivo resta invisibile mentre React sostituisce i dati: evita
       // un singolo frame della nuova pagina gia ferma al centro.
@@ -4932,7 +4980,7 @@ function AppShell({ session }: { session: Session | null }) {
       page.style.opacity = "0";
       page.style.filter = "none";
       openMobileDestination(destination);
-      window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+      scrollPageTo(0, "instant" as ScrollBehavior);
 
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 

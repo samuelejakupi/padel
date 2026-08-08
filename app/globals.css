@@ -72,12 +72,6 @@ html {
      coincidere col fondo pagina, che in home diventa scuro. */
   --scroll-edge: var(--paper);
   background: var(--paper);
-  /* Niente rimbalzo elastico ai due estremi. Non e una questione di gusto:
-     durante il rimbalzo iOS trascina tutta la pagina, e con lei anche gli
-     elementi fissi — la barra in basso si staccava dal fondo e ci tornava
-     ogni volta che si arrivava in cima o in fondo. Senza rimbalzo la barra
-     sta ferma dov'e, che e quello che ci si aspetta da una tab bar. */
-  overscroll-behavior-y: none;
   /* Quello che esce dai fianchi viene tagliato invece di allargare la pagina:
      serve al tasto in cima alla home, che scorrendo di lato esce dallo
      schermo e senza questo aggiungerebbe una barra di scorrimento
@@ -6114,14 +6108,24 @@ button.pizza-ranking-row {
     --match-card-h: 104px;
   }
 
+  /* Qui la pagina non scorre: scorre il contenuto, dentro a un contenitore
+     alto quanto lo schermo (vedi .content piu sotto). E il modo in cui sono
+     fatte le app native, e serve al rimbalzo elastico: quando a rimbalzare e
+     la pagina intera iOS trascina anche gli elementi fissi, e la barra in
+     basso si staccava dal fondo a ogni estremo. Rimbalzando il contenitore
+     invece si muove solo il contenuto, e la barra resta dov'e.
+     L'altezza al 100% serve a tutti e due: senza, il contenitore non avrebbe
+     una misura da riempire e crescerebbe con il contenuto, tornando a
+     scorrere la pagina. */
+  html,
   body {
-    overflow-x: hidden;
-    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+    height: 100%;
+    overflow: hidden;
   }
 
-  /* In home la barra inferiore non c'è: senza questo resterebbe una fascia
-     vuota in fondo alla pagina. */
-  html.theme-dark body {
+  body {
+    /* Lo spazio per la barra ora lo mette il contenitore che scorre: qui
+       lascerebbe una fascia vuota che nessuno vede scorrere. */
     padding-bottom: 0;
   }
 
@@ -6164,10 +6168,6 @@ button.pizza-ranking-row {
     display: none;
   }
 
-  /* Lo spazio per la barra lo mette gia il padding di body: aggiungerne
-     altro qui lasciava una fascia vuota dietro al vetro, che cosi non
-     aveva nulla da sfocare. Con questo il contenuto scorre davvero
-     sotto la barra. */
   /* Il passo in alto ora comprende l'isola: con viewport-fit: cover lo
      spazio non lo riserva piu iOS, e senza questo la prima card finirebbe
      sotto l'orologio.
@@ -6178,7 +6178,19 @@ button.pizza-ranking-row {
      sopra che di fianco. Il max serve ai telefoni senza isola, dove l'area
      sicura vale zero e senza di lui la card partirebbe a filo. */
   .content {
-    padding: max(14px, env(safe-area-inset-top)) 14px 6px;
+    height: 100dvh;
+    overflow-y: auto;
+    /* Il rimbalzo resta e finisce qui: non si propaga a quello che c'e
+       fuori, che e proprio la propagazione che portava via anche la barra. */
+    overscroll-behavior-y: contain;
+    /* In fondo lo spazio per la barra in vetro, che prima lo metteva body:
+       body pero non scorre piu, e li quello spazio non lo vedeva nessuno. */
+    padding: max(14px, env(safe-area-inset-top)) 14px calc(88px + env(safe-area-inset-bottom));
+    /* Lo scorrimento morbido stava su html, che qui non scorre piu: senza,
+       il "torna in cima" toccando la voce gia attiva saltava di netto invece
+       di risalire. */
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* La pagina e una superficie unica durante lo swipe: segue il dito e

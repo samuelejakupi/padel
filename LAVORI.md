@@ -191,13 +191,33 @@ comincia dove finisce l'area sicura e basta: l'area sicura è già più bassa
 della Dynamic Island di una decina di pixel, quindi lo stacco che si vede è
 quello dei fianchi. Sommarci ancora i 14px lo raddoppiava.
 
-### Niente rimbalzo elastico agli estremi
-Durante il rimbalzo iOS trascina tutta la pagina, e con lei anche gli
-elementi fissi: la barra in basso si staccava dal fondo e ci tornava ogni
-volta che si arrivava in cima o in fondo. Con `overscroll-behavior-y: none`
-la barra sta ferma dov'è, che è quello che ci si aspetta da una tab bar. Il
-prezzo è che la pagina non "rimbalza" più: sembra meno iOS per un istante,
-ma la barra ferma vale più del rimbalzo.
+### Su mobile non scorre la pagina, scorre il contenuto
+Durante il rimbalzo elastico iOS trascina tutta la pagina, e con lei anche
+gli elementi fissi: la barra in basso si staccava dal fondo ogni volta che si
+arrivava in cima o in fondo. Il primo rimedio era stato togliere il rimbalzo
+(`overscroll-behavior-y: none`), ma senza rimbalzo la pagina si ferma secca e
+sembra bloccata.
+
+Ora lo scorrimento sta dentro a `.content`, alto `100dvh` e con
+`overflow-y: auto`, come nelle app native: il rimbalzo avviene lì dentro e
+gli elementi fissi — barra e sfocatura di sistema — restano dove sono.
+`overscroll-behavior-y: contain` impedisce che il rimbalzo si propaghi fuori,
+che era esattamente la propagazione che portava via la barra.
+
+Conseguenze da ricordare, perché non sono ovvie leggendo il CSS:
+
+- `window.scrollTo` e `window.scrollBy` non muovono più niente. Ci sono
+  `scrollPageTo` e `scrollPageBy`, che chiedono a `pageScroller()` chi sta
+  scorrendo davvero: su desktop `.content` non ha overflow e si torna alla
+  finestra, e lo si riconosce dall'overflow calcolato invece di ripetere il
+  breakpoint anche in JavaScript.
+- Lo spazio per la barra in fondo lo mette `.content`, non più `body`.
+- `scroll-behavior: smooth` è passato da `html` a `.content`.
+- Il foglio dal basso blocca lo scorrimento togliendo l'overflow al
+  contenitore, una riga sola: la ginnastica di fissare il `body` e rimetterlo
+  dov'era serve solo dove a scorrere è la pagina intera.
+- La copia congelata della pagina che esce durante lo swipe fra sezioni deve
+  farsi ridare lo `scrollTop`: un clone nasce sempre in cima.
 
 ### La classifica in home è un bersaglio solo
 Erano tre cose da toccare nello stesso riquadro — lo switch player/team, le
