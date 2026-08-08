@@ -3875,6 +3875,24 @@ button.podium-person {
   font-weight: 800;
 }
 
+/* TEMPORANEO: il riquadro delle misure dentro alla scheda profilo. Va via
+   insieme al componente ViewportProbe. */
+.viewport-probe {
+  background: var(--veil-2);
+  border-radius: var(--radius-md);
+  display: grid;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  gap: 2px;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+}
+
+.viewport-probe b {
+  font-family: inherit;
+  margin-bottom: 4px;
+}
+
 .player-kpis {
   display: grid;
   gap: 12px;
@@ -5682,22 +5700,16 @@ button.pizza-ranking-row {
   --veil: 1;
   align-items: flex-end;
   animation: veil-in 340ms ease-out;
-  /* Il velo scurisce. Non è una preferenza estetica, è la stessa regola di
-     prima letta al contrario: le scritte di sistema in cima allo schermo sono
-     le uniche che il CSS non può toccare, e da quando la barra di stato è
-     traslucida iOS le tiene bianche per sempre. Quindi tutto quello che passa
-     sotto di loro deve restare scuro, sempre, foglio aperto compreso — prima
-     valeva l'opposto perché l'ora era scura.
-     Il passaggio di consegne è pulito: .system-blur porta l'ombra sotto
-     l'ora finché il foglio è chiuso, e si ritira (--island va a 1) proprio
-     quando entra questo velo, che da lì in poi fa lo stesso lavoro.
-     Stessa velatura d'inchiostro di .modal-backdrop, un po' più leggera:
-     qui sotto il foglio si vede ancora la pagina, e deve restare riconoscibile. */
+  /* Il velo schiarisce invece di scurire. Non è una preferenza estetica: le
+     scritte di sistema in cima allo schermo ora sono scure, e sono le uniche
+     che il CSS non può toccare. Tutto quello che passa sotto di loro deve
+     restare chiaro, sempre, foglio aperto compreso. Da qui brightness oltre
+     alla sfocatura, e la velatura color carta al posto di quella d'inchiostro. */
   backdrop-filter:
     blur(calc(var(--veil) * 16px))
     saturate(calc(100% + var(--veil) * 20%))
-    brightness(calc(1 - var(--veil) * 0.25));
-  background: rgba(8, 18, 29, calc(var(--veil) * 0.5));
+    brightness(calc(1 + var(--veil) * 0.3));
+  background: rgba(243, 245, 241, calc(var(--veil) * 0.62));
   display: flex;
   inset: 0;
   justify-content: center;
@@ -6588,26 +6600,6 @@ button.pizza-ranking-row {
     mask-image: linear-gradient(to top, transparent 24%, black 58%, black 100%);
   }
 
-  /* Ombra sotto l'ora, non una fascia. Da quando la barra di stato e
-     traslucida iOS disegna ora e icone sempre in bianco: su una pagina chiara
-     sparirebbero, e serve qualcosa di scuro sotto. Un rettangolo pieno si
-     vedrebbe come una tacca — era l'obiezione che aveva tenuto "default" —
-     quindi e una sfumatura che si spegne prima di finire l'area sicura: dove
-     passa un blocco scuro non si nota, dove passa il fondo chiaro basta a
-     staccare le scritte bianche. */
-  .system-blur::after {
-    background: linear-gradient(
-      to bottom,
-      rgba(11, 27, 44, 0.42) 0%,
-      rgba(11, 27, 44, 0.2) 55%,
-      transparent 100%
-    );
-    content: "";
-    inset: 0;
-    pointer-events: none;
-    position: absolute;
-  }
-
   /* Scroll edge effect: il contenuto sfuma verso il fondo mentre scorre
      sotto la barra, invece di sparirci dietro di netto. E la dissolvenza
      che iOS usa davvero, e tiene leggibili le voci del menu su qualunque
@@ -6962,46 +6954,19 @@ button.pizza-ranking-row {
   .cta-carousel {
     display: block;
     order: 2;
-    /* Niente overflow, per lo stesso motivo scritto piu sotto: l'alone del
-       tasto esce dai suoi bordi e ritagliarlo lo spegne — provato, e si
-       vedevano gli angoli tagliati.
-       Il gemello di fianco non ha bisogno di essere ritagliato qui: il tasto
-       e largo quanto la colonna, quindi una copia spostata di tutta la sua
-       larghezza finisce gia fuori dallo schermo, e a tagliarla ci pensa
-       overflow-x: clip su html. */
   }
 
+  /* Provato e tolto: una copia spenta dell'altro tasto messa di fianco al
+     nastro, per far intravedere cosa c'e di la quando il tasto si accenna da
+     solo. Due strade, tutte e due chiuse. Ritagliarla dal carosello spegne
+     l'alone del tasto, che esce dai suoi bordi di una trentina di pixel
+     (e il motivo per cui qui non c'e overflow, scritto anche piu sotto).
+     Lasciarla libera fa scorrere la pagina in orizzontale: .content ha
+     overflow-y: auto, e quando un figlio sporge di lato l'altro asse diventa
+     scorrevole da solo. Chi ci riprova sappia che il problema non e trovare
+     dove metterla, e questo. */
   .cta-carousel-track {
-    position: relative;
     will-change: transform;
-  }
-
-  /* Lo stacco fra il tasto e il suo gemello. E lo stesso numero che separa
-     due card della home: due cose affiancate si distanziano sempre uguale,
-     qui non c'e motivo di fare eccezione. */
-  .cta-carousel-peek {
-    align-items: center;
-    background: var(--veil-2);
-    border-radius: var(--radius);
-    color: var(--ink-30);
-    display: flex;
-    font-size: 24px;
-    font-style: italic;
-    font-weight: 900;
-    inset: 0;
-    justify-content: center;
-    letter-spacing: 0.6px;
-    pointer-events: none;
-    position: absolute;
-    white-space: nowrap;
-  }
-
-  .cta-carousel-peek.is-right {
-    transform: translate3d(calc(100% + var(--space-3)), 0, 0);
-  }
-
-  .cta-carousel-peek.is-left {
-    transform: translate3d(calc(-100% - var(--space-3)), 0, 0);
   }
 
   .match-panel-head {
@@ -7884,12 +7849,7 @@ button.pizza-ranking-row {
   }
 
   .notice {
-    /* Sopra la barra del menu, e misurato come lei: la barra sta a undici
-       pixel dal fondo del guscio senza sommare l'area sicura, quindi
-       sommarla qui allontanerebbe l'avviso dalla barra invece di
-       appoggiarcisi sopra. Prima non si notava perche l'area sicura valeva
-       zero; da quando la pagina arriva davvero in fondo, si nota. */
-    bottom: 86px;
+    bottom: calc(86px + env(safe-area-inset-bottom));
     width: calc(100vw - 24px);
   }
 

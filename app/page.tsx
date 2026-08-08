@@ -1912,6 +1912,65 @@ function useCardCarousel<T extends string>({
   };
 }
 
+// TEMPORANEO — da togliere appena chiarito dove finisce la pagina.
+// Sulla barra del menu che resta troppo in alto nell'app salvata sulla
+// schermata Home abbiamo gia sbagliato due diagnosi di fila, tutte e due
+// dedotte da uno screenshot. Questi sono i numeri veri, letti sul telefono:
+// quanto e alta la finestra, quanto dice lo schermo, quanto valgono le aree
+// sicure e dove finiscono davvero il guscio e la barra. Con questi si sa
+// invece di ipotizzare.
+function ViewportProbe() {
+  const [lines, setLines] = useState<string[]>([]);
+
+  // Le misure si leggono dopo che il browser ha impaginato, quindi dentro a un
+  // effetto — ma non subito: scrivere lo stato nello stesso giro fa ripartire
+  // il render a cascata. Un frame dopo va bene, e a quel punto le misure sono
+  // anche piu affidabili.
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => measure());
+    return () => cancelAnimationFrame(frame);
+
+    function measure() {
+    // Le env() non si leggono da JavaScript: si fanno misurare al browser
+    // dando a un elemento un padding che vale env(), e poi si legge il
+    // padding calcolato.
+    const probe = document.createElement("div");
+    probe.style.cssText = [
+      "position:fixed",
+      "visibility:hidden",
+      "padding-top:env(safe-area-inset-top)",
+      "padding-bottom:env(safe-area-inset-bottom)",
+      "padding-left:env(safe-area-inset-left)",
+      "padding-right:env(safe-area-inset-right)",
+    ].join(";");
+    document.body.appendChild(probe);
+    const insets = getComputedStyle(probe);
+    const round = (value: string) => Math.round(parseFloat(value) || 0);
+    const shell = document.querySelector(".app-shell")?.getBoundingClientRect();
+    const nav = document.querySelector(".mobile-nav")?.getBoundingClientRect();
+    const standalone = (window.navigator as Navigator & { standalone?: boolean }).standalone;
+    setLines([
+      `finestra ${Math.round(window.innerWidth)}x${Math.round(window.innerHeight)}`,
+      `schermo ${Math.round(window.screen.width)}x${Math.round(window.screen.height)}`,
+      `dpr ${window.devicePixelRatio}`,
+      `safe top ${round(insets.paddingTop)} · bottom ${round(insets.paddingBottom)}`,
+      `standalone ${standalone === undefined ? "n/d" : String(standalone)}`,
+      shell ? `guscio finisce a ${Math.round(shell.bottom)} (alto ${Math.round(shell.height)})` : "guscio non trovato",
+      nav ? `barra finisce a ${Math.round(nav.bottom)}` : "barra non trovata",
+      nav ? `dal fondo finestra ${Math.round(window.innerHeight - nav.bottom)}` : "",
+    ].filter(Boolean));
+    probe.remove();
+    }
+  }, []);
+
+  return (
+    <div className="viewport-probe">
+      <b>Misure schermo (temporaneo)</b>
+      {lines.map((line) => <span key={line}>{line}</span>)}
+    </div>
+  );
+}
+
 function MatchCard({
   match,
   onEdit,
@@ -4279,10 +4338,7 @@ function AppShell({ session }: { session: Session | null }) {
         // Se il dito lo sta gia spostando il suggerimento e superfluo, e
         // arriverebbe come uno strattone in mano.
         if (track?.animate && !track.style.transform) {
-          // Piu lungo di prima: deve scoprire il gemello di fianco, non
-          // limitarsi a vibrare. Meno il distacco fra i due, quello che
-          // resta e quanto se ne vede.
-          const nudge = ctaFace === "match" ? -30 : 30;
+          const nudge = ctaFace === "match" ? -16 : 16;
           track.animate(
             [
               { transform: "translate3d(0, 0, 0)" },
@@ -5432,20 +5488,6 @@ function AppShell({ session }: { session: Session | null }) {
                     un tasto che cambia da solo si preme per sbaglio. */}
                 <div className="cta-carousel" ref={setCtaCard}>
                   <div className="cta-carousel-track" ref={ctaTrackRef}>
-                    {/* Il gemello spento di fianco. Sta dentro al nastro, non
-                        accanto: cosi si sposta insieme a lui, e quando il
-                        nastro si accenna da solo quello che spunta dal bordo
-                        e il tasto dell'altra faccia invece del fondo della
-                        pagina. Il movimento smette di essere un tremolio e
-                        diventa una frase: "di qua ce n'e un altro".
-                        Copia spenta e non un tasto vero: quello vero e uno
-                        solo, ed e questo qui sotto. */}
-                    <span
-                      className={`cta-carousel-peek ${ctaFace === "match" ? "is-right" : "is-left"}`}
-                      aria-hidden="true"
-                    >
-                      {ctaFace === "match" ? "+ NUOVO TORNEO" : "+ NUOVA PARTITA"}
-                    </span>
                     {ctaFace === "match" ? (
                       <button
                         className="button button-primary cta-new-match cta-in-panel cta-between cta-aurora"
@@ -6413,6 +6455,7 @@ function AppShell({ session }: { session: Session | null }) {
               </label>
               <label>Email<input value={session?.user.email ?? ""} disabled /></label>
               {supabase ? null : <p className="demo-profile-note">Il profilo diventa modificabile dopo il collegamento a Supabase.</p>}
+              <ViewportProbe />
               <div className="modal-actions">
                 {supabase ? (
                   <button type="button" className="signout-button" onClick={() => void supabase?.auth.signOut()}>Esci dal club</button>

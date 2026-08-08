@@ -59,24 +59,6 @@ salvata sulla schermata Home. Per ora c'è il pallino sull'icona Pizza.
 
 ## Deciso, e perché
 
-### La barra di stato torna traslucida, e i veli si rovesciano
-Il 6 agosto si era scelto `statusBarStyle: "default"` per tenere l'ora scura e
-non doverci mettere niente sotto. Il conto è arrivato in fondo allo schermo:
-con "default", nell'app salvata sulla schermata Home, iOS si tiene le due
-strisce di sistema e `env(safe-area-inset-*)` vale zero — non c'è nessuna area
-sicura da recuperare, l'area non è nostra. La barra del menu finiva a 48px dal
-vetro invece che a 11. La prova che ha chiuso la diagnosi: in Safari, dove
-`viewport-fit: cover` funziona davvero, la stessa barra era già al posto giusto.
-
-Quindi `black-translucent`, con il prezzo che era stato previsto allora: ora e
-icone bianche per sempre. Il patto si rovescia — quello che passa sotto le
-scritte di sistema deve restare **scuro** — e con lui `.sheet-backdrop`, che da
-schiarente diventa scurente. `.modal-backdrop` era già scuro: adesso è coerente
-invece che in contraddizione. Sotto l'ora c'è una sfumatura in `.system-blur`
-che si spegne prima di finire l'area sicura: un'ombra, non una fascia. Era
-proprio la "tacca" l'obiezione che aveva tenuto "default", e sfumata non si
-vede.
-
 ### Un set a testa è un pareggio, e il terzo interrotto si scrive lo stesso
 Si gioca al meglio dei tre set, ma il campo scade prima della fine più spesso
 di quanto ci piaccia ammettere. Prima quel risultato non si poteva registrare:
