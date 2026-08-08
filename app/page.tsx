@@ -1461,6 +1461,355 @@ function useIsPhone() {
 // vede senza che il gesto perda il controllo della posizione.
 const NAV_PILL_TRANSITION = "scale 140ms cubic-bezier(0.34, 1.56, 0.64, 1)";
 
+// Le facce dei due caroselli della home, nell'ordine in cui si incontrano
+// scorrendo verso sinistra — lo stesso ordine dei pallini sotto la card.
+// Stanno fuori dal componente perche sono liste fisse: dentro verrebbero
+// ricostruite a ogni render e farebbero ripartire gli effetti del carosello.
+const RANKING_FACES = ["single", "team"] as const;
+const MATCHES_FACES = ["mine", "all", "tournaments"] as const;
+
+// Una card che ha piu facce e le mostra a turno: si cambia con lo swipe o da
+// sola ogni cinque secondi, e la faccia che esce da un lato lascia entrare
+// dall'altro quella nuova. La usano la classifica (singolo, squadra) e le
+// partite (personale, tutti, tornei): erano lo stesso meccanismo scritto due
+// volte, e la seconda volta sarebbe stata una copia da tenere allineata a
+// mano.
+//
+// Perche i gestori del tocco stanno su listener nativi e non sugli attributi
+// onTouch di React: React registra touchmove come passivo, e li dentro
+// preventDefault non ha alcun effetto. Senza preventDefault non c'e modo di
+// impedire alla pagina di scorrere su e giu mentre si scorre di lato.
+function useCardCarousel<T extends string>({
+  faces,
+  face,
+  onChange,
+  enabled,
+  enteringClass,
+}: {
+  faces: readonly T[];
+  face: T;
+  onChange: (next: T) => void;
+  // Il cambio automatico gira solo dove ha senso guardarlo: in home, senza
+  // fogli aperti. Fuori di li il timer non parte nemmeno.
+  enabled: boolean;
+  // Classe appesa al nastro finche la faccia nuova sta entrando, per le
+  // animazioni che devono aspettare che sia arrivata.
+  enteringClass?: string;
+}) {
+  // Il nodo della card sta in uno stato e non in un ref, perche serve a
+  // riagganciare i listener. Cambiando sezione dalla barra la card viene
+  // smontata, e al ritorno e un elemento nuovo: con un ref i listener
+  // sarebbero rimasti appesi a quello vecchio e la card tornava muta — non
+  // rispondeva piu nemmeno allo swipe fatto a mano.
+  const [card, setCard] = useState<HTMLElement | null>(null);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  // Quando la card e stata toccata l'ultima volta. Il cambio automatico non si
+  // spegne per sempre: si fa da parte mentre il dito e li e riprende cinque
+  // secondi dopo l'ultimo tocco, come se il conto ripartisse da capo.
+  const [touchedAt, setTouchedAt] = useState(0);
+  const swipe = useRef<{
+    x: number;
+    y: number;
+    lastX: number;
+    lastAt: number;
+    velocityX: number;
+    axis: "pending" | "horizontal" | "vertical";
+  } | null>(null);
+  // Vive dal touchend al click che il browser manda comunque in coda a uno
+  // swipe: serve solo a non aprire il foglio quando il gesto era un cambio.
+  const swipeHandled = useRef(false);
+  // Da quale lato deve entrare la faccia nuova quando il cambio e andato a
+  // buon fine. Null quando non c'e nessun cambio in corso.
+  const enterFrom = useRef<number | null>(null);
+  // Il cambio automatico fa avanti e indietro invece di ricominciare da capo:
+  // arrivato all'ultima faccia torna verso la prima. Con due facce e
+  // l'alternanza di sempre; con tre evita il salto dalla terza alla prima,
+  // che sarebbe l'unico movimento a non corrispondere a nessuno swipe.
+  const autoDirection = useRef<"left" | "right">("left");
+  // Il gestore di turno letto da dentro gli effetti senza doverli riagganciare
+  // a ogni render: e una funzione scritta inline nel JSX, quindi cambia
+  // identita tutte le volte.
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
+
+  const index = faces.indexOf(face);
+
+  // Cambiare faccia o aprire il foglio fa cambiare l'altezza della pagina, e
+  // il browser rimette lo scorrimento dove puo: se eri in fondo, risali. Qui
+  // teniamo fermo il bordo alto della card, spostando lo scorrimento della
+  // stessa quantita di cui si e mosso lui.
+  const keepScroll = useCallback((change: () => void) => {
+    const before = card?.getBoundingClientRect().top ?? null;
+    change();
+    if (before === null) return;
+    requestAnimationFrame(() => {
+      const after = card?.getBoundingClientRect().top;
+      if (after === undefined) return;
+      window.scrollBy({ top: after - before, behavior: "instant" as ScrollBehavior });
+    });
+  }, [card]);
+
+  // Il cambio vero e proprio: la faccia vecchia esce da un lato e quella nuova
+  // entra dall'altro. Lo chiamano sia il dito sia il timer, cosi il cambio a
+  // mano e quello automatico sono esattamente lo stesso movimento.
+  const slide = useCallback((next: T, direction: "left" | "right") => {
+    const track = trackRef.current;
+    const width = Math.max(card?.getBoundingClientRect().width ?? 1, 1);
+    const exit = direction === "left" ? -width : width;
+    const finish = () => keepScroll(() => onChangeRef.current(next));
+    if (!track || !track.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      enterFrom.current = null;
+      finish();
+      return;
+    }
+    // La faccia nuova entrera dal lato opposto: il gesto portato a termine.
+    enterFrom.current = -exit;
+    track
+      .animate(
+        [
+          { transform: track.style.transform || "translate3d(0, 0, 0)", opacity: track.style.opacity || "1" },
+          { transform: `translate3d(${exit}px, 0, 0)`, opacity: 0 },
+        ],
+        { duration: 170, easing: "cubic-bezier(0.4, 0, 0.9, 0.35)", fill: "forwards" },
+      )
+      .finished.then(finish, finish);
+  }, [card, keepScroll]);
+
+  // Il cambio automatico: le facce si alternano da sole ogni cinque secondi,
+  // cosi la home le mostra tutte senza che nessuno la tocchi. Si ferma dove
+  // non avrebbe senso girare a vuoto: fuori dalla home, con un foglio aperto,
+  // a scheda nascosta, o quando il telefono chiede meno animazioni. Toccando
+  // la card si fa da parte e riprende cinque secondi dopo l'ultimo tocco:
+  // touchedAt cambia, l'effetto riparte e il conto ricomincia da zero.
+  useEffect(() => {
+    if (!enabled || faces.length < 2) return;
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let timer = 0;
+    function schedule() {
+      timer = window.setTimeout(() => {
+        // Dito ancora appoggiato sulla card: si rimanda invece di strappargli
+        // la faccia di mano a meta gesto.
+        if (swipe.current) {
+          schedule();
+          return;
+        }
+        // Arrivati a un estremo si torna indietro: la direzione cambia una
+        // volta sola, e da li in poi si scorre nell'altro verso.
+        if (autoDirection.current === "left" && index >= faces.length - 1) autoDirection.current = "right";
+        if (autoDirection.current === "right" && index <= 0) autoDirection.current = "left";
+        const step = autoDirection.current === "left" ? 1 : -1;
+        const next = faces[index + step];
+        if (next !== undefined) slide(next, autoDirection.current);
+      }, 5000);
+    }
+
+    // A scheda nascosta il timer non parte nemmeno: un'animazione che gira
+    // dietro le quinte consuma batteria e non la guarda nessuno. Quando la
+    // pagina torna in vista il conto ricomincia da capo.
+    function sync() {
+      window.clearTimeout(timer);
+      if (document.visibilityState === "visible") schedule();
+    }
+
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, [touchedAt, index, faces, enabled, slide]);
+
+  // Il gesto orizzontale sulla card. Fa tre cose: decide una volta sola su che
+  // asse sta andando il dito, blocca lo scorrimento verticale appena ha deciso
+  // che e orizzontale, e tiene la faccia attaccata al dito finche non la si
+  // lascia.
+  useEffect(() => {
+    if (!card) return;
+    const node = card;
+
+    const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // Dove si va scorrendo in quella direzione. Le facce sono in fila, nello
+    // stesso ordine dei pallini: oltre i due estremi non c'e niente, e li il
+    // dito incontra la resistenza elastica invece di trascinare via la card.
+    function destination(direction: "left" | "right"): T | null {
+      const next = faces[direction === "left" ? index + 1 : index - 1];
+      return next ?? null;
+    }
+
+    // La stessa resistenza dei fogli che si trascinano: all'inizio segue quasi
+    // il dito, poi si arrende sempre di piu e si ferma.
+    function rubber(distance: number, limit = 220) {
+      return (1 - 1 / (distance / limit + 1)) * limit;
+    }
+
+    function cardWidth() {
+      return Math.max(node.getBoundingClientRect().width, 1);
+    }
+
+    function paint(offset: number) {
+      const track = trackRef.current;
+      if (!track) return;
+      const progress = Math.min(1, Math.abs(offset) / cardWidth());
+      track.style.transition = "none";
+      track.style.transform = `translate3d(${offset}px, 0, 0)`;
+      // Sbiadisce mentre esce: senza, la faccia vecchia resta squillante fino
+      // al bordo e il cambio sembra uno scatto invece di una dissolvenza.
+      track.style.opacity = String(1 - progress * 0.45);
+    }
+
+    function restore() {
+      const track = trackRef.current;
+      if (!track || !track.style.transform) return;
+      const fromTransform = track.style.transform;
+      const fromOpacity = track.style.opacity || "1";
+      track.style.transform = "";
+      track.style.opacity = "";
+      if (!track.animate || reduceMotion()) return;
+      track.animate(
+        [
+          { transform: fromTransform, opacity: fromOpacity },
+          { transform: "translate3d(0, 0, 0)", opacity: 1 },
+        ],
+        { duration: 420, easing: "cubic-bezier(0.34, 1.32, 0.64, 1)" },
+      );
+    }
+
+    function onStart(event: TouchEvent) {
+      swipeHandled.current = false;
+      // Il cambio automatico si fa da parte e riparte cinque secondi dopo che
+      // il dito se n'e andato: mentre la card e sotto le dita comanda lei.
+      setTouchedAt(Date.now());
+      if (event.touches.length !== 1 || !window.matchMedia("(max-width: 780px)").matches) {
+        swipe.current = null;
+        return;
+      }
+      trackRef.current?.getAnimations().forEach((animation) => animation.cancel());
+      const touch = event.touches[0];
+      swipe.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        lastX: touch.clientX,
+        lastAt: performance.now(),
+        velocityX: 0,
+        axis: "pending",
+      };
+    }
+
+    function onMove(event: TouchEvent) {
+      const gesture = swipe.current;
+      const touch = event.touches[0];
+      if (!gesture || !touch) return;
+      const distanceX = touch.clientX - gesture.x;
+      const distanceY = touch.clientY - gesture.y;
+      // L'asse si decide una volta sola, agli otto pixel: prima di allora il
+      // gesto e ancora di tutti e due, dopo non cambia piu idea a meta strada.
+      if (gesture.axis === "pending") {
+        if (Math.max(Math.abs(distanceX), Math.abs(distanceY)) < 8) return;
+        gesture.axis = Math.abs(distanceX) > Math.abs(distanceY) * 1.15 ? "horizontal" : "vertical";
+      }
+      if (gesture.axis !== "horizontal") return;
+      // E per questa riga che i listener sono nativi e non passivi: da qui in
+      // poi la pagina non scorre piu su e giu finche il dito non si stacca.
+      if (event.cancelable) event.preventDefault();
+
+      const now = performance.now();
+      const elapsed = Math.max(1, now - gesture.lastAt);
+      gesture.velocityX = (touch.clientX - gesture.lastX) / elapsed;
+      gesture.lastX = touch.clientX;
+      gesture.lastAt = now;
+
+      const direction = distanceX < 0 ? "left" : "right";
+      const free = Boolean(destination(direction));
+      paint(free ? distanceX : Math.sign(distanceX) * rubber(Math.abs(distanceX)));
+    }
+
+    function onEnd(event: TouchEvent) {
+      const gesture = swipe.current;
+      swipe.current = null;
+      // I cinque secondi si contano dall'ultimo tocco, che e questo.
+      setTouchedAt(Date.now());
+      const track = trackRef.current;
+      if (!gesture || !track || gesture.axis !== "horizontal") return;
+      const touch = event.changedTouches[0];
+      const distanceX = touch ? touch.clientX - gesture.x : 0;
+      const direction = distanceX < 0 ? "left" : "right";
+      const next = destination(direction);
+      const width = cardWidth();
+      // Due modi di convincerlo: portarlo oltre un terzo della card, oppure un
+      // colpo secco. Il secondo e per i pollici veloci, che non arrivano mai
+      // lontano ma sono decisi.
+      const enoughDistance = Math.abs(distanceX) >= Math.max(56, width * 0.3);
+      const enoughMomentum = Math.abs(distanceX) >= 28 && Math.abs(gesture.velocityX) >= 0.4;
+      if (!next || !(enoughDistance || enoughMomentum)) {
+        restore();
+        return;
+      }
+      // Il click che il browser manda dopo il gesto non deve aprire il foglio.
+      swipeHandled.current = true;
+      slide(next, direction);
+    }
+
+    function onCancel() {
+      swipe.current = null;
+      setTouchedAt(Date.now());
+      restore();
+    }
+
+    node.addEventListener("touchstart", onStart, { passive: true });
+    node.addEventListener("touchmove", onMove, { passive: false });
+    node.addEventListener("touchend", onEnd);
+    node.addEventListener("touchcancel", onCancel);
+    return () => {
+      node.removeEventListener("touchstart", onStart);
+      node.removeEventListener("touchmove", onMove);
+      node.removeEventListener("touchend", onEnd);
+      node.removeEventListener("touchcancel", onCancel);
+    };
+  }, [card, faces, index, slide]);
+
+  // Cambiata la faccia, quella nuova entra dal lato opposto a quello da cui e
+  // uscita la vecchia: il gesto continua invece di ricominciare.
+  useEffect(() => {
+    const track = trackRef.current;
+    const from = enterFrom.current;
+    enterFrom.current = null;
+    if (!track || from === null) return;
+    track.getAnimations().forEach((animation) => animation.cancel());
+    track.style.transform = "";
+    track.style.opacity = "";
+    if (!track.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      if (enteringClass) track.classList.remove(enteringClass);
+      return;
+    }
+    if (enteringClass) track.classList.add(enteringClass);
+    const entrance = track.animate(
+      [
+        { transform: `translate3d(${from}px, 0, 0)`, opacity: 0 },
+        { transform: "translate3d(0, 0, 0)", opacity: 1 },
+      ],
+      { duration: 340, easing: "cubic-bezier(0.32, 0.9, 0.28, 1)" },
+    );
+    // Arrivata: le animazioni che aspettavano possono ripartire da capo, in
+    // tempo con la faccia nuova.
+    const done = () => { if (enteringClass) track.classList.remove(enteringClass); };
+    entrance.finished.then(done, done);
+  }, [face, enteringClass]);
+
+  return {
+    setCard,
+    trackRef,
+    swipeHandled,
+    // Da chiamare al click sulla card: rimanda il cambio automatico di altri
+    // cinque secondi, come fa il tocco.
+    touch: () => setTouchedAt(Date.now()),
+  };
+}
+
 function MatchCard({
   match,
   onEdit,
@@ -3615,13 +3964,8 @@ function AppShell({ session }: { session: Session | null }) {
   const HOME_MATCHES = 2;
   const HOME_TOURNAMENTS = 2;
 
-  // Cambiare classifica o aprirla fa cambiare l'altezza della pagina, e il
-  // browser rimette lo scorrimento dove può: se eri in fondo, risali. Qui
-  // teniamo fermo il punto di riferimento — lo switch — spostando lo
-  // scorrimento della stessa quantità di cui si è mosso lui.
-  const rankingAnchorRef = useRef<HTMLDivElement | null>(null);
-  // Sta qui e non in mezzo agli altri stati perché il gesto qui sotto ha
-  // bisogno di sapere quale delle due classifiche è in scena.
+  // Sta qui e non in mezzo agli altri stati perche il carosello qui sotto ha
+  // bisogno di sapere quale delle due classifiche e in scena.
   const [rankingMode, setRankingMode] = useState<"single" | "team">("single");
   const isPhone = useIsPhone();
   // Quali partite mostrano la card e il foglio: le proprie, tutte, o solo
@@ -3634,303 +3978,48 @@ function AppShell({ session }: { session: Session | null }) {
   // questa distinzione non si potrebbe distinguere "non ho ancora deciso" da
   // "li voglio tutti chiusi".
   const [chosenMonth, setChosenMonth] = useState<string | null | undefined>(undefined);
-  // Quando la card è stata toccata l'ultima volta. Il cambio automatico non si
-  // spegne per sempre: si fa da parte mentre il dito è lì e riprende cinque
-  // secondi dopo l'ultimo tocco, come se il conto ripartisse da capo.
-  const [rankingTouchedAt, setRankingTouchedAt] = useState(0);
-  // Il nodo della card sta in uno stato e non in un ref, perché serve a
-  // riagganciare i listener. Cambiando sezione dalla barra la card viene
-  // smontata, e al ritorno è un elemento nuovo: con un ref i listener
-  // sarebbero rimasti appesi a quello vecchio e la card tornava muta — non
-  // rispondeva più nemmeno allo swipe fatto a mano.
-  const [rankingCard, setRankingCard] = useState<HTMLButtonElement | null>(null);
-  // Lo swipe sulla card della classifica. L'elenco resta agganciato al dito
-  // come la pastiglia della barra: mentre trascini si sposta davvero, e al
-  // rilascio o completa il cambio o torna al suo posto.
-  // I gestori stanno su listener nativi (vedi l'effetto più sotto) e non sugli
-  // attributi onTouch di React: React registra touchmove come passivo, e lì
-  // dentro preventDefault non ha alcun effetto. Senza preventDefault non c'è
-  // modo di impedire alla pagina di scorrere su e giù mentre si scorre di lato.
-  const rankingTrackRef = useRef<HTMLDivElement | null>(null);
-  const rankingSwipe = useRef<{
-    x: number;
-    y: number;
-    lastX: number;
-    lastAt: number;
-    velocityX: number;
-    axis: "pending" | "horizontal" | "vertical";
-  } | null>(null);
-  // Vive dal touchend al click che il browser manda comunque in coda a uno
-  // swipe: serve solo a non aprire il foglio quando il gesto era un cambio.
-  const rankingSwipeHandled = useRef(false);
-  // Da quale lato deve entrare l'elenco nuovo quando il cambio è andato a buon
-  // fine. Null quando non c'è nessun cambio in corso.
-  const rankingEnterFrom = useRef<number | null>(null);
   // Partite e classifica complete si aprono in un foglio dal basso invece di
   // portare su un'altra schermata.
   const [sheet, setSheet] = useState<null | "matches" | "ranking">(null);
 
-  const keepScroll = useCallback((change: () => void) => {
-    const before = rankingAnchorRef.current?.getBoundingClientRect().top ?? null;
-    change();
-    if (before === null) return;
-    requestAnimationFrame(() => {
-      const after = rankingAnchorRef.current?.getBoundingClientRect().top;
-      if (after === undefined) return;
-      window.scrollBy({ top: after - before, behavior: "instant" as ScrollBehavior });
-    });
-  }, []);
+  // I due caroselli della home. Le facce sono in fila nell'ordine dei
+  // pallini, e il cambio automatico va avanti e indietro lungo quella fila.
+  // Girano solo in home e a fogli chiusi: dentro a un foglio si guarda una
+  // cosa sola, e vedere la card cambiare dietro al velo sarebbe una
+  // distrazione.
+  const carouselEnabled = !sheet && view === "padel" && padelView === "overview";
 
-  // Il cambio vero e proprio: l'elenco esce da un lato e quello nuovo entra
-  // dall'altro. Lo chiamano sia il dito sia il timer, così il cambio a mano e
-  // quello automatico sono esattamente lo stesso movimento.
-  const slideRanking = useCallback((next: "single" | "team", direction: "left" | "right") => {
-    const track = rankingTrackRef.current;
-    const width = Math.max(rankingCard?.getBoundingClientRect().width ?? 1, 1);
-    const exit = direction === "left" ? -width : width;
-    const finish = () => keepScroll(() => setRankingMode(next));
-    if (!track || !track.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      rankingEnterFrom.current = null;
-      finish();
-      return;
-    }
-    // L'elenco nuovo entrerà dal lato opposto: il gesto portato a termine.
-    rankingEnterFrom.current = -exit;
-    track
-      .animate(
-        [
-          { transform: track.style.transform || "translate3d(0, 0, 0)", opacity: track.style.opacity || "1" },
-          { transform: `translate3d(${exit}px, 0, 0)`, opacity: 0 },
-        ],
-        { duration: 170, easing: "cubic-bezier(0.4, 0, 0.9, 0.35)", fill: "forwards" },
-      )
-      .finished.then(finish, finish);
-  }, [keepScroll, rankingCard]);
+  const {
+    setCard: setRankingCard,
+    trackRef: rankingTrackRef,
+    swipeHandled: rankingSwipeHandled,
+    touch: touchRanking,
+  } = useCardCarousel({
+    faces: RANKING_FACES,
+    face: rankingMode,
+    onChange: setRankingMode,
+    enabled: carouselEnabled,
+    // Il riflesso sugli anelli del podio deve accendersi quando la classifica
+    // e arrivata, non mentre sta ancora scivolando dentro.
+    enteringClass: "is-ranking-entering",
+  });
 
-  // Il cambio automatico: le due classifiche si alternano da sole ogni cinque
-  // secondi, così la home le mostra tutte e due senza che nessuno la tocchi.
-  // Si ferma dove non avrebbe senso girare a vuoto: fuori dalla home, con un
-  // foglio aperto, a scheda nascosta, o quando il telefono chiede meno
-  // animazioni. Toccando la card si fa da parte e riprende cinque secondi
-  // dopo l'ultimo tocco: rankingTouchedAt cambia, l'effetto riparte e il
-  // conto ricomincia da zero.
-  useEffect(() => {
-    if (sheet || view !== "padel" || padelView !== "overview") return;
-    if (typeof window === "undefined") return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    let timer = 0;
-    function schedule() {
-      timer = window.setTimeout(() => {
-        // Dito ancora appoggiato sulla card: si rimanda invece di strappargli
-        // la classifica di mano a metà gesto.
-        if (rankingSwipe.current) {
-          schedule();
-          return;
-        }
-        // Alterna: da singolo si va a squadra scorrendo verso sinistra, da
-        // squadra si torna indietro verso destra. Le stesse direzioni del dito.
-        const next = rankingMode === "single" ? "team" : "single";
-        slideRanking(next, next === "team" ? "left" : "right");
-      }, 5000);
-    }
-
-    // A scheda nascosta il timer non parte nemmeno: un'animazione che gira
-    // dietro le quinte consuma batteria e non la guarda nessuno. Quando la
-    // pagina torna in vista il conto ricomincia da capo.
-    function sync() {
-      window.clearTimeout(timer);
-      if (document.visibilityState === "visible") schedule();
-    }
-
-    sync();
-    document.addEventListener("visibilitychange", sync);
-    return () => {
-      window.clearTimeout(timer);
-      document.removeEventListener("visibilitychange", sync);
-    };
-  }, [rankingTouchedAt, rankingMode, sheet, view, padelView, slideRanking]);
-
-  // Il gesto orizzontale sulla card della classifica. Fa tre cose: decide una
-  // volta sola su che asse sta andando il dito, blocca lo scorrimento
-  // verticale appena ha deciso che è orizzontale, e tiene l'elenco attaccato
-  // al dito finché non lo si lascia.
-  useEffect(() => {
-    const card = rankingCard;
-    if (!card) return;
-
-    const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    // Dove si va scorrendo in quella direzione. Player sta a sinistra e team a
-    // destra: oltre i due estremi non c'è niente, e lì il dito incontra la
-    // resistenza elastica invece di trascinare via l'elenco.
-    function destination(direction: "left" | "right"): "single" | "team" | null {
-      if (direction === "left") return rankingMode === "single" ? "team" : null;
-      return rankingMode === "team" ? "single" : null;
-    }
-
-    // La stessa resistenza dei fogli che si trascinano: all'inizio segue quasi
-    // il dito, poi si arrende sempre di più e si ferma.
-    function rubber(distance: number, limit = 220) {
-      return (1 - 1 / (distance / limit + 1)) * limit;
-    }
-
-    function cardWidth() {
-      return Math.max(card?.getBoundingClientRect().width ?? 1, 1);
-    }
-
-    function paint(offset: number) {
-      const track = rankingTrackRef.current;
-      if (!track) return;
-      const progress = Math.min(1, Math.abs(offset) / cardWidth());
-      track.style.transition = "none";
-      track.style.transform = `translate3d(${offset}px, 0, 0)`;
-      // Sbiadisce mentre esce: senza, l'elenco vecchio resta squillante fino al
-      // bordo e il cambio sembra uno scatto invece di una dissolvenza.
-      track.style.opacity = String(1 - progress * 0.45);
-    }
-
-    function restore() {
-      const track = rankingTrackRef.current;
-      if (!track || !track.style.transform) return;
-      const fromTransform = track.style.transform;
-      const fromOpacity = track.style.opacity || "1";
-      track.style.transform = "";
-      track.style.opacity = "";
-      if (!track.animate || reduceMotion()) return;
-      track.animate(
-        [
-          { transform: fromTransform, opacity: fromOpacity },
-          { transform: "translate3d(0, 0, 0)", opacity: 1 },
-        ],
-        { duration: 420, easing: "cubic-bezier(0.34, 1.32, 0.64, 1)" },
-      );
-    }
-
-    function onStart(event: TouchEvent) {
-      rankingSwipeHandled.current = false;
-      // Il cambio automatico si fa da parte e riparte cinque secondi dopo che
-      // il dito se n'è andato: mentre la card è sotto le dita comanda lei.
-      setRankingTouchedAt(Date.now());
-      if (event.touches.length !== 1 || !window.matchMedia("(max-width: 780px)").matches) {
-        rankingSwipe.current = null;
-        return;
-      }
-      rankingTrackRef.current?.getAnimations().forEach((animation) => animation.cancel());
-      const touch = event.touches[0];
-      rankingSwipe.current = {
-        x: touch.clientX,
-        y: touch.clientY,
-        lastX: touch.clientX,
-        lastAt: performance.now(),
-        velocityX: 0,
-        axis: "pending",
-      };
-    }
-
-    function onMove(event: TouchEvent) {
-      const swipe = rankingSwipe.current;
-      const touch = event.touches[0];
-      if (!swipe || !touch) return;
-      const distanceX = touch.clientX - swipe.x;
-      const distanceY = touch.clientY - swipe.y;
-      // L'asse si decide una volta sola, agli otto pixel: prima di allora il
-      // gesto è ancora di tutti e due, dopo non cambia più idea a metà strada.
-      if (swipe.axis === "pending") {
-        if (Math.max(Math.abs(distanceX), Math.abs(distanceY)) < 8) return;
-        swipe.axis = Math.abs(distanceX) > Math.abs(distanceY) * 1.15 ? "horizontal" : "vertical";
-      }
-      if (swipe.axis !== "horizontal") return;
-      // È per questa riga che i listener sono nativi e non passivi: da qui in
-      // poi la pagina non scorre più su e giù finché il dito non si stacca.
-      if (event.cancelable) event.preventDefault();
-
-      const now = performance.now();
-      const elapsed = Math.max(1, now - swipe.lastAt);
-      swipe.velocityX = (touch.clientX - swipe.lastX) / elapsed;
-      swipe.lastX = touch.clientX;
-      swipe.lastAt = now;
-
-      const direction = distanceX < 0 ? "left" : "right";
-      const free = Boolean(destination(direction));
-      paint(free ? distanceX : Math.sign(distanceX) * rubber(Math.abs(distanceX)));
-    }
-
-    function onEnd(event: TouchEvent) {
-      const swipe = rankingSwipe.current;
-      rankingSwipe.current = null;
-      // I cinque secondi si contano dall'ultimo tocco, che è questo.
-      setRankingTouchedAt(Date.now());
-      const track = rankingTrackRef.current;
-      if (!swipe || !track || swipe.axis !== "horizontal") return;
-      const touch = event.changedTouches[0];
-      const distanceX = touch ? touch.clientX - swipe.x : 0;
-      const direction = distanceX < 0 ? "left" : "right";
-      const next = destination(direction);
-      const width = cardWidth();
-      // Due modi di convincerlo: portarlo oltre un terzo della card, oppure un
-      // colpo secco. Il secondo è per i pollici veloci, che non arrivano mai
-      // lontano ma sono decisi.
-      const enoughDistance = Math.abs(distanceX) >= Math.max(56, width * 0.3);
-      const enoughMomentum = Math.abs(distanceX) >= 28 && Math.abs(swipe.velocityX) >= 0.4;
-      if (!next || !(enoughDistance || enoughMomentum)) {
-        restore();
-        return;
-      }
-      // Il click che il browser manda dopo il gesto non deve aprire il foglio.
-      rankingSwipeHandled.current = true;
-      slideRanking(next, direction);
-    }
-
-    function onCancel() {
-      rankingSwipe.current = null;
-      setRankingTouchedAt(Date.now());
-      restore();
-    }
-
-    card.addEventListener("touchstart", onStart, { passive: true });
-    card.addEventListener("touchmove", onMove, { passive: false });
-    card.addEventListener("touchend", onEnd);
-    card.addEventListener("touchcancel", onCancel);
-    return () => {
-      card.removeEventListener("touchstart", onStart);
-      card.removeEventListener("touchmove", onMove);
-      card.removeEventListener("touchend", onEnd);
-      card.removeEventListener("touchcancel", onCancel);
-    };
-  }, [rankingCard, rankingMode, slideRanking]);
-
-  // Cambiata la classifica, l'elenco nuovo entra dal lato opposto a quello da
-  // cui è uscito il vecchio: il gesto continua invece di ricominciare.
-  // Finché sta entrando porta addosso "is-ranking-entering", che tiene fermo
-  // il bagliore sugli anelli del podio: quel riflesso deve accendersi quando
-  // la classifica è arrivata, non mentre sta ancora scivolando dentro.
-  useEffect(() => {
-    const track = rankingTrackRef.current;
-    const from = rankingEnterFrom.current;
-    rankingEnterFrom.current = null;
-    if (!track || from === null) return;
-    track.getAnimations().forEach((animation) => animation.cancel());
-    track.style.transform = "";
-    track.style.opacity = "";
-    if (!track.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      track.classList.remove("is-ranking-entering");
-      return;
-    }
-    track.classList.add("is-ranking-entering");
-    const entrance = track.animate(
-      [
-        { transform: `translate3d(${from}px, 0, 0)`, opacity: 0 },
-        { transform: "translate3d(0, 0, 0)", opacity: 1 },
-      ],
-      { duration: 340, easing: "cubic-bezier(0.32, 0.9, 0.28, 1)" },
-    );
-    // Arrivata: il riflesso riparte da capo, in tempo con la classifica nuova.
-    entrance.finished.then(
-      () => track.classList.remove("is-ranking-entering"),
-      () => track.classList.remove("is-ranking-entering"),
-    );
-  }, [rankingMode]);
+  const {
+    setCard: setMatchesCard,
+    trackRef: matchesTrackRef,
+    swipeHandled: matchesSwipeHandled,
+    touch: touchMatches,
+  } = useCardCarousel({
+    faces: MATCHES_FACES,
+    face: matchesMode,
+    // Cambiando insieme cambiano i mesi del foglio, e va riaperto il piu
+    // recente di quelli nuovi.
+    onChange: (next) => { setMatchesMode(next); setChosenMonth(undefined); },
+    // Solo su telefono: su desktop la card delle partite non ha i pallini,
+    // e vederla cambiare da sola senza niente che dica perche sembrerebbe
+    // un difetto. Li l'elenco resta quello che e.
+    enabled: carouselEnabled && isPhone,
+  });
 
   const [editingMatch, setEditingMatch] = useState<PadelMatch | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
@@ -4820,6 +4909,23 @@ function AppShell({ session }: { session: Session | null }) {
 
   return (
     <div className="app-shell">
+      {/* La sfocatura in cima allo schermo, quella che tiene leggibili ora e
+          icone di sistema sopra alla Dynamic Island. Sono quattro strati
+          sovrapposti invece di uno: la sfocatura non si puo sfumare da sola —
+          un solo strato con la maschera si interrompe di netto e si vede il
+          gradino — mentre quattro veli con sfocature via via piu forti, ognuno
+          acceso su una fascia diversa, danno un passaggio continuo dal nitido
+          all'appannato.
+          Il contenitore e fisso ma non sfoca: la sfocatura sta sui figli, che
+          sono in posizione assoluta. E la stessa precauzione della barra in
+          basso — su iOS un elemento fisso che sfoca viene ridisegnato in
+          ritardo durante lo scorrimento inerziale e sembra scivolare. */}
+      <div className="system-blur" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+        <span />
+      </div>
       <header className="topbar">
         <nav className="desktop-nav" aria-label="Navigazione principale">
           <button
@@ -5012,11 +5118,10 @@ function AppShell({ session }: { session: Session | null }) {
                 <button
                   className="button button-primary cta-new-match cta-in-panel cta-between cta-aurora"
                   onClick={() => setShowMatch(true)}
-                  aria-label="Nuova partita"
                 >
-                  + NUOVO
+                  + REGISTRA PARTITA
                 </button>
-                <div className="match-panel matches-panel">
+                <div className="match-panel matches-panel" ref={setMatchesCard}>
                   {/* Titolo interno al riquadro, come "Classifica Elo".
                       Su desktop resta nascosto: li il titolo di sezione
                       c'e gia sopra, fuori dal riquadro. Su mobile sparisce
@@ -5033,18 +5138,31 @@ function AppShell({ session }: { session: Session | null }) {
                       <button
                         type="button"
                         className="match-panel-open"
-                        onClick={() => { setChosenMonth(undefined); setSheet("matches"); }}
+                        onClick={() => {
+                          // Come la classifica: il tocco rimanda il cambio
+                          // automatico, e il click che segue uno swipe non
+                          // deve aprire il foglio.
+                          touchMatches();
+                          if (matchesSwipeHandled.current) return;
+                          setChosenMonth(undefined);
+                          setSheet("matches");
+                        }}
                         aria-label={`Apri tutte le partite (${filteredMatches.length})`}
                       >
-                        <div className="match-list">
-                          {filteredMatches.slice(0, HOME_MATCHES).map((match) => (
-                            <MatchCard
-                              key={match.id}
-                              match={match}
-                              viewerId={session?.user.id}
-                              compact
-                            />
-                          ))}
+                        {/* Il nastro che si muove, col dito o da solo: e
+                            l'unica cosa che scorre, il riquadro resta
+                            fermo e taglia quello che esce. */}
+                        <div className="match-preview-track" ref={matchesTrackRef}>
+                          <div className="match-list">
+                            {filteredMatches.slice(0, HOME_MATCHES).map((match) => (
+                              <MatchCard
+                                key={match.id}
+                                match={match}
+                                viewerId={session?.user.id}
+                                compact
+                              />
+                            ))}
+                          </div>
                         </div>
                       </button>
                     ) : (
@@ -5064,9 +5182,10 @@ function AppShell({ session }: { session: Session | null }) {
                     <div className="compact-empty panel-empty"><span>00</span><p>{emptyMatchesNote}</p></div>
                   )}
                   {/* Gli stessi pallini della classifica: dicono che la card
-                      ha tre facce e quale stai guardando. Si cambia dentro al
-                      foglio, dove sono tasti veri — qui la card è già un
-                      bersaglio solo e altri tasti non ce ne stanno. */}
+                      ha tre facce e quale stai guardando. Non si toccano —
+                      dentro un tasto non ci possono stare altri tasti — ma
+                      la card gira da sola e si cambia con lo swipe, come la
+                      classifica. */}
                   <span className="card-dots" aria-hidden="true">
                     <i className={matchesMode === "mine" ? "is-current" : ""} />
                     <i className={matchesMode === "all" ? "is-current" : ""} />
@@ -5132,7 +5251,7 @@ function AppShell({ session }: { session: Session | null }) {
                   onClick={() => {
                     // Anche il solo tocco rimanda il cambio automatico:
                     // riparte cinque secondi dopo che l'hai lasciata stare.
-                    setRankingTouchedAt(Date.now());
+                    touchRanking();
                     // Uno swipe finisce comunque con un click: senza questa
                     // guardia cambiare classifica aprirebbe anche il foglio.
                     if (rankingSwipeHandled.current) return;
@@ -5140,7 +5259,7 @@ function AppShell({ session }: { session: Session | null }) {
                   }}
                   aria-label={`Apri la classifica Elo ${rankingMode === "single" ? "singolo" : "squadra"} completa (${rankingRows})`}
                 >
-                  <div className="side-head" ref={rankingAnchorRef}>
+                  <div className="side-head">
                     <div><h2>{rankingMode === "single" ? "Classifica Elo - Singolo" : "Classifica Elo - Squadra"}</h2></div>
                     {/* I pallini del carosello: dicono che la card ha due
                         facce e quale delle due stai guardando. Sono muti per
@@ -5709,11 +5828,15 @@ function AppShell({ session }: { session: Session | null }) {
 
       {sheet === "matches" ? (
         <BottomSheet
+          /* Sulle proprie partite il titolo porta il nome di chi guarda
+             invece della parola "personale": e la stessa informazione, ma
+             detta da qualcuno che ti conosce. Se il nome manca — profilo
+             appena creato — si torna alla parola. */
           title={matchesMode === "mine"
-            ? "Partite - Personale"
+            ? `Partite - ${currentUserName || "Personale"}`
             : matchesMode === "tournaments"
               ? "Partite - Tornei"
-              : "Partite - Tutti"}
+              : "Partite - Tutte"}
           onClose={() => setSheet(null)}
           /* Pallini al posto degli interruttori con le icone: sono gli stessi
              della card da cui il foglio si apre, e li dentro si toccano. Le
@@ -5728,7 +5851,7 @@ function AppShell({ session }: { session: Session | null }) {
                 // recente di quelli nuovi.
                 onClick={() => { setMatchesMode("mine"); setChosenMonth(undefined); }}
                 aria-label="Solo le mie partite"
-                title="Personale"
+                title={currentUserName || "Personale"}
               >
                 <i />
               </button>
@@ -5736,7 +5859,7 @@ function AppShell({ session }: { session: Session | null }) {
                 className={matchesMode === "all" ? "active" : ""}
                 onClick={() => { setMatchesMode("all"); setChosenMonth(undefined); }}
                 aria-label="Tutte le partite"
-                title="Tutti"
+                title="Tutte"
               >
                 <i />
               </button>

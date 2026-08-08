@@ -883,6 +883,13 @@ form select:focus,
   gap: 34px;
 }
 
+/* La sfocatura sotto la barra di sistema dell'iPhone esiste solo dove c'e
+   una barra di sistema: su desktop il posto in cima allo schermo e del
+   browser, non nostro. */
+.system-blur {
+  display: none;
+}
+
 /* In home lo scuro non è più un riquadro: riveste l'intera pagina. */
 .app-shell-hub {
   background:
@@ -2387,15 +2394,16 @@ button.podium-person {
 }
 
 /* Gli stessi pallini del carosello, ma qui si toccano: sono il selettore in
-   cima ai fogli, dove hanno preso il posto dello switch a icone. Il pallino
-   e piccolo, il tasto che lo contiene no — la parte da colpire e larga
-   quanto un dito, il segno a video resta un punto. */
+   cima ai fogli, dove hanno preso il posto dello switch a icone. */
 .dot-switch {
   align-items: center;
   display: inline-flex;
-  gap: 2px;
+  gap: 5px;
 }
 
+/* Il tasto e grande quanto il pallino, non di piu: cosi i pallini del foglio
+   sono spaziati esattamente come quelli sotto la card. La parte da colpire
+   la porta l'area invisibile qui sotto, che deborda oltre il tasto. */
 .dot-switch button {
   align-items: center;
   background: transparent;
@@ -2403,24 +2411,36 @@ button.podium-person {
   border-radius: var(--radius-pill);
   cursor: pointer;
   display: flex;
-  height: 34px;
+  height: 6px;
   justify-content: center;
   padding: 0;
-  width: 22px;
+  position: relative;
+  width: 6px;
 }
 
+/* Un pallino di sei pixel non si prende col dito. Questa e la superficie
+   vera del tasto: invisibile, larga quanto serve, e non sposta niente
+   perche e in posizione assoluta. */
+.dot-switch button::after {
+  content: "";
+  inset: -16px -7px;
+  position: absolute;
+}
+
+/* Identici a quelli sotto le card: stessa misura, stesso spento, stesso
+   acceso. Sono la stessa cosa vista in due posti — nella card dicono dove
+   sei, nel foglio ti ci portano — e se cambiassero aspetto passando da uno
+   all'altro sembrerebbero due comandi diversi. */
 .dot-switch i {
-  background: var(--veil-3);
+  background: var(--veil-2);
   border-radius: var(--radius-pill);
-  height: 7px;
+  height: 6px;
   transition: background 200ms ease;
-  width: 7px;
+  width: 6px;
 }
 
-/* Pieno, non solo piu scuro: qui il pallino e un comando e deve dire senza
-   dubbi quale delle tre facce e in scena. */
 .dot-switch button.active i {
-  background: var(--ink);
+  background: var(--ink-30);
 }
 
 .ranking-switch {
@@ -6057,9 +6077,13 @@ button.pizza-ranking-row {
      sotto la barra. */
   /* Il passo in alto ora comprende l'isola: con viewport-fit: cover lo
      spazio non lo riserva piu iOS, e senza questo la prima card finirebbe
-     sotto l'orologio. */
+     sotto l'orologio.
+     Sotto l'isola sono gli stessi 14px che la prima card ha ai lati: e una
+     card che galleggia dentro allo schermo, e attorno deve avere lo stesso
+     bordo da tutte le parti. Ventiquattro la staccavano piu da sopra che
+     dai fianchi, e si notava. */
   .content {
-    padding: calc(24px + env(safe-area-inset-top)) 14px 6px;
+    padding: calc(14px + env(safe-area-inset-top)) 14px 6px;
   }
 
   /* La pagina e una superficie unica durante lo swipe: segue il dito e
@@ -6289,55 +6313,75 @@ button.pizza-ranking-row {
      le curve restano parallele fra loro e con l'angolo dello schermo
      invece di incrociarsi. Lo stacco dal bordo evita anche che l'angolo
      tondo dell'iPhone tagli la pastiglia delle voci laterali. */
-  /* Striscia di sistema in alto, gemella della dissolvenza qui sotto.
+  /* Sfocatura di sistema in alto, gemella della dissolvenza qui sotto.
      Sostituisce la fascia opaca che disegnava iOS.
-     E solo sfocatura, senza nessun colore suo: a riposo deve essere
-     invisibile, non una tacca sopra la Dynamic Island. Quello che le scorre
-     sotto continua a vedersi, appena appannato — quanto basta a leggere ora
-     e icone di sistema senza che la fascia si faccia notare.
+     Nessun colore suo: a riposo deve essere invisibile, non una tacca sopra
+     la Dynamic Island. Quello che le scorre sotto continua a vedersi, solo
+     sempre piu appannato salendo — quanto basta a leggere ora e icone di
+     sistema senza che la fascia si faccia notare.
+     Il contenitore e fisso ma non sfoca niente: la sfocatura sta sui quattro
+     figli, che sono in posizione assoluta. Su iOS un elemento fisso con
+     backdrop-filter viene ricomposto in ritardo durante lo scorrimento
+     inerziale e sembra scivolare e riassestarsi — e la stessa precauzione
+     presa per la barra in basso.
      Quando si apre il foglio dal basso si ritira del tutto (--island va a 1):
      il contenuto torna a passarle sotto e il velo del foglio, che sta piu in
      alto, lo sfoca insieme al resto dello schermo invece di trovare qui una
      campitura piatta. Alla chiusura rientra con lo stesso tempo, quindi la
      fascia e la sfocatura vanno e vengono insieme. */
-  .app-shell::before {
-    /* Solo vetro, niente piu tinta. La campitura chiara sopra alla Dynamic
-       Island si vedeva come una fascia posticcia appena sotto le passava un
-       blocco scuro o una foto: era la cosa che faceva sembrare la barra di
-       sistema incollata sopra alla pagina invece che parte sua. Adesso
-       quello che scorre sotto non viene coperto, viene solo appannato
-       quanto basta a staccare l'ora e le icone da quello che ci passa
-       dietro — un velo di sfocatura, non un colore.
-       Sfocatura piccola di proposito: piu alta e non aiuta a leggere, fa
-       solo sembrare che il contenuto sia fuori fuoco.
-       La maschera e la dissolvenza: parte gia sfumata in cima invece che
-       piena, cosi non c'e nessun bordo da nessuna parte, e finisce prima
-       del fondo per avere lo spazio in cui spegnersi. */
-    -webkit-backdrop-filter: blur(7px);
-    backdrop-filter: blur(7px);
-    -webkit-mask-image: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.92) 0%,
-      rgba(0, 0, 0, 0.72) calc(env(safe-area-inset-top) * 0.55),
-      rgba(0, 0, 0, 0.3) env(safe-area-inset-top),
-      transparent 100%
-    );
-    mask-image: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.92) 0%,
-      rgba(0, 0, 0, 0.72) calc(env(safe-area-inset-top) * 0.55),
-      rgba(0, 0, 0, 0.3) env(safe-area-inset-top),
-      transparent 100%
-    );
-    opacity: calc(1 - var(--island));
-    content: "";
-    height: calc(env(safe-area-inset-top) + 34px);
+  .system-blur {
+    display: block;
+    height: calc(env(safe-area-inset-top) + 30px);
     left: 0;
+    opacity: calc(1 - var(--island));
     pointer-events: none;
     position: fixed;
     right: 0;
     top: 0;
     z-index: 45;
+  }
+
+  /* Una sfocatura sola non si puo sfumare: mascherarla la interrompe di
+     netto a meta e il gradino si vede piu della sfocatura stessa. Quattro
+     veli invece si: ognuno sfoca il doppio del precedente ed e acceso su
+     una fascia diversa, sfumata sopra e sotto, cosi il passaggio dal
+     nitido all'appannato non ha nessun bordo.
+     Le fasce si sovrappongono di proposito — ogni velo comincia dove il
+     precedente e ancora acceso — perche e nella sovrapposizione che le due
+     sfocature si mescolano. */
+  .system-blur span {
+    inset: 0;
+    position: absolute;
+  }
+
+  .system-blur span:nth-child(1) {
+    -webkit-backdrop-filter: blur(1px);
+    backdrop-filter: blur(1px);
+    -webkit-mask-image: linear-gradient(to top, transparent 0%, black 25%, black 100%);
+    mask-image: linear-gradient(to top, transparent 0%, black 25%, black 100%);
+  }
+
+  .system-blur span:nth-child(2) {
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    -webkit-mask-image: linear-gradient(to top, transparent 20%, black 45%, black 100%);
+    mask-image: linear-gradient(to top, transparent 20%, black 45%, black 100%);
+  }
+
+  .system-blur span:nth-child(3) {
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    -webkit-mask-image: linear-gradient(to top, transparent 42%, black 68%, black 100%);
+    mask-image: linear-gradient(to top, transparent 42%, black 68%, black 100%);
+  }
+
+  /* L'ultimo velo copre solo l'area sicura, cioe la striscia dove stanno
+     davvero l'ora e le icone: e li che serve tutta la sfocatura. */
+  .system-blur span:nth-child(4) {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    -webkit-mask-image: linear-gradient(to top, transparent 64%, black 88%, black 100%);
+    mask-image: linear-gradient(to top, transparent 64%, black 88%, black 100%);
   }
 
   /* Scroll edge effect: il contenuto sfuma verso il fondo mentre scorre
@@ -6698,15 +6742,7 @@ button.pizza-ranking-row {
     display: none;
   }
 
-  /* Il contenitore dell'insegna resta, svuotato e alto zero: e il punto di
-     riferimento con cui la pagina tiene ferma la posizione mentre la card
-     cambia faccia, e toglierlo dal flusso farebbe saltare lo scorrimento. */
   .dashboard-side .side-head {
-    margin: 0;
-  }
-
-  .dashboard-side .side-head > div,
-  .dashboard-side .side-head .ranking-dots {
     display: none;
   }
 
@@ -6715,6 +6751,17 @@ button.pizza-ranking-row {
   .card-dots {
     display: flex;
     padding-top: var(--space-3);
+  }
+
+  /* Il nastro delle partite, gemello di .ranking-preview-track: e l'unica
+     cosa che si sposta quando la card cambia faccia. Il ritaglio lo fa gia
+     il riquadro, che su mobile ha overflow: hidden.
+     L'altezza minima tiene ferma la card fra una faccia e l'altra: con due
+     partite personali e nessuna di torneo si accorciava di colpo e la home
+     si muoveva sotto il dito. Due card compatte piu il loro passo. */
+  .match-preview-track {
+    min-height: calc(var(--match-card-h) * 0.9);
+    will-change: transform;
   }
 
   /* Titoli dei riquadri: piccoli e maiuscoli, cosi fanno da etichetta e

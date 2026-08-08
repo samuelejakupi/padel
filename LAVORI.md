@@ -22,13 +22,6 @@ telefono un torneo non si crea. Il riquadro con gli ultimi resta, e su
 desktop il tasto è ancora nell'intestazione di sezione. Va rimesso quando
 avremo deciso da dove si crea davvero.
 
-### I pallini della card partite non si toccano
-Nella card delle partite in home i tre pallini dicono quale filtro è in
-scena, ma non lo cambiano: dentro un tasto non ci possono stare altri tasti,
-e la card intera apre già il foglio. Il filtro si cambia lì dentro. La
-classifica ha lo swipe, le partite no — se serve anche lì, è lo stesso
-meccanismo di `slideRanking` da estendere a tre facce invece di due.
-
 ### Tre agganci CSS morti
 `theme-dark`, `.app-shell-hub` e `.is-open` hanno regole in `globals.css` ma
 nessun JavaScript le applica più: sono avanzi di quando esisteva la schermata
@@ -58,6 +51,17 @@ mobile il titolo è sparito da tutte e due le card; il riquadro dei tornei lo
 tiene, perché quello ha una faccia sola. Il contenitore dell'insegna della
 classifica resta nel DOM, svuotato e alto zero: è il punto di riferimento con
 cui la pagina tiene ferma la posizione mentre la card cambia faccia.
+
+### Il carosello è uno solo, scritto una volta
+Classifica e partite fanno la stessa cosa — più facce nella stessa card, si
+cambia con lo swipe o da sole ogni cinque secondi — e per un po' è stata la
+stessa cosa scritta due volte. Ora c'è `useCardCarousel`: gli si passa la
+fila delle facce nell'ordine dei pallini e cosa fare quando cambia. Il cambio
+automatico va avanti e indietro lungo la fila invece di riavvolgersi: con tre
+facce, il salto dalla terza alla prima sarebbe l'unico movimento a non
+corrispondere a nessuno swipe possibile. Sulle partite gira solo da telefono:
+su desktop non ci sono i pallini, e una card che cambia da sola senza niente
+che lo spieghi sembra un difetto.
 
 ### I pallini stanno sotto la card, non accanto al titolo
 Tolta l'insegna non avevano più niente accanto a cui stare. Ora sono
@@ -106,12 +110,29 @@ ma restava quella dell'ultima squadra vera: non divideva due coppie, divideva
 una coppia dal niente, e sembrava che sotto ci fosse una terza squadra ancora
 da caricare. Ora la perde anche lei.
 
-### La fascia di sistema è solo sfocatura, senza colore
+### La fascia di sistema è sfocatura sfumata, senza colore
 La campitura chiara sopra alla Dynamic Island si vedeva come una fascia
 posticcia appena sotto le passava un blocco scuro o una foto. Adesso quello
-che scorre sotto non viene coperto, viene solo appannato quanto basta a
-staccare l'ora e le icone di sistema — e la maschera parte già sfumata in
-cima, così non c'è nessun bordo da nessuna parte.
+che scorre sotto non viene coperto, viene solo appannato — sempre di più
+salendo verso l'ora e le icone di sistema.
+
+**Sono quattro veli sovrapposti, non uno.** Una sfocatura sola non si può
+sfumare: mascherarla la interrompe di netto a metà e il gradino si vede più
+della sfocatura stessa. Quattro strati con sfocature che raddoppiano, ognuno
+acceso su una fascia diversa e sovrapposto al precedente, danno un passaggio
+continuo dal nitido all'appannato.
+
+**Il contenitore è fisso ma non sfoca: sfocano i figli, che sono in
+posizione assoluta.** È la stessa precauzione già presa per la barra in
+basso. Su iOS un elemento fisso con `backdrop-filter` viene ricomposto in
+ritardo durante lo scorrimento inerziale, e tutto quello che è fisso sembra
+scivolare e riassestarsi — barra di navigazione compresa, anche se il
+difetto non è suo.
+
+### Sotto l'isola c'è lo stesso bordo che ai lati
+Il passo in alto era 24px contro i 14 dei fianchi: la prima card risultava
+più staccata da sopra che di lato, e in una schermata dove tutto galleggia
+dentro a un margine uguale quella differenza si notava.
 
 ### La classifica in home è un bersaglio solo
 Erano tre cose da toccare nello stesso riquadro — lo switch player/team, le
