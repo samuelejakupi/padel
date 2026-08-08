@@ -6208,8 +6208,19 @@ button.pizza-ranking-row {
      avesse chiesto niente. Undici pixel dal fondo del guscio invece sono
      undici pixel dal bordo dello schermo, sempre. */
   .app-shell {
-    height: 100%;
-    position: relative;
+    /* Ancorato allo schermo, non all'altezza dinamica del viewport.
+       html e body sono alti 100dvh, ma quando il sito gira come app salvata
+       sulla schermata Home iOS ferma quei 100dvh sopra la zona
+       dell'indicatore Home: il guscio finiva trentaquattro pixel prima del
+       vetro e la barra, che si appoggia al suo fondo, se li portava dietro —
+       misurati sullo screenshot, quarantanove pixel dal bordo invece di
+       undici. Con inset: 0 il guscio arriva davvero in fondo, e undici
+       pixel restano undici pixel su qualsiasi telefono.
+       Fisso e non assoluto perche il riferimento deve essere lo schermo:
+       il guscio non scorre, quindi il difetto di composizione di iOS che
+       aveva fatto togliere il fisso dalla barra qui non si presenta. */
+    inset: 0;
+    position: fixed;
   }
 
   body {
