@@ -1411,23 +1411,13 @@ function FieldRegister({
   );
 }
 
-// Secondi ⇄ mm:ss. Chi segna uno spezzone legge il tempo sul player di
-// YouTube, non conta i secondi dall'inizio.
+// Secondi → mm:ss, per mostrare il tempo di uno spezzone. Il verso opposto
+// non serve piu: il minuto si scrive in due caselle separate, quindi non c'e
+// piu niente da interpretare.
 function formatClock(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
-}
-
-function parseClock(value: string) {
-  const clean = value.trim();
-  if (!clean) return null;
-  const parts = clean.split(":").map((part) => Number(part));
-  if (parts.some((part) => !Number.isFinite(part) || part < 0)) return null;
-  if (parts.length === 1) return Math.floor(parts[0]);
-  if (parts.length === 2) return Math.floor(parts[0]) * 60 + Math.floor(parts[1]);
-  if (parts.length === 3) return Math.floor(parts[0]) * 3600 + Math.floor(parts[1]) * 60 + Math.floor(parts[2]);
-  return null;
 }
 
 // Un raccoglitore che si apre e si chiude. L'altezza si anima a mano perché
@@ -3214,11 +3204,16 @@ function PlayCreateModal({
   const withVideo = matches.filter((match) => youtubeId(match.video_url));
   const [matchId, setMatchId] = useState(withVideo[0]?.id ?? "");
   const [videoUrl, setVideoUrl] = useState(withVideo[0]?.video_url ?? "");
-  const [start, setStart] = useState("");
+  // Minuti e secondi in due caselle invece che in una sola con i due punti:
+  // il tastierino del telefono non ha il ":" e il minuto non si riusciva a
+  // scrivere. Una casella vuota vale zero, cosi "0:45" e solo 45 nei secondi.
+  const [startMinutes, setStartMinutes] = useState("");
+  const [startSecs, setStartSecs] = useState("");
   const [duration, setDuration] = useState("20");
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const startSecsRef = useRef<HTMLInputElement | null>(null);
 
   function pickMatch(id: string) {
     setMatchId(id);
@@ -3226,7 +3221,15 @@ function PlayCreateModal({
     if (chosen?.video_url) setVideoUrl(chosen.video_url);
   }
 
-  const startSeconds = parseClock(start);
+  // Solo cifre: su desktop la tastiera vera lascerebbe scrivere lettere e
+  // segni, che poi diventerebbero NaN al salvataggio.
+  function onlyDigits(value: string, max: number) {
+    return value.replace(/\D/g, "").slice(0, max);
+  }
+
+  const startSeconds = startMinutes === "" && startSecs === ""
+    ? null
+    : Number(startMinutes || 0) * 60 + Number(startSecs || 0);
   const previewId = youtubeId(videoUrl);
 
   async function submit(event: FormEvent) {
@@ -3237,7 +3240,7 @@ function PlayCreateModal({
       return;
     }
     if (startSeconds === null) {
-      setError("Indica il minuto di partenza come mm:ss, per esempio 3:12.");
+      setError("Indica il minuto di partenza: minuti e secondi, per esempio 3 e 12.");
       return;
     }
     if (!supabase) return;
@@ -3297,19 +3300,34 @@ function PlayCreateModal({
             />
           </label>
           <div className="play-time-row">
-            <label>
-              Minuto di partenza
-              {/* Tastiera intera e non tastierino: con inputMode numerico il
-                  telefono mostra solo le cifre e i due punti non si possono
-                  scrivere, quindi il minuto non si riusciva a inserire. */}
-              <input
-                value={start}
-                onChange={(event) => setStart(event.target.value)}
-                placeholder="3:12"
-                inputMode="text"
-                required
-              />
-            </label>
+            <div className="play-clock">
+              <span className="play-clock-label">Minuto di partenza</span>
+              <div className="play-clock-fields">
+                {/* Due cifre e il fuoco salta ai secondi da solo: e il gesto
+                    che si fa gia con i codici di verifica, e risparmia un
+                    tocco proprio dove prima ci si bloccava. */}
+                <input
+                  value={startMinutes}
+                  onChange={(event) => {
+                    const clean = onlyDigits(event.target.value, 2);
+                    setStartMinutes(clean);
+                    if (clean.length === 2) startSecsRef.current?.focus();
+                  }}
+                  placeholder="00"
+                  inputMode="numeric"
+                  aria-label="Minuti"
+                />
+                <b aria-hidden="true">:</b>
+                <input
+                  ref={startSecsRef}
+                  value={startSecs}
+                  onChange={(event) => setStartSecs(onlyDigits(event.target.value, 2))}
+                  placeholder="00"
+                  inputMode="numeric"
+                  aria-label="Secondi"
+                />
+              </div>
+            </div>
             <label>
               Durata
               <select value={duration} onChange={(event) => setDuration(event.target.value)}>
@@ -3320,7 +3338,7 @@ function PlayCreateModal({
             </label>
           </div>
           <p className="field-hint">
-            Il minuto è quello che leggi sul player di YouTube. Scrivilo come mm:ss.
+            Il minuto è quello che leggi sul player di YouTube. Una casella lasciata vuota vale zero.
           </p>
           <label>
             Titolo <span className="optional-label">facoltativo</span>

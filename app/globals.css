@@ -2289,6 +2289,44 @@ button.ranking-row-link:focus-visible {
   grid-template-columns: 1fr 1fr;
 }
 
+/* Non e una label ma un blocco con due campi dentro, quindi l'etichetta se
+   la scrive da sola: una sola label per due input punterebbe al primo, e
+   toccare la scritta manderebbe il fuoco nel posto sbagliato. */
+.play-clock {
+  margin-bottom: 18px;
+}
+
+.play-clock-label {
+  color: var(--ink-soft);
+  display: block;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+}
+
+.play-clock-fields {
+  align-items: center;
+  display: grid;
+  /* I due punti stanno in mezzo e occupano quello che serve: le due caselle
+     restano larghe uguali comunque. */
+  grid-template-columns: 1fr auto 1fr;
+  gap: 6px;
+}
+
+.play-clock-fields input {
+  text-align: center;
+}
+
+.play-clock-fields b {
+  color: var(--ink-30);
+  font-size: 16px;
+  font-weight: 900;
+  /* I campi hanno 8px di stacco sopra: senza, i due punti resterebbero
+     alti rispetto alle cifre che separano. */
+  margin-top: 8px;
+}
+
 .play-preview {
   margin-bottom: 18px;
 }
