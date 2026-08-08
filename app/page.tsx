@@ -2920,7 +2920,10 @@ function NewMatchModal({
             ))}
           </div>
           <div className="sets-form">
-            <span>SET</span><span>SQUADRA 1</span><span>SQUADRA 2</span>
+            {/* Le quattro colonne dell'intestazione sono le stesse delle
+                righe, trattino compreso: con tre sole, le due etichette non
+                stavano sopra ai campi che nominavano. */}
+            <span>SET</span><span>SQUADRA 1</span><span aria-hidden="true" /><span>SQUADRA 2</span>
             {scores.map((score, index) => (
               <div className="set-row" key={index}>
                 <b>{index + 1}</b>

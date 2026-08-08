@@ -671,6 +671,27 @@ form select,
   width: 100%;
 }
 
+/* Il campo eredita il carattere dall'etichetta, che e maiuscola, nerissima e
+   spaziata: senza queste tre righe quello che si scrive dentro esce in 900
+   tutto maiuscolo, e il testo suggerito sembrava urlato. Il valore resta un
+   po' marcato, perche e un dato. */
+form input,
+form select,
+form textarea,
+.teams-form select {
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Il suggerimento e un suggerimento: piu chiaro e piu leggero del valore
+   vero, se no si scambia per una risposta gia data. */
+form input::placeholder,
+form textarea::placeholder {
+  color: var(--muted);
+  font-weight: 400;
+}
+
 form input:focus,
 form select:focus,
 .teams-form select:focus {
@@ -2999,6 +3020,47 @@ button.podium-person {
    e stretto, le squadre vanno una sotto l'altra invece che affiancate. */
 .tournament-create-form .tournament-team-builder {
   grid-template-columns: minmax(0, 1fr);
+}
+
+/* Ritmo verticale del modulo: un passo solo fra un campo e il successivo, e
+   lo stesso fra un blocco e l'altro. Prima si alternavano 18, 22 e 28 e il
+   modulo sembrava montato con pezzi di provenienza diversa. */
+.sheet-form label,
+.sheet-form .teams-form,
+.sheet-form .sets-form,
+.sheet-form .tournament-team-builder,
+.sheet-form .tournament-prize-form,
+.sheet-form .tournament-elo-choice {
+  margin-bottom: var(--space-5);
+}
+
+/* Le intestazioni interne staccano dal blocco che chiudono piu di quanto
+   stacchino da quello che aprono: e quello che le fa leggere come titoli. */
+.sheet-form .tournament-form-head {
+  margin: var(--space-6) 0 var(--space-3);
+}
+
+/* Stesso respiro interno delle card: i riquadri del modulo sono superfici
+   come le altre, non caselle. */
+.sheet-form .teams-form fieldset,
+.sheet-form .sets-form {
+  padding: var(--space-5);
+}
+
+/* Tutti i campi alti uguale. Quelli dei punteggi erano piu bassi di sei
+   pixel degli altri e in fila si vedeva. */
+.sheet-form .set-row input {
+  min-height: 48px;
+}
+
+/* I due tasti in fondo occupano mezza riga ciascuno: allineati a destra,
+   dentro a un foglio stretto, restavano piccoli e lontani dal pollice. */
+.sheet-form .modal-actions {
+  margin-top: var(--space-6);
+}
+
+.sheet-form .modal-actions .button {
+  flex: 1;
 }
 
 .tournament-form-head,
@@ -5631,6 +5693,12 @@ button.pizza-ranking-row {
   align-items: center;
   display: flex;
   justify-content: space-between;
+  /* Alta quanto lo switch che alcuni fogli hanno nell'angolo — trenta pixel
+     di tasto piu tre e tre di guscio. Senza, i fogli che lo switch non ce
+     l'hanno (registra una partita, crea un torneo) tenevano il titolo
+     qualche pixel piu in alto degli altri, e passando dall'uno all'altro
+     l'etichetta si spostava. */
+  min-height: 36px;
   padding-bottom: var(--space-4);
 }
 
@@ -5831,12 +5899,15 @@ button.pizza-ranking-row {
   margin: 0 0 8px;
 }
 
+/* Le stesse quattro colonne delle righe qui sotto, trattino compreso: con
+   tre colonne le etichette "squadra 1" e "squadra 2" non cadevano sopra ai
+   campi che nominano. */
 .sets-form {
   background: var(--white);
   border-radius: var(--radius-md);
   display: grid;
   gap: 7px;
-  grid-template-columns: 56px 1fr 1fr;
+  grid-template-columns: 34px 1fr 12px 1fr;
   margin-bottom: 22px;
   padding: 15px;
 }

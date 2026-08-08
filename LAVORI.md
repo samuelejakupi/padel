@@ -15,6 +15,14 @@ Ultimo aggiornamento: 8 agosto 2026
 
 ## In sospeso
 
+### I dati di prova vanno tolti a mano da Supabase
+`supabase/pulizia-dati-di-prova.sql` toglie tutti i tornei e tutte le partite
+tranne le prime due registrate, poi rilancia `recalculate_padel_ratings()`.
+Va eseguito una volta sola nel SQL Editor, e il primo blocco è una SELECT che
+mostra quali due partite resterebbero: da guardare prima di far partire il
+resto. Finché non è stato eseguito, in app si vedono partite e tornei che non
+sono mai esistiti.
+
 ### Tre agganci CSS morti
 `theme-dark`, `.app-shell-hub` e `.is-open` hanno regole in `globals.css` ma
 nessun JavaScript le applica più: sono avanzi di quando esisteva la schermata
@@ -36,6 +44,21 @@ salvata sulla schermata Home. Per ora c'è il pallino sull'icona Pizza.
 ---
 
 ## Deciso, e perché
+
+### Il campo non deve ereditare il carattere dell'etichetta
+`form label` è maiuscolo, in peso 900 e spaziato, e `input`/`select` hanno
+`font: inherit`: risultato, quello che si scriveva dentro ai campi usciva
+nerissimo e tutto maiuscolo, e il testo suggerito sembrava urlato. Ora il
+valore è in 600 senza trasformazioni e il segnaposto in 400 grigio: il
+suggerimento deve leggersi come un suggerimento, non come una risposta già
+data.
+
+### L'intestazione del foglio è alta uguale con e senza switch
+I fogli che hanno l'interruttore nell'angolo sono alti quanto lui; quelli che
+non ce l'hanno — registra una partita, crea un torneo — tenevano il titolo
+qualche pixel più in alto, e passando dall'uno all'altro l'etichetta si
+spostava. Ora `.sheet-head` ha un'altezza minima di 36px, che è la misura
+dell'interruttore.
 
 ### I moduli sono fogli dal basso, non riquadri al centro
 "Registra una partita" e "Crea un torneo" erano finestre centrate con la
