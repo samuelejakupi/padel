@@ -280,6 +280,22 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+// I campi dove giochiamo, in provincia di Imperia. Scritti "CLUB - PAESE"
+// perche il nome finisce dentro alla card della partita, dove lo spazio e
+// quello che e. L'ordine e quello di quanto ci andiamo, non alfabetico.
+//
+// A San Bartolomeo al Mare non risulta nessun campo da padel: se ne apre uno,
+// va aggiunto qui. La casella resta comunque libera, quindi un posto fuori
+// elenco si puo sempre scrivere a mano.
+const PADEL_COURTS = [
+  "DON QUIQUE - IMPERIA",
+  "QUPOLA - PONTEDASSIO",
+  "ONEGLIA PADEL - CASTELVECCHIO",
+  "CORCUERA - IMPERIA",
+  "RIVIERA PADEL - SAN LORENZO",
+  "DIANO PADEL - DIANO MARINA",
+];
+
 // Un set finito ha un vincitore: sei giochi con due di scarto, oppure il 7-6
 // del tie-break. Tutto il resto — 2-1, 4-4, 5-3 — e un set lasciato a meta
 // perche il campo e scaduto. Serve a distinguere il terzo set interrotto,
@@ -2873,6 +2889,7 @@ function NewMatchModal({
   const [error, setError] = useState("");
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [historyReady, setHistoryReady] = useState(true);
+  const courtListId = useId();
 
   // Lo storico si appende alla discendenza, non all'id: una partita modificata
   // cambia id ogni volta (vedi migration-storico-partite.sql).
@@ -3095,12 +3112,20 @@ function NewMatchModal({
           ) : null}
           <label>
             Campo <span className="optional-label">facoltativo</span>
+            {/* Suggerimenti, non una gabbia: la casella resta libera, cosi
+                una trasferta fuori provincia si scrive comunque. L'elenco
+                serve a far uscire lo stesso nome tutte le volte, altrimenti
+                le statistiche per campo non staranno mai in piedi. */}
             <input
               value={court}
               onChange={(e) => setCourt(e.target.value)}
-              placeholder="Es. Padel Club Verona · Campo 3"
+              list={courtListId}
+              placeholder="Es. DON QUIQUE - IMPERIA"
               maxLength={60}
             />
+            <datalist id={courtListId}>
+              {PADEL_COURTS.map((name) => <option key={name} value={name} />)}
+            </datalist>
           </label>
           <label>
             Video YouTube <span className="optional-label">facoltativo</span>

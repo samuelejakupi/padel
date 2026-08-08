@@ -86,6 +86,11 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   // Nel torneo serve sempre un vincitore: il girone assegna i punti sulle
   // vittorie e un pareggio lo lascerebbe senza.
   assert.match(drawMigration, /non puo finire in pareggio/);
+  // I campi della zona: suggerimenti, non una gabbia. Se la casella tornasse
+  // libera senza elenco, lo stesso circolo finirebbe scritto in cinque modi.
+  assert.match(page, /PADEL_COURTS/);
+  assert.match(page, /DON QUIQUE - IMPERIA/);
+  assert.match(page, /QUPOLA - PONTEDASSIO/);
   assert.match(page, /function setIsComplete/);
   assert.match(page, /function readMatchScore/);
   assert.match(page, /PAREGGIO/);
