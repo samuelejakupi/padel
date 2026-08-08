@@ -59,6 +59,37 @@ salvata sulla schermata Home. Per ora c'è il pallino sull'icona Pizza.
 
 ## Deciso, e perché
 
+### La pagina chiede la viewport grande, non quella piccola
+Mezza giornata su una barra del menu che non voleva stare a 11px dal vetro, e
+la causa era una riga: `html, body { height: 100% }`. Il `100%` eredita la
+**viewport piccola**, quella che Safari usa quando la pagina non può scorrere —
+e questa non scorre, perché a scorrere è `.content`. In app salvata sulla
+schermata Home la viewport piccola vale **797px su uno schermo da 844**,
+allineata in alto: la pagina copre la barra di stato ma perde 47px in fondo, e
+lì dentro non si disegna. `height: 100lvh` chiede la viewport grande, cioè
+tutto lo schermo, e la barra è tornata al suo posto da sola.
+
+Come si è arrivati (e come non arrivarci di nuovo): il sintomo è stato inseguito
+per ore sulla barra, che era l'unica cosa a posto. Quello che ha sbloccato è
+stato smettere di dedurre dagli screenshot e mettere in pagina un riquadro con
+`window.innerHeight`, `screen.height` e le `env()`. Il numero `797 = 844 − 47`
+diceva già tutto. **Se qualcosa sembra fuori posto ai bordi dello schermo, il
+sospettato non è l'elemento: è l'altezza della finestra che lo contiene** —
+e si misura, non si indovina.
+
+Due cose trovate per strada, tenute perché servono davvero:
+
+- `apple-mobile-web-app-capable` è scritto a mano in `layout.tsx`: Next 16 non
+  lo emette più (da `appleWebApp.capable` genera solo `mobile-web-app-capable`)
+  e iOS lo vuole ancora. C'è un test che fallisce se sparisce.
+- `statusBarStyle: "black-translucent"` — senza, la pagina non passa sotto
+  l'orologio e `.system-blur` non ha niente da sfocare. Il prezzo è l'ora
+  bianca fissa.
+
+Vicolo cieco da non ripercorrere: ancorare barra e fasce a `.app-shell` alto
+`100dvh` invece di lasciarle `fixed` (commit `48cfc92`, annullato). Stessa
+trappola vista da un'altra angolazione — `dvh` non è lo schermo.
+
 ### Un set a testa è un pareggio, e il terzo interrotto si scrive lo stesso
 Si gioca al meglio dei tre set, ma il campo scade prima della fine più spesso
 di quanto ci piaccia ammettere. Prima quel risultato non si poteva registrare:

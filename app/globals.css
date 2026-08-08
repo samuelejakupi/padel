@@ -3875,24 +3875,6 @@ button.podium-person {
   font-weight: 800;
 }
 
-/* TEMPORANEO: il riquadro delle misure dentro alla scheda profilo. Va via
-   insieme al componente ViewportProbe. */
-.viewport-probe {
-  background: var(--veil-2);
-  border-radius: var(--radius-md);
-  display: grid;
-  font-family: ui-monospace, monospace;
-  font-size: 11px;
-  gap: 2px;
-  margin-bottom: 18px;
-  padding: 12px 14px;
-}
-
-.viewport-probe b {
-  font-family: inherit;
-  margin-bottom: 4px;
-}
-
 .player-kpis {
   display: grid;
   gap: 12px;
@@ -6214,11 +6196,20 @@ button.pizza-ranking-row {
      scorrere la pagina. */
   html,
   body {
-    /* PROVA: `100%` eredita la viewport piccola, quella che Safari usa quando
-       la pagina non puo scorrere — ed e da li che arrivano i 797 px su uno
-       schermo da 844 misurati sull'iPhone di Dani. `100lvh` chiede
-       esplicitamente la viewport grande, che e tutto lo schermo. La riga
-       sopra resta come ripiego per chi non conosce lvh. */
+    /* `100lvh` e non `100%`, ed e la riga che ha chiuso mezza giornata di
+       caccia. `100%` eredita la viewport piccola — quella che Safari usa
+       quando la pagina non puo scorrere, e questa non scorre perche a
+       scorrere e `.content`. In app salvata sulla schermata Home la viewport
+       piccola vale 797 px su uno schermo da 844: la pagina copriva la barra
+       di stato in alto ma perdeva 47 px in fondo, e li dentro non si puo
+       disegnare. Da qui la barra del menu che non riusciva a scendere sotto i
+       58 px dal vetro per quanto la si spostasse, e che tagliata a meta se la
+       si spingeva piu giu.
+       `100lvh` chiede esplicitamente la viewport grande, cioe tutto lo
+       schermo, e la barra e tornata ai suoi undici pixel senza toccare altro:
+       misura dal fondo, e il fondo adesso e quello vero.
+       La riga `height: 100%` sopra resta come ripiego per i browser che non
+       conoscono lvh. */
     height: 100%;
     height: 100lvh;
     overflow: hidden;
