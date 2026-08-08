@@ -3875,6 +3875,24 @@ button.podium-person {
   font-weight: 800;
 }
 
+/* TEMPORANEO: il riquadro delle misure dentro alla scheda profilo. Va via
+   insieme al componente ViewportProbe. */
+.viewport-probe {
+  background: var(--veil-2);
+  border-radius: var(--radius-md);
+  display: grid;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  gap: 2px;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+}
+
+.viewport-probe b {
+  font-family: inherit;
+  margin-bottom: 4px;
+}
+
 .player-kpis {
   display: grid;
   gap: 12px;

@@ -1912,6 +1912,57 @@ function useCardCarousel<T extends string>({
   };
 }
 
+// TEMPORANEO — va tolto appena la barra e a posto.
+// Sulla posizione della barra in fondo abbiamo sbagliato piu diagnosi di fila,
+// tutte dedotte da uno screenshot. Questi sono i numeri veri letti sul
+// telefono: la riga che conta e "finestra", perche se dice 844 la pagina
+// arriva al vetro e se dice 797 no — e da li dipende tutto il resto.
+function ViewportProbe() {
+  const [lines, setLines] = useState<string[]>([]);
+
+  // Le misure si leggono a impaginazione fatta, quindi dentro a un effetto, ma
+  // non nello stesso giro: scrivere lo stato subito fa ripartire il render a
+  // cascata. Un frame dopo va bene, e le misure sono anche piu affidabili.
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => measure());
+    return () => cancelAnimationFrame(frame);
+
+    function measure() {
+      // Le env() non si leggono da JavaScript: si fanno misurare al browser
+      // dando a un elemento un padding che vale env(), e poi si legge il
+      // padding calcolato.
+      const probe = document.createElement("div");
+      probe.style.cssText = [
+        "position:fixed",
+        "visibility:hidden",
+        "padding-top:env(safe-area-inset-top)",
+        "padding-bottom:env(safe-area-inset-bottom)",
+      ].join(";");
+      document.body.appendChild(probe);
+      const insets = getComputedStyle(probe);
+      const round = (value: string) => Math.round(parseFloat(value) || 0);
+      const nav = document.querySelector(".mobile-nav")?.getBoundingClientRect();
+      const standalone = (window.navigator as Navigator & { standalone?: boolean }).standalone;
+      setLines([
+        `finestra ${Math.round(window.innerWidth)}x${Math.round(window.innerHeight)}`,
+        `schermo ${Math.round(window.screen.width)}x${Math.round(window.screen.height)}`,
+        `safe top ${round(insets.paddingTop)} · bottom ${round(insets.paddingBottom)}`,
+        `standalone ${standalone === undefined ? "n/d" : String(standalone)}`,
+        nav ? `barra finisce a ${Math.round(nav.bottom)}` : "barra non trovata",
+        nav ? `dal fondo finestra ${Math.round(window.innerHeight - nav.bottom)}` : "",
+      ].filter(Boolean));
+      probe.remove();
+    }
+  }, []);
+
+  return (
+    <div className="viewport-probe">
+      <b>Misure schermo (temporaneo)</b>
+      {lines.map((line) => <span key={line}>{line}</span>)}
+    </div>
+  );
+}
+
 function MatchCard({
   match,
   onEdit,
@@ -6396,6 +6447,7 @@ function AppShell({ session }: { session: Session | null }) {
               </label>
               <label>Email<input value={session?.user.email ?? ""} disabled /></label>
               {supabase ? null : <p className="demo-profile-note">Il profilo diventa modificabile dopo il collegamento a Supabase.</p>}
+              <ViewportProbe />
               <div className="modal-actions">
                 {supabase ? (
                   <button type="button" className="signout-button" onClick={() => void supabase?.auth.signOut()}>Esci dal club</button>
