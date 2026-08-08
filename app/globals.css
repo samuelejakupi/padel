@@ -6214,7 +6214,13 @@ button.pizza-ranking-row {
      scorrere la pagina. */
   html,
   body {
+    /* PROVA: `100%` eredita la viewport piccola, quella che Safari usa quando
+       la pagina non puo scorrere — ed e da li che arrivano i 797 px su uno
+       schermo da 844 misurati sull'iPhone di Dani. `100lvh` chiede
+       esplicitamente la viewport grande, che e tutto lo schermo. La riga
+       sopra resta come ripiego per chi non conosce lvh. */
     height: 100%;
+    height: 100lvh;
     overflow: hidden;
   }
 
