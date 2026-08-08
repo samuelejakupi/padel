@@ -55,18 +55,27 @@ export const metadata: Metadata = {
     // contenuto partiva sotto; cosi invece la fascia la disegna la pagina
     // (.app-shell::before) e quello che ci passa sotto e sfocabile.
     //
-    // "default" e non "black-translucent": con quest'ultimo l'ora e le icone
-    // di sistema restano bianche per sempre, e allora sotto serve per forza
-    // una fascia scura, che su una pagina chiara si vede come una tacca. Con
-    // "default" le scritte le colora iOS secondo l'aspetto del telefono —
-    // scure in chiaro — e la fascia puo finalmente sparire nello sfondo.
-    // Il patto che ne segue vale per tutta l'app: quello che passa sotto le
-    // scritte di sistema deve restare chiaro. Per questo il velo dei fogli
-    // schiarisce invece di scurire (vedi .sheet-backdrop).
-    // Su un telefono tenuto in modalita scura iOS le rimette bianche: li la
-    // fascia chiara torna a essere il fondo sbagliato. Finche il tema scuro
-    // dell'app non esiste davvero, e un caso che accettiamo.
-    statusBarStyle: "default",
+    // "black-translucent", e qui c'e un dietrofront rispetto a com'era.
+    //
+    // Prima era "default", per tenere l'ora e le icone di sistema scure e non
+    // dover mettere niente sotto. Il costo di quella scelta si e visto solo
+    // dopo, e sta in fondo allo schermo: con "default" iOS, quando il sito
+    // gira come app salvata sulla schermata Home, non lascia alla pagina le
+    // due strisce di sistema — se le tiene lui, sopra e sotto, e
+    // env(safe-area-inset-*) vale zero perche non c'e nessuna area da
+    // recuperare: l'area proprio non e nostra. La barra del menu finiva cosi
+    // a quarantotto pixel dal vetro invece che a undici. Non era la barra a
+    // essere alta, era la pagina a finire prima — in Safari, dove
+    // viewport-fit: cover funziona davvero, la stessa barra era gia al posto
+    // giusto.
+    //
+    // Il prezzo e quello previsto allora: ora e icone restano bianche per
+    // sempre, quindi sotto ci vuole qualcosa di scuro. Due cose lo reggono:
+    // .system-blur, che oltre a sfocare porta una sfumatura che si spegne
+    // prima di finire l'area sicura — un'ombra sotto l'ora, non una fascia —
+    // e i veli dei fogli, che ora scuriscono. Il patto si e rovesciato:
+    // quello che passa sotto le scritte di sistema deve restare scuro.
+    statusBarStyle: "black-translucent",
   },
   icons: {
     icon: `${basePath}/theboyz-mark.png?v=${iconVersion}`,
