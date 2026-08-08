@@ -1570,6 +1570,15 @@ const CTA_FACES = ["match", "tournament"] as const;
 // onTouch di React: React registra touchmove come passivo, e li dentro
 // preventDefault non ha alcun effetto. Senza preventDefault non c'e modo di
 // impedire alla pagina di scorrere su e giu mentre si scorre di lato.
+// Di quanto si sposta la faccia che esce, e da quanto lontano arriva quella
+// che entra. E un numero fisso e non la larghezza della card, per due motivi.
+// Il primo: le tre card della home sono larghe diverso, e misurando lo stacco
+// sulla larghezza ognuna si muoveva di una quantita sua — lo stesso gesto
+// sembrava diverso a seconda di dove lo si guardava. Il secondo: una faccia
+// che esce di tutta la sua larghezza lascia il riquadro vuoto per un istante,
+// e quell'istante si legge come un buco. Corto, la dissolvenza fa il resto.
+const CAROUSEL_TRAVEL = 96;
+
 function useCardCarousel<T extends string>({
   faces,
   face,
@@ -1647,8 +1656,7 @@ function useCardCarousel<T extends string>({
   // mano e quello automatico sono esattamente lo stesso movimento.
   const slide = useCallback((next: T, direction: "left" | "right") => {
     const track = trackRef.current;
-    const width = Math.max(card?.getBoundingClientRect().width ?? 1, 1);
-    const exit = direction === "left" ? -width : width;
+    const exit = direction === "left" ? -CAROUSEL_TRAVEL : CAROUSEL_TRAVEL;
     const finish = () => keepScroll(() => onChangeRef.current(next));
     if (!track || !track.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       enterFrom.current = null;
@@ -1663,10 +1671,13 @@ function useCardCarousel<T extends string>({
           { transform: track.style.transform || "translate3d(0, 0, 0)", opacity: track.style.opacity || "1" },
           { transform: `translate3d(${exit}px, 0, 0)`, opacity: 0 },
         ],
-        { duration: 170, easing: "cubic-bezier(0.4, 0, 0.9, 0.35)", fill: "forwards" },
+        // Corta: fra l'uscita e l'entrata il riquadro resta senza faccia, e
+        // piu quel vuoto dura piu si vede. Prima erano 170 di uscita e 340 di
+        // entrata, mezzo secondo in cui la faccia dopo non c'era ancora.
+        { duration: 130, easing: "cubic-bezier(0.4, 0, 0.9, 0.35)", fill: "forwards" },
       )
       .finished.then(finish, finish);
-  }, [card, keepScroll]);
+  }, [keepScroll]);
 
   // Il cambio automatico: le facce si alternano da sole ogni cinque secondi,
   // cosi la home le mostra tutte senza che nessuno la tocchi. Si ferma dove
@@ -1883,7 +1894,7 @@ function useCardCarousel<T extends string>({
         { transform: `translate3d(${from}px, 0, 0)`, opacity: 0 },
         { transform: "translate3d(0, 0, 0)", opacity: 1 },
       ],
-      { duration: 340, easing: "cubic-bezier(0.32, 0.9, 0.28, 1)" },
+      { duration: 230, easing: "cubic-bezier(0.32, 0.9, 0.28, 1)" },
     );
     // Arrivata: le animazioni che aspettavano possono ripartire da capo, in
     // tempo con la faccia nuova.
@@ -4175,7 +4186,9 @@ function AppShell({ session }: { session: Session | null }) {
   // La home mostra soltanto un'anteprima; i "Vedi tutto" aprono le pagine
   // complete, così la schermata principale non cambia altezza.
   const HOME_ROWS = 3;
-  const HOME_MATCHES = 2;
+  // Tre come le righe della classifica qui sopra: due partite lasciavano la
+  // card piu bassa di quella accanto e l'anteprima sembrava mezza vuota.
+  const HOME_MATCHES = 3;
   const HOME_TOURNAMENTS = 2;
 
   // Sta qui e non in mezzo agli altri stati perche il carosello qui sotto ha
@@ -4266,7 +4279,10 @@ function AppShell({ session }: { session: Session | null }) {
         // Se il dito lo sta gia spostando il suggerimento e superfluo, e
         // arriverebbe come uno strattone in mano.
         if (track?.animate && !track.style.transform) {
-          const nudge = ctaFace === "match" ? -16 : 16;
+          // Piu lungo di prima: deve scoprire il gemello di fianco, non
+          // limitarsi a vibrare. Meno il distacco fra i due, quello che
+          // resta e quanto se ne vede.
+          const nudge = ctaFace === "match" ? -30 : 30;
           track.animate(
             [
               { transform: "translate3d(0, 0, 0)" },
@@ -5416,6 +5432,20 @@ function AppShell({ session }: { session: Session | null }) {
                     un tasto che cambia da solo si preme per sbaglio. */}
                 <div className="cta-carousel" ref={setCtaCard}>
                   <div className="cta-carousel-track" ref={ctaTrackRef}>
+                    {/* Il gemello spento di fianco. Sta dentro al nastro, non
+                        accanto: cosi si sposta insieme a lui, e quando il
+                        nastro si accenna da solo quello che spunta dal bordo
+                        e il tasto dell'altra faccia invece del fondo della
+                        pagina. Il movimento smette di essere un tremolio e
+                        diventa una frase: "di qua ce n'e un altro".
+                        Copia spenta e non un tasto vero: quello vero e uno
+                        solo, ed e questo qui sotto. */}
+                    <span
+                      className={`cta-carousel-peek ${ctaFace === "match" ? "is-right" : "is-left"}`}
+                      aria-hidden="true"
+                    >
+                      {ctaFace === "match" ? "+ NUOVO TORNEO" : "+ NUOVA PARTITA"}
+                    </span>
                     {ctaFace === "match" ? (
                       <button
                         className="button button-primary cta-new-match cta-in-panel cta-between cta-aurora"

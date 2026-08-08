@@ -6962,10 +6962,46 @@ button.pizza-ranking-row {
   .cta-carousel {
     display: block;
     order: 2;
+    /* Taglia il gemello che sta di fianco: senza, si vedrebbe sempre tutto
+       intero accanto al tasto vero invece di spuntare solo quando il nastro
+       si muove. */
+    overflow: hidden;
+    /* Il raggio serve al taglio: il tasto e arrotondato, e un ritaglio
+       squadrato gli scoprirebbe gli angoli. */
+    border-radius: var(--radius);
   }
 
   .cta-carousel-track {
+    position: relative;
     will-change: transform;
+  }
+
+  /* Lo stacco fra il tasto e il suo gemello. E lo stesso numero che separa
+     due card della home: due cose affiancate si distanziano sempre uguale,
+     qui non c'e motivo di fare eccezione. */
+  .cta-carousel-peek {
+    align-items: center;
+    background: var(--veil-2);
+    border-radius: var(--radius);
+    color: var(--ink-30);
+    display: flex;
+    font-size: 24px;
+    font-style: italic;
+    font-weight: 900;
+    inset: 0;
+    justify-content: center;
+    letter-spacing: 0.6px;
+    pointer-events: none;
+    position: absolute;
+    white-space: nowrap;
+  }
+
+  .cta-carousel-peek.is-right {
+    transform: translate3d(calc(100% + var(--space-3)), 0, 0);
+  }
+
+  .cta-carousel-peek.is-left {
+    transform: translate3d(calc(-100% - var(--space-3)), 0, 0);
   }
 
   .match-panel-head {
