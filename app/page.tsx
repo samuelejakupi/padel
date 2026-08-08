@@ -1467,6 +1467,9 @@ const NAV_PILL_TRANSITION = "scale 140ms cubic-bezier(0.34, 1.56, 0.64, 1)";
 // ricostruite a ogni render e farebbero ripartire gli effetti del carosello.
 const RANKING_FACES = ["single", "team"] as const;
 const MATCHES_FACES = ["mine", "all"] as const;
+// Il tasto in cima alla home e anche lui un carosello: a sinistra la partita,
+// a destra il torneo.
+const CTA_FACES = ["match", "tournament"] as const;
 
 // Una card che ha piu facce e le mostra a turno: si cambia con lo swipe o da
 // sola ogni cinque secondi, e la faccia che esce da un lato lascia entrare
@@ -2880,16 +2883,16 @@ function NewMatchModal({
   }
 
   return (
-    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <section className="modal" role="dialog" aria-modal="true" aria-labelledby="match-title">
-        <div className="modal-head">
-          <div>
-            <p className="eyebrow dark">{editing ? "MODIFICA RISULTATO" : "NUOVO RISULTATO"}</p>
-            <h2 id="match-title">{editing ? "Modifica la partita" : "Registra una partita"}</h2>
-          </div>
-          <button className="icon-button" onClick={onClose} aria-label="Chiudi">×</button>
-        </div>
-        <form onSubmit={save}>
+    // Lo stesso foglio dal basso di partite e classifica, non piu un riquadro
+    // al centro dello schermo: registrare un risultato e una delle cose che
+    // si fanno da qui dentro, non un'altra schermata. Niente crocetta — si
+    // chiude trascinando in giu o toccando fuori, come tutti gli altri
+    // fogli — e niente occhiello sopra al titolo: il titolo dice gia tutto.
+    <BottomSheet
+      title={editing ? "Modifica la partita" : "Registra una partita"}
+      onClose={onClose}
+    >
+      <form className="sheet-form" onSubmit={save}>
           {tournamentContext ? (
             <div className="tournament-match-banner">
               <TournamentTrophyBadge kind="cup" compact />
@@ -2946,7 +2949,10 @@ function NewMatchModal({
             />
           </label>
           <label>
-            Nota facoltativa
+            {/* "facoltativo" si scrive sempre allo stesso modo, in tutti i
+                campi che lo sono: era l'unico a dirlo dentro all'etichetta
+                invece che nel segno accanto. */}
+            Nota <span className="optional-label">facoltativo</span>
             <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Es. Rimonta incredibile al terzo set" />
           </label>
           {editing ? (
@@ -3000,8 +3006,7 @@ function NewMatchModal({
             <button className="button button-primary" disabled={busy}>{busy ? "Salvataggio…" : "Salva risultato"}</button>
           </div>
         </form>
-      </section>
-    </div>
+    </BottomSheet>
   );
 }
 
@@ -3661,13 +3666,11 @@ function TournamentCreateModal({
   }
 
   return (
-    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <section className="modal tournament-create-modal" role="dialog" aria-modal="true" aria-labelledby="tournament-create-title">
-        <div className="modal-head">
-          <div><p className="eyebrow dark">NUOVO TORNEO</p><h2 id="tournament-create-title">Crea il tabellone</h2></div>
-          <button className="icon-button" type="button" onClick={onClose} aria-label="Chiudi">×</button>
-        </div>
-        <form onSubmit={createTournament}>
+    // Stesso foglio della partita: si arriva qui dallo stesso tasto, scorrendo
+    // di lato, e sarebbe strano trovare due pannelli diversi a un dito di
+    // distanza.
+    <BottomSheet title="Crea un torneo" onClose={onClose}>
+      <form className="sheet-form tournament-create-form" onSubmit={createTournament}>
           <label>Nome del torneo<input value={name} onChange={(event) => setName(event.target.value)} maxLength={70} required /></label>
 
           <div className="tournament-form-head">
@@ -3721,11 +3724,10 @@ function TournamentCreateModal({
           {error ? <p className="form-message error">{error}</p> : null}
           <div className="modal-actions">
             <button className="button button-ghost" type="button" onClick={onClose}>Annulla</button>
-            <button className="button button-primary" disabled={busy}>{busy ? "Creazione…" : "Crea torneo"}</button>
+            <button className="button button-lime" disabled={busy}>{busy ? "Creazione…" : "Crea torneo"}</button>
           </div>
         </form>
-      </section>
-    </div>
+    </BottomSheet>
   );
 }
 
@@ -4022,6 +4024,21 @@ function AppShell({ session }: { session: Session | null }) {
     // e vederla cambiare da sola senza niente che dica perche sembrerebbe
     // un difetto. Li l'elenco resta quello che e.
     enabled: carouselEnabled && isPhone,
+  });
+
+  // Quale dei due tasti e in scena in cima alla home.
+  const [ctaFace, setCtaFace] = useState<"match" | "tournament">("match");
+  const {
+    setCard: setCtaCard,
+    trackRef: ctaTrackRef,
+    swipeHandled: ctaSwipeHandled,
+  } = useCardCarousel({
+    faces: CTA_FACES,
+    face: ctaFace,
+    onChange: setCtaFace,
+    // Mai da solo: un tasto che cambia mentre lo stai per premere fa aprire
+    // la cosa sbagliata. Questo si muove solo col dito.
+    enabled: false,
   });
 
   const [editingMatch, setEditingMatch] = useState<PadelMatch | null>(null);
@@ -5108,14 +5125,45 @@ function AppShell({ session }: { session: Session | null }) {
                 {/* Il tasto è uscito dal riquadro e sta fra la card di chi
                     guarda e la classifica: è la prima cosa che si fa, quindi
                     sta in cima e non in mezzo all'elenco. Su desktop resta
-                    invisibile, lì comanda quello nell'intestazione di
-                    sezione. */}
-                <button
-                  className="button button-primary cta-new-match cta-in-panel cta-between cta-aurora"
-                  onClick={() => setShowMatch(true)}
-                >
-                  + NUOVA PARTITA
-                </button>
+                    invisibile, lì comandano quelli nell'intestazione di
+                    sezione.
+                    È un carosello come le card, ma con due tasti al posto di
+                    due elenchi: scorrendo di lato compare quello del torneo.
+                    Non gira da solo — una card che cambia da sola si guarda,
+                    un tasto che cambia da solo si preme per sbaglio. */}
+                <div className="cta-carousel" ref={setCtaCard}>
+                  <div className="cta-carousel-track" ref={ctaTrackRef}>
+                    {ctaFace === "match" ? (
+                      <button
+                        className="button button-primary cta-new-match cta-in-panel cta-between cta-aurora"
+                        onClick={() => {
+                          if (ctaSwipeHandled.current) return;
+                          setShowMatch(true);
+                        }}
+                      >
+                        + NUOVA PARTITA
+                      </button>
+                    ) : (
+                      <button
+                        className="button button-lime cta-new-match cta-in-panel cta-between cta-aurora"
+                        onClick={() => {
+                          if (ctaSwipeHandled.current) return;
+                          setShowTournamentCreate(true);
+                        }}
+                        disabled={!tournamentSchemaReady}
+                      >
+                        + NUOVO TORNEO
+                      </button>
+                    )}
+                  </div>
+                  {/* Gli stessi pallini delle card: qui dicono che sotto al
+                      dito c'è un secondo tasto, che altrimenti non lo
+                      saprebbe nessuno. */}
+                  <span className="card-dots" aria-hidden="true">
+                    <i className={ctaFace === "match" ? "is-current" : ""} />
+                    <i className={ctaFace === "tournament" ? "is-current" : ""} />
+                  </span>
+                </div>
                 <div className="match-panel matches-panel" ref={setMatchesCard}>
                   {/* Titolo interno al riquadro, come "Classifica Elo".
                       Su desktop resta nascosto: li il titolo di sezione

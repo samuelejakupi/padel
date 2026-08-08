@@ -15,13 +15,6 @@ Ultimo aggiornamento: 8 agosto 2026
 
 ## In sospeso
 
-### Il torneo non si crea da mobile
-Il tasto "+ Nuovo torneo" dentro al riquadro degli ultimi tornei è stato
-tolto: su mobile era l'unico modo per aprirne uno, quindi al momento da
-telefono un torneo non si crea. Il riquadro con gli ultimi resta, e su
-desktop il tasto è ancora nell'intestazione di sezione. Va rimesso quando
-avremo deciso da dove si crea davvero.
-
 ### Tre agganci CSS morti
 `theme-dark`, `.app-shell-hub` e `.is-open` hanno regole in `globals.css` ma
 nessun JavaScript le applica più: sono avanzi di quando esisteva la schermata
@@ -43,6 +36,19 @@ salvata sulla schermata Home. Per ora c'è il pallino sull'icona Pizza.
 ---
 
 ## Deciso, e perché
+
+### I moduli sono fogli dal basso, non riquadri al centro
+"Registra una partita" e "Crea un torneo" erano finestre centrate con la
+crocetta nell'angolo, mentre tutto il resto del padel si apre in un foglio
+che sale dal basso. Ora usano lo stesso `BottomSheet` di partite e
+classifica: stesso titolo-etichetta, stesso trascinamento per chiudere,
+stesso velo. La crocetta è sparita — si chiude tirando giù o toccando fuori,
+come in tutti gli altri fogli — e con lei l'occhiello sopra al titolo, che
+ripeteva quello che il titolo diceva già.
+
+Ci si guadagna anche lo scorrimento laterale bloccato: `.sheet-body` ha già
+`touch-action: pan-y` e `overflow-x: hidden`, quindi il modulo non si sposta
+più di lato mentre lo si compila.
 
 ### Le card della home non hanno più un'insegna
 "Classifica Elo · Singolo" e "Partite · Tutti" cambiavano insieme al
@@ -84,6 +90,22 @@ un'indicazione e non un tasto.
 ### "+ NUOVA PARTITA" sta in cima, sotto la card di chi guarda
 Aprire una partita nuova è la prima cosa che si fa entrando: prima il tasto
 stava fra la classifica e le partite e bisognava scorrere per trovarlo.
+
+**Scorrendolo di lato compare "+ NUOVO TORNEO".** È lo stesso carosello
+delle card, con due tasti al posto di due elenchi, e due pallini sotto a
+dire che il secondo c'è. Questo però non gira da solo: una card che cambia
+da sola si guarda, un tasto che cambia da solo si preme per sbaglio. Il
+tasto del torneo era sparito dal riquadro degli ultimi tornei e su mobile
+non c'era più modo di crearne uno: adesso c'è, e sta dove sta l'altro
+comando che apre qualcosa di nuovo.
+
+**`overflow-x: clip` su `html`.** Mentre il nastro scorre il tasto esce dai
+fianchi dello schermo, e senza ritaglio la pagina si allargava. `clip` e non
+`hidden`: `hidden` farebbe di `html` un contenitore di scorrimento e gli
+elementi fissi — la barra in basso, la fascia in cima — smetterebbero di
+essere fissi. Il ritaglio sta sulla radice e non sul carosello perché
+l'alone colorato del tasto esce dai suoi bordi di una trentina di pixel, e
+ritagliarlo lì lo spegnerebbe.
 
 ### Su touch non si seleziona il testo
 Tenere premuto faceva comparire la selezione e la lente con "Copia", e la

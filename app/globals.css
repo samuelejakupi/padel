@@ -78,6 +78,13 @@ html {
      ogni volta che si arrivava in cima o in fondo. Senza rimbalzo la barra
      sta ferma dov'e, che e quello che ci si aspetta da una tab bar. */
   overscroll-behavior-y: none;
+  /* Quello che esce dai fianchi viene tagliato invece di allargare la pagina:
+     serve al tasto in cima alla home, che scorrendo di lato esce dallo
+     schermo e senza questo aggiungerebbe una barra di scorrimento
+     orizzontale. "clip" e non "hidden" di proposito: hidden farebbe di html
+     un contenitore di scorrimento e gli elementi fissi — la barra in basso,
+     la fascia in cima — smetterebbero di essere fissi. */
+  overflow-x: clip;
   scroll-behavior: smooth;
   /* Riserva sempre lo spazio della scrollbar: senza questo le pagine corte,
      che non la mostrano, risultano spostate di ~15px rispetto alle altre. */
@@ -245,6 +252,13 @@ button {
    mobile, dove l'intestazione di sezione non c'e. Su desktop resta quello
    nell'intestazione, quindi qui sparisce. */
 .cta-in-panel {
+  display: none;
+}
+
+/* Il carosello dei due tasti in cima alla home. Come le card: una finestra
+   che ritaglia e un nastro che scorre col dito. Su desktop non esiste — li i
+   due comandi stanno nelle intestazioni di sezione, uno per sezione. */
+.cta-carousel {
   display: none;
 }
 
@@ -2962,8 +2976,29 @@ button.podium-person {
 
 /* Tornei: stessa grammatica carta/inchiostro della scheda giocatore, con il
    lime riservato al trofeo e alla squadra momentaneamente in testa. */
-.tournament-create-modal {
-  max-width: 920px;
+
+/* I due moduli — risultato e torneo — vivono dentro a un foglio dal basso,
+   non piu in un riquadro al centro. Il foglio porta gia il fondo, i fianchi
+   e lo spazio in fondo: qui serve solo che il primo campo non parta
+   attaccato al titolo. */
+.sheet-form {
+  padding-top: var(--space-2);
+}
+
+/* Dentro al foglio la larghezza e quella e basta: i campi non possono
+   sporgere di lato, se no il modulo si scorre in orizzontale e non e mai
+   quello che si voleva fare. */
+.sheet-form input,
+.sheet-form select,
+.sheet-form textarea,
+.sheet-form fieldset {
+  max-width: 100%;
+}
+
+/* Il tabellone del torneo e piu largo di una colonna sola: sul foglio, che
+   e stretto, le squadre vanno una sotto l'altra invece che affiancate. */
+.tournament-create-form .tournament-team-builder {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .tournament-form-head,
@@ -6337,22 +6372,26 @@ button.pizza-ranking-row {
      secondo velo sfoca di piu e si spegne prima, e nella sovrapposizione dei
      due il passaggio diventa continuo.
      Due e non quattro: ogni velo e una superficie che il telefono ridisegna
-     a ogni fotogramma mentre la pagina scorre, e sopra a due si sente. */
+     a ogni fotogramma mentre la pagina scorre, e sopra a due si sente.
+     Raggi piccoli: la sfocatura deve staccare l'ora da quello che ci passa
+     dietro, non nascondere la pagina. Con raggi alti quello che scorre sotto
+     spariva in una macchia e sembrava che il telefono avesse perso il
+     fuoco. */
   .system-blur span {
     inset: 0;
     position: absolute;
   }
 
   .system-blur span:nth-child(1) {
-    -webkit-backdrop-filter: blur(6px);
-    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
     -webkit-mask-image: linear-gradient(to top, transparent 0%, black 30%, black 100%);
     mask-image: linear-gradient(to top, transparent 0%, black 30%, black 100%);
   }
 
   .system-blur span:nth-child(2) {
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
     -webkit-mask-image: linear-gradient(to top, transparent 24%, black 58%, black 100%);
     mask-image: linear-gradient(to top, transparent 24%, black 58%, black 100%);
   }
@@ -6699,7 +6738,19 @@ button.pizza-ranking-row {
      deve dare solo il gap, lo stesso che separa due card. */
   .cta-in-panel.cta-between {
     margin: 0;
+  }
+
+  /* Il posto in colonna ce l'ha il carosello, non piu il tasto: il tasto
+     adesso e dentro. Niente overflow qui: l'alone colorato del tasto esce
+     dai suoi bordi di una trentina di pixel, e ritagliarlo lo spegnerebbe.
+     Quello che scorre fuori dai fianchi lo taglia gia html. */
+  .cta-carousel {
+    display: block;
     order: 2;
+  }
+
+  .cta-carousel-track {
+    will-change: transform;
   }
 
   .match-panel-head {
