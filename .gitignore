@@ -18,6 +18,12 @@
 /.vinext/
 /out/
 
+# Lo riscrive scripts/write-version.mjs prima di ogni build, con un numero
+# diverso ogni volta. Seguito da git darebbe un conflitto a ogni push fatto
+# da due persone diverse, e non servirebbe a niente: in produzione lo genera
+# la build di Vercel.
+/public/version.json
+
 # misc
 .DS_Store
 *.pem
