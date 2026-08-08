@@ -9,11 +9,25 @@ perdono passando da una sessione all'altra.
 "in sospeso" a "deciso". Quando scarti una strada, scrivi perché: serve a non
 ripercorrerla fra un mese.
 
-Ultimo aggiornamento: 6 agosto 2026
+Ultimo aggiornamento: 8 agosto 2026
 
 ---
 
 ## In sospeso
+
+### Il torneo non si crea da mobile
+Il tasto "+ Nuovo torneo" dentro al riquadro degli ultimi tornei è stato
+tolto: su mobile era l'unico modo per aprirne uno, quindi al momento da
+telefono un torneo non si crea. Il riquadro con gli ultimi resta, e su
+desktop il tasto è ancora nell'intestazione di sezione. Va rimesso quando
+avremo deciso da dove si crea davvero.
+
+### I pallini della card partite non si toccano
+Nella card delle partite in home i tre pallini dicono quale filtro è in
+scena, ma non lo cambiano: dentro un tasto non ci possono stare altri tasti,
+e la card intera apre già il foglio. Il filtro si cambia lì dentro. La
+classifica ha lo swipe, le partite no — se serve anche lì, è lo stesso
+meccanismo di `slideRanking` da estendere a tre facce invece di due.
 
 ### Tre agganci CSS morti
 `theme-dark`, `.app-shell-hub` e `.is-open` hanno regole in `globals.css` ma
@@ -36,6 +50,68 @@ salvata sulla schermata Home. Per ora c'è il pallino sull'icona Pizza.
 ---
 
 ## Deciso, e perché
+
+### Le card della home non hanno più un'insegna
+"Classifica Elo · Singolo" e "Partite · Tutti" cambiavano insieme al
+contenuto, e dicevano a parole quello che i pallini dicono con un segno. Su
+mobile il titolo è sparito da tutte e due le card; il riquadro dei tornei lo
+tiene, perché quello ha una faccia sola. Il contenitore dell'insegna della
+classifica resta nel DOM, svuotato e alto zero: è il punto di riferimento con
+cui la pagina tiene ferma la posizione mentre la card cambia faccia.
+
+### I pallini stanno sotto la card, non accanto al titolo
+Tolta l'insegna non avevano più niente accanto a cui stare. Ora sono
+centrati sotto l'ultima riga, dove si guarda per capire quante facce ha una
+card — come sotto le foto di un profilo. Nei fogli invece i pallini hanno
+preso il posto degli interruttori a icone, e lì si toccano: le icone
+ripetevano quello che il titolo del foglio dice già per esteso, e con tre
+facce non ci stavano più.
+
+### Le partite si filtrano in tre modi
+Personale, tutti, tornei — in quest'ordine, dalla più vicina a chi guarda
+alla più lontana. Una partita è "di torneo" se porta con sé il turno da cui è
+nata (`tournament_fixture_id`): non serve interrogare i calendari, la partita
+sa già da sola di appartenere a uno. Il filtro vive in un punto solo e serve
+sia l'anteprima nella card sia il raccoglitore per mese, così i conteggi
+dicono sempre quante partite ci sono davvero.
+
+### "+ NUOVO" sta in cima, sotto la card di chi guarda
+Aprire una partita nuova è la prima cosa che si fa entrando: prima il tasto
+stava fra la classifica e le partite e bisognava scorrere per trovarlo. Il
+testo è corto perché lì attorno non c'è nient'altro da creare, e il contesto
+lo dà la posizione.
+
+### Su touch non si seleziona il testo
+Tenere premuto faceva comparire la selezione e la lente con "Copia", e la
+pagina sembrava un documento invece di un'app. La selezione resta accesa solo
+nei campi in cui si scrive, dove serve per correggere, e solo dove non c'è un
+puntatore: col mouse selezionare è un gesto normale e toglierlo sarebbe una
+perdita.
+
+### La pastiglia della barra resta schiacciata finché premi
+Prima faceva un rimbalzo di durata fissa: tenendo premuto risaliva da sola
+dopo due decimi e sembrava che il tocco fosse già finito mentre il dito era
+ancora lì. Ora si comporta come il tasto della nuova partita. Non può usare
+`transform` — quello lo scrive il gesto per posizionarla — quindi si schiaccia
+con la proprietà `scale`, che si somma alla traslazione invece di
+sostituirla, e la transizione arriva dallo stile inline scritto in
+`page.tsx`: lì `transition` viene riscritto a ogni spostamento e una regola
+nel CSS verrebbe comunque sovrascritta.
+
+### Gli slot vuoti non hanno linee, e nemmeno la riga sopra di loro
+L'anteprima tiene sempre tre righe, anche quando le squadre in classifica
+sono due: senza, passando da singolo a squadre la card si accorciava e la
+home si muoveva sotto il dito. Gli slot vuoti erano già senza linea di fondo,
+ma restava quella dell'ultima squadra vera: non divideva due coppie, divideva
+una coppia dal niente, e sembrava che sotto ci fosse una terza squadra ancora
+da caricare. Ora la perde anche lei.
+
+### La fascia di sistema è solo sfocatura, senza colore
+La campitura chiara sopra alla Dynamic Island si vedeva come una fascia
+posticcia appena sotto le passava un blocco scuro o una foto. Adesso quello
+che scorre sotto non viene coperto, viene solo appannato quanto basta a
+staccare l'ora e le icone di sistema — e la maschera parte già sfumata in
+cima, così non c'è nessun bordo da nessuna parte.
 
 ### La classifica in home è un bersaglio solo
 Erano tre cose da toccare nello stesso riquadro — lo switch player/team, le

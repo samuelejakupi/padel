@@ -1453,6 +1453,14 @@ function useIsPhone() {
   return isPhone;
 }
 
+// La pastiglia della barra viene spostata scrivendo `transform` direttamente
+// sullo stile, quindi la traslazione non deve essere animata dal CSS: se lo
+// fosse, ogni riposizionamento verrebbe animato due volte. Resta accesa solo
+// su `scale`, che e la proprieta con cui il CSS la schiaccia mentre il dito
+// preme: le due cose si sommano invece di sostituirsi, e cosi la pressione si
+// vede senza che il gesto perda il controllo della posizione.
+const NAV_PILL_TRANSITION = "scale 140ms cubic-bezier(0.34, 1.56, 0.64, 1)";
+
 function MatchCard({
   match,
   onEdit,
@@ -3616,8 +3624,10 @@ function AppShell({ session }: { session: Session | null }) {
   // bisogno di sapere quale delle due classifiche è in scena.
   const [rankingMode, setRankingMode] = useState<"single" | "team">("single");
   const isPhone = useIsPhone();
-  // Quali partite mostra il foglio: tutte, oppure solo quelle di chi guarda.
-  const [matchesMode, setMatchesMode] = useState<"all" | "mine">("all");
+  // Quali partite mostrano la card e il foglio: le proprie, tutte, o solo
+  // quelle giocate dentro a un torneo. L'ordine e quello dei pallini, dalla
+  // piu personale alla piu lontana.
+  const [matchesMode, setMatchesMode] = useState<"mine" | "all" | "tournaments">("all");
   // Quale raccoglitore del mese è aperto, uno solo per volta. Tre stati e non
   // due: undefined vuol dire "nessuna scelta ancora", e allora vale il mese
   // più recente; null vuol dire chiuso perché è stato chiuso apposta. Senza
@@ -4274,15 +4284,34 @@ function AppShell({ session }: { session: Session | null }) {
     return null;
   }, [matches, teams, currentUserId]);
 
-  // Le partite del foglio, divise per mese. Il filtro "personale" agisce
-  // prima del raggruppamento, così i conteggi sui raccoglitori dicono quante
-  // partite ci sono davvero dentro e non quante ce ne sarebbero in totale.
+  // Le partite scelte dai pallini. Il filtro sta qui e non dentro al foglio
+  // perché lo stesso elenco serve in due posti: l'anteprima nella card e il
+  // raccoglitore per mese. Una partita è "di torneo" se il calendario di un
+  // torneo la rivendica, cioè se porta con sé il turno da cui è nata.
+  const filteredMatches = useMemo(() => {
+    if (matchesMode === "mine" && currentUserId) {
+      return matches.filter((match) => match.players.some((player) => player.profile_id === currentUserId));
+    }
+    if (matchesMode === "tournaments") {
+      return matches.filter((match) => Boolean(match.tournament_fixture_id));
+    }
+    return matches;
+  }, [matches, matchesMode, currentUserId]);
+
+  // Nessuna partita, detto con le parole del filtro attivo: "non ce n'è" e
+  // "non ne hai ancora giocate" sono due cose diverse.
+  const emptyMatchesNote = matchesMode === "mine"
+    ? "Non hai ancora giocato nessuna partita."
+    : matchesMode === "tournaments"
+      ? "Nessuna partita di torneo."
+      : "Nessuna partita registrata.";
+
+  // Le partite del foglio, divise per mese. Il filtro agisce prima del
+  // raggruppamento, così i conteggi sui raccoglitori dicono quante partite ci
+  // sono davvero dentro e non quante ce ne sarebbero in totale.
   const matchMonths = useMemo(() => {
-    const source = matchesMode === "mine" && currentUserId
-      ? matches.filter((match) => match.players.some((player) => player.profile_id === currentUserId))
-      : matches;
     const groups = new Map<string, { key: string; label: string; matches: PadelMatch[] }>();
-    source.forEach((match) => {
+    filteredMatches.forEach((match) => {
       const date = new Date(match.played_at);
       // La chiave è ordinabile come testo, quindi il riordino qui sotto non
       // ha bisogno di ricostruire nessuna data.
@@ -4296,7 +4325,7 @@ function AppShell({ session }: { session: Session | null }) {
       group.matches.push(match);
     });
     return [...groups.values()].sort((a, b) => (a.key < b.key ? 1 : -1));
-  }, [matches, matchesMode, currentUserId]);
+  }, [filteredMatches]);
 
   // Il mese più recente è già aperto quando il foglio sale, e torna ad
   // aprirsi passando fra tutte le partite e le proprie: è quello che si va a
@@ -4387,7 +4416,7 @@ function AppShell({ session }: { session: Session | null }) {
     // La posizione finale viene scritta subito: l'animazione qui sotto la
     // sovrascrive solo mentre e in corso, cosi alla fine non c'e nessuno
     // scatto di assestamento.
-    pill.style.transition = "none";
+    pill.style.transition = NAV_PILL_TRANSITION;
     pill.style.opacity = "1";
     pill.style.width = `${buttonBox.width}px`;
     pill.style.transform = `translateX(${to}px)`;
@@ -4429,7 +4458,7 @@ function AppShell({ session }: { session: Session | null }) {
     const firstBox = first.getBoundingClientRect();
     const lastBox = last.getBoundingClientRect();
     const left = clientX - navBox.left - firstBox.width / 2;
-    pill.style.transition = "none";
+    pill.style.transition = NAV_PILL_TRANSITION;
     pill.style.opacity = "1";
     pill.style.width = `${firstBox.width}px`;
     const clamped = Math.min(
@@ -4965,27 +4994,36 @@ function AppShell({ session }: { session: Session | null }) {
                   <div className="section-head-label"><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
                   <div className="court-actions">
                     <button className="button button-primary cta-new-match cta-aurora" onClick={() => setShowMatch(true)}>+ Nuova partita</button>
-                    {matches.length ? (
+                    {filteredMatches.length ? (
                       <button
                         className="button button-card cta-see-all-top"
                         onClick={() => { setChosenMonth(undefined); setSheet("matches"); }}
                       >
-                        {`Vedi tutto (${matches.length})`}
+                        {`Vedi tutto (${filteredMatches.length})`}
                       </button>
                     ) : null}
                   </div>
                 </div>
-                {/* Il tasto è uscito dal riquadro e sta fra la classifica e
-                    le partite: è il gesto che le collega, non un comando che
-                    appartiene all'elenco. Su desktop resta invisibile, lì
-                    comanda quello nell'intestazione di sezione. */}
-                <button className="button button-primary cta-new-match cta-in-panel cta-between cta-aurora" onClick={() => setShowMatch(true)}>+ Nuova partita</button>
-                <div className="match-panel">
+                {/* Il tasto è uscito dal riquadro e sta fra la card di chi
+                    guarda e la classifica: è la prima cosa che si fa, quindi
+                    sta in cima e non in mezzo all'elenco. Su desktop resta
+                    invisibile, lì comanda quello nell'intestazione di
+                    sezione. */}
+                <button
+                  className="button button-primary cta-new-match cta-in-panel cta-between cta-aurora"
+                  onClick={() => setShowMatch(true)}
+                  aria-label="Nuova partita"
+                >
+                  + NUOVO
+                </button>
+                <div className="match-panel matches-panel">
                   {/* Titolo interno al riquadro, come "Classifica Elo".
                       Su desktop resta nascosto: li il titolo di sezione
-                      c'e gia sopra, fuori dal riquadro. */}
-                  <div className="match-panel-head"><h2>{isPhone ? "Partite - Tutti" : "Ultime partite"}</h2></div>
-                  {matches.length ? (
+                      c'e gia sopra, fuori dal riquadro. Su mobile sparisce
+                      del tutto: cambiava insieme ai pallini e diceva due
+                      volte la stessa cosa. */}
+                  <div className="match-panel-head"><h2>Ultime partite</h2></div>
+                  {filteredMatches.length ? (
                     isPhone ? (
                       /* Come la classifica: tutta la card è il bersaglio e
                          apre il foglio. Le singole partite non portano più in
@@ -4996,10 +5034,10 @@ function AppShell({ session }: { session: Session | null }) {
                         type="button"
                         className="match-panel-open"
                         onClick={() => { setChosenMonth(undefined); setSheet("matches"); }}
-                        aria-label={`Apri tutte le partite (${matches.length})`}
+                        aria-label={`Apri tutte le partite (${filteredMatches.length})`}
                       >
                         <div className="match-list">
-                          {matches.slice(0, HOME_MATCHES).map((match) => (
+                          {filteredMatches.slice(0, HOME_MATCHES).map((match) => (
                             <MatchCard
                               key={match.id}
                               match={match}
@@ -5011,7 +5049,7 @@ function AppShell({ session }: { session: Session | null }) {
                       </button>
                     ) : (
                       <div className="match-list">
-                        {matches.slice(0, HOME_MATCHES).map((match) => (
+                        {filteredMatches.slice(0, HOME_MATCHES).map((match) => (
                           <MatchCard
                             key={match.id}
                             match={match}
@@ -5023,8 +5061,17 @@ function AppShell({ session }: { session: Session | null }) {
                       </div>
                     )
                   ) : (
-                    <div className="compact-empty panel-empty"><span>00</span><p>Nessuna partita registrata. La prima scriverà la storia.</p></div>
+                    <div className="compact-empty panel-empty"><span>00</span><p>{emptyMatchesNote}</p></div>
                   )}
+                  {/* Gli stessi pallini della classifica: dicono che la card
+                      ha tre facce e quale stai guardando. Si cambia dentro al
+                      foglio, dove sono tasti veri — qui la card è già un
+                      bersaglio solo e altri tasti non ce ne stanno. */}
+                  <span className="card-dots" aria-hidden="true">
+                    <i className={matchesMode === "mine" ? "is-current" : ""} />
+                    <i className={matchesMode === "all" ? "is-current" : ""} />
+                    <i className={matchesMode === "tournaments" ? "is-current" : ""} />
+                  </span>
                 </div>
 
                 {/* Tornei: stessa impaginazione delle partite, tasto di
@@ -5041,14 +5088,12 @@ function AppShell({ session }: { session: Session | null }) {
                     </button>
                   </div>
                 </div>
+                {/* Niente tasto "+ Nuovo torneo" dentro al riquadro: su
+                    mobile era l'unico modo per crearne uno e per ora il
+                    torneo non si crea da qui. Il riquadro con gli ultimi
+                    resta, e su desktop il tasto è ancora nell'intestazione
+                    di sezione qui sopra. */}
                 <div className="match-panel tournament-panel">
-                  <button
-                    className="button button-lime cta-new-match cta-in-panel cta-aurora"
-                    onClick={() => setShowTournamentCreate(true)}
-                    disabled={!tournamentSchemaReady}
-                  >
-                    + Nuovo torneo
-                  </button>
                   <div className="match-panel-head"><h2>Ultimi tornei</h2></div>
                   {tournaments.length ? (
                     <div className="match-list">
@@ -5127,6 +5172,14 @@ function AppShell({ session }: { session: Session | null }) {
                       )}
                     </div>
                   </div>
+                  {/* Su mobile i pallini scendono qui, centrati sotto la
+                      terza riga: senza piu l'insegna in alto non avevano piu
+                      niente accanto a cui stare, e sotto all'elenco sono
+                      dove li si cerca — come sotto le foto di un profilo. */}
+                  <span className="card-dots" aria-hidden="true">
+                    <i className={rankingMode === "single" ? "is-current" : ""} />
+                    <i className={rankingMode === "team" ? "is-current" : ""} />
+                  </span>
                 </button>
               </aside>
             </section>
@@ -5656,32 +5709,44 @@ function AppShell({ session }: { session: Session | null }) {
 
       {sheet === "matches" ? (
         <BottomSheet
-          title={matchesMode === "all" ? "Partite - Tutti" : "Partite - Personale"}
+          title={matchesMode === "mine"
+            ? "Partite - Personale"
+            : matchesMode === "tournaments"
+              ? "Partite - Tornei"
+              : "Partite - Tutti"}
           onClose={() => setSheet(null)}
+          /* Pallini al posto degli interruttori con le icone: sono gli stessi
+             della card da cui il foglio si apre, e li dentro si toccano. Le
+             icone dicevano una seconda volta quello che il titolo del foglio
+             dice gia per esteso, e con tre facce non ci stavano piu. */
           action={(
-            <div className="mode-switch" role="group" aria-label="Quali partite">
+            <div className="dot-switch" role="group" aria-label="Quali partite">
               <button
-                className={matchesMode === "all" ? "active" : ""}
+                className={matchesMode === "mine" ? "active" : ""}
                 // Il raccoglitore da aprire lo decide l'effetto qui sopra:
                 // cambiando insieme cambiano i mesi, e va riaperto il più
                 // recente di quelli nuovi.
-                onClick={() => { setMatchesMode("all"); setChosenMonth(undefined); }}
-                aria-label="Tutte le partite"
-                title="Tutti"
-              >
-                <NavGlyph name="people" />
-              </button>
-              <button
-                className={matchesMode === "mine" ? "active" : ""}
                 onClick={() => { setMatchesMode("mine"); setChosenMonth(undefined); }}
                 aria-label="Solo le mie partite"
                 title="Personale"
               >
-                {/* La faccia di chi guarda al posto di un glifo: dice "queste
-                    sono le tue" senza bisogno di una parola. */}
-                {currentUser
-                  ? <Avatar profile={currentUser} size="sm" />
-                  : <NavGlyph name="person" />}
+                <i />
+              </button>
+              <button
+                className={matchesMode === "all" ? "active" : ""}
+                onClick={() => { setMatchesMode("all"); setChosenMonth(undefined); }}
+                aria-label="Tutte le partite"
+                title="Tutti"
+              >
+                <i />
+              </button>
+              <button
+                className={matchesMode === "tournaments" ? "active" : ""}
+                onClick={() => { setMatchesMode("tournaments"); setChosenMonth(undefined); }}
+                aria-label="Solo le partite di torneo"
+                title="Tornei"
+              >
+                <i />
               </button>
             </div>
           )}
@@ -5713,7 +5778,7 @@ function AppShell({ session }: { session: Session | null }) {
             )) : (
               <div className="compact-empty panel-empty">
                 <span>00</span>
-                <p>{matchesMode === "mine" ? "Non hai ancora giocato nessuna partita." : "Nessuna partita registrata."}</p>
+                <p>{emptyMatchesNote}</p>
               </div>
             )}
           </div>
@@ -5726,7 +5791,7 @@ function AppShell({ session }: { session: Session | null }) {
           title={rankingMode === "single" ? "Classifica Elo - Singolo" : "Classifica Elo - Squadra"}
           onClose={() => setSheet(null)}
           action={(
-            <div className="mode-switch" role="group" aria-label="Tipo di classifica">
+            <div className="dot-switch" role="group" aria-label="Tipo di classifica">
               <button
                 className={rankingMode === "single" ? "active" : ""}
                 // Cambiando tipo di classifica si torna sempre alla stagione
@@ -5735,7 +5800,7 @@ function AppShell({ session }: { session: Session | null }) {
                 aria-label="Classifica singolo"
                 title="Singolo"
               >
-                <NavGlyph name="person" />
+                <i />
               </button>
               <button
                 className={rankingMode === "team" ? "active" : ""}
@@ -5743,7 +5808,7 @@ function AppShell({ session }: { session: Session | null }) {
                 aria-label="Classifica squadre"
                 title="Squadra"
               >
-                <NavGlyph name="people" />
+                <i />
               </button>
             </div>
           )}

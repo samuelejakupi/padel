@@ -1458,6 +1458,28 @@ form select:focus,
   background: var(--ink-30);
 }
 
+/* Gli stessi pallini, ma su una riga tutta loro sotto l'ultima riga della
+   card invece che accanto all'insegna. Esistono solo su mobile, dove
+   l'insegna non c'e piu: su desktop il titolo dice gia cosa stai guardando,
+   e una riga di pallini in fondo sarebbe solo un ornamento. */
+.card-dots {
+  display: none;
+  gap: 5px;
+  justify-content: center;
+}
+
+.card-dots i {
+  background: var(--veil-2);
+  border-radius: var(--radius-pill);
+  height: 6px;
+  transition: background 200ms ease;
+  width: 6px;
+}
+
+.card-dots i.is-current {
+  background: var(--ink-30);
+}
+
 .dashboard-side {
   /* Alta quanto il suo contenuto, non quanto la colonna accanto. La griglia
      allunga le celle (align-items: stretch) e finché in fondo alla card
@@ -1564,6 +1586,13 @@ form select:focus,
    dell'anteprima: tiene il posto e basta, senza nemmeno la riga di fondo,
    che segnerebbe una divisione fra due vuoti. */
 .ranking-row-empty {
+  border-bottom-color: transparent;
+}
+
+/* L'ultima riga vera prima degli slot vuoti perde anche lei la linea: quella
+   riga non divide due squadre, divide una squadra dal niente, e disegnata
+   sembrava che sotto ci fosse una terza coppia ancora da caricare. */
+.ranking-row:has(+ .ranking-row-empty) {
   border-bottom-color: transparent;
 }
 
@@ -2347,20 +2376,6 @@ button.podium-person {
   opacity: 0.42;
 }
 
-/* Nello switch delle partite una delle due voci è la faccia di chi guarda,
-   non un glifo: va rimpicciolita al passo dei tracciati e spenta con la
-   stessa opacità, altrimenti la voce non scelta resterebbe più viva
-   dell'altra. */
-.mode-switch .avatar {
-  border-width: 1.5px;
-  height: 22px;
-  width: 22px;
-}
-
-.mode-switch button:not(.active) .avatar {
-  opacity: 0.42;
-}
-
 .mode-switch button.active {
   background: var(--white);
   box-shadow: 0 1px 3px rgba(11, 27, 44, 0.12);
@@ -2369,6 +2384,43 @@ button.podium-person {
 .mode-switch .nav-glyph {
   height: 19px;
   width: 19px;
+}
+
+/* Gli stessi pallini del carosello, ma qui si toccano: sono il selettore in
+   cima ai fogli, dove hanno preso il posto dello switch a icone. Il pallino
+   e piccolo, il tasto che lo contiene no — la parte da colpire e larga
+   quanto un dito, il segno a video resta un punto. */
+.dot-switch {
+  align-items: center;
+  display: inline-flex;
+  gap: 2px;
+}
+
+.dot-switch button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  display: flex;
+  height: 34px;
+  justify-content: center;
+  padding: 0;
+  width: 22px;
+}
+
+.dot-switch i {
+  background: var(--veil-3);
+  border-radius: var(--radius-pill);
+  height: 7px;
+  transition: background 200ms ease;
+  width: 7px;
+}
+
+/* Pieno, non solo piu scuro: qui il pallino e un comando e deve dire senza
+   dubbi quale delle tre facce e in scena. */
+.dot-switch button.active i {
+  background: var(--ink);
 }
 
 .ranking-switch {
@@ -6239,52 +6291,42 @@ button.pizza-ranking-row {
      tondo dell'iPhone tagli la pastiglia delle voci laterali. */
   /* Striscia di sistema in alto, gemella della dissolvenza qui sotto.
      Sostituisce la fascia opaca che disegnava iOS.
-     Prende il colore della pagina, non un grigio scuro suo: a riposo deve
-     essere invisibile, non una tacca sopra la Dynamic Island. Nasconde
-     comunque quello che le scorre sotto, esattamente come faceva la fascia
-     di sistema, solo che lo fa senza farsi notare.
+     E solo sfocatura, senza nessun colore suo: a riposo deve essere
+     invisibile, non una tacca sopra la Dynamic Island. Quello che le scorre
+     sotto continua a vedersi, appena appannato — quanto basta a leggere ora
+     e icone di sistema senza che la fascia si faccia notare.
      Quando si apre il foglio dal basso si ritira del tutto (--island va a 1):
      il contenuto torna a passarle sotto e il velo del foglio, che sta piu in
      alto, lo sfoca insieme al resto dello schermo invece di trovare qui una
      campitura piatta. Alla chiusura rientra con lo stesso tempo, quindi la
      fascia e la sfocatura vanno e vengono insieme. */
   .app-shell::before {
-    /* Vetro smerigliato invece di una fascia: quello che passa sotto non
-       viene coperto, viene sfocato, e la sfocatura si spegne scendendo
-       insieme al colore. La tinta unita dura solo il primo terzo dell'area
-       sicura — quanto basta a tenere leggibili l'ora e le icone di sistema,
-       che e il patto scritto in layout.tsx — e da li in giu e tutta
-       dissolvenza, che scende anche oltre l'area sicura per avere lo spazio
-       in cui finire.
-       La maschera serve alla sfocatura: senza, il vetro si interromperebbe
-       di netto sul bordo basso, che e esattamente il gradino da togliere.
-       Spegne anche il colore, quindi le due fermate qui sotto vanno lette
-       come una dissolvenza dentro l'altra.
-       Prima la versione a due fermate, per chi non ha color-mix. */
-    -webkit-backdrop-filter: blur(14px);
-    backdrop-filter: blur(14px);
-    background: linear-gradient(to bottom, var(--scroll-edge) 0%, transparent 100%);
-    background: linear-gradient(
-      to bottom,
-      var(--scroll-edge) 0%,
-      var(--scroll-edge) calc(env(safe-area-inset-top) * 0.34),
-      color-mix(in srgb, var(--scroll-edge) 58%, transparent)
-        calc(env(safe-area-inset-top) * 0.72),
-      color-mix(in srgb, var(--scroll-edge) 22%, transparent) env(safe-area-inset-top),
-      transparent 100%
-    );
+    /* Solo vetro, niente piu tinta. La campitura chiara sopra alla Dynamic
+       Island si vedeva come una fascia posticcia appena sotto le passava un
+       blocco scuro o una foto: era la cosa che faceva sembrare la barra di
+       sistema incollata sopra alla pagina invece che parte sua. Adesso
+       quello che scorre sotto non viene coperto, viene solo appannato
+       quanto basta a staccare l'ora e le icone da quello che ci passa
+       dietro — un velo di sfocatura, non un colore.
+       Sfocatura piccola di proposito: piu alta e non aiuta a leggere, fa
+       solo sembrare che il contenuto sia fuori fuoco.
+       La maschera e la dissolvenza: parte gia sfumata in cima invece che
+       piena, cosi non c'e nessun bordo da nessuna parte, e finisce prima
+       del fondo per avere lo spazio in cui spegnersi. */
+    -webkit-backdrop-filter: blur(7px);
+    backdrop-filter: blur(7px);
     -webkit-mask-image: linear-gradient(
       to bottom,
-      black 0%,
-      black calc(env(safe-area-inset-top) * 0.34),
-      rgba(0, 0, 0, 0.45) calc(env(safe-area-inset-top) * 0.78),
+      rgba(0, 0, 0, 0.92) 0%,
+      rgba(0, 0, 0, 0.72) calc(env(safe-area-inset-top) * 0.55),
+      rgba(0, 0, 0, 0.3) env(safe-area-inset-top),
       transparent 100%
     );
     mask-image: linear-gradient(
       to bottom,
-      black 0%,
-      black calc(env(safe-area-inset-top) * 0.34),
-      rgba(0, 0, 0, 0.45) calc(env(safe-area-inset-top) * 0.78),
+      rgba(0, 0, 0, 0.92) 0%,
+      rgba(0, 0, 0, 0.72) calc(env(safe-area-inset-top) * 0.55),
+      rgba(0, 0, 0, 0.3) env(safe-area-inset-top),
       transparent 100%
     );
     opacity: calc(1 - var(--island));
@@ -6604,6 +6646,13 @@ button.pizza-ranking-row {
     padding: 0 14px var(--space-3);
   }
 
+  /* Senza insegna in cima il riquadro delle partite partiva a filo: lo
+     spazio che dava l'intestazione ora lo mette il riquadro. Solo qui,
+     perche i tornei l'insegna ce l'hanno ancora. */
+  .matches-panel {
+    padding-top: var(--space-2);
+  }
+
   /* Le card stanno sopra agli aloni dei tasti. I tasti sono posizionati —
      serve al bagliore che li attraversa — e un elemento posizionato si
      dipinge sopra a uno che non lo e, per quanto lo si scriva prima: l'alone
@@ -6623,7 +6672,9 @@ button.pizza-ranking-row {
     z-index: 0;
   }
 
-  /* Il tasto è uscito dal riquadro e sta fra la classifica e le partite.
+  /* Il tasto è uscito dal riquadro e sta fra la card di chi guarda e la
+     classifica: aprire una partita nuova è la prima cosa che si fa entrando,
+     e in cima ci si arriva senza scorrere.
      Due classi e non una perché deve battere i margini che .cta-in-panel
      porta con sé: servivano quando il tasto stava dentro al riquadro, qui si
      sommano al gap della colonna e lo staccano più del dovuto — e in modo
@@ -6631,12 +6682,39 @@ button.pizza-ranking-row {
      deve dare solo il gap, lo stesso che separa due card. */
   .cta-in-panel.cta-between {
     margin: 0;
-    order: 3;
+    order: 2;
   }
 
   .match-panel-head {
     display: block;
     padding: 15px 0 10px;
+  }
+
+  /* Le due card della home restano senza insegna: il titolo cambiava
+     insieme al contenuto — singolo/squadra, personale/tutti/tornei — e
+     diceva a parole quello che i pallini dicono con un segno. I tornei la
+     tengono: quel riquadro ha una faccia sola. */
+  .matches-panel .match-panel-head {
+    display: none;
+  }
+
+  /* Il contenitore dell'insegna resta, svuotato e alto zero: e il punto di
+     riferimento con cui la pagina tiene ferma la posizione mentre la card
+     cambia faccia, e toglierlo dal flusso farebbe saltare lo scorrimento. */
+  .dashboard-side .side-head {
+    margin: 0;
+  }
+
+  .dashboard-side .side-head > div,
+  .dashboard-side .side-head .ranking-dots {
+    display: none;
+  }
+
+  /* I pallini scendono sotto l'ultima riga, centrati: e li che si guarda
+     per capire quante facce ha una card, come sotto le foto di un profilo. */
+  .card-dots {
+    display: flex;
+    padding-top: var(--space-3);
   }
 
   /* Titoli dei riquadri: piccoli e maiuscoli, cosi fanno da etichetta e
@@ -6963,8 +7041,8 @@ button.pizza-ranking-row {
 
   /* Ordine della home su mobile. dashboard-main sparisce come contenitore
      (display: contents) cosi i suoi figli diventano fratelli della
-     classifica e si possono impaginare tutti insieme: profilo, classifica,
-     tasto nuova partita, ultime partite, tasto nuovo torneo, ultimi tornei.
+     classifica e si possono impaginare tutti insieme: profilo, tasto nuova
+     partita, classifica, ultime partite, ultimi tornei.
      Su desktop resta la disposizione a due colonne. */
   .dashboard-grid {
     display: flex;
@@ -6980,7 +7058,7 @@ button.pizza-ranking-row {
   }
 
   .dashboard-side {
-    order: 2;
+    order: 3;
     /* Qui la home non è una griglia ma una colonna flex, e in una colonna
        align-self guarda il lato corto: cioè la larghezza. Lasciarlo a "start",
        che su desktop serve solo a non far allungare la card, qui la faceva
@@ -7805,6 +7883,27 @@ button.pizza-ranking-row {
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Tenere premuto non deve selezionare il testo ne far comparire la lente
+     con "Copia": in un'app quel gesto serve solo a premere, e la selezione
+     che restava accesa faceva sembrare la pagina un documento. Vale solo
+     dove non c'e un puntatore: col mouse selezionare e un gesto normale e
+     toglierlo sarebbe una perdita. */
+  body {
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+  }
+
+  /* Nei campi in cui si scrive la selezione e il modo per correggere: li
+     resta, altrimenti non si potrebbe rileggere ne sistemare quel che si e
+     appena battuto. */
+  input,
+  textarea,
+  [contenteditable="true"] {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
   .button:hover,
   .hero-stat-link:hover,
   .hub-profile:hover,
@@ -7894,25 +7993,18 @@ button.pizza-ranking-row {
   transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* La pastiglia della barra non puo usare ne transform ne transition: il
-   primo lo scrive il gesto per posizionarla, il secondo viene azzerato a
-   mano prima di ogni spostamento. Restano la proprieta scale, che si
-   combina con la traslazione invece di sostituirla, e un'animazione, che
-   non passa da transition. Va e torna da sola: cosi il rimbalzo dura
-   sempre uguale, che il dito lo si alzi subito o si resti premuti. */
-@keyframes nav-pill-press {
-  0%,
-  100% {
-    scale: 1;
-  }
-
-  45% {
-    scale: 0.92;
-  }
-}
-
+/* La pastiglia resta schiacciata finche il dito preme e torna su quando lo
+   alzi, come il tasto della nuova partita. Prima faceva un rimbalzo di
+   durata fissa: tenendo premuto risaliva da sola dopo due decimi e sembrava
+   che il tocco fosse gia finito mentre il dito era ancora li.
+   La pastiglia non puo usare transform — quello lo scrive il gesto per
+   posizionarla — quindi si schiaccia con la proprieta scale, che si combina
+   con la traslazione invece di sostituirla. La transizione arriva dallo
+   stile inline (NAV_PILL_TRANSITION in page.tsx): li transition viene
+   riscritto a ogni spostamento, e una regola qui verrebbe comunque
+   sovrascritta. */
 .mobile-nav:has(button:active) .mobile-nav-pill {
-  animation: nav-pill-press 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  scale: 0.92;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -7933,10 +8025,6 @@ button.pizza-ranking-row {
 
   .emblem-fill stop,
   .emblem-ring stop {
-    animation: none;
-  }
-
-  .mobile-nav:has(button:active) .mobile-nav-pill {
     animation: none;
   }
 
