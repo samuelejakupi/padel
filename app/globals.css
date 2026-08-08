@@ -6962,13 +6962,13 @@ button.pizza-ranking-row {
   .cta-carousel {
     display: block;
     order: 2;
-    /* Taglia il gemello che sta di fianco: senza, si vedrebbe sempre tutto
-       intero accanto al tasto vero invece di spuntare solo quando il nastro
-       si muove. */
-    overflow: hidden;
-    /* Il raggio serve al taglio: il tasto e arrotondato, e un ritaglio
-       squadrato gli scoprirebbe gli angoli. */
-    border-radius: var(--radius);
+    /* Niente overflow, per lo stesso motivo scritto piu sotto: l'alone del
+       tasto esce dai suoi bordi e ritagliarlo lo spegne — provato, e si
+       vedevano gli angoli tagliati.
+       Il gemello di fianco non ha bisogno di essere ritagliato qui: il tasto
+       e largo quanto la colonna, quindi una copia spostata di tutta la sua
+       larghezza finisce gia fuori dallo schermo, e a tagliarla ci pensa
+       overflow-x: clip su html. */
   }
 
   .cta-carousel-track {
