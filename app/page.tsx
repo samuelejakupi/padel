@@ -5119,7 +5119,7 @@ function AppShell({ session }: { session: Session | null }) {
                   className="button button-primary cta-new-match cta-in-panel cta-between cta-aurora"
                   onClick={() => setShowMatch(true)}
                 >
-                  + REGISTRA PARTITA
+                  + NUOVA PARTITA
                 </button>
                 <div className="match-panel matches-panel" ref={setMatchesCard}>
                   {/* Titolo interno al riquadro, come "Classifica Elo".
