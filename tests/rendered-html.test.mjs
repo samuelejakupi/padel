@@ -9,6 +9,11 @@ test("genera un sito statico pronto per GitHub Pages", async () => {
   await access(new URL("out/_next/", root));
   const html = await readFile(new URL("out/index.html", root), "utf8");
   assert.match(html, /TheBoyz/i);
+  // Next 16 non lo emette piu da solo ed e scritto a mano in layout.tsx: senza,
+  // iOS rimpicciolisce la finestra dell'app salvata in home (797 su 844) e la
+  // barra del menu non riesce a scendere. Se un aggiornamento lo fa sparire,
+  // deve fallire qui e non sul telefono di qualcuno.
+  assert.match(html, /<meta name="apple-mobile-web-app-capable" content="yes"/);
   assert.match(html, /Pizzeria Ranking/i);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
 });

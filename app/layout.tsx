@@ -96,6 +96,18 @@ export default function RootLayout({
   return (
     <html lang="it">
       <head>
+        {/* Scritto a mano perche Next 16 non lo emette piu: da `appleWebApp.capable`
+            genera solo `mobile-web-app-capable`, considerando quello con il
+            prefisso apple deprecato. iOS pero lo vuole ancora, ed e lui a dire
+            "questa app va a tutto schermo": senza, `black-translucent` e
+            `viewport-fit=cover` non valgono, l'app parte in standalone dal
+            manifest ma con la finestra rimpicciolita — 797 px su uno schermo da
+            844, misurati l'8 agosto — e i 47 px che restano sotto non sono
+            disegnabili. E la causa della barra del menu che non riusciva a
+            scendere e della fascia di sistema che non sfocava niente.
+            Verificare in `out/index.html` che ci sia, dopo ogni aggiornamento
+            di Next: se sparisce, il sintomo torna. */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta httpEquiv="Cache-Control" content="no-cache, must-revalidate" />
         {/* Recupero da cache mista. iOS puo conservare l'HTML di un deploy
             vecchio: quell'HTML chiama file JavaScript che non esistono piu e
