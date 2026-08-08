@@ -48,42 +48,42 @@ salvata sulla schermata Home. Per ora c'è il pallino sull'icona Pizza.
 "Classifica Elo · Singolo" e "Partite · Tutti" cambiavano insieme al
 contenuto, e dicevano a parole quello che i pallini dicono con un segno. Su
 mobile il titolo è sparito da tutte e due le card; il riquadro dei tornei lo
-tiene, perché quello ha una faccia sola. Il contenitore dell'insegna della
-classifica resta nel DOM, svuotato e alto zero: è il punto di riferimento con
-cui la pagina tiene ferma la posizione mentre la card cambia faccia.
+tiene, perché quello ha una faccia sola. Il punto di riferimento con cui la
+pagina tiene ferma la posizione mentre la card cambia faccia non è più
+l'insegna ma la card stessa, che il carosello conosce già.
 
 ### Il carosello è uno solo, scritto una volta
 Classifica e partite fanno la stessa cosa — più facce nella stessa card, si
 cambia con lo swipe o da sole ogni cinque secondi — e per un po' è stata la
 stessa cosa scritta due volte. Ora c'è `useCardCarousel`: gli si passa la
 fila delle facce nell'ordine dei pallini e cosa fare quando cambia. Il cambio
-automatico va avanti e indietro lungo la fila invece di riavvolgersi: con tre
-facce, il salto dalla terza alla prima sarebbe l'unico movimento a non
-corrispondere a nessuno swipe possibile. Sulle partite gira solo da telefono:
-su desktop non ci sono i pallini, e una card che cambia da sola senza niente
-che lo spieghi sembra un difetto.
+automatico va avanti e indietro lungo la fila invece di riavvolgersi, così
+ogni movimento corrisponde a uno swipe che si potrebbe fare davvero. Sulle
+partite gira solo da telefono: su desktop non ci sono i pallini, e una card
+che cambia da sola senza niente che lo spieghi sembra un difetto.
 
 ### I pallini stanno sotto la card, non accanto al titolo
 Tolta l'insegna non avevano più niente accanto a cui stare. Ora sono
 centrati sotto l'ultima riga, dove si guarda per capire quante facce ha una
-card — come sotto le foto di un profilo. Nei fogli invece i pallini hanno
-preso il posto degli interruttori a icone, e lì si toccano: le icone
-ripetevano quello che il titolo del foglio dice già per esteso, e con tre
-facce non ci stavano più.
+card — come sotto le foto di un profilo.
 
-### Le partite si filtrano in tre modi
-Personale, tutti, tornei — in quest'ordine, dalla più vicina a chi guarda
-alla più lontana. Una partita è "di torneo" se porta con sé il turno da cui è
-nata (`tournament_fixture_id`): non serve interrogare i calendari, la partita
-sa già da sola di appartenere a uno. Il filtro vive in un punto solo e serve
-sia l'anteprima nella card sia il raccoglitore per mese, così i conteggi
-dicono sempre quante partite ci sono davvero.
+### Le partite di torneo non hanno una sezione, hanno un segno
+Erano state messe dietro a un terzo filtro, insieme a "le mie" e "tutte".
+Sbagliato: una partita di torneo è una partita come le altre, conta nell'Elo
+e sta nel suo mese — separarla in un elenco suo la faceva sembrare un'altra
+cosa. Ora la si riconosce da un filo lime sul fianco della card. Una partita
+è "di torneo" se porta con sé il turno da cui è nata
+(`tournament_fixture_id`): non serve interrogare i calendari, la partita sa
+già da sola di appartenere a uno.
 
-### "+ NUOVO" sta in cima, sotto la card di chi guarda
+**Dentro ai fogli sono rimasti gli interruttori a icone**, non i pallini: lì
+c'è lo spazio per un comando vero, e la faccia di chi guarda dice "queste
+sono le tue" meglio di un punto. I pallini restano sulle card, dove sono
+un'indicazione e non un tasto.
+
+### "+ NUOVA PARTITA" sta in cima, sotto la card di chi guarda
 Aprire una partita nuova è la prima cosa che si fa entrando: prima il tasto
-stava fra la classifica e le partite e bisognava scorrere per trovarlo. Il
-testo è corto perché lì attorno non c'è nient'altro da creare, e il contesto
-lo dà la posizione.
+stava fra la classifica e le partite e bisognava scorrere per trovarlo.
 
 ### Su touch non si seleziona il testo
 Tenere premuto faceva comparire la selezione e la lente con "Copia", e la
@@ -116,11 +116,15 @@ posticcia appena sotto le passava un blocco scuro o una foto. Adesso quello
 che scorre sotto non viene coperto, viene solo appannato — sempre di più
 salendo verso l'ora e le icone di sistema.
 
-**Sono quattro veli sovrapposti, non uno.** Una sfocatura sola non si può
-sfumare: mascherarla la interrompe di netto a metà e il gradino si vede più
-della sfocatura stessa. Quattro strati con sfocature che raddoppiano, ognuno
-acceso su una fascia diversa e sovrapposto al precedente, danno un passaggio
-continuo dal nitido all'appannato.
+**È alta quanto l'area sicura, non di più.** Prima scendeva trenta pixel
+sotto e arrivava a sfumare il bordo della prima card anche a pagina ferma:
+la sfocatura è della barra di sistema, non della pagina.
+
+**Sono due veli sovrapposti, non uno.** Una sfocatura sola, tagliata di netto
+in fondo alla fascia, lascia un gradino visibile. Il secondo velo sfoca di
+più e si spegne prima, e nella sovrapposizione il passaggio diventa continuo.
+Due e non quattro: ogni velo è una superficie che il telefono ridisegna a
+ogni fotogramma mentre la pagina scorre, e sopra a due si sente.
 
 **Il contenitore è fisso ma non sfoca: sfocano i figli, che sono in
 posizione assoluta.** È la stessa precauzione già presa per la barra in
@@ -130,9 +134,19 @@ scivolare e riassestarsi — barra di navigazione compresa, anche se il
 difetto non è suo.
 
 ### Sotto l'isola c'è lo stesso bordo che ai lati
-Il passo in alto era 24px contro i 14 dei fianchi: la prima card risultava
-più staccata da sopra che di lato, e in una schermata dove tutto galleggia
-dentro a un margine uguale quella differenza si notava.
+Il passo in alto era 24px sommati all'area sicura, contro i 14 dei fianchi:
+la prima card risultava molto più staccata da sopra che di lato. Ora la card
+comincia dove finisce l'area sicura e basta: l'area sicura è già più bassa
+della Dynamic Island di una decina di pixel, quindi lo stacco che si vede è
+quello dei fianchi. Sommarci ancora i 14px lo raddoppiava.
+
+### Niente rimbalzo elastico agli estremi
+Durante il rimbalzo iOS trascina tutta la pagina, e con lei anche gli
+elementi fissi: la barra in basso si staccava dal fondo e ci tornava ogni
+volta che si arrivava in cima o in fondo. Con `overscroll-behavior-y: none`
+la barra sta ferma dov'è, che è quello che ci si aspetta da una tab bar. Il
+prezzo è che la pagina non "rimbalza" più: sembra meno iOS per un istante,
+ma la barra ferma vale più del rimbalzo.
 
 ### La classifica in home è un bersaglio solo
 Erano tre cose da toccare nello stesso riquadro — lo switch player/team, le

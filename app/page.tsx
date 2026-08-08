@@ -1466,12 +1466,12 @@ const NAV_PILL_TRANSITION = "scale 140ms cubic-bezier(0.34, 1.56, 0.64, 1)";
 // Stanno fuori dal componente perche sono liste fisse: dentro verrebbero
 // ricostruite a ogni render e farebbero ripartire gli effetti del carosello.
 const RANKING_FACES = ["single", "team"] as const;
-const MATCHES_FACES = ["mine", "all", "tournaments"] as const;
+const MATCHES_FACES = ["mine", "all"] as const;
 
 // Una card che ha piu facce e le mostra a turno: si cambia con lo swipe o da
 // sola ogni cinque secondi, e la faccia che esce da un lato lascia entrare
 // dall'altro quella nuova. La usano la classifica (singolo, squadra) e le
-// partite (personale, tutti, tornei): erano lo stesso meccanismo scritto due
+// partite (le proprie, tutte): erano lo stesso meccanismo scritto due
 // volte, e la seconda volta sarebbe stata una copia da tenere allineata a
 // mano.
 //
@@ -1867,7 +1867,11 @@ function MatchCard({
 
   return (
     <article
-      className={`match-card${onEdit ? " match-card-link" : ""}${compact ? " match-card-compact" : ""}`}
+      // Il filo lime sul fianco dice che la partita e nata dentro a un
+      // torneo. Non ha una sezione sua nell'elenco: le partite di torneo
+      // sono partite come le altre, contano nell'Elo e stanno nel loro mese
+      // — solo, si vede da dove vengono.
+      className={`match-card${onEdit ? " match-card-link" : ""}${compact ? " match-card-compact" : ""}${match.tournament_fixture_id ? " match-card-tournament" : ""}`}
       onClick={onEdit ? () => onEdit(match) : undefined}
       onKeyDown={onEdit ? (event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -3968,10 +3972,9 @@ function AppShell({ session }: { session: Session | null }) {
   // bisogno di sapere quale delle due classifiche e in scena.
   const [rankingMode, setRankingMode] = useState<"single" | "team">("single");
   const isPhone = useIsPhone();
-  // Quali partite mostrano la card e il foglio: le proprie, tutte, o solo
-  // quelle giocate dentro a un torneo. L'ordine e quello dei pallini, dalla
-  // piu personale alla piu lontana.
-  const [matchesMode, setMatchesMode] = useState<"mine" | "all" | "tournaments">("all");
+  // Quali partite mostrano la card e il foglio: le proprie o tutte, in
+  // quest'ordine, che e quello dei pallini.
+  const [matchesMode, setMatchesMode] = useState<"mine" | "all">("all");
   // Quale raccoglitore del mese è aperto, uno solo per volta. Tre stati e non
   // due: undefined vuol dire "nessuna scelta ancora", e allora vale il mese
   // più recente; null vuol dire chiuso perché è stato chiuso apposta. Senza
@@ -4381,9 +4384,6 @@ function AppShell({ session }: { session: Session | null }) {
     if (matchesMode === "mine" && currentUserId) {
       return matches.filter((match) => match.players.some((player) => player.profile_id === currentUserId));
     }
-    if (matchesMode === "tournaments") {
-      return matches.filter((match) => Boolean(match.tournament_fixture_id));
-    }
     return matches;
   }, [matches, matchesMode, currentUserId]);
 
@@ -4391,9 +4391,7 @@ function AppShell({ session }: { session: Session | null }) {
   // "non ne hai ancora giocate" sono due cose diverse.
   const emptyMatchesNote = matchesMode === "mine"
     ? "Non hai ancora giocato nessuna partita."
-    : matchesMode === "tournaments"
-      ? "Nessuna partita di torneo."
-      : "Nessuna partita registrata.";
+    : "Nessuna partita registrata.";
 
   // Le partite del foglio, divise per mese. Il filtro agisce prima del
   // raggruppamento, così i conteggi sui raccoglitori dicono quante partite ci
@@ -4909,20 +4907,17 @@ function AppShell({ session }: { session: Session | null }) {
 
   return (
     <div className="app-shell">
-      {/* La sfocatura in cima allo schermo, quella che tiene leggibili ora e
-          icone di sistema sopra alla Dynamic Island. Sono quattro strati
-          sovrapposti invece di uno: la sfocatura non si puo sfumare da sola —
-          un solo strato con la maschera si interrompe di netto e si vede il
-          gradino — mentre quattro veli con sfocature via via piu forti, ognuno
-          acceso su una fascia diversa, danno un passaggio continuo dal nitido
-          all'appannato.
+      {/* La sfocatura sotto la barra di sistema dell'iPhone: sfoca tutto
+          quello che passa dietro all'ora e alle icone, e finisce dove finisce
+          l'area sicura — la pagina vera, che comincia piu sotto, non la tocca.
+          Due strati e non uno: la sfocatura non si puo sfumare da sola, e con
+          un solo velo mascherato il taglio in basso si vedrebbe. Il secondo,
+          piu forte e piu corto, fa da passaggio.
           Il contenitore e fisso ma non sfoca: la sfocatura sta sui figli, che
           sono in posizione assoluta. E la stessa precauzione della barra in
           basso — su iOS un elemento fisso che sfoca viene ridisegnato in
-          ritardo durante lo scorrimento inerziale e sembra scivolare. */}
+          ritardo durante lo scorrimento. */}
       <div className="system-blur" aria-hidden="true">
-        <span />
-        <span />
         <span />
         <span />
       </div>
@@ -5182,14 +5177,13 @@ function AppShell({ session }: { session: Session | null }) {
                     <div className="compact-empty panel-empty"><span>00</span><p>{emptyMatchesNote}</p></div>
                   )}
                   {/* Gli stessi pallini della classifica: dicono che la card
-                      ha tre facce e quale stai guardando. Non si toccano —
+                      ha due facce e quale stai guardando. Non si toccano —
                       dentro un tasto non ci possono stare altri tasti — ma
                       la card gira da sola e si cambia con lo swipe, come la
                       classifica. */}
                   <span className="card-dots" aria-hidden="true">
                     <i className={matchesMode === "mine" ? "is-current" : ""} />
                     <i className={matchesMode === "all" ? "is-current" : ""} />
-                    <i className={matchesMode === "tournaments" ? "is-current" : ""} />
                   </span>
                 </div>
 
@@ -5834,16 +5828,14 @@ function AppShell({ session }: { session: Session | null }) {
              appena creato — si torna alla parola. */
           title={matchesMode === "mine"
             ? `Partite - ${currentUserName || "Personale"}`
-            : matchesMode === "tournaments"
-              ? "Partite - Tornei"
-              : "Partite - Tutte"}
+            : "Partite - Tutte"}
           onClose={() => setSheet(null)}
-          /* Pallini al posto degli interruttori con le icone: sono gli stessi
-             della card da cui il foglio si apre, e li dentro si toccano. Le
-             icone dicevano una seconda volta quello che il titolo del foglio
-             dice gia per esteso, e con tre facce non ci stavano piu. */
+          /* Dentro al foglio resta l'interruttore a icone: qui c'e lo spazio
+             per un comando vero, e la faccia di chi guarda dice "queste sono
+             le tue" meglio di un pallino. I pallini restano sulla card, dove
+             sono un'indicazione e non un tasto. */
           action={(
-            <div className="dot-switch" role="group" aria-label="Quali partite">
+            <div className="mode-switch" role="group" aria-label="Quali partite">
               <button
                 className={matchesMode === "mine" ? "active" : ""}
                 // Il raccoglitore da aprire lo decide l'effetto qui sopra:
@@ -5853,7 +5845,11 @@ function AppShell({ session }: { session: Session | null }) {
                 aria-label="Solo le mie partite"
                 title={currentUserName || "Personale"}
               >
-                <i />
+                {/* La faccia di chi guarda al posto di un glifo: dice "queste
+                    sono le tue" senza bisogno di una parola. */}
+                {currentUser
+                  ? <Avatar profile={currentUser} size="sm" />
+                  : <NavGlyph name="person" />}
               </button>
               <button
                 className={matchesMode === "all" ? "active" : ""}
@@ -5861,15 +5857,7 @@ function AppShell({ session }: { session: Session | null }) {
                 aria-label="Tutte le partite"
                 title="Tutte"
               >
-                <i />
-              </button>
-              <button
-                className={matchesMode === "tournaments" ? "active" : ""}
-                onClick={() => { setMatchesMode("tournaments"); setChosenMonth(undefined); }}
-                aria-label="Solo le partite di torneo"
-                title="Tornei"
-              >
-                <i />
+                <NavGlyph name="people" />
               </button>
             </div>
           )}
@@ -5914,7 +5902,7 @@ function AppShell({ session }: { session: Session | null }) {
           title={rankingMode === "single" ? "Classifica Elo - Singolo" : "Classifica Elo - Squadra"}
           onClose={() => setSheet(null)}
           action={(
-            <div className="dot-switch" role="group" aria-label="Tipo di classifica">
+            <div className="mode-switch" role="group" aria-label="Tipo di classifica">
               <button
                 className={rankingMode === "single" ? "active" : ""}
                 // Cambiando tipo di classifica si torna sempre alla stagione
@@ -5923,7 +5911,7 @@ function AppShell({ session }: { session: Session | null }) {
                 aria-label="Classifica singolo"
                 title="Singolo"
               >
-                <i />
+                <NavGlyph name="person" />
               </button>
               <button
                 className={rankingMode === "team" ? "active" : ""}
@@ -5931,7 +5919,7 @@ function AppShell({ session }: { session: Session | null }) {
                 aria-label="Classifica squadre"
                 title="Squadra"
               >
-                <i />
+                <NavGlyph name="people" />
               </button>
             </div>
           )}

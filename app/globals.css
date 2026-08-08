@@ -72,6 +72,12 @@ html {
      coincidere col fondo pagina, che in home diventa scuro. */
   --scroll-edge: var(--paper);
   background: var(--paper);
+  /* Niente rimbalzo elastico ai due estremi. Non e una questione di gusto:
+     durante il rimbalzo iOS trascina tutta la pagina, e con lei anche gli
+     elementi fissi — la barra in basso si staccava dal fondo e ci tornava
+     ogni volta che si arrivava in cima o in fondo. Senza rimbalzo la barra
+     sta ferma dov'e, che e quello che ci si aspetta da una tab bar. */
+  overscroll-behavior-y: none;
   scroll-behavior: smooth;
   /* Riserva sempre lo spazio della scrollbar: senza questo le pagine corte,
      che non la mostrano, risultano spostate di ~15px rispetto alle altre. */
@@ -1801,6 +1807,22 @@ button.ranking-row-link:focus-visible {
   width: 100%;
 }
 
+/* Un filo lime sul fianco sinistro dice che la partita e nata dentro a un
+   torneo. Non un'icona: nell'elenco le card sono tante e un simbolo in piu
+   su ognuna diventa rumore, mentre un filo si legge con la coda dell'occhio
+   e non ruba spazio a niente. Lime perche in tutta l'app il torneo e lime —
+   il tasto che lo crea, il trofeo, il bordo del riquadro. */
+.match-card-tournament::before {
+  background: var(--lime);
+  border-radius: var(--radius-pill);
+  bottom: 8px;
+  content: "";
+  left: 0;
+  position: absolute;
+  top: 8px;
+  width: 3px;
+}
+
 .match-card-link {
   cursor: pointer;
 }
@@ -2383,6 +2405,20 @@ button.podium-person {
   opacity: 0.42;
 }
 
+/* Nello switch delle partite una delle due voci è la faccia di chi guarda,
+   non un glifo: va rimpicciolita al passo dei tracciati e spenta con la
+   stessa opacità, altrimenti la voce non scelta resterebbe più viva
+   dell'altra. */
+.mode-switch .avatar {
+  border-width: 1.5px;
+  height: 22px;
+  width: 22px;
+}
+
+.mode-switch button:not(.active) .avatar {
+  opacity: 0.42;
+}
+
 .mode-switch button.active {
   background: var(--white);
   box-shadow: 0 1px 3px rgba(11, 27, 44, 0.12);
@@ -2393,55 +2429,6 @@ button.podium-person {
   width: 19px;
 }
 
-/* Gli stessi pallini del carosello, ma qui si toccano: sono il selettore in
-   cima ai fogli, dove hanno preso il posto dello switch a icone. */
-.dot-switch {
-  align-items: center;
-  display: inline-flex;
-  gap: 5px;
-}
-
-/* Il tasto e grande quanto il pallino, non di piu: cosi i pallini del foglio
-   sono spaziati esattamente come quelli sotto la card. La parte da colpire
-   la porta l'area invisibile qui sotto, che deborda oltre il tasto. */
-.dot-switch button {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: var(--radius-pill);
-  cursor: pointer;
-  display: flex;
-  height: 6px;
-  justify-content: center;
-  padding: 0;
-  position: relative;
-  width: 6px;
-}
-
-/* Un pallino di sei pixel non si prende col dito. Questa e la superficie
-   vera del tasto: invisibile, larga quanto serve, e non sposta niente
-   perche e in posizione assoluta. */
-.dot-switch button::after {
-  content: "";
-  inset: -16px -7px;
-  position: absolute;
-}
-
-/* Identici a quelli sotto le card: stessa misura, stesso spento, stesso
-   acceso. Sono la stessa cosa vista in due posti — nella card dicono dove
-   sei, nel foglio ti ci portano — e se cambiassero aspetto passando da uno
-   all'altro sembrerebbero due comandi diversi. */
-.dot-switch i {
-  background: var(--veil-2);
-  border-radius: var(--radius-pill);
-  height: 6px;
-  transition: background 200ms ease;
-  width: 6px;
-}
-
-.dot-switch button.active i {
-  background: var(--ink-30);
-}
 
 .ranking-switch {
   background: var(--veil-2);
@@ -6078,12 +6065,14 @@ button.pizza-ranking-row {
   /* Il passo in alto ora comprende l'isola: con viewport-fit: cover lo
      spazio non lo riserva piu iOS, e senza questo la prima card finirebbe
      sotto l'orologio.
-     Sotto l'isola sono gli stessi 14px che la prima card ha ai lati: e una
-     card che galleggia dentro allo schermo, e attorno deve avere lo stesso
-     bordo da tutte le parti. Ventiquattro la staccavano piu da sopra che
-     dai fianchi, e si notava. */
+     Sopra la card comincia dove finisce l'area sicura, senza aggiungere
+     altro: l'area sicura e gia piu bassa dell'isola di una decina di pixel,
+     quindi lo stacco che si vede e quello dei fianchi. Sommandoci i 14px del
+     lato lo stacco diventava il doppio, e la card sembrava piu lontana da
+     sopra che di fianco. Il max serve ai telefoni senza isola, dove l'area
+     sicura vale zero e senza di lui la card partirebbe a filo. */
   .content {
-    padding: calc(14px + env(safe-area-inset-top)) 14px 6px;
+    padding: max(14px, env(safe-area-inset-top)) 14px 6px;
   }
 
   /* La pagina e una superficie unica durante lo swipe: segue il dito e
@@ -6316,14 +6305,16 @@ button.pizza-ranking-row {
   /* Sfocatura di sistema in alto, gemella della dissolvenza qui sotto.
      Sostituisce la fascia opaca che disegnava iOS.
      Nessun colore suo: a riposo deve essere invisibile, non una tacca sopra
-     la Dynamic Island. Quello che le scorre sotto continua a vedersi, solo
-     sempre piu appannato salendo — quanto basta a leggere ora e icone di
-     sistema senza che la fascia si faccia notare.
-     Il contenitore e fisso ma non sfoca niente: la sfocatura sta sui quattro
-     figli, che sono in posizione assoluta. Su iOS un elemento fisso con
-     backdrop-filter viene ricomposto in ritardo durante lo scorrimento
-     inerziale e sembra scivolare e riassestarsi — e la stessa precauzione
-     presa per la barra in basso.
+     la Dynamic Island. Quello che le passa dietro si vede ancora, ma
+     appannato — quanto basta a leggere ora e icone di sistema qualunque cosa
+     ci scorra sotto.
+     Alta esattamente quanto l'area sicura: la sfocatura e della barra di
+     sistema, non della pagina, e non deve arrivare a sfumare il bordo della
+     prima card. Prima scendeva trenta pixel piu in giu e si vedeva.
+     Il contenitore e fisso ma non sfoca niente: la sfocatura sta sui figli,
+     che sono in posizione assoluta. Su iOS un elemento fisso con
+     backdrop-filter viene ricomposto in ritardo durante lo scorrimento e
+     sembra scivolare — e la stessa precauzione presa per la barra in basso.
      Quando si apre il foglio dal basso si ritira del tutto (--island va a 1):
      il contenuto torna a passarle sotto e il velo del foglio, che sta piu in
      alto, lo sfoca insieme al resto dello schermo invece di trovare qui una
@@ -6331,7 +6322,7 @@ button.pizza-ranking-row {
      fascia e la sfocatura vanno e vengono insieme. */
   .system-blur {
     display: block;
-    height: calc(env(safe-area-inset-top) + 30px);
+    height: env(safe-area-inset-top);
     left: 0;
     opacity: calc(1 - var(--island));
     pointer-events: none;
@@ -6341,47 +6332,29 @@ button.pizza-ranking-row {
     z-index: 45;
   }
 
-  /* Una sfocatura sola non si puo sfumare: mascherarla la interrompe di
-     netto a meta e il gradino si vede piu della sfocatura stessa. Quattro
-     veli invece si: ognuno sfoca il doppio del precedente ed e acceso su
-     una fascia diversa, sfumata sopra e sotto, cosi il passaggio dal
-     nitido all'appannato non ha nessun bordo.
-     Le fasce si sovrappongono di proposito — ogni velo comincia dove il
-     precedente e ancora acceso — perche e nella sovrapposizione che le due
-     sfocature si mescolano. */
+  /* Due veli e non uno: una sfocatura sola, tagliata di netto in fondo alla
+     fascia, lascerebbe un gradino visibile fra il nitido e l'appannato. Il
+     secondo velo sfoca di piu e si spegne prima, e nella sovrapposizione dei
+     due il passaggio diventa continuo.
+     Due e non quattro: ogni velo e una superficie che il telefono ridisegna
+     a ogni fotogramma mentre la pagina scorre, e sopra a due si sente. */
   .system-blur span {
     inset: 0;
     position: absolute;
   }
 
   .system-blur span:nth-child(1) {
-    -webkit-backdrop-filter: blur(1px);
-    backdrop-filter: blur(1px);
-    -webkit-mask-image: linear-gradient(to top, transparent 0%, black 25%, black 100%);
-    mask-image: linear-gradient(to top, transparent 0%, black 25%, black 100%);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    -webkit-mask-image: linear-gradient(to top, transparent 0%, black 30%, black 100%);
+    mask-image: linear-gradient(to top, transparent 0%, black 30%, black 100%);
   }
 
   .system-blur span:nth-child(2) {
-    -webkit-backdrop-filter: blur(2px);
-    backdrop-filter: blur(2px);
-    -webkit-mask-image: linear-gradient(to top, transparent 20%, black 45%, black 100%);
-    mask-image: linear-gradient(to top, transparent 20%, black 45%, black 100%);
-  }
-
-  .system-blur span:nth-child(3) {
-    -webkit-backdrop-filter: blur(4px);
-    backdrop-filter: blur(4px);
-    -webkit-mask-image: linear-gradient(to top, transparent 42%, black 68%, black 100%);
-    mask-image: linear-gradient(to top, transparent 42%, black 68%, black 100%);
-  }
-
-  /* L'ultimo velo copre solo l'area sicura, cioe la striscia dove stanno
-     davvero l'ora e le icone: e li che serve tutta la sfocatura. */
-  .system-blur span:nth-child(4) {
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-    -webkit-mask-image: linear-gradient(to top, transparent 64%, black 88%, black 100%);
-    mask-image: linear-gradient(to top, transparent 64%, black 88%, black 100%);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    -webkit-mask-image: linear-gradient(to top, transparent 24%, black 58%, black 100%);
+    mask-image: linear-gradient(to top, transparent 24%, black 58%, black 100%);
   }
 
   /* Scroll edge effect: il contenuto sfuma verso il fondo mentre scorre
