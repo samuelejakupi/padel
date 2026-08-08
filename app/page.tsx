@@ -3215,7 +3215,7 @@ function PlayCreateModal({
   const [matchId, setMatchId] = useState(withVideo[0]?.id ?? "");
   const [videoUrl, setVideoUrl] = useState(withVideo[0]?.video_url ?? "");
   const [start, setStart] = useState("");
-  const [duration, setDuration] = useState("8");
+  const [duration, setDuration] = useState("20");
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -3299,21 +3299,23 @@ function PlayCreateModal({
           <div className="play-time-row">
             <label>
               Minuto di partenza
+              {/* Tastiera intera e non tastierino: con inputMode numerico il
+                  telefono mostra solo le cifre e i due punti non si possono
+                  scrivere, quindi il minuto non si riusciva a inserire. */}
               <input
                 value={start}
                 onChange={(event) => setStart(event.target.value)}
                 placeholder="3:12"
-                inputMode="numeric"
+                inputMode="text"
                 required
               />
             </label>
             <label>
               Durata
               <select value={duration} onChange={(event) => setDuration(event.target.value)}>
-                <option value="5">5 secondi</option>
-                <option value="8">8 secondi</option>
                 <option value="10">10 secondi</option>
-                <option value="15">15 secondi</option>
+                <option value="20">20 secondi</option>
+                <option value="30">30 secondi</option>
               </select>
             </label>
           </div>
