@@ -6597,16 +6597,18 @@ button.pizza-ranking-row {
     /* Undici pixel dal bordo, gli stessi che ha ai lati: la barra è una
        pastiglia che galleggia, e deve stare staccata dallo schermo della
        stessa misura da tutte le parti.
-       L'area sicura in fondo va sottratta, non sommata. Sembra un errore e
-       non lo è: da quando la barra di stato è traslucida la pagina arriva
-       davvero ai bordi, e il riquadro su cui iOS appoggia gli elementi fissi
-       si ferma dove comincia la zona dell'indicatore Home. Undici pixel da
-       quel riquadro sono undici più l'area sicura dal vetro, ed è di quei
-       trentaquattro pixel che la barra si era rialzata. Sottraendoli i conti
-       tornano, e dove l'area sicura vale zero — telefoni senza indicatore,
-       Safari con la sua barra — la sottrazione non toglie niente e restano
-       gli undici di sempre. */
-    bottom: calc(11px - env(safe-area-inset-bottom));
+       Undici e non di meno, e non serve provare a scendere: misurato l'8
+       agosto sull'iPhone di Dani, in app salvata sulla schermata Home la
+       pagina è alta 797 su uno schermo da 844. I 47 px che restano sotto non
+       sono nostri — `body` ha `overflow: hidden`, quindi quello che ci finisce
+       viene tagliato invece che disegnato. Provato con
+       `calc(11px - env(safe-area-inset-bottom))`: la pastiglia non è scesa,
+       ha perso le scritte, tagliate al bordo della pagina.
+       Quindi il fondo utile è 797, non 844, e undici pixel da lì sono il
+       minimo possibile. Se un giorno la pagina arriverà davvero a 844 questo
+       numero andrà bene lo stesso: continua a misurare dal fondo, qualunque
+       fondo sia. */
+    bottom: 11px;
     box-shadow:
       0 0 0 0.5px rgba(11, 27, 44, 0.05),
       0 10px 30px rgba(11, 27, 44, 0.14),
