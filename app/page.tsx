@@ -4041,6 +4041,52 @@ function AppShell({ session }: { session: Session | null }) {
     enabled: false,
   });
 
+  // Ogni cinque secondi il tasto si sporge di un dito verso il lato da cui
+  // arriva l'altro, e torna. E il modo di dire "qui si scorre" senza
+  // scriverlo: i pallini sotto al tasto lo dicevano meglio, ma erano una
+  // riga in piu fra due card in una schermata che vive di passi uguali.
+  // Non cambia faccia, la accenna soltanto: cambiarla resta cosa del dito.
+  useEffect(() => {
+    if (!carouselEnabled || !isPhone) return;
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let timer = 0;
+    function schedule() {
+      timer = window.setTimeout(() => {
+        const track = ctaTrackRef.current;
+        // Se il dito lo sta gia spostando il suggerimento e superfluo, e
+        // arriverebbe come uno strattone in mano.
+        if (track?.animate && !track.style.transform) {
+          const nudge = ctaFace === "match" ? -16 : 16;
+          track.animate(
+            [
+              { transform: "translate3d(0, 0, 0)" },
+              { transform: `translate3d(${nudge}px, 0, 0)`, offset: 0.4 },
+              { transform: "translate3d(0, 0, 0)" },
+            ],
+            { duration: 760, easing: "cubic-bezier(0.34, 1.32, 0.64, 1)" },
+          );
+        }
+        schedule();
+      }, 5000);
+    }
+
+    // A scheda nascosta non parte: un movimento che nessuno guarda e solo
+    // batteria.
+    function sync() {
+      window.clearTimeout(timer);
+      if (document.visibilityState === "visible") schedule();
+    }
+
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, [carouselEnabled, isPhone, ctaFace, ctaTrackRef]);
+
   const [editingMatch, setEditingMatch] = useState<PadelMatch | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
@@ -5156,13 +5202,6 @@ function AppShell({ session }: { session: Session | null }) {
                       </button>
                     )}
                   </div>
-                  {/* Gli stessi pallini delle card: qui dicono che sotto al
-                      dito c'è un secondo tasto, che altrimenti non lo
-                      saprebbe nessuno. */}
-                  <span className="card-dots" aria-hidden="true">
-                    <i className={ctaFace === "match" ? "is-current" : ""} />
-                    <i className={ctaFace === "tournament" ? "is-current" : ""} />
-                  </span>
                 </div>
                 <div className="match-panel matches-panel" ref={setMatchesCard}>
                   {/* Titolo interno al riquadro, come "Classifica Elo".

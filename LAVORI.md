@@ -92,12 +92,18 @@ Aprire una partita nuova è la prima cosa che si fa entrando: prima il tasto
 stava fra la classifica e le partite e bisognava scorrere per trovarlo.
 
 **Scorrendolo di lato compare "+ NUOVO TORNEO".** È lo stesso carosello
-delle card, con due tasti al posto di due elenchi, e due pallini sotto a
-dire che il secondo c'è. Questo però non gira da solo: una card che cambia
-da sola si guarda, un tasto che cambia da solo si preme per sbaglio. Il
-tasto del torneo era sparito dal riquadro degli ultimi tornei e su mobile
-non c'era più modo di crearne uno: adesso c'è, e sta dove sta l'altro
-comando che apre qualcosa di nuovo.
+delle card, con due tasti al posto di due elenchi. Non gira da solo, però:
+una card che cambia da sola si guarda, un tasto che cambia da solo si preme
+per sbaglio. Il tasto del torneo era sparito dal riquadro degli ultimi
+tornei e su mobile non c'era più modo di crearne uno: adesso c'è, e sta dove
+sta l'altro comando che apre qualcosa di nuovo.
+
+**Niente pallini sotto: ogni cinque secondi si sporge e torna.** I pallini
+dicevano meglio che c'era un secondo tasto, ma erano una riga in più fra due
+card, in una schermata che vive di passi tutti uguali. L'accenno di
+movimento verso il lato da cui arriva l'altro tasto dice la stessa cosa
+senza occupare spazio. Si ferma se il dito lo sta già spostando, a scheda
+nascosta, e con la riduzione del movimento attiva.
 
 **`overflow-x: clip` su `html`.** Mentre il nastro scorre il tasto esce dai
 fianchi dello schermo, e senza ritaglio la pagina si allargava. `clip` e non
