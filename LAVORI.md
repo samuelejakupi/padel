@@ -256,14 +256,16 @@ Conseguenze da ricordare, perché non sono ovvie leggendo il CSS:
   dov'era serve solo dove a scorrere è la pagina intera.
 - La copia congelata della pagina che esce durante lo swipe fra sezioni deve
   farsi ridare lo `scrollTop`: un clone nasce sempre in cima.
-- **Barra, sfocatura di sistema e dissolvenza in fondo non sono più `fixed`
-  ma `absolute` dentro a `.app-shell`,** che è alto `100dvh`. Da quando la
-  pagina non scorre, la "finestra" su cui iOS appoggia gli elementi fissi non
-  è più tutto lo schermo: la barra era salita di una trentina di pixel,
-  quanto la zona dell'indicatore Home. Undici pixel dal fondo del guscio
-  invece sono undici pixel dal bordo dello schermo, sempre. `.app-shell` non
-  ha trasformazioni, quindi il resto (fogli, veli) continua a comportarsi
-  come prima.
+- **Barra, sfocatura di sistema e dissolvenza in fondo restano `fixed`.** Era
+  stato provato ad ancorarle a `.app-shell` alto `100dvh` (commit `48cfc92`,
+  annullato lo stesso giorno). Sembrava più solido e invece rompeva tutto: in
+  standalone `100dvh` vale 797 su uno schermo da 844, quindi l'interfaccia si
+  stringeva dentro a 797 e i 47px avanzati diventavano una fascia — la barra
+  sembrava alta, e in cima compariva il `themeColor` blu dove prima la barra
+  di stato era trasparente sul contenuto. `fixed` misura sulla finestra vera,
+  che in standalone è tutto lo schermo, ed è l'unica misura che regge. Se
+  qualcosa sembra fuori posto in fondo allo schermo, il sospettato non è la
+  barra: è l'altezza del contenitore che la ospita.
 
 ### La classifica in home è un bersaglio solo
 Erano tre cose da toccare nello stesso riquadro — lo switch player/team, le

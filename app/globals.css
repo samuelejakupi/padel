@@ -6196,31 +6196,8 @@ button.pizza-ranking-row {
      scorrere la pagina. */
   html,
   body {
-    height: 100dvh;
+    height: 100%;
     overflow: hidden;
-  }
-
-  /* Il guscio e alto quanto lo schermo ed e il punto di riferimento di tutto
-     quello che deve restare fermo. Serve alla barra qui sotto: da quando la
-     pagina non scorre piu, la "finestra" su cui iOS appoggia gli elementi
-     fissi non e piu tutto lo schermo — la barra era salita di una trentina
-     di pixel, quanto la zona dell'indicatore Home, senza che nessuno le
-     avesse chiesto niente. Undici pixel dal fondo del guscio invece sono
-     undici pixel dal bordo dello schermo, sempre. */
-  .app-shell {
-    /* Ancorato allo schermo, non all'altezza dinamica del viewport.
-       html e body sono alti 100dvh, ma quando il sito gira come app salvata
-       sulla schermata Home iOS ferma quei 100dvh sopra la zona
-       dell'indicatore Home: il guscio finiva trentaquattro pixel prima del
-       vetro e la barra, che si appoggia al suo fondo, se li portava dietro —
-       misurati sullo screenshot, quarantanove pixel dal bordo invece di
-       undici. Con inset: 0 il guscio arriva davvero in fondo, e undici
-       pixel restano undici pixel su qualsiasi telefono.
-       Fisso e non assoluto perche il riferimento deve essere lo schermo:
-       il guscio non scorre, quindi il difetto di composizione di iOS che
-       aveva fatto togliere il fisso dalla barra qui non si presenta. */
-    inset: 0;
-    position: fixed;
   }
 
   body {
@@ -6278,7 +6255,7 @@ button.pizza-ranking-row {
      sopra che di fianco. Il max serve ai telefoni senza isola, dove l'area
      sicura vale zero e senza di lui la card partirebbe a filo. */
   .content {
-    height: 100%;
+    height: 100dvh;
     overflow-y: auto;
     /* Il rimbalzo resta e finisce qui: non si propaga a quello che c'e
        fuori, che e proprio la propagazione che portava via anche la barra. */
@@ -6544,10 +6521,7 @@ button.pizza-ranking-row {
     left: 0;
     opacity: calc(1 - var(--island));
     pointer-events: none;
-    /* Assoluta dentro al guscio come la barra in basso, e per lo stesso
-       motivo: cosi le due estremita dello schermo sono misurate sullo stesso
-       riferimento e non su quello che iOS decide di volta in volta. */
-    position: absolute;
+    position: fixed;
     right: 0;
     top: 0;
     z-index: 45;
@@ -6601,7 +6575,7 @@ button.pizza-ranking-row {
     height: calc(100px + env(safe-area-inset-bottom));
     left: 0;
     pointer-events: none;
-    position: absolute;
+    position: fixed;
     right: 0;
     z-index: 45;
   }
@@ -6638,10 +6612,7 @@ button.pizza-ranking-row {
     left: 11px;
     overflow: hidden;
     padding: var(--nav-inset);
-    /* Assoluta dentro al guscio, non fissa rispetto alla finestra: vedi il
-       commento su .app-shell. Il guscio non ha trasformazioni, quindi non
-       tocca niente altro. */
-    position: absolute;
+    position: fixed;
     right: 11px;
     z-index: 50;
   }

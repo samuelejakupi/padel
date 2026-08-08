@@ -9,17 +9,10 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 // del primo salvataggio, o peggio ricadrebbe sull'immagine di condivisione.
 const iconVersion = process.env.NEXT_PUBLIC_BUILD_ID ?? "dev";
 
-// Il colore con cui iOS riempie la striscia di sistema in cima, nell'app
-// salvata sulla schermata Home. Era il blu del marchio, ed era una scelta
-// sensata finche quella striscia non si vedeva: da quando la finestra e
-// ancorata in basso (797 di finestra su 844 di schermo, misurati) i 47 px
-// avanzati stanno tutti sopra, e il blu li si legge come una fascia
-// appiccicata sotto la Dynamic Island. Con il colore della carta la striscia
-// sparisce dentro alla pagina, e l'ora — che con statusBarStyle "default"
-// iOS disegna scura — torna leggibile: scura su blu scuro non si vedeva.
-// Deve restare uguale a --paper in globals.css.
+// Colora la barra di stato su iOS e Android con il blu del sito invece del
+// bianco di sistema.
 export const viewport: Viewport = {
-  themeColor: "#f3f5f1",
+  themeColor: "#0b1b2c",
   // Niente zoom accidentale su mobile: il sito e gia dimensionato per il
   // telefono e il doppio tap o la pinch finivano solo per sballare il layout.
   width: "device-width",
