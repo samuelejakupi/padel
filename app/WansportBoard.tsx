@@ -76,10 +76,11 @@ export default function WansportBoard() {
       : null;
   const attesa = !club.richiedeLogin && risposta?.chiave !== chiave;
 
-  // Gli orari gia passati si tolgono solo oggi: domani sono tutti futuri.
-  // Si tolgono per intero, colonna compresa — tenerli spenti costringerebbe a
-  // scorrere mezza giornata prima di arrivare a stasera.
-  const daMinuti = scarto === 0 ? minutiDiOggi() : -1;
+  // Le ore gia passate restano nel tabellone. Toglierle faceva partire la
+  // giornata da un punto diverso a ogni ora, e nel confronto fra i campi la
+  // mattina serve lo stesso: si guarda anche per capire com'e andata, o per
+  // sapere se un campo e pieno da stamattina. Vengono spente, non nascoste.
+  const adesso = scarto === 0 ? minutiDiOggi() : -1;
 
   const tabellone = esito?.stato === "ok" ? esito.tabellone : null;
 
@@ -89,9 +90,7 @@ export default function WansportBoard() {
   const orari = tabellone
     ? Array.from(
         new Set(tabellone.campi.flatMap((campo) => campo.slot.map((s) => s.inizio))),
-      )
-        .filter((o) => minutiDa(o) >= daMinuti - 30)
-        .sort((a, b) => minutiDa(a) - minutiDa(b))
+      ).sort((a, b) => minutiDa(a) - minutiDa(b))
     : [];
 
   return (
@@ -164,8 +163,10 @@ export default function WansportBoard() {
                     {orari.map((o) => (
                       // Solo le ore piene portano l'etichetta: con una scritta
                       // ogni mezz'ora la riga diventa un muro di numeri e non
-                      // si legge piu niente. La mezza si riconosce dalla
-                      // casella, che resta larga uguale.
+                      // si legge piu niente. Le caselle restano tutte della
+                      // stessa misura — l'ora e la mezza valgono uguale — e a
+                      // dire dove comincia l'ora e una riga sottile nello
+                      // stacco fra le due, non una casella piu larga.
                       <th key={o} scope="col" className={o.endsWith(":00") ? "is-ora" : ""}>
                         {o.endsWith(":00") ? o.slice(0, 2) : ""}
                       </th>
@@ -180,19 +181,34 @@ export default function WansportBoard() {
                         <th scope="row">{campo.nome}</th>
                         {orari.map((o) => {
                           const libero = stato.get(o);
+                          // L'ora passata copre il libero e l'occupato: un
+                          // campo libero alle nove, se sono le undici, non e
+                          // un campo libero, e il verde sarebbe una promessa
+                          // che non si puo mantenere. Non copre pero il
+                          // chiuso, che resta chiuso a qualsiasi ora: li il
+                          // centro non ha mai avuto niente da vendere.
+                          const scaduto = minutiDa(o) < adesso;
+                          const segno =
+                            libero === undefined
+                              ? "is-chiuso"
+                              : scaduto
+                                ? "is-scaduto"
+                                : libero
+                                  ? "is-libero"
+                                  : "is-occupato";
+                          const detto =
+                            libero === undefined
+                              ? "chiuso"
+                              : scaduto
+                                ? "passato"
+                                : libero
+                                  ? "libero"
+                                  : "occupato";
                           return (
                             <td
                               key={o}
-                              className={
-                                libero === undefined
-                                  ? "is-chiuso"
-                                  : libero
-                                    ? "is-libero"
-                                    : "is-occupato"
-                              }
-                              aria-label={`${campo.nome}, ${o}, ${
-                                libero === undefined ? "chiuso" : libero ? "libero" : "occupato"
-                              }`}
+                              className={`${segno}${o.endsWith(":00") ? " is-ora" : ""}`}
+                              aria-label={`${campo.nome}, ${o}, ${detto}`}
                             />
                           );
                         })}
@@ -203,15 +219,15 @@ export default function WansportBoard() {
               </table>
             </div>
           ) : (
-            <p className="wansport-nota">Per oggi il tabellone e finito.</p>
+            <p className="wansport-nota">Per questo giorno il centro non ha orari.</p>
           )}
 
           <div className="wansport-legenda">
             <span className="is-libero">Libero</span>
             <span className="is-occupato">Occupato</span>
-            <a className="wansport-link" href={club.sito} target="_blank" rel="noreferrer">
-              Prenota sul sito
-            </a>
+            {/* La voce dello scaduto compare solo oggi: sugli altri giorni
+                non c'e niente di passato da spiegare. */}
+            {scarto === 0 ? <span className="is-scaduto">Passato</span> : null}
           </div>
         </>
       ) : null}

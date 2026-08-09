@@ -141,11 +141,24 @@ Ora è una tabella vera: una riga per campo, una colonna per mezz'ora, che
 scorre di lato. La colonna dei nomi resta ferma mentre le ore scorrono, senza
 la quale dopo due schermate non sai più che riga stai guardando. L'etichetta
 sta solo sulle ore piene: una scritta ogni mezz'ora diventava un muro di
-numeri, e la mezza si riconosce lo stesso dalla casella. Le caselle sono
-staccate di 2px invece di condividere i bordi — una griglia di linee continue
-somigliava a un foglio di calcolo. Verde tenue dove è libero, grigio dove è
-occupato: l'occupato non è una brutta notizia da segnare in rosso, è solo il
-resto della giornata.
+numeri, e la mezza si riconosce lo stesso dalla casella. Ora e mezz'ora hanno
+la stessa identica misura — allargare l'ora piena avrebbe fatto sembrare la
+mezza meno prenotabile, che non è vero — e a dire dove comincia l'ora è una
+riga sottile nello stacco fra le due caselle, disegnata da uno pseudo-elemento
+proprio per non toccare le larghezze. Le caselle sono staccate di 2px invece
+di condividere i bordi: una griglia di linee continue somigliava a un foglio
+di calcolo.
+
+Tre colori e non due: verde dove è libero, rosso tenue dove è occupato, grigio
+dove l'ora è già passata. Il rosso c'era stato scartato una prima volta come
+troppo allarmista, ma senza di esso l'occupato e lo scaduto finivano dello
+stesso grigio e la riga non si leggeva più. Tenue e non pieno, perché di
+caselle ce ne sono trenta.
+
+La colonna dei nomi non ha una fascia sotto e nemmeno un riquadro sopra: il
+fondo è quello del foglio e serve solo a coprire le caselle che le passano
+dietro mentre si scorre. I nomi vanno a capo su due righe invece di essere
+tagliati — "Campo centrale coperto" su una riga sola mangiava mezzo tabellone.
 
 Lo stato di attesa non esiste come variabile: la risposta si porta dietro la
 domanda a cui rispondeva (`club|giorno`), e se quella in mano è di un'altra
@@ -154,9 +167,11 @@ l'effetto — che `react-hooks/set-state-in-effect` rifiuta — ma sistema anche
 una corsa: cambiando club due volte di fila, la prima risposta poteva arrivare
 per ultima e sovrascrivere quella giusta.
 
-Gli slot già passati si nascondono, ma solo sul giorno corrente. L'ora si legge
-sul fuso di Roma e non su quello del dispositivo: un telefono col fuso sbagliato
-chiederebbe il tabellone di ieri senza che nessuno se ne accorga.
+Gli slot già passati restano visibili, spenti in grigio. Nasconderli faceva
+partire la giornata da un punto diverso a ogni ora, e la mattina serve lo
+stesso: si guarda anche per capire se un campo è pieno da stamattina. L'ora si
+legge sul fuso di Roma e non su quello del dispositivo: un telefono col fuso
+sbagliato chiederebbe il tabellone di ieri senza che nessuno se ne accorga.
 
 ### Se il tabellone si rompe, la vista porta al sito del club
 Quell'endpoint è di Wansport e può cambiare quando vogliono, senza avvisarci.

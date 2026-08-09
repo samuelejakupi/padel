@@ -8468,11 +8468,12 @@ button.pizza-ranking-row {
 }
 
 /* La colonna dei nomi resta ferma mentre le ore scorrono sotto: senza, dopo
-   due schermate non si sa piu quale riga si sta guardando. Il fondo bianco
-   serve a coprire le caselle che le passano dietro. */
+   due schermate non si sa piu quale riga si sta guardando. Il fondo e quello
+   del foglio, non il bianco: deve coprire le caselle che le passano dietro
+   senza per questo disegnare una fascia sotto ai nomi. */
 .wansport-tabellone tbody th,
-.wansport-angolo {
-  background: var(--white);
+.wansport-tabellone thead th.wansport-angolo {
+  background: var(--paper);
   left: 0;
   position: sticky;
   z-index: 1;
@@ -8483,11 +8484,16 @@ button.pizza-ranking-row {
   font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.6px;
+  /* I nomi dei campi possono essere lunghi — "Campo centrale coperto" —  e
+     su una riga sola diventerebbero una colonna che si mangia mezzo
+     tabellone. Vanno a capo, e la riga si alza di conseguenza: meglio due
+     righe di nome che un nome tagliato. */
+  line-height: 1.25;
   padding-right: var(--space-3);
   text-align: left;
   text-transform: uppercase;
-  white-space: nowrap;
-  width: 78px;
+  vertical-align: middle;
+  width: 92px;
 }
 
 /* L'etichetta dell'angolo c'e per chi legge con VoiceOver e non per chi
@@ -8505,6 +8511,7 @@ button.pizza-ranking-row {
   font-weight: 800;
   height: 16px;
   letter-spacing: 0.4px;
+  position: relative;
   text-align: left;
   width: 26px;
 }
@@ -8519,17 +8526,38 @@ button.pizza-ranking-row {
   border-radius: var(--radius-sm);
   height: 26px;
   padding: 0;
+  position: relative;
 }
 
-/* Il verde e pieno solo dove si puo giocare. L'occupato non e rosso: non e un
-   errore ne una brutta notizia, e semplicemente il resto della giornata, e in
-   una riga da trenta caselle un rosso ogni due sere farebbe sembrare il campo
-   perennemente pieno. */
+/* Dove comincia l'ora piena passa una riga sottile. Sta nello stacco fra due
+   caselle, disegnata da un pseudo-elemento e non da un bordo, cosi le caselle
+   restano tutte della stessa misura: allargare quella dell'ora avrebbe fatto
+   sembrare la mezz'ora meno prenotabile, che non e vero. */
+.wansport-tabellone .is-ora::before {
+  background: var(--veil-3);
+  bottom: 0;
+  content: "";
+  left: -2px;
+  position: absolute;
+  top: 0;
+  width: 1px;
+}
+
 .wansport-tabellone td.is-libero {
   background: color-mix(in srgb, var(--positive) 22%, transparent);
 }
 
+/* Il rosso dice "questo e preso" a colpo d'occhio, ed e la cosa che si cerca
+   scorrendo una riga da trenta caselle. Tenue e non pieno: sono tante, e a
+   piena forza la riga diventerebbe un allarme. */
 .wansport-tabellone td.is-occupato {
+  background: color-mix(in srgb, var(--danger) 26%, transparent);
+}
+
+/* Quello che e gia passato non e ne libero ne occupato: e fuori gioco, e il
+   grigio lo dice senza doverlo scrivere. Vince sugli altri due, perche un
+   campo libero alle nove alle undici non e piu un'occasione. */
+.wansport-tabellone td.is-scaduto {
   background: var(--veil-2);
 }
 
@@ -8571,6 +8599,10 @@ button.pizza-ranking-row {
 }
 
 .wansport-legenda .is-occupato::before {
+  background: color-mix(in srgb, var(--danger) 26%, transparent);
+}
+
+.wansport-legenda .is-scaduto::before {
   background: var(--veil-2);
 }
 
