@@ -1112,7 +1112,6 @@ function clampProgress(value: number) {
 type EmblemName = "goat" | "kraken" | "trophy";
 
 const EMBLEM_COMPONENT: Partial<Record<BadgeGlyph, EmblemName>> = {
-  goat: "goat",
   "goat-slayer": "kraken",
   trophy: "trophy",
 };
