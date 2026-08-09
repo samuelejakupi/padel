@@ -52,6 +52,8 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(page, /ANDAMENTO ELO/);
   assert.match(page, /STORICO PERSONALE/);
   assert.doesNotMatch(page, /FORCED_BADGES/);
+  assert.match(page, /const decidedMatches = wins \+ losses/);
+  assert.doesNotMatch(page, /draws \* 0\.5/);
   assert.match(page, /0 PARTITE/);
   assert.match(page, /Gioca la prima partita per entrare nella classifica/);
   assert.doesNotMatch(page, /signUp\s*\(/);

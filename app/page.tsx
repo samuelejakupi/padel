@@ -317,15 +317,19 @@ function matchIsDraw(match: PadelMatch) {
   return match.winner_team === 0;
 }
 
-// Il pareggio vale mezza vittoria: contarlo come sconfitta punirebbe chi non
-// ha perso, tenerlo fuori dal totale premierebbe chi non ha vinto.
+// Il win rate descrive soltanto le partite che hanno prodotto un vincitore:
+// i pareggi non sono né vittorie né sconfitte e restano fuori dal denominatore.
 //
-// Prende tre numeri e non il profilo intero di proposito: passare l'oggetto
+// Prende due numeri e non il profilo intero di proposito: passare l'oggetto
 // fa credere al compilatore di React che la funzione possa modificarlo, e i
 // memo che lo usano smettono di essere ottimizzati.
-function padelWinRate(wins: number, draws: number, matchesPlayed: number) {
-  if (!matchesPlayed) return 0;
-  return Math.round(((wins + draws * 0.5) / matchesPlayed) * 100);
+function padelWinRateRatio(wins: number, losses: number) {
+  const decidedMatches = wins + losses;
+  return decidedMatches ? wins / decidedMatches : 0;
+}
+
+function padelWinRate(wins: number, losses: number) {
+  return Math.round(padelWinRateRatio(wins, losses) * 100);
 }
 
 // I set che assegnano un punto: quello interrotto non conta, ne per chi lo
@@ -1049,26 +1053,29 @@ function buildBadgeMetrics(profiles: Profile[], matches: PadelMatch[]) {
     }
   });
 
-  type PairRun = { ids: string[]; matches: number; wins: number };
+  type PairRun = { ids: string[]; matches: number; wins: number; losses: number };
   const pairs = new Map<string, PairRun>();
   ordered.forEach((match) => ([1, 2] as const).forEach((side) => {
     const ids = match.players.filter((player) => player.team === side).map((player) => player.profile_id).sort();
     if (ids.length !== 2) return;
     const key = ids.join("|");
-    const pair = pairs.get(key) ?? { ids, matches: 0, wins: 0 };
+    const pair = pairs.get(key) ?? { ids, matches: 0, wins: 0, losses: 0 };
     pair.matches += 1;
-    // Mezzo punto per il pareggio: e il modo piu onesto di tenerlo dentro a
-    // una percentuale di vittorie senza farlo pesare come una sconfitta.
-    pair.wins += matchIsDraw(match) ? 0.5 : match.winner_team === side ? 1 : 0;
+    if (!matchIsDraw(match)) {
+      pair.wins += match.winner_team === side ? 1 : 0;
+      pair.losses += match.winner_team === side ? 0 : 1;
+    }
     pairs.set(key, pair);
   }));
 
-  const eligiblePairs = [...pairs.values()].filter((pair) => pair.matches >= 5);
+  const eligiblePairs = [...pairs.values()].filter(
+    (pair) => pair.matches >= 5 && pair.wins + pair.losses > 0,
+  );
   const topPairRate = eligiblePairs.length
-    ? Math.max(...eligiblePairs.map((pair) => pair.wins / pair.matches))
+    ? Math.max(...eligiblePairs.map((pair) => padelWinRateRatio(pair.wins, pair.losses)))
     : 0;
   pairs.forEach((pair) => {
-    const rate = pair.matches ? pair.wins / pair.matches : 0;
+    const rate = padelWinRateRatio(pair.wins, pair.losses);
     pair.ids.forEach((id) => {
       const item = metrics.get(id);
       if (!item) return;
@@ -2233,7 +2240,7 @@ function TeamRankingList({
     <div className={`${expanded ? "ranking-table ranking-table-team" : "ranking-list ranking-list-team"}${bare ? " ranking-table-bare" : ""}`}>
       {visible.map((team, index) => {
         const rank = ranks[start + index];
-        const winRate = team.matches_played ? Math.round((team.wins / team.matches_played) * 100) : 0;
+        const winRate = padelWinRate(team.wins, team.losses);
         return (
           <div className={`ranking-row ${medalClass(rank)}`} key={team.id}>
             <span className={`rank-number rank-${rank}`}>{rank}</span>
@@ -2649,7 +2656,7 @@ function RankingList({
         // La posizione va letta sull'elenco intero, non sulla finestra:
         // altrimenti la prima riga visibile direbbe sempre "1".
         const rank = ranks[start + index];
-        const winRate = padelWinRate(profile.wins, profile.draws ?? 0, profile.matches_played);
+        const winRate = padelWinRate(profile.wins, profile.losses);
         const content = (
           <>
             <span className={`rank-number ${isRanked ? `rank-${rank}` : "rank-nc"}`}>
@@ -4901,8 +4908,9 @@ function AppShell({ session }: { session: Session | null }) {
   // funzione in questo punto del componente fa rinunciare il compilatore di
   // React a tutte le memoizzazioni manuali della pagina (lo dice `npm run
   // lint`). Se la formula cambia, cambiala in tutti e due i posti.
-  const winRate = currentUser?.matches_played
-    ? Math.round(((currentUser.wins + (currentUser.draws ?? 0) * 0.5) / currentUser.matches_played) * 100)
+  const decidedMatches = currentUser ? currentUser.wins + currentUser.losses : 0;
+  const winRate = currentUser && decidedMatches
+    ? Math.round((currentUser.wins / decidedMatches) * 100)
     : 0;
   const missingDatabaseSchema =
     notice.includes("public.profiles") ||
@@ -5753,7 +5761,7 @@ function AppShell({ session }: { session: Session | null }) {
               {(selectedPlayer.draws ?? 0) > 0
                 ? <article><b>{selectedPlayer.draws}</b><small>Pareggi</small></article>
                 : null}
-              <article><b>{padelWinRate(selectedPlayer.wins, selectedPlayer.draws ?? 0, selectedPlayer.matches_played)}%</b><small>Win rate</small></article>
+              <article><b>{padelWinRate(selectedPlayer.wins, selectedPlayer.losses)}%</b><small>Win rate</small></article>
             </div>
 
             <section className="player-trophies">
