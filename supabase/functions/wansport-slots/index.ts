@@ -26,6 +26,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // registrato presso di loro: il gate di Wansport e per club e vale anche sul
 // dato, non solo sulla pagina. Restano elencati lo stesso perche l'app possa
 // spiegare *perche* non li mostra invece di far finta che non esistano.
+//
+// Su quelli dove abbiamo un'iscrizione, la funzione entra da sola con le
+// credenziali nei secret (vedi `accedi`). Il flag resta a `true` lo stesso:
+// dice com'e fatto il centro, non se ci riusciamo. Se le credenziali mancano
+// o smettono di funzionare si torna esattamente al comportamento di prima.
 const CLUBS: Record<string, { host: string; nome: string; richiedeLogin: boolean }> = {
   corcuera: {
     host: "corcuerapadel.wansport.com",
@@ -54,6 +59,40 @@ const CLUBS: Record<string, { host: string; nome: string; richiedeLogin: boolean
   },
 };
 
+// L'account Wansport e uno solo e vale su tutti i sottodomini: ci si iscrive
+// a Wansport, e sono poi i club a tesserarti. Quindi una coppia sola, non una
+// per centro. Su un club dove non siamo tesserati il login riesce lo stesso
+// ma il pannello risponde `success: false`, ed e esattamente il caso che
+// gestivamo gia: quel club torna a dire "richiede login". Il giorno che ci
+// tesseriamo, si accende da solo senza toccare niente.
+//
+// Due posti da cui possono arrivare, in quest'ordine:
+//
+// 1. il Vault del database, dove le mette il profilo dentro l'app;
+// 2. i secret della funzione (`WANSPORT_USER` / `WANSPORT_PASS`), che restano
+//    come via di servizio se il Vault non e stato ancora preparato.
+//
+// In nessuno dei due casi escono da qui dentro: quello che torna al telefono
+// e solo la griglia libero/occupato. E l'account del gruppo, non quello dei
+// singoli: nessuno deve consegnare all'app la password che usa altrove.
+async function credenziali(
+  db: ReturnType<typeof createClient>,
+): Promise<{ utente: string; segreto: string } | null> {
+  try {
+    const { data } = await db.rpc("accesso_wansport");
+    const riga = Array.isArray(data) ? data[0] : data;
+    const utente = (riga as { utente?: string })?.utente;
+    const segreto = (riga as { segreto?: string })?.segreto;
+    if (utente && segreto) return { utente, segreto };
+  } catch {
+    // Il Vault puo non essere ancora preparato: si prova la via di servizio.
+  }
+
+  const utente = Deno.env.get("WANSPORT_USER");
+  const segreto = Deno.env.get("WANSPORT_PASS");
+  return utente && segreto ? { utente, segreto } : null;
+}
+
 // L'id con cui Wansport identifica il padel. E lo stesso su tutti i centri.
 const SPORT_PADEL = 15;
 
@@ -61,6 +100,13 @@ const SPORT_PADEL = 15;
 // stessa chiamata quando in tre aprono l'app insieme, abbastanza poco da non
 // mostrare come libero un campo appena preso.
 const CACHE_TTL_SECONDI = 60;
+
+// Quanto teniamo buona una sessione Wansport. Quindici minuti sta sotto la
+// scadenza di Joomla con margine, e soprattutto tiene basso il numero di
+// accessi: rifare il login a ogni richiesta riempirebbe il loro registro di
+// centinaia di righe a nome nostro, che e il modo piu rapido per farsi
+// notare e chiudere l'account.
+const SESSIONE_TTL_SECONDI = 15 * 60;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -148,6 +194,171 @@ function normalizza(payload: unknown, club: string, nome: string, giorno: string
   return { club, nome, giorno, campi };
 }
 
+// ── Accesso ───────────────────────────────────────────────────────────────
+//
+// Wansport gira su Joomla e il modulo di accesso e quello standard: POST alla
+// radice del sito con `option=com_users`, `task=user.login`, piu un token
+// anti-CSRF che cambia a ogni visita. Il token e un campo nascosto dal nome
+// casuale di 32 cifre esadecimali e valore "1": va pescato dalla pagina
+// appena prima di rispedirlo. Da qui la sequenza in due tempi — prima si
+// prende pagina e cookie, poi si accede.
+//
+// `fetch` di Deno non ha un barattolo dei biscotti: i cookie li teniamo noi.
+
+function raccogliCookie(barattolo: Map<string, string>, risposta: Response): void {
+  for (const riga of risposta.headers.getSetCookie()) {
+    const coppia = riga.split(";")[0] ?? "";
+    const taglio = coppia.indexOf("=");
+    if (taglio > 0) barattolo.set(coppia.slice(0, taglio).trim(), coppia.slice(taglio + 1).trim());
+  }
+}
+
+function intestazioneCookie(barattolo: Map<string, string>): string {
+  return Array.from(barattolo, ([nome, valore]) => `${nome}=${valore}`).join("; ");
+}
+
+async function accedi(host: string, utente: string, segreto: string): Promise<string | null> {
+  const barattolo = new Map<string, string>();
+
+  let html: string;
+  try {
+    const pagina = await fetch(`https://${host}/`, { signal: AbortSignal.timeout(10_000) });
+    if (!pagina.ok) return null;
+    raccogliCookie(barattolo, pagina);
+    html = await pagina.text();
+  } catch {
+    return null;
+  }
+
+  const token = html.match(/<input[^>]*name="([0-9a-f]{32})"[^>]*value="1"/)?.[1];
+  if (!token) return null;
+
+  const modulo = new URLSearchParams({
+    username: utente,
+    password: segreto,
+    option: "com_users",
+    task: "user.login",
+    // Dove Joomla ci rimanda dopo: "index.php" in base64, com'e nel modulo.
+    return: "aW5kZXgucGhw",
+    [token]: "1",
+  });
+
+  try {
+    const risposta = await fetch(`https://${host}/`, {
+      method: "POST",
+      body: modulo,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Cookie: intestazioneCookie(barattolo),
+      },
+      // Senza `manual` il redirect verrebbe seguito perdendo per strada il
+      // cookie nuovo: Joomla rigenera l'id di sessione proprio al login, e
+      // quello vecchio da quel momento non vale piu niente.
+      redirect: "manual",
+      signal: AbortSignal.timeout(10_000),
+    });
+    raccogliCookie(barattolo, risposta);
+  } catch {
+    return null;
+  }
+
+  // Non controlliamo qui se le credenziali erano giuste: Joomla rimanda
+  // indietro con un redirect sia quando entra sia quando rifiuta, e leggere
+  // il messaggio d'errore vorrebbe dire indovinare la traduzione. La prova
+  // vera e la chiamata al pannello subito dopo — se risponde, siamo dentro.
+  return intestazioneCookie(barattolo);
+}
+
+async function sessioneSalvata(
+  db: ReturnType<typeof createClient>,
+  club: string,
+): Promise<string | null> {
+  try {
+    const { data } = await db
+      .from("wansport_sessioni")
+      .select("cookie, creata_il")
+      .eq("club", club)
+      .maybeSingle();
+    if (!data) return null;
+    const eta = (Date.now() - new Date(data.creata_il as string).getTime()) / 1000;
+    return eta < SESSIONE_TTL_SECONDI ? (data.cookie as string) : null;
+  } catch {
+    return null;
+  }
+}
+
+// La richiesta vera al pannello. `null` vuol dire "non ci siamo arrivati",
+// diverso da "ci siamo arrivati e ci ha detto di no".
+async function chiediPannello(
+  host: string,
+  giorno: string,
+  cookie: string | null,
+): Promise<unknown | null> {
+  const indirizzo = new URL(`https://${host}/index.php`);
+  indirizzo.searchParams.set("option", "com_wsinit");
+  indirizzo.searchParams.set("task", "prenotazioni.getPannelloPrenotazioni");
+  indirizzo.searchParams.set("format", "raw");
+  indirizzo.searchParams.set("filtroData", giorno);
+  indirizzo.searchParams.set("filtroSport", String(SPORT_PADEL));
+
+  try {
+    const risposta = await fetch(indirizzo, {
+      headers: cookie ? { Accept: "application/json", Cookie: cookie } : { Accept: "application/json" },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!risposta.ok) return null;
+    return await risposta.json();
+  } catch {
+    return null;
+  }
+}
+
+function respinto(grezzo: unknown): boolean {
+  return (grezzo as { success?: boolean })?.success === false;
+}
+
+// Chi sta chiamando. Le Edge Function accettano gia solo richieste con un JWT
+// valido, ma la chiave anonima *e* un JWT valido: passa chiunque abbia aperto
+// il sito. Per salvare l'accesso serve di piu — una persona con un account
+// nel club — e questo e il modo di distinguerle.
+async function utenteDellaRichiesta(req: Request): Promise<string | null> {
+  const autorizzazione = req.headers.get("Authorization") ?? "";
+  if (!autorizzazione.startsWith("Bearer ")) return null;
+  try {
+    const cliente = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: autorizzazione } } },
+    );
+    const { data } = await cliente.auth.getUser();
+    return data.user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// Un controllo di cortesia dopo il salvataggio: le credenziali appena messe
+// aprono davvero una sessione? Si accede e si richiede la pagina iniziale col
+// cookie in mano — se il modulo di login e ancora li, non siamo entrati.
+//
+// E un indizio, non una sentenza: serve a dire "guarda che cosi non passa"
+// subito invece di lasciarlo scoprire fra tre giorni davanti al campo. Il
+// salvataggio avviene comunque, anche se questo dice di no.
+async function verificaAccesso(host: string, utente: string, segreto: string): Promise<boolean> {
+  const cookie = await accedi(host, utente, segreto);
+  if (!cookie) return false;
+  try {
+    const pagina = await fetch(`https://${host}/`, {
+      headers: { Cookie: cookie },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!pagina.ok) return false;
+    return !(await pagina.text()).includes('value="user.login"');
+  } catch {
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
@@ -157,12 +368,70 @@ Deno.serve(async (req) => {
       headers: { ...CORS, "Content-Type": "application/json" },
     });
 
-  let corpo: { club?: string; giorno?: string };
+  let corpo: { club?: string; giorno?: string; azione?: string; utente?: string; segreto?: string };
   try {
     corpo = await req.json();
   } catch {
     return rispondi({ errore: "Richiesta non leggibile" }, 400);
   }
+
+  const db = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  );
+
+  // ── Le due azioni del profilo ──────────────────────────────────────────
+
+  // "C'e un accesso configurato?" e tutto quello che il profilo ha bisogno di
+  // sapere: ne l'utente ne, tantomeno, la password tornano mai indietro.
+  if (corpo.azione === "stato") {
+    if (!(await utenteDellaRichiesta(req))) return rispondi({ errore: "Serve l'accesso" }, 401);
+    try {
+      const { data } = await db.rpc("accesso_wansport_configurato");
+      return rispondi({ configurato: data === true });
+    } catch {
+      return rispondi({ configurato: false });
+    }
+  }
+
+  if (corpo.azione === "salva") {
+    if (!(await utenteDellaRichiesta(req))) return rispondi({ errore: "Serve l'accesso" }, 401);
+
+    const utente = typeof corpo.utente === "string" ? corpo.utente.trim() : "";
+    const segreto = typeof corpo.segreto === "string" ? corpo.segreto : "";
+    // I limiti non sono una convalida del formato — Wansport accetta email o
+    // numero di cellulare e non tocca a noi decidere quale — ma un tetto: da
+    // qui in avanti finiscono nel Vault, e nel Vault ci va una credenziale,
+    // non un file.
+    if (!utente || !segreto || utente.length > 200 || segreto.length > 200) {
+      return rispondi({ errore: "Utente e password non possono essere vuoti" }, 400);
+    }
+
+    try {
+      const { error } = await db.rpc("salva_accesso_wansport", { utente, segreto });
+      if (error) return rispondi({ errore: "salvataggio-fallito" }, 500);
+    } catch {
+      return rispondi({ errore: "salvataggio-fallito" }, 500);
+    }
+
+    // Le sessioni aperte con le credenziali di prima non valgono piu niente:
+    // si buttano subito, se no per un quarto d'ora si continuerebbe a usare
+    // il vecchio accesso e sembrerebbe che il salvataggio non abbia fatto
+    // nulla.
+    try {
+      await db.from("wansport_sessioni").delete().neq("club", "");
+    } catch {
+      // Scadono da sole: fastidioso, non grave.
+    }
+
+    // La prova si fa sul primo club che vuole il login: se il modulo di
+    // accesso sparisce, le credenziali sono buone.
+    const banco = Object.values(CLUBS).find((c) => c.richiedeLogin);
+    const verificato = banco ? await verificaAccesso(banco.host, utente, segreto) : false;
+    return rispondi({ salvato: true, verificato });
+  }
+
+  // ── Il tabellone ───────────────────────────────────────────────────────
 
   const club = typeof corpo.club === "string" ? corpo.club : "";
   const configurazione = CLUBS[club];
@@ -171,16 +440,13 @@ Deno.serve(async (req) => {
   const giorno = giornoValido(corpo.giorno);
   if (!giorno) return rispondi({ errore: "Data non valida" }, 400);
 
-  if (configurazione.richiedeLogin) {
-    // Non e un errore nostro ed e stabile nel tempo: l'app lo mostra come
-    // stato del club, non come guasto.
+  // Un club dietro al login senza credenziali configurate: non e un errore
+  // nostro ed e stabile nel tempo, l'app lo mostra come stato del club e non
+  // come guasto.
+  const accesso = configurazione.richiedeLogin ? await credenziali(db) : null;
+  if (configurazione.richiedeLogin && !accesso) {
     return rispondi({ errore: "richiede-login", nome: configurazione.nome }, 409);
   }
-
-  const db = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-  );
 
   // Cache. Se qualcosa qui non funziona non e un motivo per non rispondere:
   // si perde il risparmio di chiamate, non il tabellone.
@@ -202,28 +468,40 @@ Deno.serve(async (req) => {
     // avanti lo stesso
   }
 
-  const indirizzo = new URL(`https://${configurazione.host}/index.php`);
-  indirizzo.searchParams.set("option", "com_wsinit");
-  indirizzo.searchParams.set("task", "prenotazioni.getPannelloPrenotazioni");
-  indirizzo.searchParams.set("format", "raw");
-  indirizzo.searchParams.set("filtroData", giorno);
-  indirizzo.searchParams.set("filtroSport", String(SPORT_PADEL));
+  // Primo tentativo con quello che abbiamo in mano: la sessione salvata se il
+  // club ne vuole una, niente se il pannello e aperto a tutti. Se il club
+  // vuole una sessione e non ce l'abbiamo, la chiamata si salta: sarebbe un
+  // no garantito, e un no garantito non vale la pena di chiederlo.
+  let cookie = accesso ? await sessioneSalvata(db, club) : null;
+  let grezzo =
+    accesso && !cookie ? null : await chiediPannello(configurazione.host, giorno, cookie);
 
-  let grezzo: unknown;
-  try {
-    const risposta = await fetch(indirizzo, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!risposta.ok) return rispondi({ errore: "wansport-non-raggiungibile" }, 502);
-    grezzo = await risposta.json();
-  } catch {
-    return rispondi({ errore: "wansport-non-raggiungibile" }, 502);
+  // Secondo tentativo, solo dove abbiamo un accesso: la sessione puo essere
+  // scaduta prima del previsto, o non esserci mai stata. Si rifa il login una
+  // volta sola — se anche questo non basta, la risposta e "richiede-login" e
+  // l'app manda al sito del club, che e dove l'informazione c'e comunque.
+  if (accesso && (grezzo === null || respinto(grezzo))) {
+    cookie = await accedi(configurazione.host, accesso.utente, accesso.segreto);
+    if (cookie) {
+      grezzo = await chiediPannello(configurazione.host, giorno, cookie);
+      if (grezzo !== null && !respinto(grezzo)) {
+        try {
+          await db
+            .from("wansport_sessioni")
+            .upsert({ club, cookie, creata_il: new Date().toISOString() });
+        } catch {
+          // La sessione salvata e un risparmio di accessi, non una dipendenza.
+        }
+      }
+    }
   }
 
-  // Il centro puo aver chiuso il pannello da quando l'abbiamo verificato: e
-  // un'impostazione che l'amministratore del club cambia quando vuole.
-  if ((grezzo as { success?: boolean })?.success === false) {
+  if (grezzo === null) return rispondi({ errore: "wansport-non-raggiungibile" }, 502);
+
+  // Il centro puo aver chiuso il pannello da quando l'abbiamo verificato, o
+  // aver disdetto la nostra iscrizione: e roba che l'amministratore del club
+  // cambia quando vuole, e da qui si vede uguale.
+  if (respinto(grezzo)) {
     return rispondi({ errore: "richiede-login", nome: configurazione.nome }, 409);
   }
 

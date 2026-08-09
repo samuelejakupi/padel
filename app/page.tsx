@@ -15,6 +15,7 @@ import {
   supabase,
 } from "@/lib/supabase";
 import WansportBoard from "./WansportBoard";
+import WansportAccesso from "./WansportAccesso";
 
 type View = "padel" | "pizza";
 type PadelView = "overview" | "ranking" | "matches" | "tournaments" | "player";
@@ -6457,6 +6458,12 @@ function AppShell({ session }: { session: Session | null }) {
               </label>
               <label>Email<input value={session?.user.email ?? ""} disabled /></label>
               {supabase ? null : <p className="demo-profile-note">Il profilo diventa modificabile dopo il collegamento a Supabase.</p>}
+              {/* Sta dentro al modulo del profilo ma non ne fa parte: ha un
+                  suo tasto e un suo salvataggio, perche quello che configura
+                  non e un dato tuo ma l'accesso Wansport di tutti. Per questo
+                  non e un `<form>` annidato — non si puo — e i suoi comandi
+                  sono `type="button"`. */}
+              {supabase ? <WansportAccesso /> : null}
               <div className="modal-actions">
                 {supabase ? (
                   <button type="button" className="signout-button" onClick={() => void supabase?.auth.signOut()}>Esci dal club</button>

@@ -53,9 +53,6 @@ export default function WansportBoard() {
   const chiave = `${club.slug}|${scarto}`;
 
   useEffect(() => {
-    // Il club che tiene il tabellone dietro al login lo sappiamo gia: inutile
-    // far partire una chiamata per farsi dire di no.
-    if (club.richiedeLogin) return;
     let vivo = true;
     const chiesta = `${club.slug}|${scarto}`;
     // Lo stato si tocca solo qui dentro, quando la risposta arriva. Scriverlo
@@ -67,14 +64,10 @@ export default function WansportBoard() {
     return () => {
       vivo = false;
     };
-  }, [club.richiedeLogin, club.slug, scarto]);
+  }, [club.slug, scarto]);
 
-  const esito: EsitoTabellone | null = club.richiedeLogin
-    ? { stato: "richiede-login" }
-    : risposta?.chiave === chiave
-      ? risposta.esito
-      : null;
-  const attesa = !club.richiedeLogin && risposta?.chiave !== chiave;
+  const esito: EsitoTabellone | null = risposta?.chiave === chiave ? risposta.esito : null;
+  const attesa = risposta?.chiave !== chiave;
 
   // Le ore gia passate restano nel tabellone. Toglierle faceva partire la
   // giornata da un punto diverso a ogni ora, e nel confronto fra i campi la

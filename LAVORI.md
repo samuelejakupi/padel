@@ -16,31 +16,102 @@ Ultimo aggiornamento: 9 agosto 2026
 ## In sospeso
 
 ### Il tabellone dei campi liberi non funziona finché non lo si accende
-Servono due cose, tutte e due da fare a mano una volta sola:
+Serve qualche passaggio a mano, una volta sola:
 
 1. `supabase/migration-wansport-cache.sql` nel SQL Editor. Senza, la Edge
    Function funziona lo stesso — la cache è un risparmio, non una dipendenza —
    ma ogni apertura della vista è una chiamata al sito del club.
-2. `supabase functions deploy wansport-slots` con la CLI di Supabase. Senza
-   questo il tasto "Campi liberi" si apre su un errore. Va rifatto a ogni
-   modifica di `supabase/functions/wansport-slots/index.ts`.
+2. `supabase/migration-wansport-sessioni.sql`, sempre nel SQL Editor. Serve ai
+   club dove entriamo con un account nostro: senza, si rifà il login a ogni
+   richiesta invece di riusare la sessione.
+3. `supabase/migration-wansport-accesso.sql`, sempre nel SQL Editor: prepara
+   il Vault e le tre funzioni con cui ci si parla. Senza, il riquadro nel
+   profilo non riesce a salvare.
+4. Le credenziali dell'account Wansport del gruppo, **dal profilo dentro
+   l'app** — non in un file, e nemmeno in chat. Sono due e valgono per tutti i
+   centri: l'account Wansport è uno solo e sono i club a tesserarti.
+   In alternativa restano i secret della funzione (`WANSPORT_USER` /
+   `WANSPORT_PASS`, dal Dashboard), che valgono come via di servizio se il
+   Vault non è ancora pronto. Se mancano tutti e due, i club chiusi tornano a
+   dire "richiede login" e non succede nient'altro.
+5. `supabase functions deploy wansport-slots`, o l'editor delle Edge Functions
+   nel Dashboard. Senza questo il tasto "Campi liberi" si apre su un errore.
+   Va rifatto a ogni modifica di
+   `supabase/functions/wansport-slots/index.ts`.
 
 Prima Edge Function del progetto, quindi la cartella `supabase/functions/` è
 nuova. È esclusa da `tsconfig.json` e da ESLint: gira su Deno, importa da URL e
 usa il global `Deno`, cose che il build di Next non sa compilare e che in
 produzione esistono benissimo.
 
-### Quattro club su cinque mostrano il tabellone solo ai loro iscritti
-Funziona **solo Corcuera**. Don Quique, Oneglia, Riviera e Diano rispondono
-`{"success": false}` a chi non è registrato presso di loro, e il blocco vale
-anche sul dato, non solo sulla pagina: è un'impostazione che ogni centro
-decide per sé. Nell'app restano in elenco con la loro spiegazione e il link al
-sito, invece di sparire — sapere *perché* non si vede è meglio che non vederlo.
+### Nei club chiusi si entra con un account solo, non con quello di ognuno
+Don Quique, Oneglia, Riviera e Diano rispondono `{"success": false}` a chi non
+è registrato presso di loro, e il blocco vale anche sul dato, non solo sulla
+pagina: è un'impostazione che ogni centro decide per sé.
 
-Da provare, e serve un account: se dopo il login su quei centri l'endpoint
-risponde, la funzione si estende quasi senza modifiche (tenere una sessione
-lato Edge Function). Da valutare in parallelo la strada pulita, cioè chiedere
-a Wansport un accesso da partner facendosi presentare da uno dei club.
+La prima idea era un tasto "accedi" nell'app, con ognuno che mette le proprie
+credenziali Wansport. È stata scartata: per rigiocarsi quel login la funzione
+deve conservare le password in chiaro o comunque decifrabili — non si possono
+hashare, serve il valore vero — e da quel momento nel nostro Supabase ci sono
+le password di quattro persone per un servizio che non è nostro, con la gente
+che ricicla le password. Un bucco lì esce dal padel.
+
+Quello che si fa invece: **un account solo, del gruppo**, messo una volta dal
+riquadro in fondo al profilo. Nessuno consegna all'app la propria password, e
+in caso di guaio il danno è un account che si blocca.
+
+Le credenziali finiscono nel **Vault** di Supabase e non in una tabella: il
+Vault cifra sul disco e tiene la chiave di cifratura fuori dal database, così
+un dump o un backup non contengono niente di leggibile. Ci si arriva solo per
+tre funzioni `security definer` con l'esecuzione revocata ad `anon` e
+`authenticated` — dal telefono non si chiamano nemmeno da loggati — e la sola
+che restituisce la password in chiaro, `accesso_wansport()`, va trattata come
+il punto delicato del file: se un giorno diventasse chiamabile dal client
+sarebbe finita.
+
+Dal profilo si può sapere se un accesso c'è e sostituirlo, **non rileggerlo**:
+non esiste una chiamata che restituisca la password, nemmeno mascherata, e i
+due campi partono sempre vuoti apposta. Salvando si cancellano anche tutte le
+sessioni aperte, se no per un quarto d'ora si continuerebbe a usare il vecchio
+accesso e sembrerebbe che il salvataggio non abbia funzionato. Subito dopo si
+fa una prova di login e si dice se passa: salvato e funzionante sono due cose
+diverse, e la differenza è meglio saperla lì che davanti al campo.
+
+Chi può metterlo: chiunque abbia un account nell'app. La funzione controlla
+che ci sia una persona vera dietro la richiesta — la chiave anonima da sola
+non basta, ed è un controllo che serve perché le Edge Function accettano
+quella chiave come JWT valido — ma non distingue fra noi. Siamo in quattro e
+la password non si rilegge: il rischio è che qualcuno la sovrascriva, non che
+la porti via. Se un giorno servisse stringere, basta confrontare l'id di chi
+chiama con un secret.
+
+L'account Wansport è unico e vale su tutti i sottodomini — ci si iscrive a
+Wansport, e sono poi i singoli club a tesserarti — quindi la coppia di secret
+è una sola e non una per centro. Su un club dove non siamo tesserati il login
+riesce lo stesso ma il pannello risponde `success: false`, che è il caso già
+gestito: quel club dice "richiede login" e mostra il link al sito. Per questo
+nel client non c'è più nessun elenco di club "fuori portata" da tenere
+allineato a mano: si chiede e basta, e il giorno che ci si tessera da qualche
+parte quel centro si accende da solo.
+
+Il login è quello standard di Joomla: POST alla radice con `option=com_users`,
+`task=user.login` e un token anti-CSRF che va pescato dalla pagina appena
+prima (campo nascosto, nome di 32 cifre esadecimali, valore `1`). Il redirect
+si intercetta a mano, perché Joomla rigenera l'id di sessione proprio al login
+e seguendolo si perderebbe il cookie buono. La sessione si riusa per quindici
+minuti: rifare il login a ogni richiesta riempirebbe il loro registro accessi
+di centinaia di righe a nome nostro, che è il modo più rapido per farsi
+notare.
+
+Se le credenziali mancano, sono sbagliate o il club ci toglie l'iscrizione, la
+risposta torna a essere `richiede-login` e l'app si comporta come prima: non
+c'è un caso in cui l'utente veda un errore. Il rovescio è che una credenziale
+sbagliata non si distingue da un club chiuso — se un centro smette di
+funzionare senza motivo, è la prima cosa da guardare, nei log della funzione.
+
+Resta aperta la strada pulita: chiedere a Wansport un accesso da partner
+facendosi presentare da uno dei club. È l'unica che non dipende da un account
+personale e non rischia niente.
 
 ### `migration-pareggi.sql` va eseguita prima che i pareggi funzionino
 Finché non gira nel SQL Editor, il sito continua a funzionare come prima: le

@@ -8616,6 +8616,52 @@ button.pizza-ranking-row {
   margin: 0 0 var(--space-3);
 }
 
+/* ── L'accesso Wansport, dentro al modulo del profilo ────────────────────
+   Un riquadro staccato da quello che sta sopra, perche quello che configura
+   non e un dato di chi guarda ma una cosa del gruppo: se somigliasse agli
+   altri campi sembrerebbe "il tuo account Wansport", che e proprio la lettura
+   da evitare. */
+.wansport-accesso {
+  border-top: 1px solid var(--veil-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+}
+
+.wansport-accesso-testo {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Quello che succede alla password dopo il tasto. Si legge piccolo ma si
+   legge: chi consegna una credenziale ha diritto di sapere dove finisce. */
+.wansport-accesso-nota {
+  color: var(--ink-45);
+  font-size: 11px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.wansport-accesso-esito {
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.wansport-accesso-comandi {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.wansport-accesso-comandi .button {
+  flex: 1;
+}
+
 /* Il modo per uscire quando il tabellone non c'e o non basta. Non e un tasto
    primario: e la via d'uscita, e deve leggersi come tale. */
 .wansport-link {

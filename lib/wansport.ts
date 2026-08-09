@@ -36,42 +36,40 @@ export type WansportTabellone = {
 export type WansportClub = {
   slug: string;
   etichetta: string;
-  // Il centro apre il tabellone solo a chi e registrato da loro. Lo sappiamo
-  // in anticipo, quindi lo diciamo prima di far aspettare qualcuno per niente.
-  richiedeLogin: boolean;
   // Dove mandare chi vuole guardare comunque, o prenotare.
   sito: string;
 };
 
+// Quali di questi si riescano davvero a vedere non e scritto qui, e per un
+// motivo: dipende da dove il nostro account e tesserato, che cambia senza che
+// il codice lo sappia. Prima c'era un elenco di club "fuori portata" e andava
+// tenuto allineato a mano. Ora si chiede e basta: la Edge Function risponde
+// 409 se non ci arriva, e il giorno che ci tesseriamo da qualche parte quel
+// club si accende da solo.
 export const WANSPORT_CLUBS: WansportClub[] = [
   {
     slug: "corcuera",
     etichetta: "CORCUERA - IMPERIA",
-    richiedeLogin: false,
     sito: "https://corcuerapadel.wansport.com/bookingspanel",
   },
   {
     slug: "don-quique",
     etichetta: "DON QUIQUE - IMPERIA",
-    richiedeLogin: true,
     sito: "https://donquiquepadelimperia.wansport.com/bookingspanel",
   },
   {
     slug: "oneglia",
     etichetta: "ONEGLIA PADEL - CASTELVECCHIO",
-    richiedeLogin: true,
     sito: "https://onegliapadel.wansport.com/bookingspanel",
   },
   {
     slug: "riviera",
     etichetta: "RIVIERA PADEL - SAN LORENZO",
-    richiedeLogin: true,
     sito: "https://rivierapadel.wansport.com/bookingspanel",
   },
   {
     slug: "diano",
     etichetta: "DIANO PADEL - DIANO MARINA",
-    richiedeLogin: true,
     sito: "https://dianopadelacademy.wansport.com/bookingspanel",
   },
 ];
@@ -111,6 +109,38 @@ export function minutiDiOggi(): number {
 export function minutiDa(orario: string): number {
   const [h, m] = orario.split(":");
   return Number(h) * 60 + Number(m);
+}
+
+// ── L'accesso Wansport del gruppo ────────────────────────────────────────
+//
+// Le credenziali si mettono dal profilo e da li in poi non si rivedono piu:
+// vanno nel Vault del database e le rilegge solo la Edge Function. Da qui si
+// puo sapere se ci sono e sostituirle, non leggerle — non c'e nessuna
+// chiamata che le restituisca, ed e voluto.
+
+export async function accessoConfigurato(): Promise<boolean> {
+  if (!supabase) return false;
+  const { data, error } = await supabase.functions.invoke<{ configurato?: boolean }>(
+    "wansport-slots",
+    { body: { azione: "stato" } },
+  );
+  return !error && data?.configurato === true;
+}
+
+export type EsitoSalvataggio = "salvato" | "salvato-ma-non-passa" | "errore";
+
+export async function salvaAccesso(utente: string, segreto: string): Promise<EsitoSalvataggio> {
+  if (!supabase) return "errore";
+  const { data, error } = await supabase.functions.invoke<{
+    salvato?: boolean;
+    verificato?: boolean;
+  }>("wansport-slots", { body: { azione: "salva", utente, segreto } });
+
+  if (error || !data?.salvato) return "errore";
+  // Salvato e verificato sono due cose diverse: la password finisce nel Vault
+  // comunque, ma se il login non passa e meglio dirlo adesso che lasciarlo
+  // scoprire davanti al campo.
+  return data.verificato ? "salvato" : "salvato-ma-non-passa";
 }
 
 export async function leggiTabellone(club: string, giorno: string): Promise<EsitoTabellone> {
