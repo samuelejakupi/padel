@@ -14,6 +14,7 @@ import {
   type TournamentTeam,
   supabase,
 } from "@/lib/supabase";
+import WansportBoard from "./WansportBoard";
 
 type View = "padel" | "pizza";
 type PadelView = "overview" | "ranking" | "matches" | "tournaments" | "player";
@@ -4242,7 +4243,7 @@ function AppShell({ session }: { session: Session | null }) {
   const [chosenMonth, setChosenMonth] = useState<string | null | undefined>(undefined);
   // Partite e classifica complete si aprono in un foglio dal basso invece di
   // portare su un'altra schermata.
-  const [sheet, setSheet] = useState<null | "matches" | "ranking">(null);
+  const [sheet, setSheet] = useState<null | "matches" | "ranking" | "campi">(null);
 
   // I due caroselli della home. Le facce sono in fila nell'ordine dei
   // pallini, e il cambio automatico va avanti e indietro lungo quella fila.
@@ -5445,6 +5446,12 @@ function AppShell({ session }: { session: Session | null }) {
                   <div className="section-head-label"><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
                   <div className="court-actions">
                     <button className="button button-primary cta-new-match cta-aurora" onClick={() => setShowMatch(true)}>+ Nuova partita</button>
+                    {/* Il tabellone dei campi liberi. Sta accanto a "nuova
+                        partita" perche e la domanda che viene prima: dove si
+                        gioca stasera si guarda, poi si registra. */}
+                    <button className="button button-card" onClick={() => setSheet("campi")}>
+                      Campi liberi
+                    </button>
                     {filteredMatches.length ? (
                       <button
                         className="button button-card cta-see-all-top"
@@ -6197,6 +6204,12 @@ function AppShell({ session }: { session: Session | null }) {
             </div>
           </section>
         </div>
+      ) : null}
+
+      {sheet === "campi" ? (
+        <BottomSheet title="Campi liberi" onClose={() => setSheet(null)}>
+          <WansportBoard />
+        </BottomSheet>
       ) : null}
 
       {sheet === "matches" ? (

@@ -9,11 +9,38 @@ perdono passando da una sessione all'altra.
 "in sospeso" a "deciso". Quando scarti una strada, scrivi perché: serve a non
 ripercorrerla fra un mese.
 
-Ultimo aggiornamento: 8 agosto 2026
+Ultimo aggiornamento: 9 agosto 2026
 
 ---
 
 ## In sospeso
+
+### Il tabellone dei campi liberi non funziona finché non lo si accende
+Servono due cose, tutte e due da fare a mano una volta sola:
+
+1. `supabase/migration-wansport-cache.sql` nel SQL Editor. Senza, la Edge
+   Function funziona lo stesso — la cache è un risparmio, non una dipendenza —
+   ma ogni apertura della vista è una chiamata al sito del club.
+2. `supabase functions deploy wansport-slots` con la CLI di Supabase. Senza
+   questo il tasto "Campi liberi" si apre su un errore. Va rifatto a ogni
+   modifica di `supabase/functions/wansport-slots/index.ts`.
+
+Prima Edge Function del progetto, quindi la cartella `supabase/functions/` è
+nuova. È esclusa da `tsconfig.json` e da ESLint: gira su Deno, importa da URL e
+usa il global `Deno`, cose che il build di Next non sa compilare e che in
+produzione esistono benissimo.
+
+### Quattro club su cinque mostrano il tabellone solo ai loro iscritti
+Funziona **solo Corcuera**. Don Quique, Oneglia, Riviera e Diano rispondono
+`{"success": false}` a chi non è registrato presso di loro, e il blocco vale
+anche sul dato, non solo sulla pagina: è un'impostazione che ogni centro
+decide per sé. Nell'app restano in elenco con la loro spiegazione e il link al
+sito, invece di sparire — sapere *perché* non si vede è meglio che non vederlo.
+
+Da provare, e serve un account: se dopo il login su quei centri l'endpoint
+risponde, la funzione si estende quasi senza modifiche (tenere una sessione
+lato Edge Function). Da valutare in parallelo la strada pulita, cioè chiedere
+a Wansport un accesso da partner facendosi presentare da uno dei club.
 
 ### `migration-pareggi.sql` va eseguita prima che i pareggi funzionino
 Finché non gira nel SQL Editor, il sito continua a funzionare come prima: le
@@ -58,6 +85,69 @@ salvata sulla schermata Home. Per ora c'è il pallino sull'icona Pizza.
 ---
 
 ## Deciso, e perché
+
+### Gli orari dei campi si leggono quando li chiedi, non ogni minuto
+Il primo istinto era un lavoro periodico che tiene aggiornato il tabellone.
+Sbagliato per due motivi. Il primo è di misura: un giro al minuto su cinque
+club sono settemiladuecento chiamate al giorno a un sito che non è nostro, e in
+qualsiasi registro di accessi quella riga si vede. Chiedendo il tabellone solo
+quando qualcuno apre la vista, il traffico è quello di sei persone che
+guardano gli orari — indistinguibile da sei persone che li guardano davvero,
+perché è esattamente quello che sta succedendo.
+
+Il secondo è che il polling risolveva un problema che non abbiamo: nessuno
+guarda i campi liberi in background. La domanda arriva la sera, prima di
+decidere dove giocare.
+
+La cache a un minuto (`wansport_cache`) serve al caso opposto: in tre che
+aprono l'app insieme, una chiamata sola. Sessanta secondi perché un campo
+appena prenotato non deve restare verde a lungo.
+
+### Con Wansport si parla da una Edge Function, non dal browser
+Non è una scelta di stile, sono due vincoli che si sommano. Il sito è uno
+static export: `output: "export"` significa niente API route, quindi non
+esiste un posto nostro dove far girare del codice server. E anche volendo, dal
+browser la chiamata a `wansport.com` la blocca il CORS. La Edge Function di
+Supabase è l'unico posto rimasto — e per fortuna, perché è anche l'unico in cui
+un domani si possono tenere delle credenziali senza spedirle a tutti dentro al
+bundle.
+
+L'elenco dei club sta **dentro** la funzione e non nella richiesta. Se il
+sottodominio arrivasse dal client, quella funzione sarebbe un proxy aperto
+verso qualunque indirizzo: chiunque abbia la nostra anon key potrebbe usarla
+per far partire richieste da un'infrastruttura che risponde al nostro nome.
+
+### I nomi di chi ha prenotato non escono dalla Edge Function
+La risposta di Wansport contiene nome e cognome di chi ha preso il campo, in
+chiaro e senza bisogno di autenticarsi. Sono dati personali di gente che non ci
+conosce e non ci ha chiesto niente: `normalizza()` li guarda solo per contarli
+— zero organizzazioni vuol dire slot libero — e quello che prosegue verso la
+cache e verso l'app è la sola griglia libero/occupato.
+
+Vale come regola e non come dettaglio di questa versione: se domani serve
+qualcos'altro da quella risposta, si estrae il minimo lì dentro e si scarta il
+resto lì dentro. `wansport_cache` ha RLS attiva e nessuna policy proprio per
+questo: ci scrive solo la funzione con la service role key, e dal client quella
+tabella non si legge nemmeno da autenticati.
+
+### Il tabellone mostra le fasce libere, non le caselle
+Wansport ragiona a mezz'ora e ne restituisce trenta per campo. Ridisegnarle
+tutte sarebbe stato fedele e inutile: nessuno prenota mezz'ora di padel, e
+trenta caselle verdi non rispondono alla domanda che ci si fa davvero, che è
+"da che ora posso partire, e per quanto". Le caselle contigue diventano quindi
+una fascia sola, con la durata accanto, e un filo verde segna quelle in cui ci
+sta una partita intera (90 minuti). Le finestre più corte restano visibili ma
+spente: esistono, non sono un'occasione.
+
+Gli slot già passati si nascondono, ma solo sul giorno corrente. L'ora si legge
+sul fuso di Roma e non su quello del dispositivo: un telefono col fuso sbagliato
+chiederebbe il tabellone di ieri senza che nessuno se ne accorga.
+
+### Se il tabellone si rompe, la vista porta al sito del club
+Quell'endpoint è di Wansport e può cambiare quando vogliono, senza avvisarci.
+Il giorno che succede la schermata non deve diventare un errore: mostra il
+link al `bookingspanel` del centro, dove l'informazione c'è comunque. Vale
+anche per i club che chiedono il login — stessa uscita, motivo diverso.
 
 ### La pagina chiede la viewport grande, non quella piccola
 Mezza giornata su una barra del menu che non voleva stare a 11px dal vetro, e

@@ -51,3 +51,8 @@ next-env.d.ts
 
 # typescript incremental build info
 *.tsbuildinfo
+
+# supabase cli
+# Lo scrive `supabase link` con il riferimento del progetto: e roba della
+# macchina di chi ha lanciato il comando, non del progetto.
+/supabase/.temp/

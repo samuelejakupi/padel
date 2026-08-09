@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Le Edge Function girano su Deno, non su Node: importano da URL e usano
+    // il global `Deno`. Compilarle o analizzarle qui darebbe solo errori su
+    // cose che in produzione esistono. Le controlla il deploy di Supabase.
+    "supabase/functions/**",
   ]),
 ]);
 

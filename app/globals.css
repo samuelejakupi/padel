@@ -8399,3 +8399,140 @@ button.pizza-ranking-row {
     animation: none;
   }
 }
+
+/* ── Tabellone dei campi liberi ─────────────────────────────────────────
+   Vive dentro al foglio dal basso, quindi non ha fondo ne bordi suoi: il
+   pannello ce li ha gia. Quello che disegna sono due file di chip e, sotto,
+   un blocco per campo. */
+
+.wansport-filtri {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.wansport-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.wansport-chip {
+  background: var(--veil-1);
+  border: 0;
+  border-radius: var(--radius-pill);
+  color: var(--ink-45);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  padding: var(--space-2) var(--space-4);
+  text-transform: uppercase;
+  transition: background 160ms ease, color 160ms ease, scale 160ms ease;
+}
+
+.wansport-chip.is-current {
+  background: var(--ink);
+  color: var(--white);
+}
+
+@media (hover: hover) {
+  .wansport-chip:hover {
+    background: var(--veil-2);
+  }
+
+  .wansport-chip.is-current:hover {
+    background: var(--ink);
+    scale: 1.02;
+  }
+}
+
+.wansport-campi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.wansport-campo h3 {
+  color: var(--ink-soft);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  margin: 0 0 var(--space-3);
+  text-transform: uppercase;
+}
+
+.wansport-fasce {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Una fascia libera e una riga, non una casella in una griglia: la griglia
+   costringerebbe a disegnare anche le ore occupate, che non servono a
+   nessuno. Qui c'e solo quello che si puo prenotare. */
+.wansport-fasce li {
+  align-items: baseline;
+  background: var(--veil-1);
+  border-left: 3px solid var(--veil-3);
+  border-radius: var(--radius-md);
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+}
+
+/* Il filo verde dice "qui ci sta una partita intera". Le finestre piu corte
+   restano visibili ma spente: esistono, non sono un'occasione. */
+.wansport-fasce li.is-partita {
+  border-left-color: var(--positive);
+}
+
+.wansport-fasce b {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.wansport-fasce span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+}
+
+.wansport-fasce li.is-partita span {
+  color: var(--positive);
+}
+
+.wansport-pieno,
+.wansport-nota {
+  color: var(--muted);
+  font-size: 15px;
+  margin: 0;
+}
+
+.wansport-nota p {
+  margin: 0 0 var(--space-3);
+}
+
+/* Il modo per uscire quando il tabellone non c'e o non basta. Non e un tasto
+   primario: e la via d'uscita, e deve leggersi come tale. */
+.wansport-link {
+  color: var(--blue-dark);
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+@media (hover: hover) {
+  .wansport-link:hover {
+    text-decoration: underline;
+  }
+}
