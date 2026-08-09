@@ -1131,30 +1131,29 @@ function GoatEmblem({ className }: { className?: string }) {
       aria-hidden="true"
       focusable="false"
     >
-      <path className="goat-shield" d="M64 3 119 27 108 133 64 165 20 133 9 27Z" />
-      <path className="goat-border" d="M64 8 114 30 103 129 64 158 25 129 14 30Z" />
-      <path className="goat-border-runner" d="M64 13 109 33 98 125 64 151 30 125 19 33Z" />
-      <path className="goat-crown" d="m55 20 9-8 9 8-9 7Z" />
+      <path className="goat-shield" d="M64 5 119 29v91c0 20-18 34-55 45-37-11-55-25-55-45V29Z" />
+      <path className="goat-border" d="M64 13 111 34v84c0 16-16 28-47 38-31-10-47-22-47-38V34Z" />
+      <path className="goat-crown" d="m55 23 9-13 9 13-9 13Z" />
 
       <g className="goat-portrait">
-        <path className="goat-horn" d="M91 75C112 43 100 17 69 22 42 26 25 45 28 69" />
-        <path className="goat-horn-ridge" d="M92 63 81 55m14-2-12-8m11-5-12-5m7-7-10-1" />
+        <path className="goat-horn-outline" d="M91 75C111 43 99 23 70 26 43 29 26 46 27 68" />
+        <path className="goat-horn" d="M91 75C111 43 99 23 70 26 43 29 26 46 27 68" />
         <path
           className="goat-body"
-          d="M38 139c-5-20-7-43 1-60l-6-13 17 4c10-12 27-17 42-9 9 5 12 13 15 23l11 7-5 12-14 3c-3 9-9 14-18 17l-2 19c-13 9-29 8-41-3Z"
+          d="M34 139c-7-22-7-48 4-66l-8-14 21 9c10-11 25-16 40-8 10 5 14 14 17 24l10 7c3 5 0 12-6 15l-13 1c-4 10-11 16-20 19l-2 21c-15 5-30 2-43-8Z"
         />
-        <path className="goat-ear" d="m51 70-20-8 8 20Z" />
-        <path className="goat-face-cut" d="M89 65c-8 10-11 25-8 43 8 3 15 1 20-4l-10-4 15-9c-2-12-7-21-17-26Z" />
-        <path className="goat-muzzle" d="m99 84 19 7-5 12-17 2 5-7-10-5Z" />
-        <path className="goat-beard" d="m65 111 17 9-6 28-16-18Z" />
-        <path className="goat-fur" d="m48 84 8 12m-11 1 12 11m-8 4 12 10m-5-42 8 10m1-19 5 13m2 8-8 13" />
-        <path className="goat-brow" d="m79 78 13-4" />
-        <ellipse className="goat-eye" cx="87" cy="80" rx="3.3" ry="2.2" />
-        <path className="goat-nostril" d="m108 94 4 1" />
+        <path className="goat-ear" d="m51 69-21-10 8 23Z" />
+        <path className="goat-face-cut" d="M86 63c-7 11-9 26-5 43 7 5 15 5 21 0l-10-7 15-11c-4-12-11-21-21-25Z" />
+        <path className="goat-muzzle" d="m103 84 15 7c3 5 0 12-6 15l-17 1 7-8-10-6Z" />
+        <path className="goat-beard" d="m61 113 19 10-5 28-18-21Z" />
+        <path className="goat-fur" d="m47 85 12 17m-14 3 14 16m6-43 8 16m-6 7-7 17" />
+        <path className="goat-brow" d="m79 78 14-4" />
+        <ellipse className="goat-eye" cx="87" cy="81" rx="3.6" ry="2.4" />
+        <path className="goat-nostril" d="m108 96 5 1" />
       </g>
 
-      <path className="goat-laurel" d="M31 127c6 10 17 17 29 21m37-21c-6 10-17 17-29 21" />
-      <path className="goat-leaves" d="m34 128-9-1 6 7m8 1-9 1 8 6m7-1-8 3 9 4m48-20 9-1-6 7m-8 1 9 1-8 6m-7-1 8 3-9 4" />
+      <path className="goat-laurel" d="M30 132c8 8 17 13 28 17m40-17c-8 8-17 13-28 17" />
+      <path className="goat-leaves" d="m34 135-10-2 8 8m10 0-10 1 10 6m52-13 10-2-8 8m-10 0 10 1-10 6" />
     </svg>
   );
 }
