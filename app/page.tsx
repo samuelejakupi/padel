@@ -1109,7 +1109,7 @@ function clampProgress(value: number) {
 // CSS di globals.css come per ogni altra cosa, il filo di luce si muove
 // davvero, e il numero resta testo, quindi si cambia senza ridisegnare
 // niente. Quelli non ancora rifatti continuano a pescare il webp.
-type EmblemName = "goat" | "kraken" | "trophy";
+type EmblemName = "kraken" | "trophy";
 
 const EMBLEM_COMPONENT: Partial<Record<BadgeGlyph, EmblemName>> = {
   "goat-slayer": "kraken",
@@ -1122,6 +1122,42 @@ const EMBLEM_HEX_INNER = "64 12.64 114.59 35.56 100 96.24 64 115.02 28 96.24 13.
 const EMBLEM_HEX_OUTER = "64 0 0 29 18.03 104.03 64 128 109.97 104.03 128 29";
 const EMBLEM_FRAME =
   "M64,12.64l50.59,22.92-14.58,60.68-36,18.78-36-18.78-14.58-60.68L64,12.64h0ZM64,0L0,29l18.03,75.03,45.97,23.97,45.97-23.97,18.03-75.03L64,0h0Z";
+
+function GoatEmblem({ className }: { className?: string }) {
+  return (
+    <svg
+      className={`emblem goat-emblem${className ? ` ${className}` : ""}`}
+      viewBox="0 0 128 168"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path className="goat-shield" d="M64 3 119 27 108 133 64 165 20 133 9 27Z" />
+      <path className="goat-border" d="M64 8 114 30 103 129 64 158 25 129 14 30Z" />
+      <path className="goat-border-runner" d="M64 13 109 33 98 125 64 151 30 125 19 33Z" />
+      <path className="goat-crown" d="m55 20 9-8 9 8-9 7Z" />
+
+      <g className="goat-portrait">
+        <path className="goat-horn" d="M91 75C112 43 100 17 69 22 42 26 25 45 28 69" />
+        <path className="goat-horn-ridge" d="M92 63 81 55m14-2-12-8m11-5-12-5m7-7-10-1" />
+        <path
+          className="goat-body"
+          d="M38 139c-5-20-7-43 1-60l-6-13 17 4c10-12 27-17 42-9 9 5 12 13 15 23l11 7-5 12-14 3c-3 9-9 14-18 17l-2 19c-13 9-29 8-41-3Z"
+        />
+        <path className="goat-ear" d="m51 70-20-8 8 20Z" />
+        <path className="goat-face-cut" d="M89 65c-8 10-11 25-8 43 8 3 15 1 20-4l-10-4 15-9c-2-12-7-21-17-26Z" />
+        <path className="goat-muzzle" d="m99 84 19 7-5 12-17 2 5-7-10-5Z" />
+        <path className="goat-beard" d="m65 111 17 9-6 28-16-18Z" />
+        <path className="goat-fur" d="m48 84 8 12m-11 1 12 11m-8 4 12 10m-5-42 8 10m1-19 5 13m2 8-8 13" />
+        <path className="goat-brow" d="m79 78 13-4" />
+        <ellipse className="goat-eye" cx="87" cy="80" rx="3.3" ry="2.2" />
+        <path className="goat-nostril" d="m108 94 4 1" />
+      </g>
+
+      <path className="goat-laurel" d="M31 127c6 10 17 17 29 21m37-21c-6 10-17 17-29 21" />
+      <path className="goat-leaves" d="m34 128-9-1 6 7m8 1-9 1 8 6m7-1-8 3 9 4m48-20 9-1-6 7m-8 1 9 1-8 6m-7-1 8 3-9 4" />
+    </svg>
+  );
+}
 
 function Emblem({ name, rank = "#1", className }: { name: EmblemName; rank?: string; className?: string }) {
   // I due gradienti sono riferiti per id, e lo stesso emblema compare piu
@@ -1159,13 +1195,6 @@ function Emblem({ name, rank = "#1", className }: { name: EmblemName; rank?: str
             ? "M64,12.64l50.59,22.92-14.58,60.68-36,18.78-36-18.78-14.58-60.68,50.59-22.92h0ZM64,0L0,29l18.03,75.03,45.97,23.97,45.97-23.97,18.03-75.03L64,0h0Z"
             : EMBLEM_FRAME}
         />
-        {name === "goat" ? (
-          <>
-            <polygon points="27.52 66.61 22.31 66.61 27.52 71.82 27.52 66.61" />
-            <polygon points="100.48 71.82 105.69 66.61 100.48 66.61 100.48 71.82" />
-            <polygon points="84.85 35.33 74.42 35.33 64 45.76 53.58 35.33 43.15 35.33 22.31 56.18 22.31 66.61 43.15 45.76 48.36 45.76 53.58 50.97 48.36 56.18 48.36 50.97 43.15 56.18 48.36 61.39 53.58 61.39 58.79 66.61 58.79 71.82 53.58 66.61 53.58 77.03 58.79 82.24 58.79 87.45 64 92.67 69.21 87.45 69.21 82.24 74.42 77.03 74.42 66.61 69.21 71.82 69.21 66.61 74.42 61.39 79.64 61.39 84.85 56.18 79.64 50.97 79.64 56.18 74.42 50.97 79.64 45.76 84.85 45.76 105.69 66.61 105.69 56.18 84.85 35.33" />
-          </>
-        ) : null}
         {name === "kraken" ? (
           <polygon points="97.43 50.63 84.06 50.63 77.37 50.63 70.69 57.32 77.37 57.32 90.74 64 97.43 70.69 97.43 84.06 90.74 90.75 84.06 90.75 77.37 84.06 77.37 77.38 84.06 77.38 77.37 84.06 90.74 84.06 90.74 77.37 84.06 70.69 70.69 70.69 57.31 84.06 57.31 90.75 64 97.43 70.69 90.75 70.69 84.06 64 90.75 64 84.06 70.69 84.06 77.37 90.75 70.69 97.43 64 104.12 57.31 97.43 50.63 90.75 50.63 77.38 57.31 64 43.94 70.69 37.26 77.37 37.26 90.75 43.94 84.06 43.94 90.75 37.26 90.75 30.57 84.06 30.57 70.69 37.26 64 50.63 57.32 57.31 57.32 50.63 50.63 30.57 50.64 37.26 57.32 37.26 57.32 30.57 57.32 30.57 50.64 37.26 43.95 43.94 43.95 50.63 50.63 43.94 30.57 64 23.88 84.06 30.57 77.37 50.63 84.06 43.95 90.74 43.95 97.43 50.63 97.43 57.32 90.74 57.32 90.74 57.32 97.43 50.63" />
         ) : null}
@@ -1344,7 +1373,9 @@ function BadgeList({ badges }: { badges: Badge[] }) {
           aria-label={`${badge.label}. ${badge.meaning} ${badge.progressLabel}`}
         >
           <div className="badge-emblem" aria-hidden="true">
-            {emblem ? (
+            {badge.glyph === "goat" ? (
+              <GoatEmblem className="badge-art" />
+            ) : emblem ? (
               <Emblem name={emblem} className="badge-art" />
             ) : (
               <Image className="badge-art" src={`${basePath}/emblems/${badge.glyph}.webp`} alt="" width={128} height={168} />

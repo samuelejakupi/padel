@@ -4116,6 +4116,123 @@ button.podium-person {
   width: 100%;
 }
 
+/* GOAT: tre soli colori, leggibili anche nella bacheca mobile. L'animazione
+   resta nel DOM della pagina per funzionare anche nella PWA su Safari. */
+.goat-emblem {
+  --goat-dark: #0b1b2b;
+  --goat-fur: #8798a8;
+  --goat-gold: #d6a93b;
+  overflow: visible;
+}
+
+.goat-shield {
+  fill: var(--goat-dark);
+  stroke: var(--goat-gold);
+  stroke-linejoin: round;
+  stroke-width: 4;
+}
+
+.goat-border,
+.goat-border-runner {
+  fill: none;
+  stroke: var(--goat-gold);
+  stroke-linejoin: round;
+}
+
+.goat-border {
+  stroke-width: 2;
+}
+
+.goat-border-runner {
+  animation: goat-border-run 7s linear infinite;
+  stroke-dasharray: 12 10;
+  stroke-width: 1.5;
+}
+
+.goat-crown,
+.goat-eye {
+  fill: var(--goat-gold);
+}
+
+.goat-portrait {
+  animation: goat-breathe 4.8s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+
+.goat-body {
+  fill: var(--goat-fur);
+  stroke: var(--goat-gold);
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.goat-horn {
+  fill: none;
+  stroke: var(--goat-gold);
+  stroke-linecap: round;
+  stroke-width: 11;
+}
+
+.goat-horn-ridge,
+.goat-brow,
+.goat-nostril {
+  fill: none;
+  stroke: var(--goat-dark);
+  stroke-linecap: round;
+  stroke-width: 2.2;
+}
+
+.goat-ear,
+.goat-face-cut,
+.goat-muzzle,
+.goat-beard {
+  fill: var(--goat-dark);
+  stroke: var(--goat-gold);
+  stroke-linejoin: round;
+  stroke-width: 1.3;
+}
+
+.goat-fur {
+  fill: none;
+  stroke: var(--goat-dark);
+  stroke-linecap: round;
+  stroke-width: 2.3;
+}
+
+.goat-eye {
+  animation: goat-blink 5.4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.goat-laurel,
+.goat-leaves {
+  fill: none;
+  stroke: var(--goat-gold);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+@keyframes goat-border-run {
+  to { stroke-dashoffset: -88; }
+}
+
+@keyframes goat-breathe {
+  0%,
+  100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-1px) scale(1.012); }
+}
+
+@keyframes goat-blink {
+  0%,
+  45%,
+  49%,
+  100% { transform: scaleY(1); }
+  47% { transform: scaleY(0.08); }
+}
+
 .emblem-art {
   fill: var(--ink);
 }
@@ -8292,6 +8409,12 @@ button.pizza-ranking-row {
 
   .emblem-fill stop,
   .emblem-ring stop {
+    animation: none;
+  }
+
+  .goat-border-runner,
+  .goat-portrait,
+  .goat-eye {
     animation: none;
   }
 
