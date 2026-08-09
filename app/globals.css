@@ -8536,3 +8536,26 @@ button.pizza-ranking-row {
     text-decoration: underline;
   }
 }
+
+/* Il tasto che apre il tabellone dei campi liberi esiste in due copie, come
+   il "vedi tutto" delle partite: una nell'intestazione di sezione (desktop) e
+   una nella colonna (mobile), perche sotto i 780px `.section-head` non c'e
+   piu. Questa e la copia mobile, spenta di default. */
+.cta-campi-liberi {
+  display: none;
+}
+
+@media (max-width: 780px) {
+  .cta-campi-liberi {
+    display: inline-flex;
+    /* Stesso gruppo del carosello: nella colonna gli ordini sono espliciti
+       (1 profilo, 2 comandi, 3 classifica, 4 partite, 5 tornei) e senza
+       questo il tasto risalirebbe in cima, prima di tutti gli altri. Dentro
+       lo stesso ordine decide la posizione nel documento, quindi resta dopo
+       "nuova partita". */
+    order: 2;
+    /* Sopra ci sono gia i 6px del tasto nuova partita: insieme fanno il
+       passo da 10 di tutta la colonna. */
+    margin: var(--space-1) 0 var(--space-3);
+  }
+}

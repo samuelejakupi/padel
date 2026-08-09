@@ -5497,6 +5497,17 @@ function AppShell({ session }: { session: Session | null }) {
                     )}
                   </div>
                 </div>
+                {/* Su mobile l'intestazione di sezione non c'e (`.section-head`
+                    e display:none sotto i 780px), quindi il gemello di questo
+                    tasto che sta li sopra non si vedrebbe. Qui invece siamo
+                    nella colonna, subito sotto al comando che apre una partita
+                    nuova: prima si guarda dove si gioca, poi si registra. */}
+                <button
+                  className="button button-ghost button-full cta-campi-liberi"
+                  onClick={() => setSheet("campi")}
+                >
+                  Campi liberi
+                </button>
                 <div className="match-panel matches-panel" ref={setMatchesCard}>
                   {/* Titolo interno al riquadro, come "Classifica Elo".
                       Su desktop resta nascosto: li il titolo di sezione
