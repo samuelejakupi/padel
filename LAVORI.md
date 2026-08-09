@@ -130,14 +130,29 @@ resto lì dentro. `wansport_cache` ha RLS attiva e nessuna policy proprio per
 questo: ci scrive solo la funzione con la service role key, e dal client quella
 tabella non si legge nemmeno da autenticati.
 
-### Il tabellone mostra le fasce libere, non le caselle
-Wansport ragiona a mezz'ora e ne restituisce trenta per campo. Ridisegnarle
-tutte sarebbe stato fedele e inutile: nessuno prenota mezz'ora di padel, e
-trenta caselle verdi non rispondono alla domanda che ci si fa davvero, che è
-"da che ora posso partire, e per quanto". Le caselle contigue diventano quindi
-una fascia sola, con la durata accanto, e un filo verde segna quelle in cui ci
-sta una partita intera (90 minuti). Le finestre più corte restano visibili ma
-spente: esistono, non sono un'occasione.
+### Il tabellone è una tabella, non un elenco di fasce
+Prima le mezz'ore contigue venivano riassunte in una fascia sola con la durata
+accanto, un campo sotto l'altro. Era più corto da leggere ma perdeva la cosa
+per cui si guarda un tabellone: il confronto fra un campo e l'altro alla
+stessa ora. Al club si scende lungo l'ora e si vede chi è libero, e l'elenco
+di fasce quel movimento non lo permetteva.
+
+Ora è una tabella vera: una riga per campo, una colonna per mezz'ora, che
+scorre di lato. La colonna dei nomi resta ferma mentre le ore scorrono, senza
+la quale dopo due schermate non sai più che riga stai guardando. L'etichetta
+sta solo sulle ore piene: una scritta ogni mezz'ora diventava un muro di
+numeri, e la mezza si riconosce lo stesso dalla casella. Le caselle sono
+staccate di 2px invece di condividere i bordi — una griglia di linee continue
+somigliava a un foglio di calcolo. Verde tenue dove è libero, grigio dove è
+occupato: l'occupato non è una brutta notizia da segnare in rosso, è solo il
+resto della giornata.
+
+Lo stato di attesa non esiste come variabile: la risposta si porta dietro la
+domanda a cui rispondeva (`club|giorno`), e se quella in mano è di un'altra
+domanda stiamo aspettando. Serviva a togliere un `setState` sincrono dentro
+l'effetto — che `react-hooks/set-state-in-effect` rifiuta — ma sistema anche
+una corsa: cambiando club due volte di fila, la prima risposta poteva arrivare
+per ultima e sovrascrivere quella giusta.
 
 Gli slot già passati si nascondono, ma solo sul giorno corrente. L'ora si legge
 sul fuso di Roma e non su quello del dispositivo: un telefono col fuso sbagliato

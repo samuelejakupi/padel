@@ -8,16 +8,18 @@
 // duecento righe a un file da seimila. In `page.tsx` restano tre righe di
 // aggancio.
 //
-// Cosa mostra: le fasce libere, non le caselle. Wansport ragiona a mezz'ora,
-// ma nessuno prenota mezz'ora di padel — la domanda vera e "da che ora posso
-// partire, e per quanto".
+// La forma e quella di una tabella vera: una riga per campo, una colonna per
+// mezz'ora, che scorre di lato. E il modo in cui il tabellone si legge al
+// club — si scende lungo l'ora e si guarda quale campo e libero — e provare a
+// riassumerlo in un elenco di fasce faceva perdere proprio quel confronto fra
+// un campo e l'altro.
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   WANSPORT_CLUBS,
-  fasceLibere,
   giornoIso,
   leggiTabellone,
+  minutiDa,
   minutiDiOggi,
   type EsitoTabellone,
 } from "../lib/wansport";
@@ -25,10 +27,6 @@ import {
 // Quattro giorni: oggi piu tre. Piu in la il tabellone e quasi tutto libero e
 // non dice niente, e ogni giorno in piu e una chiamata in piu al sito del club.
 const GIORNI = [0, 1, 2, 3];
-
-// La durata di una partita. Sotto a questa una finestra libera esiste ma non
-// serve, e va detto invece di lasciarla sembrare un'occasione.
-const PARTITA_MINUTI = 90;
 
 function nomeGiorno(scarto: number): string {
   if (scarto === 0) return "Oggi";
@@ -43,40 +41,58 @@ function nomeGiorno(scarto: number): string {
 export default function WansportBoard() {
   const [slug, setSlug] = useState(WANSPORT_CLUBS[0].slug);
   const [scarto, setScarto] = useState(0);
-  const [esito, setEsito] = useState<EsitoTabellone | null>(null);
-  const [attesa, setAttesa] = useState(true);
+  // La risposta si porta dietro la domanda a cui rispondeva. Cosi non serve
+  // uno stato "sto caricando" da accendere e spegnere a mano: se la risposta
+  // in mano e di un'altra domanda, stiamo aspettando. Ed e anche il rimedio
+  // alla corsa fra due chiamate — cambi club due volte di fila e la prima
+  // risposta arriva per ultima — perche una risposta vecchia non combacia con
+  // la domanda di adesso e resta dov'e.
+  const [risposta, setRisposta] = useState<{ chiave: string; esito: EsitoTabellone } | null>(null);
 
   const club = WANSPORT_CLUBS.find((c) => c.slug === slug) ?? WANSPORT_CLUBS[0];
-
-  const carica = useCallback(async () => {
-    setAttesa(true);
-    // Il club che tiene il tabellone dietro al login lo sappiamo gia: inutile
-    // far partire una chiamata per farsi dire di no.
-    if (club.richiedeLogin) {
-      setEsito({ stato: "richiede-login" });
-      setAttesa(false);
-      return;
-    }
-    setEsito(await leggiTabellone(club.slug, giornoIso(scarto)));
-    setAttesa(false);
-  }, [club.richiedeLogin, club.slug, scarto]);
+  const chiave = `${club.slug}|${scarto}`;
 
   useEffect(() => {
+    // Il club che tiene il tabellone dietro al login lo sappiamo gia: inutile
+    // far partire una chiamata per farsi dire di no.
+    if (club.richiedeLogin) return;
     let vivo = true;
-    // La guardia serve a scartare la risposta di una richiesta che nel
-    // frattempo non interessa piu: cambiando club in fretta, altrimenti,
-    // l'ultima ad arrivare vince anche se non e quella chiesta per ultima.
-    (async () => {
-      await carica();
-      if (!vivo) return;
-    })();
+    const chiesta = `${club.slug}|${scarto}`;
+    // Lo stato si tocca solo qui dentro, quando la risposta arriva. Scriverlo
+    // subito nel corpo dell'effetto e quello che `react-hooks` non vuole: e
+    // un secondo giro di disegno appiccicato al primo.
+    void leggiTabellone(club.slug, giornoIso(scarto)).then((esito) => {
+      if (vivo) setRisposta({ chiave: chiesta, esito });
+    });
     return () => {
       vivo = false;
     };
-  }, [carica]);
+  }, [club.richiedeLogin, club.slug, scarto]);
 
-  // Gli slot gia passati si nascondono solo oggi: domani sono tutti futuri.
+  const esito: EsitoTabellone | null = club.richiedeLogin
+    ? { stato: "richiede-login" }
+    : risposta?.chiave === chiave
+      ? risposta.esito
+      : null;
+  const attesa = !club.richiedeLogin && risposta?.chiave !== chiave;
+
+  // Gli orari gia passati si tolgono solo oggi: domani sono tutti futuri.
+  // Si tolgono per intero, colonna compresa — tenerli spenti costringerebbe a
+  // scorrere mezza giornata prima di arrivare a stasera.
   const daMinuti = scarto === 0 ? minutiDiOggi() : -1;
+
+  const tabellone = esito?.stato === "ok" ? esito.tabellone : null;
+
+  // Le colonne sono l'unione degli orari di tutti i campi, non quelli del
+  // primo: due campi dello stesso centro possono avere aperture diverse, e
+  // fidarsi del primo lascerebbe l'altro disallineato di una casella.
+  const orari = tabellone
+    ? Array.from(
+        new Set(tabellone.campi.flatMap((campo) => campo.slot.map((s) => s.inizio))),
+      )
+        .filter((o) => minutiDa(o) >= daMinuti - 30)
+        .sort((a, b) => minutiDa(a) - minutiDa(b))
+    : [];
 
   return (
     <div className="wansport">
@@ -132,41 +148,72 @@ export default function WansportBoard() {
             Apri il tabellone del club
           </a>
         </div>
-      ) : esito?.stato === "ok" ? (
-        <div className="wansport-campi">
-          {esito.tabellone.campi.map((campo) => {
-            const fasce = fasceLibere(campo.slot, daMinuti);
-            return (
-              <section className="wansport-campo" key={campo.id}>
-                <h3>{campo.nome}</h3>
-                {fasce.length ? (
-                  <ul className="wansport-fasce">
-                    {fasce.map((f) => (
-                      <li
-                        key={f.inizio}
-                        className={f.durata >= PARTITA_MINUTI ? "is-partita" : ""}
-                      >
-                        <b>
-                          {f.inizio}–{f.fine}
-                        </b>
-                        <span>
-                          {f.durata >= 60
-                            ? `${Math.floor(f.durata / 60)}h${f.durata % 60 ? ` ${f.durata % 60}′` : ""}`
-                            : `${f.durata}′`}
-                        </span>
-                      </li>
+      ) : tabellone ? (
+        <>
+          {orari.length ? (
+            <div className="wansport-tabellone">
+              <table>
+                <thead>
+                  <tr>
+                    {/* L'angolo resta vuoto: sopra ai nomi dei campi non c'e
+                        niente da intitolare, e la parola "campo" ripeterebbe
+                        quello che si legge nella colonna sotto. */}
+                    <th className="wansport-angolo" scope="col">
+                      <span className="wansport-muto">Campo</span>
+                    </th>
+                    {orari.map((o) => (
+                      // Solo le ore piene portano l'etichetta: con una scritta
+                      // ogni mezz'ora la riga diventa un muro di numeri e non
+                      // si legge piu niente. La mezza si riconosce dalla
+                      // casella, che resta larga uguale.
+                      <th key={o} scope="col" className={o.endsWith(":00") ? "is-ora" : ""}>
+                        {o.endsWith(":00") ? o.slice(0, 2) : ""}
+                      </th>
                     ))}
-                  </ul>
-                ) : (
-                  <p className="wansport-pieno">Tutto occupato</p>
-                )}
-              </section>
-            );
-          })}
-          <a className="wansport-link" href={club.sito} target="_blank" rel="noreferrer">
-            Prenota sul sito del club
-          </a>
-        </div>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tabellone.campi.map((campo) => {
+                    const stato = new Map(campo.slot.map((s) => [s.inizio, s.libero]));
+                    return (
+                      <tr key={campo.id}>
+                        <th scope="row">{campo.nome}</th>
+                        {orari.map((o) => {
+                          const libero = stato.get(o);
+                          return (
+                            <td
+                              key={o}
+                              className={
+                                libero === undefined
+                                  ? "is-chiuso"
+                                  : libero
+                                    ? "is-libero"
+                                    : "is-occupato"
+                              }
+                              aria-label={`${campo.nome}, ${o}, ${
+                                libero === undefined ? "chiuso" : libero ? "libero" : "occupato"
+                              }`}
+                            />
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="wansport-nota">Per oggi il tabellone e finito.</p>
+          )}
+
+          <div className="wansport-legenda">
+            <span className="is-libero">Libero</span>
+            <span className="is-occupato">Occupato</span>
+            <a className="wansport-link" href={club.sito} target="_blank" rel="noreferrer">
+              Prenota sul sito
+            </a>
+          </div>
+        </>
       ) : null}
     </div>
   );

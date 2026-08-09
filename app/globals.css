@@ -8402,8 +8402,8 @@ button.pizza-ranking-row {
 
 /* ── Tabellone dei campi liberi ─────────────────────────────────────────
    Vive dentro al foglio dal basso, quindi non ha fondo ne bordi suoi: il
-   pannello ce li ha gia. Quello che disegna sono due file di chip e, sotto,
-   un blocco per campo. */
+   pannello ce li ha gia. Due file di chip e, sotto, la griglia vera: una
+   riga per campo, una colonna per mezz'ora, che scorre di lato. */
 
 .wansport-filtri {
   display: flex;
@@ -8448,67 +8448,132 @@ button.pizza-ranking-row {
   }
 }
 
-.wansport-campi {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
+/* La finestra che scorre. `contain` sull'asse verticale: senza, arrivando in
+   fondo alla riga il rimbalzo si propaga a `.sheet-body` e il foglio comincia
+   a chiudersi mentre stai solo guardando le nove di sera. */
+.wansport-tabellone {
+  -webkit-overflow-scrolling: touch;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-bottom: var(--space-2);
 }
 
-.wansport-campo h3 {
+.wansport-tabellone table {
+  border-collapse: separate;
+  /* Le caselle sono staccate di due pixel invece di condividere un bordo:
+     una griglia di linee continue somiglia a un foglio di calcolo, e qui
+     l'informazione sta nei pieni, non nelle linee. */
+  border-spacing: 2px;
+  table-layout: fixed;
+}
+
+/* La colonna dei nomi resta ferma mentre le ore scorrono sotto: senza, dopo
+   due schermate non si sa piu quale riga si sta guardando. Il fondo bianco
+   serve a coprire le caselle che le passano dietro. */
+.wansport-tabellone tbody th,
+.wansport-angolo {
+  background: var(--white);
+  left: 0;
+  position: sticky;
+  z-index: 1;
+}
+
+.wansport-tabellone tbody th {
   color: var(--ink-soft);
   font-size: 10px;
   font-weight: 900;
-  letter-spacing: 1px;
-  margin: 0 0 var(--space-3);
+  letter-spacing: 0.6px;
+  padding-right: var(--space-3);
+  text-align: left;
   text-transform: uppercase;
+  white-space: nowrap;
+  width: 78px;
 }
 
-.wansport-fasce {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  list-style: none;
-  margin: 0;
+/* L'etichetta dell'angolo c'e per chi legge con VoiceOver e non per chi
+   guarda: sopra ai nomi dei campi una scritta "campo" ripeterebbe solo quello
+   che si legge sotto. */
+.wansport-muto {
+  clip-path: inset(50%);
+  position: absolute;
+  white-space: nowrap;
+}
+
+.wansport-tabellone thead th {
+  color: var(--ink-30);
+  font-size: 10px;
+  font-weight: 800;
+  height: 16px;
+  letter-spacing: 0.4px;
+  text-align: left;
+  width: 26px;
+}
+
+/* Solo le ore piene sono scritte, e sono anche le uniche scure: la mezz'ora
+   si conta, non si legge. */
+.wansport-tabellone thead th.is-ora {
+  color: var(--ink-45);
+}
+
+.wansport-tabellone td {
+  border-radius: var(--radius-sm);
+  height: 26px;
   padding: 0;
 }
 
-/* Una fascia libera e una riga, non una casella in una griglia: la griglia
-   costringerebbe a disegnare anche le ore occupate, che non servono a
-   nessuno. Qui c'e solo quello che si puo prenotare. */
-.wansport-fasce li {
-  align-items: baseline;
-  background: var(--veil-1);
-  border-left: 3px solid var(--veil-3);
-  border-radius: var(--radius-md);
+/* Il verde e pieno solo dove si puo giocare. L'occupato non e rosso: non e un
+   errore ne una brutta notizia, e semplicemente il resto della giornata, e in
+   una riga da trenta caselle un rosso ogni due sere farebbe sembrare il campo
+   perennemente pieno. */
+.wansport-tabellone td.is-libero {
+  background: color-mix(in srgb, var(--positive) 22%, transparent);
+}
+
+.wansport-tabellone td.is-occupato {
+  background: var(--veil-2);
+}
+
+/* Fuori orario: il centro quella mezz'ora non la vende proprio. Niente fondo,
+   solo la traccia, se no sembrerebbe occupata. */
+.wansport-tabellone td.is-chiuso {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--veil-1);
+}
+
+.wansport-legenda {
+  align-items: center;
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-4);
-  justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
+  margin-top: var(--space-4);
 }
 
-/* Il filo verde dice "qui ci sta una partita intera". Le finestre piu corte
-   restano visibili ma spente: esistono, non sono un'occasione. */
-.wansport-fasce li.is-partita {
-  border-left-color: var(--positive);
-}
-
-.wansport-fasce b {
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.wansport-fasce span {
+.wansport-legenda span {
+  align-items: center;
   color: var(--muted);
+  display: inline-flex;
   font-size: 10px;
   font-weight: 800;
+  gap: var(--space-2);
   letter-spacing: 0.4px;
+  text-transform: uppercase;
 }
 
-.wansport-fasce li.is-partita span {
-  color: var(--positive);
+.wansport-legenda span::before {
+  border-radius: var(--radius-sm);
+  content: "";
+  height: 12px;
+  width: 12px;
 }
 
-.wansport-pieno,
+.wansport-legenda .is-libero::before {
+  background: color-mix(in srgb, var(--positive) 22%, transparent);
+}
+
+.wansport-legenda .is-occupato::before {
+  background: var(--veil-2);
+}
+
 .wansport-nota {
   color: var(--muted);
   font-size: 15px;
@@ -8527,6 +8592,7 @@ button.pizza-ranking-row {
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.4px;
+  margin-left: auto;
   text-decoration: none;
   text-transform: uppercase;
 }
@@ -8554,8 +8620,10 @@ button.pizza-ranking-row {
        lo stesso ordine decide la posizione nel documento, quindi resta dopo
        "nuova partita". */
     order: 2;
-    /* Sopra ci sono gia i 6px del tasto nuova partita: insieme fanno il
-       passo da 10 di tutta la colonna. */
-    margin: var(--space-1) 0 var(--space-3);
+    /* Niente margini: il passo lo porta gia il `gap: 10px` della colonna, e
+       un margine qui si sommerebbe al gap invece di sostituirlo — venti pixel
+       dove tutti gli altri stacchi ne fanno dieci. Vale per qualsiasi cosa si
+       aggiunga a questa colonna: e `.dashboard-grid` a spaziare i figli. */
+    margin: 0;
   }
 }
