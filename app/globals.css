@@ -5955,6 +5955,13 @@ button.pizza-ranking-row {
   font-weight: 800;
 }
 
+/* Senza pastiglia del conteggio — i club non hanno niente da contare prima di
+   essere aperti — la spinta che tiene la freccia a destra la deve dare il
+   nome, se no si ritrovano appiccicati a sinistra. */
+.month-head.is-senza-conteggio b {
+  margin-right: auto;
+}
+
 /* Quante partite ci sono dentro: la pastiglia risponde alla domanda prima
    che il raccoglitore si apra. */
 .month-count {

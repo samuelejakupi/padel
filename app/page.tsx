@@ -14,6 +14,7 @@ import {
   type TournamentTeam,
   supabase,
 } from "@/lib/supabase";
+import MonthGroup from "./MonthGroup";
 import WansportBoard from "./WansportBoard";
 import WansportAccesso from "./WansportAccesso";
 
@@ -1456,82 +1457,6 @@ function formatClock(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
-}
-
-// Un raccoglitore che si apre e si chiude. L'altezza si anima a mano perché
-// da "0" a "auto" il browser non sa interpolare: si misura il contenuto, si
-// va da una misura all'altra, e appena arrivati si torna ad "auto" — se
-// restasse un numero fisso, un elenco che cambia resterebbe tagliato.
-function MonthGroup({
-  label,
-  count,
-  open,
-  onToggle,
-  children,
-}: {
-  label: string;
-  count: number;
-  open: boolean;
-  onToggle: () => void;
-  children: ReactNode;
-}) {
-  const bodyRef = useRef<HTMLDivElement | null>(null);
-  const mounted = useRef(false);
-
-  useEffect(() => {
-    const body = bodyRef.current;
-    if (!body) return;
-    // Al primo disegno nessuna animazione: il foglio si apre già con tutti i
-    // raccoglitori chiusi, e vederli richiudersi sarebbe un movimento di
-    // troppo.
-    if (!mounted.current) {
-      mounted.current = true;
-      body.style.height = open ? "auto" : "0px";
-      return;
-    }
-    const from = body.getBoundingClientRect().height;
-    const to = open ? body.scrollHeight : 0;
-    body.style.height = `${to}px`;
-    if (!body.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      if (open) body.style.height = "auto";
-      return;
-    }
-    const animation = body.animate(
-      [
-        { height: `${from}px`, opacity: open ? 0.4 : 1 },
-        { height: `${to}px`, opacity: open ? 1 : 0.4 },
-      ],
-      {
-        // Aperture più lente delle chiusure: entrando c'è qualcosa da
-        // guardare arrivare, uscendo si toglie di mezzo e basta. È il passo
-        // dei pannelli di sistema.
-        duration: open ? 420 : 280,
-        easing: open ? "cubic-bezier(0.32, 0.9, 0.28, 1)" : "cubic-bezier(0.4, 0, 0.9, 0.35)",
-      },
-    );
-    animation.finished.then(
-      () => { if (open) body.style.height = "auto"; },
-      () => {},
-    );
-  }, [open]);
-
-  return (
-    <div className={`month-group${open ? " is-open" : ""}`}>
-      <button
-        type="button"
-        className="month-head"
-        onClick={onToggle}
-        aria-expanded={open}
-      >
-        <b>{label}</b>
-        <span className="month-count">{count}</span>
-        <i className="month-chevron" aria-hidden="true" />
-      </button>
-      <div className="month-body" ref={bodyRef}>
-        <div className="month-body-inner">{children}</div>
-      </div>
-    </div>
-  );
 }
 
 // Vero sotto i 780px, cioè dove vale l'impaginazione mobile. Serve nei punti

@@ -13,8 +13,17 @@
 // club — si scende lungo l'ora e si guarda quale campo e libero — e provare a
 // riassumerlo in un elenco di fasce faceva perdere proprio quel confronto fra
 // un campo e l'altro.
+//
+// I club sono raccoglitori, non pastiglie (10 ago 2026). Con cinque centri le
+// pastiglie andavano a capo e non si capiva piu quale fosse quello aperto:
+// cinque nomi in fila, uno nero, e il tabellone sotto senza intestazione. Il
+// raccoglitore invece ha il nome attaccato al suo contenuto. E la stessa
+// forma dei mesi nel foglio delle partite — stesso componente, non una copia
+// — quindi si apre uno per volta e il primo e gia aperto quando il foglio
+// sale: chi entra vuole vedere un tabellone, non un elenco da aprire.
 
 import { useEffect, useState } from "react";
+import MonthGroup from "./MonthGroup";
 import {
   WANSPORT_CLUBS,
   giornoIso,
@@ -22,6 +31,7 @@ import {
   minutiDa,
   minutiDiOggi,
   type EsitoTabellone,
+  type WansportClub,
 } from "../lib/wansport";
 
 // Quattro giorni: oggi piu tre. Piu in la il tabellone e quasi tutto libero e
@@ -39,20 +49,72 @@ function nomeGiorno(scarto: number): string {
 }
 
 export default function WansportBoard() {
-  const [slug, setSlug] = useState(WANSPORT_CLUBS[0].slug);
+  // Quale raccoglitore e aperto. Uno solo, e il primo lo e gia in partenza.
+  // Puo essere `null` — richiudendo quello aperto non se ne apre un altro
+  // d'ufficio: e la stessa liberta che hanno i mesi.
+  const [apertoSlug, setApertoSlug] = useState<string | null>(WANSPORT_CLUBS[0].slug);
+  // Il giorno sta qui e non dentro il singolo club apposta: cambiando centro
+  // si continua a guardare lo stesso giorno, che e quello che si sta
+  // cercando. Ricominciare da "Oggi" a ogni apertura farebbe rifare la strada.
   const [scarto, setScarto] = useState(0);
+
+  return (
+    <div className="wansport">
+      <div className="month-groups">
+        {WANSPORT_CLUBS.map((club) => (
+          <MonthGroup
+            key={club.slug}
+            // Nell'etichetta il paese viene dopo il trattino: nel
+            // raccoglitore ci sta, ed e quello che distingue i due centri di
+            // San Lorenzo da quelli di Imperia.
+            label={club.etichetta}
+            open={club.slug === apertoSlug}
+            onToggle={() => setApertoSlug((corrente) => (corrente === club.slug ? null : club.slug))}
+          >
+            <CorpoClub
+              club={club}
+              aperto={club.slug === apertoSlug}
+              scarto={scarto}
+              onGiorno={setScarto}
+            />
+          </MonthGroup>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Il contenuto di un raccoglitore: i giorni e la griglia di quel centro.
+//
+// Resta montato anche da chiuso, e non e una svista. Se sparisse alla
+// chiusura, il raccoglitore si richiuderebbe su una scatola gia vuota invece
+// di veder scendere quello che c'era; e riaprendolo si ricomincerebbe da
+// "sto guardando" ogni volta. Quello che non fa da chiuso e chiedere: la
+// chiamata al club parte solo se il raccoglitore e aperto, se no aprire il
+// foglio ne farebbe cinque in un colpo, una per centro, per mostrarne una.
+function CorpoClub({
+  club,
+  aperto,
+  scarto,
+  onGiorno,
+}: {
+  club: WansportClub;
+  aperto: boolean;
+  scarto: number;
+  onGiorno: (scarto: number) => void;
+}) {
   // La risposta si porta dietro la domanda a cui rispondeva. Cosi non serve
   // uno stato "sto caricando" da accendere e spegnere a mano: se la risposta
   // in mano e di un'altra domanda, stiamo aspettando. Ed e anche il rimedio
-  // alla corsa fra due chiamate — cambi club due volte di fila e la prima
+  // alla corsa fra due chiamate — cambi giorno due volte di fila e la prima
   // risposta arriva per ultima — perche una risposta vecchia non combacia con
   // la domanda di adesso e resta dov'e.
   const [risposta, setRisposta] = useState<{ chiave: string; esito: EsitoTabellone } | null>(null);
 
-  const club = WANSPORT_CLUBS.find((c) => c.slug === slug) ?? WANSPORT_CLUBS[0];
   const chiave = `${club.slug}|${scarto}`;
 
   useEffect(() => {
+    if (!aperto) return;
     let vivo = true;
     const chiesta = `${club.slug}|${scarto}`;
     // Lo stato si tocca solo qui dentro, quando la risposta arriva. Scriverlo
@@ -64,7 +126,7 @@ export default function WansportBoard() {
     return () => {
       vivo = false;
     };
-  }, [club.slug, scarto]);
+  }, [aperto, club.slug, scarto]);
 
   const esito: EsitoTabellone | null = risposta?.chiave === chiave ? risposta.esito : null;
   const attesa = risposta?.chiave !== chiave;
@@ -87,29 +149,14 @@ export default function WansportBoard() {
     : [];
 
   return (
-    <div className="wansport">
+    <>
       <div className="wansport-filtri">
-        <div className="wansport-chips" role="group" aria-label="Campo">
-          {WANSPORT_CLUBS.map((c) => (
-            <button
-              key={c.slug}
-              className={`wansport-chip${c.slug === slug ? " is-current" : ""}`}
-              onClick={() => setSlug(c.slug)}
-              type="button"
-            >
-              {/* Nell'etichetta il paese viene dopo il trattino e qui non
-                  serve: la chip e stretta e il posto lo sai gia. */}
-              {c.etichetta.split(" - ")[0]}
-            </button>
-          ))}
-        </div>
-
         <div className="wansport-chips" role="group" aria-label="Giorno">
           {GIORNI.map((g) => (
             <button
               key={g}
               className={`wansport-chip${g === scarto ? " is-current" : ""}`}
-              onClick={() => setScarto(g)}
+              onClick={() => onGiorno(g)}
               type="button"
             >
               {nomeGiorno(g)}
@@ -123,7 +170,7 @@ export default function WansportBoard() {
       ) : esito?.stato === "richiede-login" ? (
         <div className="wansport-nota">
           <p>
-            {club.etichetta.split(" - ")[0]} mostra gli orari solo a chi e registrato da loro. Il
+            {club.etichetta.split(" - ")[0]} in questo momento non ci fa leggere gli orari. Il
             tabellone si apre sul loro sito.
           </p>
           <a className="wansport-link" href={club.sito} target="_blank" rel="noreferrer">
@@ -224,6 +271,6 @@ export default function WansportBoard() {
           </div>
         </>
       ) : null}
-    </div>
+    </>
   );
 }
