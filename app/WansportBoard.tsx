@@ -9,10 +9,10 @@
 // aggancio.
 //
 // La forma e quella di una tabella vera: una riga per campo, una colonna per
-// mezz'ora, che scorre di lato. E il modo in cui il tabellone si legge al
-// club — si scende lungo l'ora e si guarda quale campo e libero — e provare a
-// riassumerlo in un elenco di fasce faceva perdere proprio quel confronto fra
-// un campo e l'altro.
+// mezz'ora. E il modo in cui il tabellone si legge al club — si scende lungo
+// l'ora e si guarda quale campo e libero — e provare a riassumerlo in un
+// elenco di fasce faceva perdere proprio quel confronto fra un campo e
+// l'altro.
 //
 // I club sono raccoglitori, non pastiglie (10 ago 2026). Con cinque centri le
 // pastiglie andavano a capo e non si capiva piu quale fosse quello aperto:
@@ -31,12 +31,25 @@ import {
   minutiDa,
   minutiDiOggi,
   type EsitoTabellone,
+  type WansportCampo,
   type WansportClub,
 } from "../lib/wansport";
 
 // Quattro giorni: oggi piu tre. Piu in la il tabellone e quasi tutto libero e
 // non dice niente, e ogni giorno in piu e una chiamata in piu al sito del club.
 const GIORNI = [0, 1, 2, 3];
+
+// Dove si taglia la giornata (10 ago 2026). Dalle otto alle undici di sera
+// sono trenta mezz'ore: in una riga sola stanno solo scorrendo di lato, e una
+// casella larga tre millimetri non la legge nessuno — men che meno quella e
+// solo quella che ti interessa. Spezzata in due, ogni meta ci sta quasi
+// intera e le caselle raddoppiano.
+//
+// Le 14 e non le 12: a mezzogiorno si gioca ancora, e "mattino" che finisce
+// mentre il campo e pieno non descrive niente. Dopo pranzo invece la giornata
+// cambia davvero — e chi cerca un campo di solito sa gia in quale delle due
+// meta guardare.
+const TAGLIO_POMERIGGIO = 14 * 60;
 
 function nomeGiorno(scarto: number): string {
   if (scarto === 0) return "Oggi";
@@ -148,6 +161,13 @@ function CorpoClub({
       ).sort((a, b) => minutiDa(a) - minutiDa(b))
     : [];
 
+  // Una fascia vuota non si disegna: un centro che apre alle 15 non ha un
+  // mattino da mostrare, e un'intestazione sopra il nulla e peggio del nulla.
+  const fasce = [
+    { nome: "Mattino", orari: orari.filter((o) => minutiDa(o) < TAGLIO_POMERIGGIO) },
+    { nome: "Pomeriggio", orari: orari.filter((o) => minutiDa(o) >= TAGLIO_POMERIGGIO) },
+  ].filter((fascia) => fascia.orari.length > 0);
+
   return (
     <>
       <div className="wansport-filtri">
@@ -189,75 +209,13 @@ function CorpoClub({
         </div>
       ) : tabellone ? (
         <>
-          {orari.length ? (
-            <div className="wansport-tabellone">
-              <table>
-                <thead>
-                  <tr>
-                    {/* L'angolo resta vuoto: sopra ai nomi dei campi non c'e
-                        niente da intitolare, e la parola "campo" ripeterebbe
-                        quello che si legge nella colonna sotto. */}
-                    <th className="wansport-angolo" scope="col">
-                      <span className="wansport-muto">Campo</span>
-                    </th>
-                    {orari.map((o) => (
-                      // Solo le ore piene portano l'etichetta: con una scritta
-                      // ogni mezz'ora la riga diventa un muro di numeri e non
-                      // si legge piu niente. Le caselle restano tutte della
-                      // stessa misura — l'ora e la mezza valgono uguale — e a
-                      // dire dove comincia l'ora e una riga sottile nello
-                      // stacco fra le due, non una casella piu larga.
-                      <th key={o} scope="col" className={o.endsWith(":00") ? "is-ora" : ""}>
-                        {o.endsWith(":00") ? o.slice(0, 2) : ""}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {tabellone.campi.map((campo) => {
-                    const stato = new Map(campo.slot.map((s) => [s.inizio, s.libero]));
-                    return (
-                      <tr key={campo.id}>
-                        <th scope="row">{campo.nome}</th>
-                        {orari.map((o) => {
-                          const libero = stato.get(o);
-                          // L'ora passata copre il libero e l'occupato: un
-                          // campo libero alle nove, se sono le undici, non e
-                          // un campo libero, e il verde sarebbe una promessa
-                          // che non si puo mantenere. Non copre pero il
-                          // chiuso, che resta chiuso a qualsiasi ora: li il
-                          // centro non ha mai avuto niente da vendere.
-                          const scaduto = minutiDa(o) < adesso;
-                          const segno =
-                            libero === undefined
-                              ? "is-chiuso"
-                              : scaduto
-                                ? "is-scaduto"
-                                : libero
-                                  ? "is-libero"
-                                  : "is-occupato";
-                          const detto =
-                            libero === undefined
-                              ? "chiuso"
-                              : scaduto
-                                ? "passato"
-                                : libero
-                                  ? "libero"
-                                  : "occupato";
-                          return (
-                            <td
-                              key={o}
-                              className={`${segno}${o.endsWith(":00") ? " is-ora" : ""}`}
-                              aria-label={`${campo.nome}, ${o}, ${detto}`}
-                            />
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+          {fasce.length ? (
+            fasce.map((fascia) => (
+              <div className="wansport-fascia" key={fascia.nome}>
+                <h4 className="wansport-fascia-nome">{fascia.nome}</h4>
+                <Griglia campi={tabellone.campi} orari={fascia.orari} adesso={adesso} />
+              </div>
+            ))
           ) : (
             <p className="wansport-nota">Per questo giorno il centro non ha orari.</p>
           )}
@@ -272,5 +230,89 @@ function CorpoClub({
         </>
       ) : null}
     </>
+  );
+}
+
+// Mezza giornata di tabellone. I campi sono sempre tutti: una fascia mostra
+// meno ore, non meno campi, se no il confronto fra un campo e l'altro — che e
+// tutto il motivo per cui questa e una tabella — si perderebbe a meta pagina.
+function Griglia({
+  campi,
+  orari,
+  adesso,
+}: {
+  campi: WansportCampo[];
+  orari: string[];
+  adesso: number;
+}) {
+  return (
+    <div className="wansport-tabellone">
+      <table>
+        <thead>
+          <tr>
+            {/* L'angolo resta vuoto: sopra ai nomi dei campi non c'e niente
+                da intitolare, e la parola "campo" ripeterebbe quello che si
+                legge nella colonna sotto. */}
+            <th className="wansport-angolo" scope="col">
+              <span className="wansport-muto">Campo</span>
+            </th>
+            {orari.map((o) => (
+              // Solo le ore piene portano l'etichetta: con una scritta ogni
+              // mezz'ora la riga diventa un muro di numeri e non si legge piu
+              // niente. Le caselle restano tutte della stessa misura — l'ora
+              // e la mezza valgono uguale — e a dire dove comincia l'ora e
+              // una riga sottile nello stacco fra le due, non una casella
+              // piu larga.
+              <th key={o} scope="col" className={o.endsWith(":00") ? "is-ora" : ""}>
+                {o.endsWith(":00") ? o.slice(0, 2) : ""}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {campi.map((campo) => {
+            const stato = new Map(campo.slot.map((s) => [s.inizio, s.libero]));
+            return (
+              <tr key={campo.id}>
+                <th scope="row">{campo.nome}</th>
+                {orari.map((o) => {
+                  const libero = stato.get(o);
+                  // L'ora passata copre il libero e l'occupato: un campo
+                  // libero alle nove, se sono le undici, non e un campo
+                  // libero, e il verde sarebbe una promessa che non si puo
+                  // mantenere. Non copre pero il chiuso, che resta chiuso a
+                  // qualsiasi ora: li il centro non ha mai avuto niente da
+                  // vendere.
+                  const scaduto = minutiDa(o) < adesso;
+                  const segno =
+                    libero === undefined
+                      ? "is-chiuso"
+                      : scaduto
+                        ? "is-scaduto"
+                        : libero
+                          ? "is-libero"
+                          : "is-occupato";
+                  const detto =
+                    libero === undefined
+                      ? "chiuso"
+                      : scaduto
+                        ? "passato"
+                        : libero
+                          ? "libero"
+                          : "occupato";
+                  return (
+                    <td
+                      key={o}
+                      className={`${segno}${o.endsWith(":00") ? " is-ora" : ""}`}
+                      aria-label={`${campo.nome}, ${o}, ${detto}`}
+                    />
+                  );
+                })}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }

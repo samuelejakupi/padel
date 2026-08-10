@@ -8465,6 +8465,22 @@ button.pizza-ranking-row {
   padding-bottom: var(--space-2);
 }
 
+/* La giornata spezzata in due, mattino e pomeriggio: trenta mezz'ore in una
+   riga sola si leggono solo scorrendo, e la casella che cerchi è larga tre
+   millimetri. Metà per volta ci sta quasi tutta. */
+.wansport-fascia + .wansport-fascia {
+  margin-top: var(--space-4);
+}
+
+.wansport-fascia-nome {
+  color: var(--ink-45);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  margin: 0 0 var(--space-2);
+  text-transform: uppercase;
+}
+
 .wansport-tabellone table {
   border-collapse: separate;
   /* Le caselle sono staccate di due pixel invece di condividere un bordo:
