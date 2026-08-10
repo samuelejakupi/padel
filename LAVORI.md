@@ -9,14 +9,25 @@ perdono passando da una sessione all'altra.
 "in sospeso" a "deciso". Quando scarti una strada, scrivi perché: serve a non
 ripercorrerla fra un mese.
 
-Ultimo aggiornamento: 10 agosto 2026
+Ultimo aggiornamento: 10 agosto 2026 (sera)
 
 ---
 
 ## In sospeso
 
-### Il tabellone dei campi liberi non funziona finché non lo si accende
-Serve qualche passaggio a mano, una volta sola:
+### ~~Il tabellone dei campi liberi non funziona finché non lo si accende~~
+**Chiuso il 10 agosto 2026: tutti e cinque i centri si vedono.** Le tre
+migrazioni sono state eseguite, i secret `WANSPORT_USER` / `WANSPORT_PASS`
+sono nel Dashboard, la funzione è deployata. Verificato che
+`wansport_sessioni` si riempie davvero: una riga per club chiuso, nessun
+duplicato, e Corcuera giustamente assente perché non apre nessuna sessione.
+
+Resta da fare, quando capita: spostare le credenziali dai secret al Vault
+(punto 4), che ora è possibile perché `migration-wansport-accesso.sql` è
+girata. I secret restano come via di servizio.
+
+I passaggi restano scritti qui sotto perché servono a chi rifà tutto da zero
+— un altro ambiente, o il giorno che si azzera il progetto Supabase.
 
 1. `supabase/migration-wansport-cache.sql` nel SQL Editor. Senza, la Edge
    Function funziona lo stesso — la cache è un risparmio, non una dipendenza —
@@ -220,6 +231,52 @@ salvata sulla schermata Home. Per ora c'è il pallino sull'icona Pizza.
 ---
 
 ## Deciso, e perché
+
+### I club sono raccoglitori, non pastiglie
+Con cinque centri la fila di pastiglie andava a capo, e quale fosse quello
+aperto lo diceva solo il nero di una: cinque nomi in fila e sotto un tabellone
+senza intestazione. Il raccoglitore invece tiene il nome attaccato al suo
+contenuto.
+
+È la stessa forma dei mesi del foglio delle partite, e soprattutto lo **stesso
+componente**: `MonthGroup` è uscito da `page.tsx` ed è diventato
+`app/MonthGroup.tsx`. Copiarlo voleva dire due animazioni da tenere uguali a
+mano, che è il modo in cui diventano diverse. Il nome resta `MonthGroup` anche
+se ora raccoglie pure i club, perché le classi CSS si chiamano `month-*` e
+rinominare le une senza le altre farebbe più danno che chiarezza. Il conteggio
+è diventato facoltativo: i mesi contano le partite, i club non hanno niente da
+contare prima di essere aperti.
+
+Il primo è già aperto quando il foglio sale — chi entra vuole vedere un
+tabellone, non un elenco da aprire — e per fortuna il primo è Corcuera, l'unico
+col pannello pubblico: quella chiamata automatica non tocca nessun account.
+Richiudendo l'ultimo aperto restano tutti chiusi, come fanno i mesi.
+
+Il corpo di un club resta montato anche da chiuso, se no la chiusura
+collasserebbe su una scatola già vuota e riaprendo si ripartirebbe da "sto
+guardando". Ma da chiuso non chiede niente: la chiamata parte solo se il
+raccoglitore è aperto, se no aprire il foglio farebbe cinque chiamate ai club
+per mostrarne una.
+
+Le chip dei giorni sono passate dentro al raccoglitore aperto, dove valgono.
+Il giorno scelto però resta cambiando centro: si sta cercando un giorno, non
+un club.
+
+### Il tabellone è diviso in mattino e pomeriggio
+Dalle 8 alle 23 sono trenta mezz'ore: in una riga sola si leggevano solo
+scorrendo di lato, e la casella che cerchi era larga tre millimetri. Due
+blocchi impilati, e ogni metà ci sta quasi intera.
+
+Il taglio è alle **14 e non alle 12**: a mezzogiorno si gioca ancora, e un
+"mattino" che finisce col campo pieno non descrive niente. Dopo pranzo la
+giornata cambia davvero, e chi cerca un campo sa già in quale metà guardare.
+
+Ogni blocco tiene **tutti** i campi e metà delle ore: una fascia mostra meno
+ore, non meno campi, se no il confronto fra un campo e l'altro — che è tutto
+il motivo per cui questa è una tabella e non un elenco — si perderebbe a metà
+pagina. Una fascia vuota non viene disegnata: un centro che apre alle 15 non
+ha un mattino da mostrare, e un'intestazione sopra il nulla è peggio del
+nulla.
 
 ### Gli orari dei campi si leggono quando li chiedi, non ogni minuto
 Il primo istinto era un lavoro periodico che tiene aggiornato il tabellone.
