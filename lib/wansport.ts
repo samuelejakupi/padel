@@ -41,11 +41,16 @@ export type WansportClub = {
 };
 
 // Quali di questi si riescano davvero a vedere non e scritto qui, e per un
-// motivo: dipende da dove il nostro account e tesserato, che cambia senza che
+// motivo: dipende dall'accesso configurato lato server, che cambia senza che
 // il codice lo sappia. Prima c'era un elenco di club "fuori portata" e andava
 // tenuto allineato a mano. Ora si chiede e basta: la Edge Function risponde
-// 409 se non ci arriva, e il giorno che ci tesseriamo da qualche parte quel
-// club si accende da solo.
+// 409 se non ci arriva, e il giorno che l'accesso funziona quel club si
+// accende da solo.
+//
+// (Fino al 10 ago 2026 qui c'era scritto che dipendeva da "dove il nostro
+// account e tesserato". Non era vero: il tesseramento non c'entra, basta una
+// sessione qualunque. Vedi LAVORI.md, "Il pannello dei loggati e un altro
+// componente".)
 export const WANSPORT_CLUBS: WansportClub[] = [
   {
     slug: "corcuera",

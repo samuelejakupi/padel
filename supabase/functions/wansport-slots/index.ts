@@ -22,15 +22,19 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // La lista sta qui e non nel client per un motivo di sicurezza: senza, la
 // funzione sarebbe un proxy aperto verso qualsiasi indirizzo le si passi.
 //
-// `richiedeLogin` segna i centri che rispondono {"success": false} a chi non e
-// registrato presso di loro: il gate di Wansport e per club e vale anche sul
-// dato, non solo sulla pagina. Restano elencati lo stesso perche l'app possa
-// spiegare *perche* non li mostra invece di far finta che non esistano.
+// `richiedeLogin` segna i centri che non hanno acceso il pannello pubblico:
+// agli anonimi rispondono
+// `{"success":false,"errCode":401,"errMsg":"Il pannello non e attivo"}`.
+// Non c'entra l'essere tesserati li — basta una sessione qualunque, e la
+// sessione cambia solo la porta da cui si entra (vedi `chiediPannello`).
+// Restano elencati lo stesso perche l'app possa spiegare *perche* non li
+// mostra invece di far finta che non esistano.
 //
-// Su quelli dove abbiamo un'iscrizione, la funzione entra da sola con le
-// credenziali nei secret (vedi `accedi`). Il flag resta a `true` lo stesso:
-// dice com'e fatto il centro, non se ci riusciamo. Se le credenziali mancano
-// o smettono di funzionare si torna esattamente al comportamento di prima.
+// Su questi la funzione entra da sola con le credenziali del gruppo (Vault, o
+// i secret come via di servizio — vedi `credenziali` e `accedi`). Il flag
+// resta a `true` lo stesso: dice com'e fatto il centro, non se ci riusciamo.
+// Se le credenziali mancano o smettono di funzionare si torna esattamente al
+// comportamento di prima.
 const CLUBS: Record<string, { host: string; nome: string; richiedeLogin: boolean }> = {
   corcuera: {
     host: "corcuerapadel.wansport.com",
@@ -289,17 +293,35 @@ async function sessioneSalvata(
 
 // La richiesta vera al pannello. `null` vuol dire "non ci siamo arrivati",
 // diverso da "ci siamo arrivati e ci ha detto di no".
+//
+// Il componente cambia a seconda di chi chiede, ed e la cosa che ci ha fatto
+// perdere piu tempo (misurato il 10 ago 2026 leggendo le XHR del sito da
+// loggato — vedi il file dei lavori):
+//   - `com_wsinit` e la porta degli anonimi. Funziona solo sui club che hanno
+//     acceso il pannello pubblico: Corcuera si, tutti gli altri rispondono
+//     `{"success":false,"errCode":401,"errMsg":"Il pannello non e attivo"}`.
+//     Quel messaggio non parla di tesseramento e non parla di noi: dice solo
+//     che da fuori quella porta e chiusa.
+//   - `com_wansport` e la porta di chi ha una sessione, la stessa che usa il
+//     sito dopo il login e che spiega perche dall'app i campi si vedevano.
+//     Basta un account Wansport qualsiasi: **non serve essere tesserati** al
+//     singolo club, cosa che invece avevamo dato per vera per un giorno.
+// Quindi il componente lo sceglie il cookie, non il club.
 async function chiediPannello(
   host: string,
   giorno: string,
   cookie: string | null,
 ): Promise<unknown | null> {
   const indirizzo = new URL(`https://${host}/index.php`);
-  indirizzo.searchParams.set("option", "com_wsinit");
+  indirizzo.searchParams.set("option", cookie ? "com_wansport" : "com_wsinit");
   indirizzo.searchParams.set("task", "prenotazioni.getPannelloPrenotazioni");
   indirizzo.searchParams.set("format", "raw");
   indirizzo.searchParams.set("filtroData", giorno);
   indirizzo.searchParams.set("filtroSport", String(SPORT_PADEL));
+  // Lo manda il sito e non costa niente mandarlo: "wanna play" e la ricerca di
+  // compagni di gioco, un'altra vista sullo stesso pannello. Senza, la
+  // risposta e la stessa; con, siamo identici a una richiesta del loro sito.
+  if (cookie) indirizzo.searchParams.set("isWannaplay", "0");
 
   try {
     const risposta = await fetch(indirizzo, {

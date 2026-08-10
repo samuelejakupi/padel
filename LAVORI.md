@@ -9,7 +9,7 @@ perdono passando da una sessione all'altra.
 "in sospeso" a "deciso". Quando scarti una strada, scrivi perché: serve a non
 ripercorrerla fra un mese.
 
-Ultimo aggiornamento: 9 agosto 2026
+Ultimo aggiornamento: 10 agosto 2026
 
 ---
 
@@ -45,9 +45,18 @@ usa il global `Deno`, cose che il build di Next non sa compilare e che in
 produzione esistono benissimo.
 
 ### Nei club chiusi si entra con un account solo, non con quello di ognuno
-Don Quique, Oneglia, Riviera e Diano rispondono `{"success": false}` a chi non
-è registrato presso di loro, e il blocco vale anche sul dato, non solo sulla
-pagina: è un'impostazione che ogni centro decide per sé.
+Don Quique, Oneglia, Riviera e Diano rispondono `{"success": false}` a chi
+arriva da fuori senza sessione, e il blocco vale anche sul dato, non solo
+sulla pagina.
+
+> **Corretto il 10 agosto 2026.** Qui sotto, fino alla sezione successiva, si
+> dava per scontato che servisse essere *tesserati presso ciascun centro*.
+> Non è vero, e per un giorno ci ha mandati a cercare la soluzione dalla parte
+> sbagliata (chiedere ai club di iscriverci, o comprare le API). Basta un
+> account Wansport qualunque: quello che cambia non è chi sei, è **da quale
+> porta entri** — vedi "Il pannello dei loggati è un altro componente" più
+> sotto. Le decisioni sull'account unico e sul Vault restano valide come sono
+> scritte; è la spiegazione del perché a essere stata sbagliata.
 
 La prima idea era un tasto "accedi" nell'app, con ognuno che mette le proprie
 credenziali Wansport. È stata scartata: per rigiocarsi quel login la funzione
@@ -91,8 +100,63 @@ Wansport, e sono poi i singoli club a tesserarti — quindi la coppia di secret
 riesce lo stesso ma il pannello risponde `success: false`, che è il caso già
 gestito: quel club dice "richiede login" e mostra il link al sito. Per questo
 nel client non c'è più nessun elenco di club "fuori portata" da tenere
-allineato a mano: si chiede e basta, e il giorno che ci si tessera da qualche
-parte quel centro si accende da solo.
+allineato a mano: si chiede e basta, e il giorno che un centro si apre quel
+centro si accende da solo.
+
+### Il pannello dei loggati è un altro componente
+Misurato il 10 agosto 2026 leggendo le XHR del sito di Don Quique da loggato,
+dopo un giorno passato a dedurre la cosa sbagliata.
+
+Gli anonimi passano da `option=com_wsinit`. Quella porta è aperta solo sui
+club che hanno acceso il pannello pubblico — Corcuera sì, gli altri quattro
+no, e rispondono
+`{"success":false,"errCode":401,"errMsg":"Il pannello non è attivo"}`.
+Quel messaggio non parla di tesseramento e non parla di noi: dice solo che da
+fuori quella porta è chiusa.
+
+Chi ha una sessione passa invece da `option=com_wansport`, stesso `task`, più
+`isWannaplay=0`. Con un account Wansport qualsiasi — **senza essere tesserati
+al centro** — Don Quique restituisce `success: true` e la griglia intera, le
+due sedi comprese. È la stessa porta che usa l'app, ed è il motivo per cui
+dall'app i campi si vedevano mentre dal browser no.
+
+Quindi il componente lo sceglie il cookie, non il club: con sessione
+`com_wansport`, senza sessione `com_wsinit`.
+
+Due cose emerse per strada, che valgono più della sezione:
+
+- **Un account creato con Google non ha una password**, quindi il login
+  email+password falliva in silenzio. Va impostata una password vera da
+  "password dimenticata" prima di metterla nel Vault. Questo, sommato al fatto
+  che una credenziale sbagliata è indistinguibile da un pannello chiuso,
+  è tutto il mistero: non stava fallendo il pannello, stava fallendo il login.
+- **QUPOLA non è un club a sé**: è la sede "DON QUIQUE PONTEDASSIO" dentro lo
+  stesso sottodominio di Don Quique. I campi sono COURT 1, COURT 2, GARDEN
+  COURT 3, GARDEN COURT 4, QUPOLA 1 (INDOOR), QUPOLA 2 (INDOOR).
+  `PADEL_COURTS` in `app/page.tsx` invece va lasciato com'è: è l'elenco dei
+  *posti dove si gioca* per registrare una partita, e Qupola come posto esiste
+  eccome. Sono due liste diverse e non vanno allineate.
+
+### Aperto: il tabellone di Don Quique mescola due sedi lontane 10 km
+`normalizza()` nella Edge Function appiattisce `dati.sedi[]` in un unico
+elenco di campi e butta via il nome della sede — scelta giusta finché un club
+aveva una sede sola (su Corcuera la sede si chiama come la parrocchia
+proprietaria, che non dice niente a nessuno).
+
+Su Don Quique non regge più: sotto l'etichetta "DON QUIQUE - IMPERIA"
+finiscono anche QUPOLA 1 e QUPOLA 2, che sono a Pontedassio. I nomi dei campi
+lo lasciano intuire, ma chi guarda per decidere dove andare merita di meglio.
+
+Da decidere insieme, perché tocca la vista mobile: portare `sede` nel payload
+e mostrarla come intestazione di gruppo solo quando le sedi sono più di una.
+Non l'ho fatto di mia iniziativa il 10 ago perché non potevo verificarlo a
+schermo — e in quella colonna gli ordini sono espliciti, quindi un elemento
+nuovo senza `order` risale in cima a tutto.
+
+Rimane da verificare, quando capita: se le altre tre società si comportano
+come Don Quique. Il login è per sottodominio, quindi vanno provate una per una
+— ma se una non va, l'app degrada da sola sul link al sito e non si rompe
+niente.
 
 Il login è quello standard di Joomla: POST alla radice con `option=com_users`,
 `task=user.login` e un token anti-CSRF che va pescato dalla pagina appena
@@ -103,7 +167,7 @@ minuti: rifare il login a ogni richiesta riempirebbe il loro registro accessi
 di centinaia di righe a nome nostro, che è il modo più rapido per farsi
 notare.
 
-Se le credenziali mancano, sono sbagliate o il club ci toglie l'iscrizione, la
+Se le credenziali mancano, sono sbagliate o il club chiude il pannello, la
 risposta torna a essere `richiede-login` e l'app si comporta come prima: non
 c'è un caso in cui l'utente veda un errore. Il rovescio è che una credenziale
 sbagliata non si distingue da un club chiuso — se un centro smette di
