@@ -8771,17 +8771,20 @@ button.pizza-ranking-row {
   padding: var(--space-6);
 }
 
+/* L'emoji sta in fondo al nome e non accanto, quindi l'intestazione e una
+   colonna sola: non c'e piu niente da affiancare. */
 .titolo-head {
-  align-items: flex-start;
   display: flex;
-  gap: var(--space-4);
+  flex-direction: column;
 }
 
-/* L'emoji fa da insegna e da segnaposto: scorrendo velocemente e la prima
-   cosa che si riconosce, molto prima del nome del titolo. */
+/* Piu grande del nome, ma non tanto da alzare la riga che la contiene: e
+   la firma del titolo, non la sua insegna. */
 .titolo-emoji {
-  font-size: 26px;
+  font-size: 16px;
   line-height: 1;
+  margin-left: var(--space-2);
+  vertical-align: -2px;
 }
 
 .titolo-head h3 {

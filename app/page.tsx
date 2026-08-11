@@ -4669,9 +4669,6 @@ function AppShell({ session }: { session: Session | null }) {
     };
   }), [titleStandings, titleVotes, profiles]);
 
-  // Quanti titoli mancano all'appello: finisce sul tasto VOTA, così si sa se
-  // vale la pena aprirlo prima di aprirlo.
-  const pendingTitles = titleBoard.filter((title) => !title.voted).length;
 
   const selectedPlayer = profiles.find((profile) => profile.id === selectedPlayerId) ?? null;
   const isOwnCard = view === "padel" && padelView === "player" && selectedPlayerId === session?.user.id;
@@ -6445,7 +6442,7 @@ function AppShell({ session }: { session: Session | null }) {
               setSheet("titoli");
             }}
           >
-            {pendingTitles ? `VOTA I TITOLI (${pendingTitles})` : "VOTA I TITOLI"}
+            VOTA
           </button>
         </BottomSheet>
       ) : null}
@@ -6470,11 +6467,13 @@ function AppShell({ session }: { session: Session | null }) {
               return (
                 <article className="titolo-card" key={title.slug}>
                   <header className="titolo-head">
-                    <span className="titolo-emoji" aria-hidden="true">{title.emoji}</span>
-                    <div>
-                      <h3>{title.label}</h3>
-                      <p>{title.meaning}</p>
-                    </div>
+                    {/* L'emoji chiude il nome invece di annunciarlo: il titolo si
+                        legge per esteso e l'emoji arriva come un sigillo. */}
+                    <h3>
+                      {title.label}
+                      <span className="titolo-emoji" aria-hidden="true">{title.emoji}</span>
+                    </h3>
+                    <p>{title.meaning}</p>
                   </header>
 
                   {/* Chi lo detiene. A pari voti restano tutti: vedi il commento
