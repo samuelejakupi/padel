@@ -9,7 +9,7 @@ perdono passando da una sessione all'altra.
 "in sospeso" a "deciso". Quando scarti una strada, scrivi perché: serve a non
 ripercorrerla fra un mese.
 
-Ultimo aggiornamento: 10 agosto 2026 (sera)
+Ultimo aggiornamento: 11 agosto 2026
 
 ---
 
@@ -228,9 +228,59 @@ Concordate ma non fatte. Richiedono service worker, chiavi VAPID e una Edge
 Function su Supabase che le invii; su iPhone funzionano solo con la web app
 salvata sulla schermata Home. Per ora c'è il pallino sull'icona Pizza.
 
+### `migration-titoli.sql` va eseguita prima che i titoli funzionino
+Finché non gira nel SQL Editor di Supabase, il tasto "VOTA I TITOLI" in fondo
+al foglio della classifica risponde con un avviso invece di aprirsi. Le due
+query dei titoli falliscono da sole e non si portano dietro il resto del
+caricamento, quindi l'app continua a funzionare come prima: è lo stesso
+comportamento delle migrazioni dei pareggi e delle plays.
+
 ---
 
 ## Deciso, e perché
+
+### I titoli si votano dal fondo della classifica
+La classifica è l'unico punto dell'app dove il gruppo è tutto in fila, quindi è
+lì che si vota: si finisce di leggere chi va forte e si passa a dire chi è cosa.
+Il tasto sta in fondo al **foglio** della classifica, non nella card della home
+— `.ranking-preview` è tutta un `<button>` e dentro un tasto non ci va un altro
+tasto — e non nella pagina classifica intera, che sarebbe stato un secondo
+posto da tenere allineato.
+
+Il foglio dei titoli **sostituisce** quello della classifica invece di
+sovrapporsi: `sheet` tiene un foglio solo, e due `BottomSheet` aperti insieme si
+contenderebbero il trascinamento e l'animazione della fascia in cima allo
+schermo. Chiudendo si torna alla home, non alla classifica.
+
+### La votazione dei titoli è sempre aperta, e il voto è segreto
+Niente sessioni e niente stagioni: un voto per titolo a testa, correggibile
+quando si vuole. Un titolo dice cosa pensi di una persona, e quello cambia da
+solo — congelarlo a fine anno avrebbe trasformato un'opinione in un verdetto.
+
+I voti sono anonimi e questo **non** si ottiene con una policy. Se il telefono
+potesse leggere i voti per contarli, chi legge potrebbe anche guardarli: la
+policy di lettura lascia quindi vedere a ognuno solo la propria riga, e i totali
+arrivano già sommati da `title_standings()`, che gira come proprietario e
+restituisce numeri, mai nomi di votanti. Lo stesso motivo per cui la scrittura
+passa da `save_title_vote()` invece che da un insert diretto.
+
+### Non ci si vota da soli, e il bianco è una scelta
+Il divieto di autovoto sta nel `check` della tabella e nella funzione, non nel
+frontend: un vincolo che vive solo nel telefono non è un vincolo. La scheda
+bianca è una riga con `target_id` nullo, diversa dal non aver votato, che è
+l'assenza della riga — così il foglio può dire "3 voti espressi · 1 in bianco"
+invece di far sparire l'astensione nel silenzio.
+
+### A pari voti il titolo resta conteso
+Con otto votanti i pareggi sono la norma, non l'eccezione. In cima restano
+tutti i nomi a pari merito, con le facce accavallate: scegliere un vincitore
+per ordine alfabetico o per id sarebbe stato un vincitore inventato dal codice.
+
+### I due GOAT convivono
+L'emblema GOAT della bacheca lo assegnano i numeri, il titolo GOAT lo assegna
+il gruppo. Stesso nome, due strade diverse, ed è voluto: uno è il più forte,
+l'altro è quello che tutti chiamano il più forte. Non si rinomina né si toglie
+quello statistico.
 
 ### I club sono raccoglitori, non pastiglie
 Con cinque centri la fila di pastiglie andava a capo, e quale fosse quello

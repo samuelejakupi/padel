@@ -153,6 +153,83 @@ const pizzaCriteria = [
 ] as const;
 const pizzaMedalTones = ["gold", "silver", "bronze"] as const;
 
+// I titoli votati dal gruppo. L'ordine di questo elenco è l'ordine in cui
+// compaiono nel foglio: si apre con l'ego e si chiude con il GOAT, che è quello
+// che pesa di più e sta in fondo come una firma.
+//
+// Lo `slug` è la chiave nel database e deve restare identico a quello ammesso
+// dal `check` di `migration-titoli.sql`: cambiarlo qui senza cambiarlo là
+// significa che il voto viene rifiutato dal server e non si capisce perché.
+//
+// Il GOAT qui non è l'emblema GOAT della bacheca. Quello lo assegnano i numeri,
+// questo lo assegna il gruppo: due strade diverse per lo stesso nome, ed è
+// voluto — uno è il più forte, l'altro è quello che tutti chiamano il più forte.
+const TITLES = [
+  {
+    slug: "ego",
+    emoji: "😤",
+    label: "BIGGEST EGO",
+    meaning: "Quello più pieno di sé, che si sente il più forte.",
+  },
+  {
+    slug: "intimidator",
+    emoji: "🔥",
+    label: "MOST INTIMIDATING",
+    meaning: "Quello che mette più soggezione averlo dall'altra parte della rete.",
+  },
+  {
+    slug: "showman",
+    emoji: "🎭",
+    label: "BEST SHOWMAN",
+    meaning: "Il più spettacolare, quello che intrattiene: colpi da circo, esultanze, carisma.",
+  },
+  {
+    slug: "clutcher",
+    emoji: "🧊",
+    label: "MOST CLUTCH",
+    meaning: "Nei momenti decisivi — match point, tie-break, 30-40 — non trema e piazza il colpo.",
+  },
+  {
+    slug: "consistency",
+    emoji: "🎯",
+    label: "MOST CONSISTENT",
+    meaning: "Il più costante: rende sempre allo stesso livello, pochi alti e bassi.",
+  },
+  {
+    slug: "cheater",
+    emoji: "🤡",
+    label: "CHEATER",
+    meaning: "Chiama fuori le palle dentro, nega il doppio rimbalzo, «non ho toccato la rete».",
+  },
+  {
+    slug: "trash_talker",
+    emoji: "😈",
+    label: "TRASH TALKER",
+    meaning: "Provoca l'avversario a parole durante il match: sfottò, gestacci, faccia tosta.",
+  },
+  {
+    slug: "goat",
+    emoji: "🐐",
+    label: "GOAT",
+    meaning: "Greatest Of All Time: il più forte di sempre.",
+  },
+] as const;
+
+// Il voto di chi guarda, uno per titolo. `target_id` nullo è la scheda bianca:
+// diverso dal non aver votato, che è l'assenza della riga.
+type TitleVote = {
+  title: string;
+  target_id: string | null;
+};
+
+// I totali che arrivano già sommati da `title_standings()`. Le righe con
+// `target_id` nullo sono le schede bianche di quel titolo.
+type TitleStanding = {
+  title: string;
+  target_id: string | null;
+  votes: number;
+};
+
 // Le schede storiche erano su scale diverse e comprendevano il bonus Fabio.
 // Qui vengono riportate sugli stessi pesi delle nuove, così la classifica ha
 // un metro solo: si divide per il vecchio massimo e si moltiplica per il peso.
@@ -4169,7 +4246,7 @@ function AppShell({ session }: { session: Session | null }) {
   const [chosenMonth, setChosenMonth] = useState<string | null | undefined>(undefined);
   // Partite e classifica complete si aprono in un foglio dal basso invece di
   // portare su un'altra schermata.
-  const [sheet, setSheet] = useState<null | "matches" | "ranking" | "campi">(null);
+  const [sheet, setSheet] = useState<null | "matches" | "ranking" | "campi" | "titoli">(null);
 
   // I due caroselli della home. Le facce sono in fila nell'ordine dei
   // pallini, e il cambio automatico va avanti e indietro lungo quella fila.
@@ -4291,6 +4368,12 @@ function AppShell({ session }: { session: Session | null }) {
   const [playsSchemaReady, setPlaysSchemaReady] = useState(true);
   const [showPlayCreate, setShowPlayCreate] = useState(false);
   const [playingClip, setPlayingClip] = useState<PlayerPlay | null>(null);
+  // I titoli: i totali di tutti (anonimi, già sommati dal database) e il solo
+  // voto di chi guarda, che è l'unico che la RLS gli lascia rileggere.
+  const [titleStandings, setTitleStandings] = useState<TitleStanding[]>([]);
+  const [titleVotes, setTitleVotes] = useState<TitleVote[]>([]);
+  const [titlesSchemaReady, setTitlesSchemaReady] = useState(true);
+  const [savingTitle, setSavingTitle] = useState("");
   const [seasonRows, setSeasonRows] = useState<SeasonStanding[]>([]);
   const [season, setSeason] = useState(new Date().getFullYear());
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -4320,6 +4403,8 @@ function AppShell({ session }: { session: Session | null }) {
       tournamentsResult,
       courtsResult,
       setFlagsResult,
+      titleStandingsResult,
+      titleVotesResult,
     ] = await Promise.all([
       client.from("profiles").select("*").order("rating", { ascending: false }),
       client
@@ -4361,6 +4446,12 @@ function AppShell({ session }: { session: Session | null }) {
       // non e stata eseguita la colonna non esiste e i set risultano tutti
       // completi, che e esattamente com'erano prima.
       client.from("match_sets").select("match_id, set_number, incomplete"),
+      // I titoli. I totali passano da una funzione e non da una select perché
+      // la tabella dei voti è illeggibile per chi non ne è l'autore: è così che
+      // il voto resta anonimo. Finché migration-titoli.sql non è stata
+      // eseguita queste due falliscono da sole, senza toccare il resto.
+      client.rpc("title_standings"),
+      client.from("title_votes").select("title, target_id"),
     ]);
 
     if (profilesResult.error || matchesResult.error) {
@@ -4434,6 +4525,11 @@ function AppShell({ session }: { session: Session | null }) {
       if (!seasonsResult.error) setSeasonRows((seasonsResult.data ?? []) as SeasonStanding[]);
       setPlaysSchemaReady(!playsResult.error);
       if (!playsResult.error) setPlays((playsResult.data ?? []) as PlayerPlay[]);
+      setTitlesSchemaReady(!titleStandingsResult.error);
+      if (!titleStandingsResult.error) {
+        setTitleStandings((titleStandingsResult.data ?? []) as TitleStanding[]);
+      }
+      if (!titleVotesResult.error) setTitleVotes((titleVotesResult.data ?? []) as TitleVote[]);
       setTeamSchemaReady(!teamsResult.error);
       if (!teamsResult.error) {
         setTeamRecords(
@@ -4540,6 +4636,43 @@ function AppShell({ session }: { session: Session | null }) {
     ),
   );
   const currentRank = currentUser?.matches_played ? rankOf(sorted, currentUser.id) : 0;
+
+  // Il tabellone dei titoli: per ognuno, chi lo detiene e con quanti voti.
+  //
+  // A parità di voti non si inventa un vincitore — il titolo resta conteso e
+  // si mostrano tutti i nomi in cima. È l'unica cosa onesta da fare con otto
+  // votanti: con numeri così piccoli i pareggi sono la norma, non l'eccezione,
+  // e sceglierne uno a caso (o per ordine alfabetico) sarebbe un vincitore
+  // inventato dal codice.
+  const titleBoard = useMemo(() => TITLES.map((title) => {
+    const rows = titleStandings.filter((row) => row.title === title.slug);
+    const blank = rows.find((row) => row.target_id === null)?.votes ?? 0;
+    const named = rows.filter((row) => row.target_id !== null);
+    const cast = named.reduce((total, row) => total + row.votes, 0) + blank;
+    const top = named.reduce((best, row) => Math.max(best, row.votes), 0);
+    const leaders = top
+      ? named
+          .filter((row) => row.votes === top)
+          .map((row) => profiles.find((profile) => profile.id === row.target_id))
+          .filter((profile): profile is Profile => Boolean(profile))
+      : [];
+    return {
+      ...title,
+      blank,
+      cast,
+      top,
+      leaders,
+      // Il voto di chi guarda: `undefined` se non ha ancora votato questo
+      // titolo, `null` se ha scelto la scheda bianca.
+      own: titleVotes.find((vote) => vote.title === title.slug)?.target_id,
+      voted: titleVotes.some((vote) => vote.title === title.slug),
+    };
+  }), [titleStandings, titleVotes, profiles]);
+
+  // Quanti titoli mancano all'appello: finisce sul tasto VOTA, così si sa se
+  // vale la pena aprirlo prima di aprirlo.
+  const pendingTitles = titleBoard.filter((title) => !title.voted).length;
+
   const selectedPlayer = profiles.find((profile) => profile.id === selectedPlayerId) ?? null;
   const isOwnCard = view === "padel" && padelView === "player" && selectedPlayerId === session?.user.id;
   const selectedPlayerRank = selectedPlayer?.matches_played ? rankOf(sorted, selectedPlayer.id) : 0;
@@ -5024,6 +5157,40 @@ function AppShell({ session }: { session: Session | null }) {
           : "Squadra senza nome: resta fuori dalla classifica.",
     );
     if (!error) await loadData();
+  }
+
+  // Un titolo per volta. `targetId` nullo è la scheda bianca, ed è un voto a
+  // tutti gli effetti: viene salvato, non cancellato.
+  //
+  // Il voto si vede cambiato subito e i totali arrivano dopo. Non è solo una
+  // questione di velocità: il totale è la somma di tutti, quindi cambia di uno
+  // e spesso non si muove nemmeno di posizione — se aspettassimo quello per
+  // segnare la scelta, premere sembrerebbe non aver fatto niente.
+  async function saveTitleVote(title: string, targetId: string | null) {
+    if (!supabase || !session) return;
+    setSavingTitle(title);
+    setTitleVotes((previous) => [
+      ...previous.filter((vote) => vote.title !== title),
+      { title, target_id: targetId },
+    ]);
+
+    const { error } = await supabase.rpc("save_title_vote", {
+      p_title: title,
+      p_target_id: targetId,
+    });
+
+    if (error) {
+      setNotice(error.message);
+      // Il voto respinto non deve restare a video: si rilegge quello vero.
+      const { data } = await supabase.from("title_votes").select("title, target_id");
+      setTitleVotes((data ?? []) as TitleVote[]);
+      setSavingTitle("");
+      return;
+    }
+
+    const { data, error: standingsError } = await supabase.rpc("title_standings");
+    if (!standingsError) setTitleStandings((data ?? []) as TitleStanding[]);
+    setSavingTitle("");
   }
 
   function openPlayer(profile: Profile) {
@@ -6262,6 +6429,118 @@ function AppShell({ session }: { session: Session | null }) {
           ) : (
             <TeamRankingList teams={rankedSeasonTeams} showTrend={isCurrentSeason} />
           )}
+          {/* I titoli stanno in fondo alla classifica perché è l'unico punto
+              dell'app dove il gruppo è tutto in fila: si finisce di leggere chi
+              va forte e si passa a dire chi è cosa. Il foglio dei titoli
+              sostituisce questo invece di sovrapporsi — `sheet` tiene un foglio
+              solo, e due pannelli aperti insieme si contenderebbero il
+              trascinamento e la fascia in cima allo schermo. */}
+          <button
+            className="button button-ghost button-full cta-titoli"
+            onClick={() => {
+              if (!titlesSchemaReady) {
+                setNotice("Per votare i titoli esegui la migrazione migration-titoli.sql in Supabase.");
+                return;
+              }
+              setSheet("titoli");
+            }}
+          >
+            {pendingTitles ? `VOTA I TITOLI (${pendingTitles})` : "VOTA I TITOLI"}
+          </button>
+        </BottomSheet>
+      ) : null}
+      {sheet === "titoli" ? (
+        <BottomSheet
+          title="I titoli"
+          eyebrow="VOTO SEGRETO"
+          onClose={() => setSheet(null)}
+        >
+          <div className="titoli-sheet">
+            <p className="titoli-intro">
+              Un voto per titolo, e si cambia quando si vuole. Nessuno vede mai chi ha
+              votato chi: si vedono solo i totali.
+            </p>
+            {profiles.filter((profile) => profile.id !== session?.user.id).length === 0 ? (
+              <p className="demo-profile-note">
+                Non c&apos;è nessun altro da votare: da soli i titoli non hanno senso.
+              </p>
+            ) : null}
+            {titleBoard.map((title) => {
+              const candidates = profiles.filter((profile) => profile.id !== session?.user.id);
+              return (
+                <article className="titolo-card" key={title.slug}>
+                  <header className="titolo-head">
+                    <span className="titolo-emoji" aria-hidden="true">{title.emoji}</span>
+                    <div>
+                      <h3>{title.label}</h3>
+                      <p>{title.meaning}</p>
+                    </div>
+                  </header>
+
+                  {/* Chi lo detiene. A pari voti restano tutti: vedi il commento
+                      su `titleBoard`. */}
+                  <div className="titolo-holder">
+                    {title.leaders.length ? (
+                      <>
+                        <span className="titolo-holder-faces" aria-hidden="true">
+                          {title.leaders.map((leader) => (
+                            <Avatar key={leader.id} profile={leader} size="sm" />
+                          ))}
+                        </span>
+                        <b>{title.leaders.map((leader) => leader.display_name).join(" · ")}</b>
+                        <small>
+                          {title.leaders.length > 1 ? "a pari merito · " : ""}
+                          {title.top} {title.top === 1 ? "voto" : "voti"}
+                        </small>
+                      </>
+                    ) : (
+                      <small className="titolo-holder-empty">Ancora nessun voto per questo titolo.</small>
+                    )}
+                  </div>
+
+                  <div className="titolo-choices" role="group" aria-label={`Vota ${title.label}`}>
+                    {candidates.map((candidate) => (
+                      <button
+                        key={candidate.id}
+                        type="button"
+                        className={`titolo-choice ${title.own === candidate.id ? "is-chosen" : ""}`}
+                        disabled={savingTitle === title.slug}
+                        aria-pressed={title.own === candidate.id}
+                        onClick={() => void saveTitleVote(title.slug, candidate.id)}
+                      >
+                        <Avatar profile={candidate} size="sm" />
+                        <span>{candidate.display_name}</span>
+                      </button>
+                    ))}
+                    {/* Il bianco è una scelta, non un ripensamento: sta in fila
+                        con gli altri e si può premere come loro. */}
+                    <button
+                      type="button"
+                      className={`titolo-choice titolo-choice-blank ${title.voted && title.own === null ? "is-chosen" : ""}`}
+                      disabled={savingTitle === title.slug}
+                      aria-pressed={title.voted && title.own === null}
+                      onClick={() => void saveTitleVote(title.slug, null)}
+                    >
+                      <span className="titolo-blank-mark" aria-hidden="true">—</span>
+                      <span>Bianco</span>
+                    </button>
+                  </div>
+
+                  <footer className="titolo-foot">
+                    {title.cast ? (
+                      <span>
+                        {title.cast} {title.cast === 1 ? "voto espresso" : "voti espressi"}
+                        {title.blank ? ` · ${title.blank} in bianco` : ""}
+                      </span>
+                    ) : (
+                      <span>Nessuno ha ancora votato</span>
+                    )}
+                    {title.voted ? <span className="titolo-done">HAI VOTATO</span> : null}
+                  </footer>
+                </article>
+              );
+            })}
+          </div>
         </BottomSheet>
       ) : null}
       {showMatch || editingMatch || tournamentMatch ? (

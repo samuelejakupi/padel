@@ -8728,3 +8728,229 @@ button.pizza-ranking-row {
     margin: 0;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   I titoli votati dal gruppo
+   ---------------------------------------------------------------------------
+   Si arriva qui dal fondo del foglio della classifica: si finisce di leggere
+   chi va forte e si passa a dire chi e cosa. Il foglio e lungo per forza —
+   otto titoli con dentro tutto il roster — quindi ogni titolo e una card sua,
+   con un confine visibile: scorrendo si deve sempre capire dove finisce una
+   domanda e dove comincia la successiva. */
+
+/* Il tasto in fondo alla classifica. Non e la copia mobile di niente — dentro
+   il foglio non c'e nessuna intestazione di sezione che sparisce sotto i
+   780px — quindi vive in una copia sola e si vede ovunque. */
+.cta-titoli {
+  /* Lo stacco dall'ultima riga della classifica e piu largo del passo base:
+     qui non si sta aggiungendo una voce all'elenco, si sta cambiando
+     argomento. */
+  margin-top: var(--space-6);
+}
+
+.titoli-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.titoli-intro {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 0 0 var(--space-2);
+}
+
+.titolo-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+
+.titolo-head {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--space-4);
+}
+
+/* L'emoji fa da insegna e da segnaposto: scorrendo velocemente e la prima
+   cosa che si riconosce, molto prima del nome del titolo. */
+.titolo-emoji {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.titolo-head h3 {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.titolo-head p {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  margin: var(--space-1) 0 0;
+}
+
+/* Chi detiene il titolo adesso. Sta sopra la scelta e non sotto: si vota
+   sapendo come sta andando, che e come funziona una votazione fra amici. */
+.titolo-holder {
+  align-items: center;
+  background: var(--veil-1);
+  border-radius: var(--radius-md);
+  display: flex;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+}
+
+/* A pari voti le facce si accavallano invece di allargare la riga: due o tre
+   nomi contesi capitano spesso con otto votanti. */
+.titolo-holder-faces {
+  display: flex;
+}
+
+.titolo-holder-faces .avatar + .avatar {
+  margin-left: -10px;
+}
+
+.titolo-holder b {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.titolo-holder small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  margin-left: auto;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.titolo-holder-empty {
+  margin-left: 0;
+  text-transform: none;
+}
+
+.titolo-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.titolo-choice {
+  align-items: center;
+  background: var(--veil-2);
+  border: 0;
+  border-radius: var(--radius-pill);
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 900;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-4) var(--space-1) var(--space-1);
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+/* Nella pastiglia l'avatar sta stretto: 36px farebbero una riga alta come una
+   card. Il ritaglio e lo stesso, cambia solo la misura. */
+.titolo-choice .avatar-sm {
+  height: 24px;
+  width: 24px;
+}
+
+.titolo-choice:disabled {
+  cursor: progress;
+  opacity: 0.5;
+}
+
+.titolo-choice.is-chosen {
+  background: var(--ink);
+  color: var(--white);
+}
+
+/* Il bianco non ha una faccia: al suo posto una lineetta dentro un tondo
+   tratteggiato, cosi la pastiglia resta larga come le altre e la fila non si
+   scompone. */
+.titolo-choice-blank {
+  padding-left: var(--space-3);
+}
+
+.titolo-blank-mark {
+  align-items: center;
+  border: 1px dashed var(--ink-30);
+  border-radius: 50%;
+  display: inline-flex;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.titolo-choice-blank.is-chosen .titolo-blank-mark {
+  border-color: var(--white);
+}
+
+.titolo-foot {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  display: flex;
+  font-size: 10px;
+  font-weight: 800;
+  gap: var(--space-3);
+  justify-content: space-between;
+  letter-spacing: 0.4px;
+  padding-top: var(--space-3);
+  text-transform: uppercase;
+}
+
+.titolo-done {
+  color: var(--positive);
+  font-weight: 900;
+}
+
+@media (hover: hover) {
+  .titolo-choice:hover:not(:disabled):not(.is-chosen) {
+    background: var(--veil-3);
+    /* Ingrandisce, non si sposta: e la regola di STYLE.md, e qui conta il
+       doppio perche le pastiglie stanno in fila e un movimento farebbe
+       ballare le vicine. */
+    transform: scale(1.02);
+  }
+}
+
+@media (max-width: 780px) {
+  .titolo-card {
+    padding: var(--space-5) var(--space-4);
+  }
+
+  /* Su schermo stretto le pastiglie diventano due colonne piene invece di una
+     fila che va a capo dove capita: i nomi sono lunghi diversi e l'ultima riga
+     restava sempre monca. */
+  .titolo-choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .titolo-choice {
+    /* In griglia la pastiglia riempie la colonna, quindi il nome puo essere
+       piu lungo dello spazio: si taglia invece di allargare la cella. */
+    overflow: hidden;
+  }
+
+  .titolo-choice span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
