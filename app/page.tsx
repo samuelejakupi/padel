@@ -168,25 +168,25 @@ const TITLES = [
   {
     slug: "ego",
     emoji: "😤",
-    label: "BIGGEST EGO",
+    label: "EGO",
     meaning: "Quello più pieno di sé, che si sente il più forte.",
   },
   {
     slug: "intimidator",
     emoji: "🔥",
-    label: "MOST INTIMIDATING",
+    label: "INTIMIDATOR",
     meaning: "Quello che mette più soggezione averlo dall'altra parte della rete.",
   },
   {
     slug: "showman",
     emoji: "🎭",
-    label: "BEST SHOWMAN",
+    label: "SHOWMAN",
     meaning: "Il più spettacolare, quello che intrattiene: colpi da circo, esultanze, carisma.",
   },
   {
     slug: "clutcher",
     emoji: "🧊",
-    label: "MOST CLUTCH",
+    label: "CLUTCHER",
     meaning: "Nei momenti decisivi (match point, tie-break, 30-40) non trema e piazza il colpo.",
   },
   {
@@ -204,7 +204,7 @@ const TITLES = [
   {
     slug: "consistency",
     emoji: "🎯",
-    label: "MOST CONSISTENT",
+    label: "CONSISTENCY",
     meaning: "Il più costante: rende sempre allo stesso livello, pochi alti e bassi.",
   },
   {
@@ -6435,7 +6435,7 @@ function AppShell({ session }: { session: Session | null }) {
               cosa che il foglio non fa. */}
           {rankingMode === "single" ? (
           <button
-            className="button button-ghost button-full cta-titoli"
+            className="button button-full cta-titoli"
             onClick={() => {
               if (!titlesSchemaReady) {
                 setNotice("Per votare i titoli esegui la migrazione migration-titoli.sql in Supabase.");
@@ -6473,7 +6473,6 @@ function AppShell({ session }: { session: Session | null }) {
                       {title.label}
                       <span className="titolo-emoji" aria-hidden="true">{title.emoji}</span>
                     </h3>
-                    <p>{title.meaning}</p>
                   </header>
 
                   {/* Chi lo detiene. A pari voti restano tutti: vedi il commento
@@ -6497,7 +6496,7 @@ function AppShell({ session }: { session: Session | null }) {
                     )}
                   </div>
 
-                  <div className="titolo-choices" role="group" aria-label={`Vota ${title.label}`}>
+                  <div className="titolo-choices" role="group" aria-label={`Vota ${title.label}: ${title.meaning}`}>
                     {candidates.map((candidate) => {
                       const chosen = title.own === candidate.id;
                       return (
