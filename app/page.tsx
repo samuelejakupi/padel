@@ -2569,7 +2569,16 @@ function BottomSheet({
         aria-modal="true"
         aria-label={title}
         onTouchStart={(event) => {
-          if ((bodyRef.current?.scrollTop ?? 0) > 0 || event.touches.length !== 1) {
+          // Il foglio si trascina solo prendendolo per l'intestazione. Prima
+          // bastava che l'elenco fosse in cima, e allora un dito appoggiato
+          // sul contenuto muoveva il foglio invece della lista: chi voleva
+          // scorrere si trovava il pannello che scendeva, e per rimediare
+          // doveva tirarlo indietro. Sono due gesti diversi e ora partono da
+          // due posti diversi, che è anche il modo in cui uno riconosce quale
+          // dei due sta facendo.
+          const dentroElenco = event.target instanceof Node
+            && bodyRef.current?.contains(event.target);
+          if (dentroElenco || event.touches.length !== 1) {
             drag.current = null;
             return;
           }
@@ -5590,7 +5599,7 @@ function AppShell({ session }: { session: Session | null }) {
                     nella colonna, subito sotto al comando che apre una partita
                     nuova: prima si guarda dove si gioca, poi si registra. */}
                 <button
-                  className="button button-ghost button-full cta-campi-liberi"
+                  className="button button-full cta-campi-liberi"
                   onClick={() => setSheet("campi")}
                 >
                   Campi liberi
@@ -6452,11 +6461,6 @@ function AppShell({ session }: { session: Session | null }) {
       {sheet === "titoli" ? (
         <BottomSheet title="Votazione" onClose={() => setSheet(null)}>
           <div className="titoli-sheet">
-            <p className="titoli-intro">
-              Un voto per titolo, e si cambia quando si vuole: ripremi il nome che hai
-              scelto per togliere il voto. Nessuno vede mai chi ha votato chi, si vedono
-              solo i totali.
-            </p>
             {profiles.filter((profile) => profile.id !== session?.user.id).length === 0 ? (
               <p className="demo-profile-note">
                 Non c&apos;è nessun altro da votare: da soli i titoli non hanno senso.

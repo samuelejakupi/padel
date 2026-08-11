@@ -8732,11 +8732,39 @@ button.pizza-ranking-row {
    una nella colonna (mobile), perche sotto i 780px `.section-head` non c'e
    piu. Questa e la copia mobile, spenta di default. */
 .cta-campi-liberi {
+  /* Bianco pieno come le card, non il velo del tasto fantasma. Sopra questo
+     tasto c'e "nuova partita" con il suo alone azzurro e lime, che scende
+     dieci pixel e ne sfuma trenta: attraverso un fondo al sei per cento si
+     vedeva, e l'effetto era di un bagliore steso sopra un altro comando.
+     Regola generale: aloni e ombre stanno sullo sfondo, mai su un altro
+     tasto o su una card. Se qualcosa gli finisce accanto, quel qualcosa
+     deve essere opaco — e disegnato dopo, vedi lo z-index qui sotto. */
+  background: var(--white);
   /* Lati tondi come il tasto della votazione: sono i due comandi che
      stanno da soli in fondo a qualcosa, e devono leggersi come la stessa
      cosa. */
   border-radius: var(--radius-pill);
+  color: var(--ink);
   display: none;
+  /* Non basta il fondo pieno. `.cta-carousel-track` ha `will-change:
+     transform` sotto i 780px — serve allo scorrimento del carosello — e
+     quello apre un contesto di impilamento: il tasto sopra, alone compreso,
+     finisce disegnato *dopo* questa pastiglia, quindi sopra. Verificato l'11
+     agosto 2026 leggendo i pixel: dentro al tasto, in alto, il colore era
+     (211, 231, 219) — verde — invece del grigio della riga bassa.
+     Con lo z-index la pastiglia torna a essere disegnata per ultima, e con
+     il fondo pieno l'alone non la attraversa nemmeno da dietro. Servono tutte
+     e due: l'ordine non cura la trasparenza, e l'opacita non cura l'ordine. */
+  position: relative;
+  z-index: 1;
+}
+
+/* Il velo dell'hover steso sopra il bianco invece che sopra il vuoto: deve
+   restare pieno anche premuto, se no l'alone torna a passare. */
+@media (hover: hover) {
+  .cta-campi-liberi:hover {
+    background: linear-gradient(var(--veil-1), var(--veil-1)), var(--white);
+  }
 }
 
 @media (max-width: 780px) {
@@ -8818,12 +8846,6 @@ button.pizza-ranking-row {
   flex-direction: column;
 }
 
-.titoli-intro {
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.5;
-  margin: 0 0 var(--space-2);
-}
 
 /* Un titolo non e una scheda: e una voce di elenco, come le righe della
    classifica sopra cui sta. Otto riquadri bianchi impilati facevano sembrare
