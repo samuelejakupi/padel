@@ -2328,6 +2328,7 @@ function BottomSheet({
   title,
   eyebrow,
   action,
+  footer,
   onClose,
   children,
 }: {
@@ -2337,6 +2338,14 @@ function BottomSheet({
   eyebrow?: ReactNode;
   // Comando nell'angolo dell'intestazione, al posto della crocetta.
   action?: ReactNode;
+  // Comando appoggiato in fondo al foglio, con il contenuto che gli scorre
+  // sotto. Sta **fuori** dall'elenco che scorre e non dentro: un elemento
+  // appiccicato al fondo di un contenitore scorrevole resta comunque un suo
+  // figlio, e nei momenti in cui il browser muove il contenuto per conto suo
+  // — il rimbalzo elastico di iOS, la corsa oltre il fondo — si muove con
+  // lui. Qui invece non fa parte di quello che scorre, quindi non c'è niente
+  // che lo possa spostare.
+  footer?: ReactNode;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -2563,7 +2572,7 @@ function BottomSheet({
       onMouseDown={(event) => event.target === event.currentTarget && dismiss()}
     >
       <section
-        className="sheet"
+        className={`sheet ${footer ? "has-footer" : ""}`}
         ref={panelRef}
         role="dialog"
         aria-modal="true"
@@ -2576,9 +2585,12 @@ function BottomSheet({
           // doveva tirarlo indietro. Sono due gesti diversi e ora partono da
           // due posti diversi, che è anche il modo in cui uno riconosce quale
           // dei due sta facendo.
-          const dentroElenco = event.target instanceof Node
-            && bodyRef.current?.contains(event.target);
-          if (dentroElenco || event.touches.length !== 1) {
+          // Si nomina l'intestazione invece di escludere l'elenco: fuori
+          // dall'elenco c'è anche il piede, e premere un tasto non deve
+          // trascinare niente.
+          const perIlTitolo = event.target instanceof Element
+            && Boolean(event.target.closest(".sheet-head"));
+          if (!perIlTitolo || event.touches.length !== 1) {
             drag.current = null;
             return;
           }
@@ -2633,6 +2645,7 @@ function BottomSheet({
           {action}
         </div>
         <div className="sheet-body" ref={bodyRef}>{children}</div>
+        {footer ? <div className="sheet-footer">{footer}</div> : null}
       </section>
     </div>
   );
@@ -6422,6 +6435,29 @@ function AppShell({ session }: { session: Session | null }) {
               </button>
             </div>
           )}
+          /* I titoli stanno in fondo alla classifica perché è l'unico punto
+             dell'app dove il gruppo è tutto in fila: si finisce di leggere chi
+             va forte e si passa a dire chi è cosa. Il foglio dei titoli
+             sostituisce questo invece di sovrapporsi — `sheet` tiene un foglio
+             solo, e due pannelli aperti insieme si contenderebbero il
+             trascinamento e la fascia in cima allo schermo.
+             Solo sotto la classifica dei singoli: i titoli si votano fra
+             persone, e sotto un elenco di coppie il tasto prometteva una cosa
+             che il foglio non fa. */
+          footer={rankingMode === "single" ? (
+            <button
+              className="button button-full cta-titoli"
+              onClick={() => {
+                if (!titlesSchemaReady) {
+                  setNotice("Per votare i titoli esegui la migrazione migration-titoli.sql in Supabase.");
+                  return;
+                }
+                setSheet("titoli");
+              }}
+            >
+              Votazione
+            </button>
+          ) : null}
         >
           {rankingMode === "single" ? (
             <RankingList
@@ -6432,30 +6468,6 @@ function AppShell({ session }: { session: Session | null }) {
           ) : (
             <TeamRankingList teams={rankedSeasonTeams} showTrend={isCurrentSeason} />
           )}
-          {/* I titoli stanno in fondo alla classifica perché è l'unico punto
-              dell'app dove il gruppo è tutto in fila: si finisce di leggere chi
-              va forte e si passa a dire chi è cosa. Il foglio dei titoli
-              sostituisce questo invece di sovrapporsi — `sheet` tiene un foglio
-              solo, e due pannelli aperti insieme si contenderebbero il
-              trascinamento e la fascia in cima allo schermo.
-
-              Solo sotto la classifica dei singoli: i titoli si votano fra
-              persone, e sotto un elenco di coppie il tasto prometteva una
-              cosa che il foglio non fa. */}
-          {rankingMode === "single" ? (
-          <button
-            className="button button-full cta-titoli"
-            onClick={() => {
-              if (!titlesSchemaReady) {
-                setNotice("Per votare i titoli esegui la migrazione migration-titoli.sql in Supabase.");
-                return;
-              }
-              setSheet("titoli");
-            }}
-          >
-            Votazione
-          </button>
-          ) : null}
         </BottomSheet>
       ) : null}
       {sheet === "titoli" ? (
@@ -6488,6 +6500,8 @@ function AppShell({ session }: { session: Session | null }) {
                       <small className="titolo-stato titolo-stato-manca">DA VOTARE</small>
                     )}
                   </header>
+
+                  <p className="titolo-meaning">{title.meaning}</p>
 
                   {/* Chi lo detiene. A pari voti restano tutti: vedi il commento
                       su `titleBoard`. */}

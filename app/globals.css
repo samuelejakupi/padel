@@ -5917,20 +5917,26 @@ button.pizza-ranking-row {
   touch-action: pan-y;
 }
 
-/* Il foglio che ha un tasto appoggiato in fondo non aggiunge l'area sicura
-   al proprio fondo. Motivo misurato l'11 agosto 2026: arrivati in fondo
-   alla classifica il tasto smette di stare appoggiato e si ferma dove lo
-   lascia il padding, che con l'area sicura dentro e piu in alto — lo stacco
-   passava da 22 a 56. Non si corregge con un margine negativo sul tasto:
-   provati tre valori, il migliore si fermava a 44, perche un margine
-   negativo sull'ultimo figlio non accorcia l'area scorrevole quanto
-   servirebbe. Togliendo invece l'area sicura da qui i due punti coincidono
-   e lo stacco resta 22 dappertutto — e i pixel dell'area sicura non
-   mancano a nessuno, perche la pagina e gia tagliata prima di arrivarci.
-   Verificato: in fondo alla corsa l'ultima riga resta 22px sopra il tasto,
-   quindi non ci sparisce sotto niente. */
-.sheet-body:has(.cta-titoli) {
-  --sheet-fondo: var(--space-6);
+/* Il foglio che ha un piede lascia sotto l'elenco lo spazio che il piede
+   occupa piu due stacchi: cosi, arrivati in fondo, l'ultima riga si ferma
+   sopra al tasto invece di finirci sotto. Niente area sicura nel conto, per
+   il motivo scritto sulla barra mobile: la pagina e gia tagliata prima. */
+.sheet.has-footer .sheet-body {
+  padding-bottom: calc(46px + var(--space-6) * 2);
+}
+
+/* Il piede sta fuori dall'elenco che scorre, non in fondo a esso. Un
+   elemento appiccicato con `sticky` resta comunque figlio del contenitore
+   che scorre: nei momenti in cui il browser muove il contenuto per conto suo
+   — il rimbalzo elastico, la corsa oltre il fondo — se lo porta dietro, e si
+   vedeva salire insieme alla classifica. Qui invece e appoggiato al foglio,
+   che non scorre mai, quindi non c'e niente che lo possa spostare. Il
+   contenuto gli passa sotto perche e disegnato dopo. */
+.sheet-footer {
+  bottom: var(--space-6);
+  left: var(--space-6);
+  position: absolute;
+  right: var(--space-6);
 }
 
 .sheet-body::-webkit-scrollbar {
@@ -8816,22 +8822,7 @@ button.pizza-ranking-row {
      il lavoro che l'ombra faceva male. */
   background: var(--ink);
   border-radius: var(--radius-pill);
-  /* Misurato l'11 agosto 2026 su un foglio finto con il CSS vero: con
-     `bottom: var(--space-6)` lo stacco reale era 44px, e 78 simulando
-     l'area sicura dell'iPhone. Lo sticky non misura dal bordo del
-     contenitore ma dal suo riquadro interno, quindi al valore scritto qui
-     si somma tutto il `padding-bottom` di `.sheet-body` — area sicura
-     compresa. Sottraendolo resta lo stacco che si voleva, e resta lo stesso
-     su qualunque telefono.
-     Niente env() aggiunta a mano, per il motivo scritto sulla barra mobile:
-     la pagina e gia tagliata all'area utile e quei pixel sono gia fuori. */
-  bottom: calc(var(--space-6) - var(--sheet-fondo));
   color: var(--white);
-  /* Lo stacco dall'ultima riga: qui non si sta aggiungendo una voce
-     all'elenco, si sta cambiando argomento. */
-  margin-top: var(--space-6);
-  position: sticky;
-  z-index: 1;
 }
 
 @media (hover: hover) {
@@ -8898,6 +8889,15 @@ button.pizza-ranking-row {
   line-height: 1;
   margin-left: var(--space-2);
   vertical-align: -2px;
+}
+
+/* La spiegazione del titolo. Non e un sottotitolo di servizio: senza, EGO e
+   CLUTCHER sono due parole inglesi e ognuno vota quello che ha capito. */
+.titolo-meaning {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  margin: calc(var(--space-4) * -1 + var(--space-1)) 0 0;
 }
 
 .titolo-head h3 {
