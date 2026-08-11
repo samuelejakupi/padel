@@ -8740,12 +8740,41 @@ button.pizza-ranking-row {
 
 /* Il tasto in fondo alla classifica. Non e la copia mobile di niente — dentro
    il foglio non c'e nessuna intestazione di sezione che sparisce sotto i
-   780px — quindi vive in una copia sola e si vede ovunque. */
+   780px — quindi vive in una copia sola e si vede ovunque.
+
+   Resta appoggiato in fondo al foglio e la classifica gli scorre sotto: e la
+   conclusione della lettura, non l'ultima riga dell'elenco, e in fondo a otto
+   nomi diventava una scoperta invece che un invito. Lo stacco dal bordo di
+   sotto e lo stesso che il foglio tiene ai lati (--space-6), piu la tacca di
+   sistema dove c'e: `sticky` misura dal fondo dell'area che scorre, che qui
+   arriva al bordo dello schermo perche `.sheet` non ha padding in basso.
+
+   Il punto in cui smette di stare attaccato coincide con la sua posizione di
+   riposo — `.sheet-body` ha lo stesso `padding-bottom` — quindi alla fine
+   della corsa si appoggia senza saltare. */
 .cta-titoli {
-  /* Lo stacco dall'ultima riga della classifica e piu largo del passo base:
-     qui non si sta aggiungendo una voce all'elenco, si sta cambiando
-     argomento. */
+  /* Due strati invece di uno: il velo del tasto fantasma sopra il colore del
+     foglio. Il velo da solo e trasparente, e le righe della classifica si
+     leggerebbero attraverso la pastiglia mentre le passano sotto. */
+  background: linear-gradient(var(--veil-2), var(--veil-2)), var(--paper);
+  border-radius: var(--radius-pill);
+  bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  /* Sollevato di poco: senza, una pastiglia dello stesso colore del foglio
+     sembra un buco nell'elenco invece di una cosa che ci galleggia sopra. */
+  box-shadow: 0 6px 24px rgba(11, 27, 44, 0.16);
+  /* Lo stacco dall'ultima riga: qui non si sta aggiungendo una voce
+     all'elenco, si sta cambiando argomento. */
   margin-top: var(--space-6);
+  position: sticky;
+  z-index: 1;
+}
+
+/* `.button-ghost:hover` rimetterebbe il velo da solo, cioe la trasparenza che
+   qui abbiamo appena tolto. Stessa tinta piu scura, sempre su due strati. */
+@media (hover: hover) {
+  .cta-titoli:hover {
+    background: linear-gradient(var(--veil-3), var(--veil-3)), var(--paper);
+  }
 }
 
 .titoli-sheet {
