@@ -5854,11 +5854,15 @@ button.pizza-ranking-row {
   display: flex;
   justify-content: space-between;
   /* Alta quanto lo switch che alcuni fogli hanno nell'angolo — trenta pixel
-     di tasto piu tre e tre di guscio. Senza, i fogli che lo switch non ce
-     l'hanno (registra una partita, crea un torneo) tenevano il titolo
-     qualche pixel piu in alto degli altri, e passando dall'uno all'altro
-     l'etichetta si spostava. */
-  min-height: 36px;
+     di tasto piu tre e tre di guscio — piu il padding qui sotto, che il
+     min-height si tiene dentro perche il box si misura dal bordo.
+     Senza il padding nel conto restavano sei pixel di scarto: misurati l'11
+     agosto 2026 su un foglio finto con il CSS vero, testata 36 contro 48 e
+     titolo a 3px dalla cima invece che a 9. Chi lo switch non ce l'ha
+     (campi liberi, votazione, registra una partita, crea un torneo) teneva
+     l'etichetta piu in alto degli altri, e passando dall'uno all'altro si
+     spostava. */
+  min-height: calc(36px + var(--space-4));
   padding-bottom: var(--space-4);
 }
 
@@ -5902,12 +5906,31 @@ button.pizza-ranking-row {
   padding-inline: 10px;
   overflow-x: hidden;
   overscroll-behavior: contain;
-  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  /* Il fondo ha un nome perche non lo usa solo questo padding: chi resta
+     appoggiato in fondo al foglio deve poterlo sottrarre. */
+  --sheet-fondo: calc(var(--space-6) + env(safe-area-inset-bottom));
+  padding-bottom: var(--sheet-fondo);
   /* Nessuna barra in vista: il foglio si scorre e si chiude col dito, e una
      barra di sistema in mezzo a un pannello che si trascina è solo rumore. */
   scrollbar-width: none;
   /* L'elenco è l'unico punto in cui il dito può scorrere. */
   touch-action: pan-y;
+}
+
+/* Il foglio che ha un tasto appoggiato in fondo non aggiunge l'area sicura
+   al proprio fondo. Motivo misurato l'11 agosto 2026: arrivati in fondo
+   alla classifica il tasto smette di stare appoggiato e si ferma dove lo
+   lascia il padding, che con l'area sicura dentro e piu in alto — lo stacco
+   passava da 22 a 56. Non si corregge con un margine negativo sul tasto:
+   provati tre valori, il migliore si fermava a 44, perche un margine
+   negativo sull'ultimo figlio non accorcia l'area scorrevole quanto
+   servirebbe. Togliendo invece l'area sicura da qui i due punti coincidono
+   e lo stacco resta 22 dappertutto — e i pixel dell'area sicura non
+   mancano a nessuno, perche la pagina e gia tagliata prima di arrivarci.
+   Verificato: in fondo alla corsa l'ultima riga resta 22px sopra il tasto,
+   quindi non ci sparisce sotto niente. */
+.sheet-body:has(.cta-titoli) {
+  --sheet-fondo: var(--space-6);
 }
 
 .sheet-body::-webkit-scrollbar {
@@ -8758,20 +8781,19 @@ button.pizza-ranking-row {
      leggerebbero attraverso la pastiglia mentre le passano sotto. */
   background: linear-gradient(var(--veil-2), var(--veil-2)), var(--paper);
   border-radius: var(--radius-pill);
-  /* Niente env(safe-area-inset-bottom), per lo stesso motivo scritto sulla
-     barra mobile: la pagina e gia tagliata all'area utile, quindi il fondo
-     da cui si misura e gia sopra la barra di sistema. Aggiungendo l'area
-     sicura il tasto si staccava due volte e finiva a mezza altezza. */
-  bottom: var(--space-6);
+  /* Misurato l'11 agosto 2026 su un foglio finto con il CSS vero: con
+     `bottom: var(--space-6)` lo stacco reale era 44px, e 78 simulando
+     l'area sicura dell'iPhone. Lo sticky non misura dal bordo del
+     contenitore ma dal suo riquadro interno, quindi al valore scritto qui
+     si somma tutto il `padding-bottom` di `.sheet-body` — area sicura
+     compresa. Sottraendolo resta lo stacco che si voleva, e resta lo stesso
+     su qualunque telefono.
+     Niente env() aggiunta a mano, per il motivo scritto sulla barra mobile:
+     la pagina e gia tagliata all'area utile e quei pixel sono gia fuori. */
+  bottom: calc(var(--space-6) - var(--sheet-fondo));
   /* Sollevato di poco: senza, una pastiglia dello stesso colore del foglio
      sembra un buco nell'elenco invece di una cosa che ci galleggia sopra. */
   box-shadow: 0 6px 24px rgba(11, 27, 44, 0.16);
-  /* `.sheet-body` chiude con un padding che comprende l'area sicura. Senza
-     questo, arrivati in fondo alla classifica il tasto si staccherebbe e
-     risalirebbe di quei pixel: il margine negativo riporta la sua posizione
-     di riposo esattamente dove sta quando e appoggiato, e il passaggio da
-     appoggiato a fermo non si vede. */
-  margin-bottom: calc(-1 * env(safe-area-inset-bottom));
   /* Lo stacco dall'ultima riga: qui non si sta aggiungendo una voce
      all'elenco, si sta cambiando argomento. */
   margin-top: var(--space-6);

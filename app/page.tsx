@@ -6428,7 +6428,12 @@ function AppShell({ session }: { session: Session | null }) {
               va forte e si passa a dire chi è cosa. Il foglio dei titoli
               sostituisce questo invece di sovrapporsi — `sheet` tiene un foglio
               solo, e due pannelli aperti insieme si contenderebbero il
-              trascinamento e la fascia in cima allo schermo. */}
+              trascinamento e la fascia in cima allo schermo.
+
+              Solo sotto la classifica dei singoli: i titoli si votano fra
+              persone, e sotto un elenco di coppie il tasto prometteva una
+              cosa che il foglio non fa. */}
+          {rankingMode === "single" ? (
           <button
             className="button button-ghost button-full cta-titoli"
             onClick={() => {
@@ -6441,6 +6446,7 @@ function AppShell({ session }: { session: Session | null }) {
           >
             Votazione
           </button>
+          ) : null}
         </BottomSheet>
       ) : null}
       {sheet === "titoli" ? (
