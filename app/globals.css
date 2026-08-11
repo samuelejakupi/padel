@@ -8758,10 +8758,20 @@ button.pizza-ranking-row {
      leggerebbero attraverso la pastiglia mentre le passano sotto. */
   background: linear-gradient(var(--veil-2), var(--veil-2)), var(--paper);
   border-radius: var(--radius-pill);
-  bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  /* Niente env(safe-area-inset-bottom), per lo stesso motivo scritto sulla
+     barra mobile: la pagina e gia tagliata all'area utile, quindi il fondo
+     da cui si misura e gia sopra la barra di sistema. Aggiungendo l'area
+     sicura il tasto si staccava due volte e finiva a mezza altezza. */
+  bottom: var(--space-6);
   /* Sollevato di poco: senza, una pastiglia dello stesso colore del foglio
      sembra un buco nell'elenco invece di una cosa che ci galleggia sopra. */
   box-shadow: 0 6px 24px rgba(11, 27, 44, 0.16);
+  /* `.sheet-body` chiude con un padding che comprende l'area sicura. Senza
+     questo, arrivati in fondo alla classifica il tasto si staccherebbe e
+     risalirebbe di quei pixel: il margine negativo riporta la sua posizione
+     di riposo esattamente dove sta quando e appoggiato, e il passaggio da
+     appoggiato a fermo non si vede. */
+  margin-bottom: calc(-1 * env(safe-area-inset-bottom));
   /* Lo stacco dall'ultima riga: qui non si sta aggiungendo una voce
      all'elenco, si sta cambiando argomento. */
   margin-top: var(--space-6);
@@ -8774,6 +8784,22 @@ button.pizza-ranking-row {
 @media (hover: hover) {
   .cta-titoli:hover {
     background: linear-gradient(var(--veil-3), var(--veil-3)), var(--paper);
+  }
+}
+
+/* Al tocco il browser accende :hover insieme a :active — e la stessa cosa
+   annotata in fondo al file sui tasti che si schiacciano. Su un tasto
+   qualunque non cambia niente, qui invece `.button-ghost:hover` rimetteva il
+   velo trasparente e per un istante la classifica si leggeva attraverso la
+   pastiglia. Qui il tocco non cambia il fondo: il ritorno visivo lo da gia
+   lo schiacciamento.
+   Una sfocatura sotto la pastiglia risolverebbe il sintomo ma non si puo
+   usare: su iOS un elemento che sta fermo mentre sotto scorre e che sfoca
+   viene ridisegnato in ritardo, ed e esattamente il difetto per cui la barra
+   mobile porta la sfocatura su un figlio invece che su se stessa. */
+@media (hover: none) {
+  .cta-titoli:hover {
+    background: linear-gradient(var(--veil-2), var(--veil-2)), var(--paper);
   }
 }
 
