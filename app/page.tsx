@@ -187,7 +187,7 @@ const TITLES = [
     slug: "clutcher",
     emoji: "🧊",
     label: "MOST CLUTCH",
-    meaning: "Nei momenti decisivi — match point, tie-break, 30-40 — non trema e piazza il colpo.",
+    meaning: "Nei momenti decisivi (match point, tie-break, 30-40) non trema e piazza il colpo.",
   },
   {
     slug: "trash_talker",
