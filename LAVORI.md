@@ -228,6 +228,27 @@ Concordate ma non fatte. Richiedono service worker, chiavi VAPID e una Edge
 Function su Supabase che le invii; su iPhone funzionano solo con la web app
 salvata sulla schermata Home. Per ora c'è il pallino sull'icona Pizza.
 
+### L'account di Mene va creato a mano dal Dashboard
+Il roster è cresciuto a nove: `groupUsers` in `app/page.tsx` e
+`handle_new_user()` in `supabase/schema.sql` sono già allineati, e il limite di
+profili è passato da 8 a 9. Manca l'account vero, che non si crea dall'app —
+`supabase.auth.signUp` è disattivato di proposito e non va reintrodotto.
+
+Nell'ordine:
+
+1. `supabase/migration-mene.sql` nel SQL Editor. Senza, il trigger
+   `on_auth_user_created` rifiuta l'account nuovo con "Registrazione pubblica
+   disabilitata".
+2. Authentication → Users → Add user nel Dashboard Supabase, con email
+   `mene@theboyz.local` e la password concordata, spuntando la conferma
+   automatica dell'email: sul dominio `.local` non arriva nessun messaggio, e
+   senza la spunta l'account resta non confermato e il login non passa.
+
+Finché il punto 2 non è fatto, "Mene" compare nella tendina del login ma il
+suo accesso non funziona.
+
+---
+
 ### `migration-titoli.sql` va eseguita prima che i titoli funzionino
 Finché non gira nel SQL Editor di Supabase, il tasto "VOTA I TITOLI" in fondo
 al foglio della classifica risponde con un avviso invece di aprirsi. Le due

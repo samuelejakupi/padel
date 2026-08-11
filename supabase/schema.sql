@@ -120,6 +120,7 @@ begin
     when 'alban@theboyz.local' then 'Alban'
     when 'mattia@theboyz.local' then 'Mattia'
     when 'manu@theboyz.local' then 'Manu'
+    when 'mene@theboyz.local' then 'Mene'
     else null
   end;
 
@@ -127,7 +128,7 @@ begin
     raise exception 'Registrazione pubblica disabilitata';
   end if;
 
-  if member_count >= 8 then
+  if member_count >= 9 then
     raise exception 'Tutti i profili TheBoyz sono già stati creati';
   end if;
 
@@ -155,6 +156,7 @@ with existing_users as (
       when 'alban@theboyz.local' then 'Alban'
       when 'mattia@theboyz.local' then 'Mattia'
       when 'manu@theboyz.local' then 'Manu'
+      when 'mene@theboyz.local' then 'Mene'
     end as requested_name
   from auth.users as user_account
   where not exists (
@@ -168,7 +170,8 @@ with existing_users as (
       'fabio@theboyz.local',
       'alban@theboyz.local',
       'mattia@theboyz.local',
-      'manu@theboyz.local'
+      'manu@theboyz.local',
+      'mene@theboyz.local'
     )
   order by user_account.created_at
 )
