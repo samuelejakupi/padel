@@ -5,10 +5,15 @@ cd /d "%~dp0"
 rem Invia le modifiche a GitHub nell'ordine corretto:
 rem commit prima, poi pull (il rebase non funziona con modifiche non salvate),
 rem poi push. Si ferma al primo errore invece di proseguire e combinare guai.
-
-set "MSG=%~1"
-if "%MSG%"=="" set /p "MSG=Messaggio del commit: "
-if "%MSG%"=="" set "MSG=Aggiornamento"
+rem
+rem Se non c'e' niente di nuovo da salvare non e' un errore e non e' un motivo
+rem per fermarsi: i commit possono essere gia' stati fatti (per esempio da
+rem Claude, che puo' committare ma non ha rete per il push). In quel caso si
+rem salta il commit e si va dritti a pull e push.
+rem
+rem Niente blocchi fra parentesi attorno a MSG: dentro un blocco il valore
+rem verrebbe letto quando il blocco viene analizzato, cioe' prima che set lo
+rem scriva, e il commit partirebbe con il messaggio vuoto. Da qui le etichette.
 
 echo.
 echo === Aggiungo i file ===
@@ -16,17 +21,23 @@ git add .
 if errorlevel 1 goto errore
 
 git diff --cached --quiet
-if not errorlevel 1 (
-  echo.
-  echo Non c'e' niente da inviare: nessuna modifica rispetto all'ultimo commit.
-  goto fine
-)
+if not errorlevel 1 goto niente
+
+set "MSG=%~1"
+if "%MSG%"=="" set /p "MSG=Messaggio del commit: "
+if "%MSG%"=="" set "MSG=Aggiornamento"
 
 echo.
 echo === Commit ===
 git commit -m "%MSG%"
 if errorlevel 1 goto errore
+goto invio
 
+:niente
+echo.
+echo Niente di nuovo da salvare: i commit ci sono gia', passo all'invio.
+
+:invio
 echo.
 echo === Scarico le modifiche di Samuele ===
 git pull
