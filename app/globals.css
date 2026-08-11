@@ -8816,7 +8816,6 @@ button.pizza-ranking-row {
 .titoli-sheet {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
 }
 
 .titoli-intro {
@@ -8826,21 +8825,48 @@ button.pizza-ranking-row {
   margin: 0 0 var(--space-2);
 }
 
+/* Un titolo non e una scheda: e una voce di elenco, come le righe della
+   classifica sopra cui sta. Otto riquadri bianchi impilati facevano sembrare
+   il foglio un modulo da compilare; una riga di separazione basta a dire dove
+   finisce una domanda e comincia la successiva. */
 .titolo-card {
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-bottom: 1px solid var(--line);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: var(--space-6);
+  padding: var(--space-6) 0;
 }
 
-/* L'emoji sta in fondo al nome e non accanto, quindi l'intestazione e una
-   colonna sola: non c'e piu niente da affiancare. */
+/* L'ultima riga non serve: sotto c'e gia il tasto, e la linea gli finiva
+   attaccata. */
+.titolo-card:last-child {
+  border-bottom: 0;
+}
+
+/* Nome a sinistra, stato a destra, sulla stessa mezzeria. */
 .titolo-head {
+  align-items: center;
   display: flex;
-  flex-direction: column;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
+
+/* Quanti hanno votato, oppure che manchi tu. Stessa taglia delle etichette
+   piccole del resto dell'app. */
+.titolo-stato {
+  color: var(--muted);
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+/* Chiamata all'azione, non un dato: prende il colore che nell'app vuol dire
+   "tocca a te". */
+.titolo-stato-manca {
+  color: var(--blue-dark);
+  font-weight: 900;
 }
 
 /* Piu grande del nome, ma non tanto da alzare la riga che la contiene: e
@@ -8861,16 +8887,14 @@ button.pizza-ranking-row {
 }
 
 
-/* Chi detiene il titolo adesso. Sta sopra la scelta e non sotto: si vota
-   sapendo come sta andando, che e come funziona una votazione fra amici. */
+/* Chi lo detiene. Sta sopra la scelta e non sotto: si vota sapendo come sta
+   andando, che e come funziona una votazione fra amici. Niente riquadro
+   attorno: dentro un elenco senza cornici sarebbe stata l'unica cosa incorniciata. */
 .titolo-holder {
   align-items: center;
-  background: var(--veil-1);
-  border-radius: var(--radius-md);
   display: flex;
   gap: var(--space-3);
-  min-height: 44px;
-  padding: var(--space-2) var(--space-4);
+  min-height: 36px;
 }
 
 /* A pari voti le facce si accavallano invece di allargare la riga: due o tre
@@ -8888,13 +8912,15 @@ button.pizza-ranking-row {
   font-weight: 900;
 }
 
+/* Attaccato al nome, non spinto a destra: sopra c'e gia il totale allineato
+   a destra, e due numeri incolonnati li' facevano leggere il secondo come una
+   correzione del primo. Sono due cose diverse — quanti hanno votato e quanti
+   voti ha preso chi guida — e vicine al nome si capisce quale e quale. */
 .titolo-holder small {
   color: var(--muted);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.4px;
-  margin-left: auto;
-  text-align: right;
   text-transform: uppercase;
 }
 
@@ -8942,24 +8968,6 @@ button.pizza-ranking-row {
 }
 
 
-.titolo-foot {
-  align-items: center;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  display: flex;
-  font-size: 10px;
-  font-weight: 800;
-  gap: var(--space-3);
-  justify-content: space-between;
-  letter-spacing: 0.4px;
-  padding-top: var(--space-3);
-  text-transform: uppercase;
-}
-
-.titolo-done {
-  color: var(--positive);
-  font-weight: 900;
-}
 
 @media (hover: hover) {
   .titolo-choice:hover:not(:disabled):not(.is-chosen) {
@@ -8973,7 +8981,7 @@ button.pizza-ranking-row {
 
 @media (max-width: 780px) {
   .titolo-card {
-    padding: var(--space-5) var(--space-4);
+    padding: var(--space-5) 0;
   }
 
   /* Su schermo stretto le pastiglie diventano due colonne piene invece di una

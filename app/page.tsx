@@ -6473,6 +6473,16 @@ function AppShell({ session }: { session: Session | null }) {
                       {title.label}
                       <span className="titolo-emoji" aria-hidden="true">{title.emoji}</span>
                     </h3>
+                    {/* A destra quello che serve sapere adesso: se non hai ancora
+                        votato, che manchi tu; altrimenti quanti hanno votato. Il
+                        "hai votato" di prima lo dice gia la pastiglia accesa. */}
+                    {title.voted ? (
+                      <small className="titolo-stato">
+                        {title.cast} {title.cast === 1 ? "voto" : "voti"}
+                      </small>
+                    ) : (
+                      <small className="titolo-stato titolo-stato-manca">DA VOTARE</small>
+                    )}
                   </header>
 
                   {/* Chi lo detiene. A pari voti restano tutti: vedi il commento
@@ -6492,7 +6502,7 @@ function AppShell({ session }: { session: Session | null }) {
                         </small>
                       </>
                     ) : (
-                      <small className="titolo-holder-empty">Ancora nessun voto per questo titolo.</small>
+                      <small className="titolo-holder-empty">Ancora nessun voto.</small>
                     )}
                   </div>
 
@@ -6518,16 +6528,6 @@ function AppShell({ session }: { session: Session | null }) {
                     })}
                   </div>
 
-                  <footer className="titolo-foot">
-                    {title.cast ? (
-                      <span>
-                        {title.cast} {title.cast === 1 ? "voto espresso" : "voti espressi"}
-                      </span>
-                    ) : (
-                      <span>Nessuno ha ancora votato</span>
-                    )}
-                    {title.voted ? <span className="titolo-done">HAI VOTATO</span> : null}
-                  </footer>
                 </article>
               );
             })}
