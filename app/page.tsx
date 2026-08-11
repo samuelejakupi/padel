@@ -190,10 +190,10 @@ const TITLES = [
     meaning: "Nei momenti decisivi — match point, tie-break, 30-40 — non trema e piazza il colpo.",
   },
   {
-    slug: "consistency",
-    emoji: "🎯",
-    label: "MOST CONSISTENT",
-    meaning: "Il più costante: rende sempre allo stesso livello, pochi alti e bassi.",
+    slug: "trash_talker",
+    emoji: "😈",
+    label: "TRASH TALKER",
+    meaning: "Provoca l'avversario a parole durante il match: sfottò, gestacci, faccia tosta.",
   },
   {
     slug: "cheater",
@@ -202,10 +202,10 @@ const TITLES = [
     meaning: "Chiama fuori le palle dentro, nega il doppio rimbalzo, «non ho toccato la rete».",
   },
   {
-    slug: "trash_talker",
-    emoji: "😈",
-    label: "TRASH TALKER",
-    meaning: "Provoca l'avversario a parole durante il match: sfottò, gestacci, faccia tosta.",
+    slug: "consistency",
+    emoji: "🎯",
+    label: "MOST CONSISTENT",
+    meaning: "Il più costante: rende sempre allo stesso livello, pochi alti e bassi.",
   },
   {
     slug: "goat",
@@ -6439,16 +6439,12 @@ function AppShell({ session }: { session: Session | null }) {
               setSheet("titoli");
             }}
           >
-            VOTA
+            Votazione
           </button>
         </BottomSheet>
       ) : null}
       {sheet === "titoli" ? (
-        <BottomSheet
-          title="I titoli"
-          eyebrow="VOTO SEGRETO"
-          onClose={() => setSheet(null)}
-        >
+        <BottomSheet title="Votazione" onClose={() => setSheet(null)}>
           <div className="titoli-sheet">
             <p className="titoli-intro">
               Un voto per titolo, e si cambia quando si vuole: ripremi il nome che hai
