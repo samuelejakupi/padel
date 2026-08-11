@@ -264,12 +264,16 @@ arrivano già sommati da `title_standings()`, che gira come proprietario e
 restituisce numeri, mai nomi di votanti. Lo stesso motivo per cui la scrittura
 passa da `save_title_vote()` invece che da un insert diretto.
 
-### Non ci si vota da soli, e il bianco è una scelta
+### Non ci si vota da soli, e il voto si toglie ripremendolo
 Il divieto di autovoto sta nel `check` della tabella e nella funzione, non nel
-frontend: un vincolo che vive solo nel telefono non è un vincolo. La scheda
-bianca è una riga con `target_id` nullo, diversa dal non aver votato, che è
-l'assenza della riga — così il foglio può dire "3 voti espressi · 1 in bianco"
-invece di far sparire l'astensione nel silenzio.
+frontend: un vincolo che vive solo nel telefono non è un vincolo.
+
+La scheda bianca c'era e l'abbiamo tolta: non votare e votare nessuno sono la
+stessa cosa, e due modi per dirla erano uno di troppo — in fondo alla fila dei
+nomi c'era una pastiglia in più che non aggiungeva niente. Il voto si annulla
+ripremendo il nome già scelto, che è il gesto con cui si annulla una selezione
+ovunque. `save_title_vote` con `p_target_id` nullo cancella la riga invece di
+salvarne una vuota, e `target_id` è `not null`.
 
 ### A pari voti il titolo resta conteso
 Con otto votanti i pareggi sono la norma, non l'eccezione. In cima restano

@@ -8882,26 +8882,6 @@ button.pizza-ranking-row {
   color: var(--white);
 }
 
-/* Il bianco non ha una faccia: al suo posto una lineetta dentro un tondo
-   tratteggiato, cosi la pastiglia resta larga come le altre e la fila non si
-   scompone. */
-.titolo-choice-blank {
-  padding-left: var(--space-3);
-}
-
-.titolo-blank-mark {
-  align-items: center;
-  border: 1px dashed var(--ink-30);
-  border-radius: 50%;
-  display: inline-flex;
-  height: 24px;
-  justify-content: center;
-  width: 24px;
-}
-
-.titolo-choice-blank.is-chosen .titolo-blank-mark {
-  border-color: var(--white);
-}
 
 .titolo-foot {
   align-items: center;

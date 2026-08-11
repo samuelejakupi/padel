@@ -215,18 +215,17 @@ const TITLES = [
   },
 ] as const;
 
-// Il voto di chi guarda, uno per titolo. `target_id` nullo è la scheda bianca:
-// diverso dal non aver votato, che è l'assenza della riga.
+// Il voto di chi guarda, uno per titolo. O c'è la riga, o non ha votato: non
+// esiste una terza forma.
 type TitleVote = {
   title: string;
-  target_id: string | null;
+  target_id: string;
 };
 
-// I totali che arrivano già sommati da `title_standings()`. Le righe con
-// `target_id` nullo sono le schede bianche di quel titolo.
+// I totali che arrivano già sommati da `title_standings()`.
 type TitleStanding = {
   title: string;
-  target_id: string | null;
+  target_id: string;
   votes: number;
 };
 
@@ -4646,24 +4645,20 @@ function AppShell({ session }: { session: Session | null }) {
   // inventato dal codice.
   const titleBoard = useMemo(() => TITLES.map((title) => {
     const rows = titleStandings.filter((row) => row.title === title.slug);
-    const blank = rows.find((row) => row.target_id === null)?.votes ?? 0;
-    const named = rows.filter((row) => row.target_id !== null);
-    const cast = named.reduce((total, row) => total + row.votes, 0) + blank;
-    const top = named.reduce((best, row) => Math.max(best, row.votes), 0);
+    const cast = rows.reduce((total, row) => total + row.votes, 0);
+    const top = rows.reduce((best, row) => Math.max(best, row.votes), 0);
     const leaders = top
-      ? named
+      ? rows
           .filter((row) => row.votes === top)
           .map((row) => profiles.find((profile) => profile.id === row.target_id))
           .filter((profile): profile is Profile => Boolean(profile))
       : [];
     return {
       ...title,
-      blank,
       cast,
       top,
       leaders,
-      // Il voto di chi guarda: `undefined` se non ha ancora votato questo
-      // titolo, `null` se ha scelto la scheda bianca.
+      // Chi ha votato chi guarda, se ha votato: `undefined` se non l'ha fatto.
       own: titleVotes.find((vote) => vote.title === title.slug)?.target_id,
       voted: titleVotes.some((vote) => vote.title === title.slug),
     };
@@ -5156,8 +5151,10 @@ function AppShell({ session }: { session: Session | null }) {
     if (!error) await loadData();
   }
 
-  // Un titolo per volta. `targetId` nullo è la scheda bianca, ed è un voto a
-  // tutti gli effetti: viene salvato, non cancellato.
+  // Un titolo per volta. `targetId` nullo vuol dire togliere il voto: si ottiene
+  // ripremendo il nome già scelto, che è il gesto con cui si annulla una scelta
+  // ovunque. Non esiste una scheda bianca da salvare — non votare e votare
+  // nessuno sono la stessa cosa, e due modi per dirla sarebbero uno di troppo.
   //
   // Il voto si vede cambiato subito e i totali arrivano dopo. Non è solo una
   // questione di velocità: il totale è la somma di tutti, quindi cambia di uno
@@ -5166,10 +5163,10 @@ function AppShell({ session }: { session: Session | null }) {
   async function saveTitleVote(title: string, targetId: string | null) {
     if (!supabase || !session) return;
     setSavingTitle(title);
-    setTitleVotes((previous) => [
-      ...previous.filter((vote) => vote.title !== title),
-      { title, target_id: targetId },
-    ]);
+    setTitleVotes((previous) => {
+      const others = previous.filter((vote) => vote.title !== title);
+      return targetId ? [...others, { title, target_id: targetId }] : others;
+    });
 
     const { error } = await supabase.rpc("save_title_vote", {
       p_title: title,
@@ -6454,8 +6451,9 @@ function AppShell({ session }: { session: Session | null }) {
         >
           <div className="titoli-sheet">
             <p className="titoli-intro">
-              Un voto per titolo, e si cambia quando si vuole. Nessuno vede mai chi ha
-              votato chi: si vedono solo i totali.
+              Un voto per titolo, e si cambia quando si vuole: ripremi il nome che hai
+              scelto per togliere il voto. Nessuno vede mai chi ha votato chi, si vedono
+              solo i totali.
             </p>
             {profiles.filter((profile) => profile.id !== session?.user.id).length === 0 ? (
               <p className="demo-profile-note">
@@ -6498,38 +6496,31 @@ function AppShell({ session }: { session: Session | null }) {
                   </div>
 
                   <div className="titolo-choices" role="group" aria-label={`Vota ${title.label}`}>
-                    {candidates.map((candidate) => (
-                      <button
-                        key={candidate.id}
-                        type="button"
-                        className={`titolo-choice ${title.own === candidate.id ? "is-chosen" : ""}`}
-                        disabled={savingTitle === title.slug}
-                        aria-pressed={title.own === candidate.id}
-                        onClick={() => void saveTitleVote(title.slug, candidate.id)}
-                      >
-                        <Avatar profile={candidate} size="sm" />
-                        <span>{candidate.display_name}</span>
-                      </button>
-                    ))}
-                    {/* Il bianco è una scelta, non un ripensamento: sta in fila
-                        con gli altri e si può premere come loro. */}
-                    <button
-                      type="button"
-                      className={`titolo-choice titolo-choice-blank ${title.voted && title.own === null ? "is-chosen" : ""}`}
-                      disabled={savingTitle === title.slug}
-                      aria-pressed={title.voted && title.own === null}
-                      onClick={() => void saveTitleVote(title.slug, null)}
-                    >
-                      <span className="titolo-blank-mark" aria-hidden="true">—</span>
-                      <span>Bianco</span>
-                    </button>
+                    {candidates.map((candidate) => {
+                      const chosen = title.own === candidate.id;
+                      return (
+                        <button
+                          key={candidate.id}
+                          type="button"
+                          className={`titolo-choice ${chosen ? "is-chosen" : ""}`}
+                          disabled={savingTitle === title.slug}
+                          aria-pressed={chosen}
+                          /* Ripremere il nome già scelto toglie il voto. È lo stesso
+                             gesto con cui si annulla una selezione ovunque, e rende
+                             inutile una pastiglia "bianco" in fondo alla fila. */
+                          onClick={() => void saveTitleVote(title.slug, chosen ? null : candidate.id)}
+                        >
+                          <Avatar profile={candidate} size="sm" />
+                          <span>{candidate.display_name}</span>
+                        </button>
+                      );
+                    })}
                   </div>
 
                   <footer className="titolo-foot">
                     {title.cast ? (
                       <span>
                         {title.cast} {title.cast === 1 ? "voto espresso" : "voti espressi"}
-                        {title.blank ? ` · ${title.blank} in bianco` : ""}
                       </span>
                     ) : (
                       <span>Nessuno ha ancora votato</span>
