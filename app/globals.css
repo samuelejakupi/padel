@@ -4274,15 +4274,6 @@ button.podium-person {
 .player-trophies .badge-bronze { --badge-accent: #b97743; }
 .player-trophies .badge-steel { --badge-accent: #8ea5bc; }
 
-.player-trophies .badge-progression {
-  --badge-accent: #d6a93b;
-}
-
-.player-trophies .mw2-progression-art {
-  height: 148px;
-  width: 128px;
-}
-
 /* Emblemi vettoriali. Il disegno arriva dal JSX, i colori da qui: cosi
    restano dentro alla palette invece di essere scritti dentro alla forma.
    Il riquadro lo danno le regole di chi li ospita — la bacheca, la card del

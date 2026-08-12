@@ -1027,51 +1027,6 @@ type Badge = {
   unlocked: boolean;
 };
 
-type Mw2ProgressionEmblem = {
-  src: string;
-  label: string;
-  progressLabel: string;
-};
-
-const MW2_EARLY_PROGRESSION = [
-  { wins: 1, file: "starting", label: "EMBLEMA INIZIALE" },
-  { wins: 2, file: "level-2", label: "LIVELLO 2" },
-  { wins: 3, file: "level-10", label: "LIVELLO 10" },
-  { wins: 4, file: "level-13", label: "LIVELLO 13" },
-  { wins: 5, file: "level-15", label: "LIVELLO 15" },
-  { wins: 6, file: "level-34", label: "LIVELLO 34" },
-  { wins: 7, file: "level-37", label: "LIVELLO 37" },
-  { wins: 8, file: "level-43", label: "LIVELLO 43" },
-  { wins: 9, file: "level-50", label: "LIVELLO 50" },
-] as const;
-
-function mw2ProgressionEmblem(wins: number): Mw2ProgressionEmblem {
-  const safeWins = Math.max(0, wins);
-  if (safeWins < 10) {
-    const current = [...MW2_EARLY_PROGRESSION]
-      .reverse()
-      .find((emblem) => safeWins >= emblem.wins) ?? MW2_EARLY_PROGRESSION[0];
-    const next = MW2_EARLY_PROGRESSION.find((emblem) => emblem.wins > safeWins);
-    return {
-      src: `${basePath}/mw2-progression/${current.file}.png`,
-      label: current.label,
-      progressLabel: next
-        ? `Prossimo emblema a ${next.wins} vittorie`
-        : "Prossimo emblema a 10 vittorie",
-    };
-  }
-
-  const prestige = Math.min(10, Math.floor(safeWins / 10));
-  const nextPrestigeWins = (prestige + 1) * 10;
-  return {
-    src: `${basePath}/mw2-progression/prestige-${prestige}.png`,
-    label: `PRESTIGIO ${prestige}`,
-    progressLabel: prestige === 10
-      ? "Prestigio massimo raggiunto"
-      : `Prestigio ${prestige + 1} a ${nextPrestigeWins} vittorie`,
-  };
-}
-
 type PlayerBadgeMetrics = {
   bestWinStreak: number;
   bestLoseStreak: number;
@@ -1517,31 +1472,9 @@ function BadgeGlyphIcon({ name }: { name: BadgeGlyph }) {
   );
 }
 
-function BadgeList({ badges, wins }: { badges: Badge[]; wins: number }) {
-  const progression = mw2ProgressionEmblem(wins);
+function BadgeList({ badges }: { badges: Badge[] }) {
   return (
     <div className="badge-grid">
-      <article
-        className="badge badge-progression is-unlocked"
-        tabIndex={0}
-        aria-label={`${progression.label}. Emblema progressione MW2. ${wins} vittorie. ${progression.progressLabel}`}
-      >
-        <div className="badge-emblem" aria-hidden="true">
-          <Image
-            className="badge-art mw2-progression-art"
-            src={progression.src}
-            alt=""
-            width={180}
-            height={180}
-          />
-        </div>
-        <aside className="badge-tooltip" role="tooltip">
-          <strong>{progression.label}</strong>
-          <p>Il tuo emblema di progressione MW2.</p>
-          <span>Cambia con le vittorie e mostra sempre e soltanto il livello corrente.</span>
-          <small>{wins} {wins === 1 ? "vittoria" : "vittorie"} · {progression.progressLabel}</small>
-        </aside>
-      </article>
       {badges.map((badge) => {
         const emblem = EMBLEM_COMPONENT[badge.glyph];
         return (
@@ -6188,7 +6121,9 @@ function AppShell({ session }: { session: Session | null }) {
               <div className="bacheca-group-head">
                 <div><span>01</span><div><h3>Emblemi</h3></div></div>
               </div>
-              <BadgeList badges={earnedPlayerBadges} wins={selectedPlayer.wins} />
+              {earnedPlayerBadges.length ? <BadgeList badges={earnedPlayerBadges} /> : (
+                <div className="player-trophies-empty"><p>Nessun emblema ancora conquistato.</p></div>
+              )}
 
               <FieldRegister profile={selectedPlayer} profiles={profiles} matches={matches} />
 
