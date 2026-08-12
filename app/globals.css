@@ -515,6 +515,29 @@ button {
   width: 154px;
 }
 
+.avatar-mvp-crown {
+  filter: drop-shadow(0 2px 2px rgba(11, 27, 44, 0.28));
+  font-size: 21px;
+  left: 50%;
+  line-height: 1;
+  pointer-events: none;
+  position: absolute;
+  top: -16px;
+  transform: translateX(-50%) rotate(-4deg);
+  z-index: 5;
+}
+
+.avatar-md .avatar-mvp-crown {
+  font-size: 24px;
+  top: -19px;
+}
+
+.avatar-lg .avatar-mvp-crown,
+.avatar-xl .avatar-mvp-crown {
+  font-size: 36px;
+  top: -28px;
+}
+
 .rank-badge {
   align-items: center;
   background: var(--lime);
@@ -2021,6 +2044,136 @@ button.ranking-row-link:focus-visible {
   align-items: center;
   display: flex;
   justify-content: flex-end;
+}
+
+.match-mvp-row {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 14px;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  margin: 0 -4px -3px;
+  padding: 11px 4px 0;
+}
+
+.match-mvp-row > span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.match-mvp-row > span b {
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.match-mvp-row.is-awarded {
+  color: #8a5b00;
+}
+
+.match-mvp-button {
+  background: var(--ink);
+  border: 0;
+  border-radius: var(--radius-pill);
+  color: var(--white);
+  cursor: pointer;
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.35px;
+  padding: 8px 13px;
+  text-transform: uppercase;
+}
+
+.match-mvp-button:hover {
+  background: var(--blue-dark);
+}
+
+.mvp-vote-intro {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.mvp-candidates {
+  border: 0;
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+}
+
+.mvp-candidates legend {
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.7px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.mvp-candidates label {
+  align-items: center;
+  background: var(--paper);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 11px 13px;
+}
+
+.mvp-candidates label.is-selected {
+  background: color-mix(in srgb, var(--lime) 13%, var(--white));
+  border-color: var(--lime);
+}
+
+.mvp-candidates label.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.mvp-candidates input {
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.mvp-candidates label > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mvp-candidates label > span b {
+  font-size: 13px;
+}
+
+.mvp-candidates label > span small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.mvp-candidates label > i {
+  align-items: center;
+  background: var(--line);
+  border-radius: 50%;
+  color: transparent;
+  display: flex;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.mvp-candidates label.is-selected > i {
+  background: var(--lime);
+  color: var(--ink);
 }
 
 .match-video-preview {
@@ -7529,7 +7682,8 @@ button.pizza-ranking-row {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "head head"
-      "main video";
+      "main video"
+      "mvp mvp";
     min-height: var(--match-card-h);
     padding: 12px 14px 14px;
   }
@@ -7586,6 +7740,16 @@ button.pizza-ranking-row {
   .match-video {
     grid-area: video;
     justify-content: flex-end;
+  }
+
+  .match-mvp-row {
+    grid-area: mvp;
+    margin-top: 2px;
+    padding-top: 10px;
+  }
+
+  .match-mvp-button {
+    padding: 8px 11px;
   }
 
   /* L'anteprima riempie l'altezza della riga invece di galleggiarci in

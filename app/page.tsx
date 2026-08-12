@@ -229,6 +229,24 @@ type TitleStanding = {
   votes: number;
 };
 
+type MvpProgress = {
+  match_id: string;
+  votes_cast: number;
+  total_voters: number;
+};
+
+type MvpMatchState = {
+  id: string;
+  mvp_voting_enabled: boolean;
+  mvp_voting_closed_at: string | null;
+  mvps: { profile_id: string; awarded_at: string }[];
+};
+
+type ViewerMvpVote = {
+  match_id: string;
+  target_id: string;
+};
+
 // Le schede storiche erano su scale diverse e comprendevano il bonus Fabio.
 // Qui vengono riportate sugli stessi pesi delle nuove, così la classifica ha
 // un metro solo: si divide per il vecchio massimo e si moltiplica per il peso.
@@ -677,10 +695,12 @@ function Avatar({
   profile,
   size = "md",
   rank,
+  mvp = false,
 }: {
   profile: Profile;
   size?: "sm" | "md" | "lg" | "xl";
   rank?: number;
+  mvp?: boolean;
 }) {
   return (
     <span className={`avatar avatar-${size}`} aria-label={`Foto di ${profile.display_name}`}>
@@ -690,6 +710,7 @@ function Avatar({
       ) : (
         <span>{initials(profile.display_name)}</span>
       )}
+      {mvp ? <b className="avatar-mvp-crown" title="MVP della partita" aria-label="MVP della partita">👑</b> : null}
       {rank === 1 ? (
         <b className="rank-badge rank-badge-award" title="Primo in classifica">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -989,6 +1010,7 @@ type BadgeGlyph =
   | "marathon"
   | "duo"
   | "goat-slayer"
+  | "mvp"
   | "centurion"
   | "trophy";
 
@@ -1018,6 +1040,7 @@ type PlayerBadgeMetrics = {
   bestPairMatches: number;
   bestPairRate: number;
   ownsTopPair: boolean;
+  mvpWins: number;
 };
 
 function emptyBadgeMetrics(): PlayerBadgeMetrics {
@@ -1034,6 +1057,7 @@ function emptyBadgeMetrics(): PlayerBadgeMetrics {
     bestPairMatches: 0,
     bestPairRate: 0,
     ownsTopPair: false,
+    mvpWins: 0,
   };
 }
 
@@ -1074,6 +1098,11 @@ function buildBadgeMetrics(profiles: Profile[], matches: PadelMatch[]) {
     const losingGoat = !drawn && match.players.some(
       (player) => goatsBefore.has(player.profile_id) && player.team !== match.winner_team,
     );
+
+    (match.mvps ?? []).forEach((mvp) => {
+      const item = metrics.get(mvp.profile_id);
+      if (item) item.mvpWins += 1;
+    });
 
     match.players.forEach((player) => {
       const item = metrics.get(player.profile_id);
@@ -1188,11 +1217,12 @@ function clampProgress(value: number) {
 // CSS di globals.css come per ogni altra cosa, il filo di luce si muove
 // davvero, e il numero resta testo, quindi si cambia senza ridisegnare
 // niente. Quelli non ancora rifatti continuano a pescare il webp.
-type EmblemName = "kraken" | "trophy";
+type EmblemName = "kraken" | "trophy" | "mvp";
 
 const EMBLEM_COMPONENT: Partial<Record<BadgeGlyph, EmblemName>> = {
   "goat-slayer": "kraken",
   trophy: "trophy",
+  mvp: "mvp",
 };
 
 // Il contorno esterno e quello interno sono gli stessi per tutti: cambia
@@ -1278,6 +1308,9 @@ function Emblem({ name, rank = "#1", className }: { name: EmblemName; rank?: str
         ) : null}
         {name === "trophy" ? (
           <path d="M86.25,45.87l.82-19.24-23.08,11.55-23.08-11.56.82,19.26h-20.19l4,23.08,30.74,15.39-15.36,5.7,1,7.38,22.08,11,22.07-11,1-7.38-15.36-5.7,30.76-15.39,4-23.08h-20.21ZM30.05,66.27l-2-16.18h13.86l.96,22.6-12.82-6.42ZM85.11,72.69l.96-22.6h13.86l-2,16.18-12.82,6.42Z" />
+        ) : null}
+        {name === "mvp" ? (
+          <path d="M27 82 23 43l24 17 17-34 17 34 24-17-4 39-37 18Zm9-7h56l2-17-18 13-12-24-12 24-18-13Zm2 14h52v10H38Z" />
         ) : null}
       </g>
 
@@ -1374,6 +1407,7 @@ function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch
       unlocked: own.ownsTopPair,
     },
     recordBadge("goat-slayer", "red", "goat-slayer", "AMMAZZA-GOAT", "Chi ha battuto più volte il numero uno.", "Conta solo quando l'avversario era GOAT prima dell'inizio della partita.", own.winsAgainstGoat, maxOf((item) => item.winsAgainstGoat), "GOAT battuti"),
+    recordBadge("mvp", "gold", "mvp", "RE DEGLI MVP", "Chi ha conquistato più riconoscimenti MVP.", "Conta gli MVP assegnati nelle partite abilitate alla votazione; le votazioni finite in parità non assegnano punti.", own.mvpWins, maxOf((item) => item.mvpWins), "MVP"),
     {
       id: "trophy", tone: "gold", glyph: "trophy", label: "CAMPIONE",
       meaning: "Chi ha vinto almeno un torneo del gruppo.",
@@ -1955,6 +1989,7 @@ function MatchCard({
   match,
   onEdit,
   onPlayVideo,
+  onVoteMvp,
   viewerId,
   actionLabel,
   compact = false,
@@ -1962,6 +1997,7 @@ function MatchCard({
   match: PadelMatch;
   onEdit?: (match: PadelMatch) => void;
   onPlayVideo?: (videoId: string) => void;
+  onVoteMvp?: (match: PadelMatch) => void;
   viewerId?: string;
   // Cosa succede toccando la card: non sempre e "modifica", quindi chi la
   // usa puo dirlo, altrimenti chi naviga con lo screen reader sentirebbe
@@ -1986,6 +2022,19 @@ function MatchCard({
   const team2 = match.players.filter((player) => player.team === rightSide);
   const draw = matchIsDraw(match);
   const videoId = youtubeId(match.video_url);
+  const mvpIds = new Set((match.mvps ?? []).map((mvp) => mvp.profile_id));
+  const mvpNames = match.players
+    .filter((player) => mvpIds.has(player.profile_id))
+    .map((player) => player.profile.display_name);
+  const viewerPlayed = Boolean(viewerId && match.players.some((player) => player.profile_id === viewerId));
+  const closedWithoutMvp = Boolean(match.mvp_voting_enabled && match.mvp_voting_closed_at && mvpNames.length === 0);
+  const canVoteMvp = Boolean(
+    onVoteMvp
+    && viewerPlayed
+    && match.mvp_voting_enabled
+    && !match.mvp_voting_closed_at
+    && mvpNames.length === 0,
+  );
   const formatTeam = (players: typeof team1) => (
     <span className="match-team-players">
       {players.map((player) => {
@@ -2046,7 +2095,7 @@ function MatchCard({
             sul terzo elemento, la classe drawn, che tinge i due contorni di
             giallo invece che di verde e rosso. */}
         <div className={`match-team ${draw ? "drawn" : match.winner_team === leftSide ? "winner" : ""}`}>
-          <div className="mini-avatars">{team1.map((player) => <Avatar key={player.profile_id} profile={player.profile} size="sm" />)}</div>
+          <div className="mini-avatars">{team1.map((player) => <Avatar key={player.profile_id} profile={player.profile} size="sm" mvp={mvpIds.has(player.profile_id)} />)}</div>
           {formatTeam(team1)}
           {draw ? <em>PAREGGIO</em> : match.winner_team === leftSide ? <em>VITTORIA</em> : null}
         </div>
@@ -2064,7 +2113,7 @@ function MatchCard({
             ))}
         </div>
         <div className={`match-team team-right ${draw ? "drawn" : match.winner_team === rightSide ? "winner" : ""}`}>
-          <div className="mini-avatars">{team2.map((player) => <Avatar key={player.profile_id} profile={player.profile} size="sm" />)}</div>
+          <div className="mini-avatars">{team2.map((player) => <Avatar key={player.profile_id} profile={player.profile} size="sm" mvp={mvpIds.has(player.profile_id)} />)}</div>
           {formatTeam(team2)}
           {draw ? <em>PAREGGIO</em> : match.winner_team === rightSide ? <em>VITTORIA</em> : null}
         </div>
@@ -2092,7 +2141,108 @@ function MatchCard({
         )}
       </div>
       )}
+      {!compact && (mvpNames.length > 0 || canVoteMvp || closedWithoutMvp) ? (
+        <div className={`match-mvp-row${mvpNames.length ? " is-awarded" : ""}`}>
+          {mvpNames.length ? (
+            <span><b>👑 MVP</b> {mvpNames.join(" · ")}</span>
+          ) : closedWithoutMvp ? (
+            <span><b>MVP non assegnato</b> · votazione terminata in parità</span>
+          ) : (
+            <span>
+              <b>MVP della partita</b>
+              {typeof match.mvp_votes_cast === "number"
+                ? ` ${match.mvp_votes_cast}/${match.mvp_total_voters ?? match.players.length} voti`
+                : " Votazione aperta"}
+            </span>
+          )}
+          {canVoteMvp ? (
+            <button
+              type="button"
+              className="match-mvp-button"
+              onClick={(event) => { event.stopPropagation(); onVoteMvp?.(match); }}
+            >
+              {match.viewer_mvp_vote ? "Cambia voto MVP" : "Vota MVP"}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </article>
+  );
+}
+
+function MvpVoteModal({
+  match,
+  viewerId,
+  onClose,
+  onSaved,
+}: {
+  match: PadelMatch;
+  viewerId: string;
+  onClose: () => void;
+  onSaved: (result: { awarded: boolean; closed: boolean }) => Promise<void>;
+}) {
+  const [selectedId, setSelectedId] = useState(match.viewer_mvp_vote ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!selectedId || !supabase) return;
+    setBusy(true);
+    setError("");
+    const { data, error: voteError } = await supabase.rpc("vote_match_mvp", {
+      p_match_id: match.id,
+      p_target_id: selectedId,
+    });
+    if (voteError) {
+      setError(voteError.message);
+      setBusy(false);
+      return;
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    await onSaved({ awarded: Boolean(row?.is_awarded), closed: Boolean(row?.is_closed) });
+  }
+
+  return (
+    <BottomSheet title="Vota l'MVP" onClose={onClose}>
+      <form className="sheet-form mvp-vote-form" onSubmit={submit}>
+        <p className="mvp-vote-intro">
+          Scegli il migliore della partita. L&apos;MVP viene assegnato appena un giocatore raggiunge 3 voti
+          oppure quando hanno votato tutti. Se il primo posto è pari, non viene assegnato.
+        </p>
+        <fieldset className="mvp-candidates" disabled={busy}>
+          <legend>Partecipanti</legend>
+          {match.players.map((player) => {
+            const isSelf = player.profile_id === viewerId;
+            return (
+              <label className={`${selectedId === player.profile_id ? "is-selected" : ""}${isSelf ? " is-disabled" : ""}`} key={player.profile_id}>
+                <input
+                  type="radio"
+                  name="mvp"
+                  value={player.profile_id}
+                  checked={selectedId === player.profile_id}
+                  onChange={() => setSelectedId(player.profile_id)}
+                  disabled={isSelf}
+                />
+                <Avatar profile={player.profile} size="md" />
+                <span>
+                  <b>{player.profile.display_name}</b>
+                  <small>{isSelf ? "Tu · non puoi autovotarti" : player.team === 1 ? "Squadra 1" : "Squadra 2"}</small>
+                </span>
+                <i aria-hidden="true">✓</i>
+              </label>
+            );
+          })}
+        </fieldset>
+        {error ? <p className="form-message error">{error}</p> : null}
+        <div className="modal-actions">
+          <button type="button" className="button button-ghost" onClick={onClose}>Annulla</button>
+          <button className="button button-primary" disabled={!selectedId || busy}>
+            {busy ? "Salvataggio…" : match.viewer_mvp_vote ? "Aggiorna voto" : "Conferma voto"}
+          </button>
+        </div>
+      </form>
+    </BottomSheet>
   );
 }
 
@@ -3062,6 +3212,13 @@ function NewMatchModal({
       // Lo storico è un di più: se la migrazione non è stata eseguita la
       // partita resta salvata comunque, senza bloccare nulla.
       const matchId = typeof newId === "string" ? newId : null;
+
+      // Correggere una partita storica la elimina e la ricrea. Senza questo
+      // passaggio sembrerebbe una partita nuova e aprirebbe retroattivamente
+      // la votazione MVP, contro la regola della migrazione.
+      if (matchId && match?.mvp_voting_enabled === false) {
+        await supabase.rpc("disable_match_mvp_voting", { p_match_id: matchId });
+      }
 
       if (matchId && tournamentContext) {
         const { error: tournamentError } = await supabase.rpc("assign_tournament_match", {
@@ -4235,6 +4392,8 @@ function AppShell({ session }: { session: Session | null }) {
   const [padelView, setPadelView] = useState<PadelView>("overview");
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [matches, setMatches] = useState<PadelMatch[]>([]);
+  const [mvpSchemaReady, setMvpSchemaReady] = useState(true);
+  const [votingMvpMatch, setVotingMvpMatch] = useState<PadelMatch | null>(null);
   const [pizzaRestaurants, setPizzaRestaurants] = useState<PizzaRestaurantRecord[]>([]);
   const [showMatch, setShowMatch] = useState(false);
   const [pizzaSchemaReady, setPizzaSchemaReady] = useState(true);
@@ -4426,6 +4585,9 @@ function AppShell({ session }: { session: Session | null }) {
       setFlagsResult,
       titleStandingsResult,
       titleVotesResult,
+      mvpMatchesResult,
+      mvpVotesResult,
+      mvpProgressResult,
     ] = await Promise.all([
       client.from("profiles").select("*").order("rating", { ascending: false }),
       client
@@ -4473,6 +4635,13 @@ function AppShell({ session }: { session: Session | null }) {
       // eseguita queste due falliscono da sole, senza toccare il resto.
       client.rpc("title_standings"),
       client.from("title_votes").select("title, target_id"),
+      // Le query MVP restano separate da quella principale: prima della
+      // migrazione l'archivio partite continua così a caricarsi normalmente.
+      client
+        .from("matches")
+        .select("id, mvp_voting_enabled, mvp_voting_closed_at, mvps:match_mvps(profile_id, awarded_at)"),
+      client.from("match_mvp_votes").select("match_id, target_id"),
+      client.rpc("match_mvp_progress"),
     ]);
 
     if (profilesResult.error || matchesResult.error) {
@@ -4509,10 +4678,32 @@ function AppShell({ session }: { session: Session | null }) {
               .filter((row) => row.incomplete)
               .map((row) => `${row.match_id}|${row.set_number}`),
       );
+      const mvpReady = !mvpMatchesResult.error && !mvpVotesResult.error && !mvpProgressResult.error;
+      const mvpMatchMap = new Map(
+        mvpMatchesResult.error
+          ? []
+          : ((mvpMatchesResult.data ?? []) as unknown as MvpMatchState[]).map((row) => [row.id, row]),
+      );
+      const viewerMvpVoteMap = new Map(
+        mvpVotesResult.error
+          ? []
+          : ((mvpVotesResult.data ?? []) as ViewerMvpVote[]).map((row) => [row.match_id, row.target_id]),
+      );
+      const mvpProgressMap = new Map(
+        mvpProgressResult.error
+          ? []
+          : ((mvpProgressResult.data ?? []) as MvpProgress[]).map((row) => [row.match_id, row]),
+      );
       const normalized = (matchesResult.data ?? []).map((match) => ({
         ...match,
         court: courtMap.get(match.id) ?? null,
         tournament_fixture_id: fixtureByMatch.get(match.id) ?? null,
+        mvp_voting_enabled: mvpMatchMap.get(match.id)?.mvp_voting_enabled ?? false,
+        mvp_voting_closed_at: mvpMatchMap.get(match.id)?.mvp_voting_closed_at ?? null,
+        mvps: mvpMatchMap.get(match.id)?.mvps ?? [],
+        mvp_votes_cast: mvpProgressMap.get(match.id)?.votes_cast ?? 0,
+        mvp_total_voters: mvpProgressMap.get(match.id)?.total_voters ?? 0,
+        viewer_mvp_vote: viewerMvpVoteMap.get(match.id) ?? null,
         sets: (match.sets ?? []).map((set) => ({
           ...set,
           incomplete: incompleteSets.has(`${match.id}|${set.set_number}`),
@@ -4524,6 +4715,7 @@ function AppShell({ session }: { session: Session | null }) {
       })) as unknown as PadelMatch[];
       setProfiles(withAvatars);
       setMatches(normalized);
+      setMvpSchemaReady(mvpReady);
       setTournamentSchemaReady(!tournamentsResult.error);
       if (!tournamentsResult.error) {
         setTournaments(loadedTournaments.map((tournament) => ({
@@ -5669,6 +5861,7 @@ function AppShell({ session }: { session: Session | null }) {
                             match={match}
                             onEdit={(selected) => setEditingMatch(selected)}
                             onPlayVideo={(id) => setPlayingVideo(id)}
+                            onVoteMvp={mvpSchemaReady ? setVotingMvpMatch : undefined}
                             viewerId={session?.user.id}
                           />
                         ))}
@@ -6007,6 +6200,7 @@ function AppShell({ session }: { session: Session | null }) {
                     match={match}
                     onEdit={(selected) => setEditingMatch(selected)}
                     onPlayVideo={(id) => setPlayingVideo(id)}
+                    onVoteMvp={mvpSchemaReady ? setVotingMvpMatch : undefined}
                     viewerId={session?.user.id}
                   />
                 ))}
@@ -6094,6 +6288,7 @@ function AppShell({ session }: { session: Session | null }) {
                     match={match}
                     onEdit={(selected) => setEditingMatch(selected)}
                     onPlayVideo={(id) => setPlayingVideo(id)}
+                    onVoteMvp={mvpSchemaReady ? setVotingMvpMatch : undefined}
                     viewerId={session?.user.id}
                   />
                 ))}
@@ -6393,6 +6588,7 @@ function AppShell({ session }: { session: Session | null }) {
                       match={match}
                       onEdit={(selected) => { setSheet(null); setEditingMatch(selected); }}
                       onPlayVideo={(id) => setPlayingVideo(id)}
+                      onVoteMvp={mvpSchemaReady ? setVotingMvpMatch : undefined}
                       viewerId={session?.user.id}
                     />
                   ))}
@@ -6687,6 +6883,24 @@ function AppShell({ session }: { session: Session | null }) {
             </form>
           </section>
         </div>
+      ) : null}
+      {votingMvpMatch ? (
+        <MvpVoteModal
+          match={votingMvpMatch}
+          viewerId={session?.user.id ?? ""}
+          onClose={() => setVotingMvpMatch(null)}
+          onSaved={async ({ awarded, closed }) => {
+            setVotingMvpMatch(null);
+            await loadData();
+            setNotice(
+              awarded
+                ? "MVP assegnato."
+                : closed
+                  ? "Votazione conclusa in parità: nessun MVP assegnato."
+                  : "Voto MVP salvato.",
+            );
+          }}
+        />
       ) : null}
       {playingVideo ? (
         <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setPlayingVideo(null)}>

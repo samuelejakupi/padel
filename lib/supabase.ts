@@ -70,6 +70,11 @@ export type MatchEvent = {
   created_at: string;
 };
 
+export type MatchMvp = {
+  profile_id: string;
+  awarded_at: string;
+};
+
 export type PadelMatch = {
   id: string;
   played_at: string;
@@ -87,6 +92,13 @@ export type PadelMatch = {
   players: MatchPlayer[];
   rating_delta?: number;
   tournament_fixture_id?: string | null;
+  // Disponibile soltanto per le partite create dopo migration-mvp.sql.
+  mvp_voting_enabled?: boolean;
+  mvp_voting_closed_at?: string | null;
+  mvps?: MatchMvp[];
+  mvp_votes_cast?: number;
+  mvp_total_voters?: number;
+  viewer_mvp_vote?: string | null;
 };
 
 export type TournamentTeam = {
