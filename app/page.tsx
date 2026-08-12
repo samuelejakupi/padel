@@ -703,14 +703,14 @@ function Avatar({
   mvp?: boolean;
 }) {
   return (
-    <span className={`avatar avatar-${size}`} aria-label={`Foto di ${profile.display_name}`}>
+    <span className={`avatar avatar-${size}${mvp ? " avatar-mvp" : ""}`} aria-label={`Foto di ${profile.display_name}${mvp ? ", MVP della partita" : ""}`}>
       {profile.avatar_url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={profile.avatar_url} alt="" />
       ) : (
         <span>{initials(profile.display_name)}</span>
       )}
-      {mvp ? <b className="avatar-mvp-crown" title="MVP della partita" aria-label="MVP della partita">👑</b> : null}
+      {mvp ? <b className="avatar-mvp-label" title="MVP della partita">MVP</b> : null}
       {rank === 1 ? (
         <b className="rank-badge rank-badge-award" title="Primo in classifica">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -2144,7 +2144,7 @@ function MatchCard({
       {!compact && (mvpNames.length > 0 || canVoteMvp || closedWithoutMvp) ? (
         <div className={`match-mvp-row${mvpNames.length ? " is-awarded" : ""}`}>
           {mvpNames.length ? (
-            <span><b>👑 MVP</b> {mvpNames.join(" · ")}</span>
+            <span><b>MVP</b> {mvpNames.join(" · ")}</span>
           ) : closedWithoutMvp ? (
             <span><b>MVP non assegnato</b> · votazione terminata in parità</span>
           ) : (
