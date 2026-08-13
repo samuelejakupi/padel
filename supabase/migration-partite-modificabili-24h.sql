@@ -1,3 +1,11 @@
+-- ATTENZIONE — SUPERATA da migration-permessi-partite.sql (13 agosto 2026).
+-- Questo file limitava modifica ed eliminazione a chi aveva registrato la
+-- partita, entro 24 ore. La regola concordata poi e un'altra: correggere lo puo
+-- fare chiunque abbia giocato, entro 24 ore; eliminare resta all'autore senza
+-- scadenza. Rilanciare questo file rimetterebbe le vecchie regole al posto di
+-- quelle nuove: se serve rieseguirlo, subito dopo va rieseguita anche
+-- migration-permessi-partite.sql, che deve restare l'ultima parola.
+
 -- Soltanto il creatore può correggere o eliminare una partita, e soltanto
 -- nelle prime 24 ore dalla creazione. La modifica dell'app passa dalla stessa
 -- funzione: elimina il vecchio risultato e lo registra nuovamente.

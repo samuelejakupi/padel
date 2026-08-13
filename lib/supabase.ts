@@ -82,6 +82,13 @@ export type PadelMatch = {
   lineage_id?: string | null;
   created_at?: string;
   created_by?: string;
+  // Chi ha registrato la partita la prima volta e quando. Non sono created_by e
+  // created_at: correggere una partita la cancella e la riregistra, quindi quei
+  // due parlano dell'ultima correzione. Questi due invece attraversano le
+  // correzioni, e sono loro a decidere chi può correggere (i partecipanti,
+  // entro 24 ore) e chi può eliminare (solo l'autore, sempre).
+  origin_at?: string | null;
+  origin_by?: string | null;
   // 0 = pareggio: un set a testa con il terzo interrotto.
   winner_team: 0 | 1 | 2;
   notes?: string | null;

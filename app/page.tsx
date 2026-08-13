@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { FormEvent, ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { CSSProperties, FormEvent, ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import {
   hasSupabaseConfig,
@@ -1471,34 +1471,105 @@ function BadgeGlyphIcon({ name }: { name: BadgeGlyph }) {
   );
 }
 
-function BadgeList({ badges }: { badges: Badge[] }) {
+function BadgeTile({ badge, ghost }: { badge: Badge; ghost: boolean }) {
+  const emblem = EMBLEM_COMPONENT[badge.glyph];
   return (
-    <div className="badge-grid">
-      {badges.map((badge) => {
-        const emblem = EMBLEM_COMPONENT[badge.glyph];
-        return (
-        <article
-          className={`badge badge-${badge.tone} ${badge.unlocked ? "is-unlocked" : "is-locked"}`}
-          key={badge.id}
-          tabIndex={0}
-          aria-label={`${badge.label}. ${badge.meaning}${badge.progressLabel ? ` ${badge.progressLabel}` : ""}`}
-        >
-          <div className="badge-emblem" aria-hidden="true">
-            {emblem ? (
-              <Emblem name={emblem} className="badge-art" />
-            ) : (
-              <Image className="badge-art" src={`${basePath}/emblems/${badge.glyph}.webp`} alt="" width={128} height={168} />
-            )}
+    <article
+      className={`badge badge-${badge.tone} ${badge.unlocked ? "is-unlocked" : "is-locked"}`}
+      // La copia del nastro non si raggiunge col tab: sono gli stessi emblemi
+      // scritti due volte, e chi naviga da tastiera li sentirebbe annunciare
+      // tutti in doppio.
+      tabIndex={ghost ? -1 : 0}
+      aria-hidden={ghost ? true : undefined}
+      aria-label={ghost ? undefined : `${badge.label}. ${badge.meaning}${badge.progressLabel ? ` ${badge.progressLabel}` : ""}`}
+    >
+      <div className="badge-emblem" aria-hidden="true">
+        {emblem ? (
+          <Emblem name={emblem} className="badge-art" />
+        ) : (
+          <Image className="badge-art" src={`${basePath}/emblems/${badge.glyph}.webp`} alt="" width={128} height={168} />
+        )}
+      </div>
+      <aside className="badge-tooltip" role="tooltip">
+        <strong>{badge.label}</strong>
+        <p>{badge.meaning}</p>
+        <span>{badge.criterion}</span>
+        <small>{badge.value}{badge.progressLabel ? ` · ${badge.progressLabel}` : ""}</small>
+      </aside>
+    </article>
+  );
+}
+
+// Quanto cammina il nastro degli emblemi, in pixel al secondo. Lento: e una
+// vetrina, non un tabellone che scorre — si deve fare in tempo a riconoscere un
+// emblema senza rincorrerlo.
+const BADGE_MARQUEE_SPEED = 22;
+// Lo stacco fra un emblema e l'altro, e anche fra la fine di una fila e
+// l'inizio della sua copia: se fosse diverso il giro si vedrebbe.
+const BADGE_MARQUEE_GAP = 8;
+
+// La bacheca degli emblemi. Sul telefono non ci stanno in riga, e prima si
+// trascinavano col dito: chi non ci provava vedeva sempre e solo i primi tre.
+// Adesso la fila cammina da sola, senza fine.
+// Il giro si chiude perche la fila e scritta due volte: quando l'animazione
+// torna a zero la seconda copia sta esattamente dove stava la prima, quindi il
+// salto cade su pixel identici e non si vede. Se gli emblemi ci stanno tutti il
+// nastro resta fermo e la copia non viene nemmeno scritta.
+function BadgeList({ badges }: { badges: Badge[] }) {
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  // La prima fila sta in uno stato e non in un ref perche serve a far ripartire
+  // la misura quando compare: con un ref l'effetto girerebbe prima che il nodo
+  // esista.
+  const [row, setRow] = useState<HTMLDivElement | null>(null);
+  const [shift, setShift] = useState(0);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!row || !viewport) return;
+    if (typeof window === "undefined") return;
+    // Chi chiede meno animazioni tiene la striscia ferma: la ritrova scorrevole
+    // col dito, vedi la regola in globals.css.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    function measure() {
+      if (!row || !viewport) return;
+      const fila = row.getBoundingClientRect().width;
+      const finestra = viewport.getBoundingClientRect().width;
+      // Il pixel di margine e per gli arrotondamenti: senza, una fila larga
+      // quanto la finestra partiva a camminare per un decimo di pixel.
+      setShift(fila > finestra + 1 ? fila + BADGE_MARQUEE_GAP : 0);
+    }
+
+    measure();
+    // Gli emblemi sono immagini: la fila e piu corta finche non sono arrivate, e
+    // una misura sola presa troppo presto direbbe che ci stanno.
+    const observer = new ResizeObserver(measure);
+    observer.observe(row);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, [row, badges]);
+
+  const running = shift > 0;
+  return (
+    <div className="badge-marquee" ref={viewportRef}>
+      <div
+        className={`badge-marquee-lane${running ? " is-running" : ""}`}
+        style={running
+          ? ({
+              "--marquee-shift": `${shift}px`,
+              "--marquee-duration": `${shift / BADGE_MARQUEE_SPEED}s`,
+            } as CSSProperties)
+          : undefined}
+      >
+        <div className="badge-grid" ref={setRow}>
+          {badges.map((badge) => <BadgeTile key={badge.id} badge={badge} ghost={false} />)}
+        </div>
+        {running ? (
+          <div className="badge-grid">
+            {badges.map((badge) => <BadgeTile key={badge.id} badge={badge} ghost />)}
           </div>
-          <aside className="badge-tooltip" role="tooltip">
-            <strong>{badge.label}</strong>
-            <p>{badge.meaning}</p>
-            <span>{badge.criterion}</span>
-            <small>{badge.value}{badge.progressLabel ? ` · ${badge.progressLabel}` : ""}</small>
-          </aside>
-        </article>
-        );
-      })}
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -1969,6 +2040,287 @@ function useCardCarousel<T extends string>({
   };
 }
 
+// Quanto si staccano i due tasti del nastro qui sotto: lo stesso stacco che
+// separa un tasto da una card nella colonna della home (`gap: 10px` di
+// `.dashboard-grid`). Non e un numero scelto per il nastro, e il passo della
+// pagina: due tasti che scorrono lontani fra loro sembrerebbero due schermate,
+// vicini cosi sembrano quello che sono, due facce dello stesso comando.
+const RAIL_GAP = 10;
+// Quanto dura la corsa del nastro quando il dito lo lascia a meta. La stessa
+// cifra sta nella transizione di `.cta-carousel-track.is-settling`: il tempo
+// che il nastro impiega davvero lo decide il CSS, questo serve solo a sapere
+// quando e finita per togliere di mezzo il vicino.
+const RAIL_SETTLE_MS = 210;
+
+// Il nastro dei due tasti in cima alla home. Le card cambiano faccia — quella
+// che c'e esce sfumando e quella nuova entra al suo posto; qui invece i due
+// tasti stanno davvero uno accanto all'altro e quello che si vede e il nastro
+// che scorre. La dissolvenza faceva sembrare che il tasto si trasformasse:
+// cosi si vede che sono due, e che di la ce n'e un altro.
+//
+// Il vicino viene montato solo mentre il nastro si muove. A riposo starebbe
+// fuori dallo schermo, e `.content` — che su mobile scorre in verticale —
+// diventerebbe scorrevole anche di lato: e lo stesso inciampo per cui la
+// copia spenta di fianco al nastro era stata provata e tolta.
+function useButtonRail<T extends string>({
+  faces,
+  face,
+  onChange,
+}: {
+  faces: readonly T[];
+  face: T;
+  onChange: (next: T) => void;
+}) {
+  // Come per le card: il nodo sta in uno stato e non in un ref, perche
+  // cambiando sezione viene smontato e al ritorno e un elemento nuovo.
+  const [card, setCard] = useState<HTMLElement | null>(null);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  // Il vicino: quale tasto e in arrivo (o in uscita) e da che lato. Null a
+  // nastro fermo, ed e allora che non deve proprio esistere.
+  const [preview, setPreview] = useState<{ face: T; side: "left" | "right" } | null>(null);
+  const previewRef = useRef<{ face: T; side: "left" | "right" } | null>(null);
+  // Di quanto e spostato il nastro. Lo tiene React e non il DOM, e non e un
+  // dettaglio: e cosi che il cambio di faccia e lo spostamento del nastro
+  // finiscono nello stesso disegno. Scrivendolo a mano dopo il cambio ci
+  // sarebbe un fotogramma con il tasto nuovo gia in scena e il nastro ancora
+  // spostato di tutta la sua larghezza — cioe il tasto fuori dallo schermo.
+  const [offset, setOffset] = useState(0);
+  // Acceso solo mentre il nastro finisce la corsa da solo: mentre il dito e
+  // sul tasto il nastro deve stargli attaccato, non inseguirlo.
+  const [settling, setSettling] = useState(false);
+  const settleTimer = useRef(0);
+  const settleFrame = useRef(0);
+  const swipe = useRef<{
+    x: number;
+    y: number;
+    lastX: number;
+    lastAt: number;
+    velocityX: number;
+    axis: "pending" | "horizontal" | "vertical";
+  } | null>(null);
+  // Vive dal touchend al click che il browser manda comunque in coda a uno
+  // swipe: serve solo a non premere il tasto quando il gesto era un cambio.
+  const swipeHandled = useRef(false);
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
+
+  const index = faces.indexOf(face);
+
+  // Il vicino si monta e si smonta di rado — una volta per gesto — ma il dito
+  // passa di qui a ogni frame: senza questo confronto sarebbe un render al
+  // millimetro percorso.
+  const showPreview = useCallback((next: { face: T; side: "left" | "right" } | null) => {
+    const current = previewRef.current;
+    if (current?.face === next?.face && current?.side === next?.side) return;
+    previewRef.current = next;
+    setPreview(next);
+  }, []);
+
+  // Fine corsa: il nastro torna a zero, il vicino sparisce, i tempi in sospeso
+  // si azzerano. Lo chiamano sia il traguardo sia un dito che ricomincia a
+  // trascinare mentre la corsa e ancora in atto.
+  const restRail = useCallback(() => {
+    if (typeof window !== "undefined") {
+      window.clearTimeout(settleTimer.current);
+      window.cancelAnimationFrame(settleFrame.current);
+    }
+    settleTimer.current = 0;
+    settleFrame.current = 0;
+    setSettling(false);
+    setOffset(0);
+    showPreview(null);
+  }, [showPreview]);
+
+  useEffect(() => () => {
+    window.clearTimeout(settleTimer.current);
+    window.cancelAnimationFrame(settleFrame.current);
+  }, []);
+
+  useEffect(() => {
+    if (!card) return;
+    const node = card;
+
+    const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function destination(direction: "left" | "right"): T | null {
+      const next = faces[direction === "left" ? index + 1 : index - 1];
+      return next ?? null;
+    }
+
+    // La stessa resistenza dei fogli che si trascinano: agli estremi il dito
+    // trova il muro invece di portarsi via il nastro.
+    function rubber(distance: number, limit = 220) {
+      return (1 - 1 / (distance / limit + 1)) * limit;
+    }
+
+    // Di quanto scorre il nastro per cambiare tasto: la larghezza del tasto
+    // piu lo stacco, cioe esattamente il punto dove comincia il vicino.
+    function step() {
+      return Math.max(node.getBoundingClientRect().width, 1) + RAIL_GAP;
+    }
+
+    // Mentre il dito e appoggiato il nastro si scrive a mano, fuori da React:
+    // un render per ogni millimetro percorso sarebbe uno spreco, e lo
+    // spostamento qui non deve arrivare da nessun'altra parte.
+    function paint(value: number) {
+      const track = trackRef.current;
+      if (!track) return;
+      track.style.transform = `translate3d(${value}px, 0, 0)`;
+    }
+
+    function onStart(event: TouchEvent) {
+      swipeHandled.current = false;
+      if (event.touches.length !== 1 || !window.matchMedia("(max-width: 780px)").matches) {
+        swipe.current = null;
+        return;
+      }
+      // Un dito che ricomincia mentre il nastro sta ancora correndo comanda
+      // lui: la corsa finisce qui e si riparte da fermo.
+      trackRef.current?.getAnimations().forEach((animation) => animation.cancel());
+      restRail();
+      const touch = event.touches[0];
+      swipe.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        lastX: touch.clientX,
+        lastAt: performance.now(),
+        velocityX: 0,
+        axis: "pending",
+      };
+    }
+
+    function onMove(event: TouchEvent) {
+      const gesture = swipe.current;
+      const touch = event.touches[0];
+      if (!gesture || !touch) return;
+      const distanceX = touch.clientX - gesture.x;
+      const distanceY = touch.clientY - gesture.y;
+      // L'asse si decide una volta sola, agli otto pixel: prima il gesto e
+      // ancora di tutti e due, dopo non cambia piu idea a meta strada.
+      if (gesture.axis === "pending") {
+        if (Math.max(Math.abs(distanceX), Math.abs(distanceY)) < 8) return;
+        gesture.axis = Math.abs(distanceX) > Math.abs(distanceY) * 1.15 ? "horizontal" : "vertical";
+      }
+      if (gesture.axis !== "horizontal") return;
+      // E per questa riga che i listener sono nativi e non passivi: React
+      // registra touchmove come passivo, e li preventDefault non fa nulla.
+      if (event.cancelable) event.preventDefault();
+
+      const now = performance.now();
+      const elapsed = Math.max(1, now - gesture.lastAt);
+      gesture.velocityX = (touch.clientX - gesture.lastX) / elapsed;
+      gesture.lastX = touch.clientX;
+      gesture.lastAt = now;
+
+      const direction = distanceX < 0 ? "left" : "right";
+      const target = destination(direction);
+      // Il vicino entra dal lato opposto a quello verso cui va il dito: si
+      // tira il nastro a sinistra e da destra arriva l'altro tasto.
+      showPreview(target ? { face: target, side: direction === "left" ? "right" : "left" } : null);
+      paint(target ? distanceX : Math.sign(distanceX) * rubber(Math.abs(distanceX)));
+    }
+
+    // Il gesto lasciato a meta: il nastro torna dov'era e il vicino se ne va.
+    // Qui non cambia niente in React — lo spostamento e ancora quello scritto
+    // a mano — quindi lo si riporta a zero a mano.
+    function bounceBack() {
+      const track = trackRef.current;
+      if (!track) return;
+      const from = track.style.transform;
+      paint(0);
+      if (!track.animate || reduceMotion() || !from) {
+        showPreview(null);
+        return;
+      }
+      track
+        .animate(
+          [{ transform: from }, { transform: "translate3d(0px, 0, 0)" }],
+          { duration: 260, easing: "cubic-bezier(0.34, 1.28, 0.64, 1)" },
+        )
+        .finished.then(() => showPreview(null), () => showPreview(null));
+    }
+
+    function onEnd(event: TouchEvent) {
+      const gesture = swipe.current;
+      swipe.current = null;
+      const track = trackRef.current;
+      if (!gesture || !track || gesture.axis !== "horizontal") return;
+      const touch = event.changedTouches[0];
+      const distanceX = touch ? touch.clientX - gesture.x : 0;
+      const direction = distanceX < 0 ? "left" : "right";
+      const next = destination(direction);
+      const width = Math.max(node.getBoundingClientRect().width, 1);
+      // Due modi di convincerlo: portarlo oltre un terzo del tasto, oppure un
+      // colpo secco. Il secondo e per i pollici veloci, che non arrivano mai
+      // lontano ma sono decisi.
+      const enoughDistance = Math.abs(distanceX) >= Math.max(56, width * 0.3);
+      const enoughMomentum = Math.abs(distanceX) >= 28 && Math.abs(gesture.velocityX) >= 0.4;
+      if (!next || !(enoughDistance || enoughMomentum)) {
+        bounceBack();
+        return;
+      }
+      // Il click che il browser manda dopo il gesto non deve premere il tasto.
+      swipeHandled.current = true;
+
+      const previous = faces[index];
+      if (reduceMotion()) {
+        paint(0);
+        onChangeRef.current(next);
+        restRail();
+        return;
+      }
+
+      // Il cambio di faccia e lo spostamento del nastro insieme, in un solo
+      // aggiornamento. Il tasto nuovo prende il posto che aveva il vicino, il
+      // tasto che esce diventa lui il vicino dall'altra parte, e il nastro si
+      // sposta di quel tanto che serve perche sullo schermo non si muova
+      // niente: gli stessi pixel di un istante prima, con dentro cose diverse.
+      // Da li in poi basta riportare il nastro a zero e la corsa si vede.
+      const jump = distanceX + (direction === "left" ? step() : -step());
+      onChangeRef.current(next);
+      showPreview({ face: previous, side: direction === "left" ? "left" : "right" });
+      setOffset(jump);
+
+      // Due frame prima di far partire la corsa: la transizione ha bisogno di
+      // vedere disegnata la posizione di partenza, se no salta direttamente
+      // all'arrivo. Il disegno in mezzo non e uno sfarfallio, e proprio il
+      // fotogramma di continuita.
+      settleFrame.current = window.requestAnimationFrame(() => {
+        settleFrame.current = window.requestAnimationFrame(() => {
+          settleFrame.current = 0;
+          setSettling(true);
+          setOffset(0);
+          settleTimer.current = window.setTimeout(() => {
+            settleTimer.current = 0;
+            setSettling(false);
+            showPreview(null);
+          }, RAIL_SETTLE_MS);
+        });
+      });
+    }
+
+    function onCancel() {
+      swipe.current = null;
+      bounceBack();
+    }
+
+    node.addEventListener("touchstart", onStart, { passive: true });
+    node.addEventListener("touchmove", onMove, { passive: false });
+    node.addEventListener("touchend", onEnd);
+    node.addEventListener("touchcancel", onCancel);
+    return () => {
+      node.removeEventListener("touchstart", onStart);
+      node.removeEventListener("touchmove", onMove);
+      node.removeEventListener("touchend", onEnd);
+      node.removeEventListener("touchcancel", onCancel);
+    };
+  }, [card, faces, index, showPreview, restRail]);
+
+  return { setCard, trackRef, swipeHandled, preview, offset, settling };
+}
+
 function MatchCard({
   match,
   onEdit,
@@ -2154,14 +2506,107 @@ function MatchCard({
   );
 }
 
-const MATCH_MANAGEMENT_WINDOW_MS = 24 * 60 * 60 * 1000;
+// Quanto resta aperta una partita alle correzioni. Ventiquattro ore dalla
+// registrazione, non dalla data della partita: il conto parte da quando il
+// risultato e stato messo a referto, che e il momento in cui gli altri possono
+// accorgersi che c'e uno sbaglio.
+const MATCH_EDIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
-function canManageMatch(match: PadelMatch, userId: string | null | undefined) {
-  if (!userId || match.created_by !== userId || !match.created_at) return false;
-  const createdAt = new Date(match.created_at).getTime();
-  return Number.isFinite(createdAt)
-    && Date.now() >= createdAt
-    && Date.now() < createdAt + MATCH_MANAGEMENT_WINDOW_MS;
+// L'istante da cui contano le 24 ore. Non `created_at` della riga: correggere
+// una partita la cancella e la riregistra, quindi quella data si sposterebbe a
+// ogni correzione e la finestra non si chiuderebbe mai. Vedi origin_at in
+// lib/supabase.ts e migration-permessi-partite.sql.
+function matchOpenUntil(match: PadelMatch) {
+  const origin = match.origin_at ?? match.created_at;
+  return origin ? new Date(origin).getTime() + MATCH_EDIT_WINDOW_MS : 0;
+}
+
+// Correggere il risultato lo puo fare chi c'era — piu chi l'ha registrato, che
+// non sempre e in campo — e solo finche la finestra e aperta. Passate le 24 ore
+// il risultato e storia, anche per chi ha giocato.
+function canEditMatch(match: PadelMatch, viewerId?: string | null) {
+  if (!viewerId) return false;
+  if (Date.now() > matchOpenUntil(match)) return false;
+  return (match.origin_by ?? match.created_by) === viewerId
+    || match.players.some((player) => player.profile_id === viewerId);
+}
+
+// Eliminare invece resta di chi ha registrato, per sempre: chi ha giocato puo
+// correggere quello che c'e scritto, non far sparire la partita.
+function canDeleteMatch(match: PadelMatch, viewerId?: string | null) {
+  if (!viewerId) return false;
+  return (match.origin_by ?? match.created_by) === viewerId;
+}
+
+// Quanto manca alla chiusura, detto come lo direbbe una persona.
+function matchWindowLeft(match: PadelMatch) {
+  const left = matchOpenUntil(match) - Date.now();
+  if (left <= 0) return null;
+  const hours = Math.floor(left / (60 * 60 * 1000));
+  if (hours >= 1) return `${hours} ${hours === 1 ? "ora" : "ore"}`;
+  const minutes = Math.max(1, Math.round(left / (60 * 1000)));
+  return `${minutes} ${minutes === 1 ? "minuto" : "minuti"}`;
+}
+
+// Cosa e cambiato fra il risultato di prima e quello appena salvato, scritto da
+// solo. Prima era una casella da riempire a mano: quasi sempre restava vuota, e
+// quando non lo era diceva quello che si vedeva gia dal punteggio. Il registro
+// deve dire cosa e stato toccato, non cosa l'autore aveva voglia di raccontare.
+function matchChangeSummary(
+  before: PadelMatch,
+  after: { playerIds: string[]; sets: PadelSet[]; playedAt: string; court: string; videoUrl: string; notes: string },
+  profiles: Profile[],
+) {
+  const name = (id: string) => profiles.find((profile) => profile.id === id)?.display_name ?? "?";
+  const changes: string[] = [];
+
+  const beforePlayers = [
+    ...before.players.filter((player) => player.team === 1).map((player) => player.profile_id),
+    ...before.players.filter((player) => player.team === 2).map((player) => player.profile_id),
+  ];
+  if (beforePlayers.join("|") !== after.playerIds.join("|")) {
+    const stessi = new Set(beforePlayers).size === new Set(after.playerIds).size
+      && beforePlayers.every((id) => after.playerIds.includes(id));
+    // Gli stessi quattro in caselle diverse non e un cambio di formazione: e una
+    // coppia rifatta, e dirlo cosi si capisce al volo.
+    changes.push(stessi
+      ? "coppie rifatte"
+      : `giocatori: ${after.playerIds.slice(0, 2).map(name).join(" · ")} vs ${after.playerIds.slice(2, 4).map(name).join(" · ")}`);
+  }
+
+  const scoreOf = (sets: PadelSet[]) => [...sets]
+    .sort((a, b) => a.set_number - b.set_number)
+    .map((set) => `${set.team1_games}-${set.team2_games}`)
+    .join(" ");
+  const scoreBefore = scoreOf(before.sets);
+  const scoreAfter = scoreOf(after.sets);
+  if (scoreBefore !== scoreAfter) changes.push(`punteggio ${scoreBefore || "—"} → ${scoreAfter}`);
+
+  // Lo stesso taglio che fa il modulo quando riempie la casella della data:
+  // confrontarlo con la stringa grezza direbbe "data cambiata" a chi non ha
+  // toccato niente, per via del fuso.
+  const dayBefore = new Date(before.played_at).toISOString().slice(0, 10);
+  if (dayBefore !== after.playedAt) {
+    const day = (value: string) => new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "2-digit" }).format(new Date(`${value}T12:00:00`));
+    changes.push(`data ${day(dayBefore)} → ${day(after.playedAt)}`);
+  }
+
+  // Campo, video e nota si comportano tutti e tre allo stesso modo: si
+  // aggiungono, si tolgono o cambiano. Cambiati, il valore non si riporta: in
+  // una riga di registro un indirizzo YouTube per esteso coprirebbe tutto.
+  const fields: [string, string, string][] = [
+    ["campo", (before.court ?? "").trim(), after.court.trim()],
+    ["video", (before.video_url ?? "").trim(), after.videoUrl.trim()],
+    ["nota", (before.notes ?? "").trim(), after.notes.trim()],
+  ];
+  for (const [label, was, now] of fields) {
+    if (was === now) continue;
+    changes.push(!was ? `${label} aggiunto` : !now ? `${label} rimosso` : `${label} cambiato`);
+  }
+
+  // Salvare senza toccare niente non e un errore: capita di aprire, guardare e
+  // confermare. Il registro lo dice com'e.
+  return changes.length ? changes.join(" · ") : "nessun dato cambiato";
 }
 
 function PlannedMatchCard({
@@ -3092,6 +3537,7 @@ function readMatchScore(scores: string[][]) {
 function NewMatchModal({
   profiles,
   match,
+  viewerId,
   plannedMatch,
   plannedMatchesReady,
   tournamentContext,
@@ -3101,6 +3547,9 @@ function NewMatchModal({
 }: {
   profiles: Profile[];
   match?: PadelMatch | null;
+  // Chi sta guardando: da lui dipende se questo foglio e un modulo da riempire,
+  // una scheda da leggere, o una scheda con sotto il tasto rosso.
+  viewerId?: string | null;
   plannedMatch?: PlannedMatch | null;
   plannedMatchesReady?: boolean;
   tournamentContext?: TournamentMatchContext | null;
@@ -3110,6 +3559,13 @@ function NewMatchModal({
 }) {
   const editing = Boolean(match);
   const completingPlanned = Boolean(plannedMatch);
+  // Le due regole, lette una volta all'apertura del foglio: correggere e di chi
+  // ha giocato, per 24 ore; eliminare e di chi ha registrato, per sempre. Il
+  // controllo vero sta sul database (migration-permessi-partite.sql): qui
+  // servono solo a non mostrare comandi che poi verrebbero rifiutati.
+  const canEdit = !match || canEditMatch(match, viewerId);
+  const canDelete = Boolean(match) && canDeleteMatch(match as PadelMatch, viewerId);
+  const windowLeft = match ? matchWindowLeft(match) : null;
   const initialPlayers = match
     ? [
         ...match.players.filter((player) => player.team === 1).map((player) => player.profile_id),
@@ -3141,7 +3597,6 @@ function NewMatchModal({
   const [notes, setNotes] = useState(match?.notes ?? plannedMatch?.notes ?? "");
   const [videoUrl, setVideoUrl] = useState(match?.video_url ?? "");
   const [court, setCourt] = useState(match?.court ?? plannedMatch?.court ?? "");
-  const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [events, setEvents] = useState<MatchEvent[]>([]);
@@ -3279,7 +3734,10 @@ function NewMatchModal({
           .eq("id", match.id)
           .maybeSingle();
         lineage = (row?.lineage_id as string | null) ?? match.id;
-        const { error: deleteError } = await supabase.rpc("delete_match", { p_match_id: match.id });
+        // La porta della correzione, non quella dell'eliminazione: qui la
+        // partita esce soltanto perche sta per rientrare corretta, e a passarci
+        // sono tutti quelli che hanno giocato.
+        const { error: deleteError } = await supabase.rpc("delete_match_for_edit", { p_match_id: match.id });
         if (deleteError) {
           setError(deleteError.message);
           setBusy(false);
@@ -3349,7 +3807,19 @@ function NewMatchModal({
           match_id: matchId,
           kind: match ? "edited" : "created",
           author_id: auth.user?.id ?? null,
-          comment: comment.trim() || null,
+          // Cosa e cambiato lo scrive il registro da solo, confrontando il
+          // prima con il dopo: la casella da riempire a mano restava vuota
+          // quasi sempre, e quando non lo era ripeteva il punteggio.
+          comment: match
+            ? matchChangeSummary(match, {
+                playerIds: players,
+                sets,
+                playedAt,
+                court,
+                videoUrl: cleanVideo,
+                notes,
+              }, profiles)
+            : null,
           summary: matchSummary(profiles, players, sets),
         });
       }
@@ -3388,6 +3858,17 @@ function NewMatchModal({
               <span><small>PARTITA DI TORNEO · ELO ×{tournamentContext.eloMultiplier}</small><b>{tournamentContext.tournamentName}</b></span>
             </div>
           ) : null}
+          {/* Passate le 24 ore il foglio resta, ma diventa una scheda da
+              leggere: sotto c'e lo storico, che dice tutto quello che c'e da
+              sapere su come si e arrivati a questo risultato. */}
+          {!canEdit ? (
+            <p className="match-locked">
+              <b>Il risultato è chiuso.</b>
+              Le correzioni restano aperte 24 ore dalla registrazione, e solo per chi ha giocato.
+            </p>
+          ) : null}
+          {canEdit ? (
+          <>
           <label>
             Data della partita
             <input type="date" value={playedAt} onChange={(e) => setPlayedAt(e.target.value)} required disabled={completingPlanned} />
@@ -3506,16 +3987,12 @@ function NewMatchModal({
             Nota <span className="optional-label">facoltativo</span>
             <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Es. Rimonta incredibile al terzo set" />
           </label>
-          {editing ? (
-            <label>
-              Motivo della correzione <span className="optional-label">facoltativo</span>
-              <input
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Es. Il terzo set era 7-5, non 6-5"
-                maxLength={140}
-              />
-            </label>
+          {/* Niente piu casella per il motivo della correzione: cosa e cambiato
+              lo scrive il registro da solo. */}
+          {editing && windowLeft ? (
+            <p className="match-window">Le correzioni si chiudono fra {windowLeft}.</p>
+          ) : null}
+          </>
           ) : null}
           {error ? <p className="form-message error">{error}</p> : null}
 
@@ -3553,15 +4030,20 @@ function NewMatchModal({
           ) : null}
 
           <div className="modal-actions">
-            {editing ? (
+            {/* Eliminare resta di chi ha registrato, senza scadenza: chi ha
+                giocato puo correggere quello che c'e scritto, non far sparire
+                la partita. */}
+            {canDelete ? (
               <button type="button" className="button button-danger" onClick={() => void removeMatch()} disabled={busy}>
                 Elimina
               </button>
             ) : null}
-            <button type="button" className="button button-ghost" onClick={onClose}>Annulla</button>
-            <button className="button button-primary" disabled={busy || (randomTeams && players.length !== 4)}>
-              {busy ? "Salvataggio…" : randomTeams ? "Crea partita" : "Salva risultato"}
-            </button>
+            <button type="button" className="button button-ghost" onClick={onClose}>{canEdit ? "Annulla" : "Chiudi"}</button>
+            {canEdit ? (
+              <button className="button button-primary" disabled={busy || (randomTeams && players.length !== 4)}>
+                {busy ? "Salvataggio…" : randomTeams ? "Crea partita" : "Salva risultato"}
+              </button>
+            ) : null}
           </div>
         </form>
     </BottomSheet>
@@ -4458,7 +4940,7 @@ function TournamentsPage({
         <BlockMark size="lg" />
         <div className="section-hero-head">
           <div><p className="eyebrow">THEBOYZ CUP</p><h1>Tornei</h1><p>Girone all’italiana: vittorie, scontri diretti, game vinti.</p></div>
-          <button className="button button-primary tournament-new-button" onClick={onCreate} disabled={!schemaReady}>+ Nuovo torneo</button>
+          <button className="button button-primary tournament-new-button" onClick={onCreate} disabled={!schemaReady}>+ TOURNAMENT</button>
         </div>
       </article>
 
@@ -4619,18 +5101,22 @@ function AppShell({ session }: { session: Session | null }) {
   });
 
   // Quale dei due tasti e in scena in cima alla home.
+  // Non e un carosello come le card ma un nastro: i due tasti sono uno accanto
+  // all'altro e si scorre fra loro. E mai da solo — un tasto che cambia mentre
+  // lo stai per premere fa aprire la cosa sbagliata: questo si muove solo col
+  // dito.
   const [ctaFace, setCtaFace] = useState<"match" | "tournament">("match");
   const {
     setCard: setCtaCard,
     trackRef: ctaTrackRef,
     swipeHandled: ctaSwipeHandled,
-  } = useCardCarousel({
+    preview: ctaPreview,
+    offset: ctaOffset,
+    settling: ctaSettling,
+  } = useButtonRail({
     faces: CTA_FACES,
     face: ctaFace,
     onChange: setCtaFace,
-    // Mai da solo: un tasto che cambia mentre lo stai per premere fa aprire
-    // la cosa sbagliata. Questo si muove solo col dito.
-    enabled: false,
   });
 
   // Ogni cinque secondi il tasto si sporge di un dito verso il lato da cui
@@ -4647,9 +5133,10 @@ function AppShell({ session }: { session: Session | null }) {
     function schedule() {
       timer = window.setTimeout(() => {
         const track = ctaTrackRef.current;
-        // Se il dito lo sta gia spostando il suggerimento e superfluo, e
-        // arriverebbe come uno strattone in mano.
-        if (track?.animate && !track.style.transform) {
+        // Solo a nastro fermo. Se il dito lo sta gia spostando, o la corsa non
+        // e finita, il suggerimento e superfluo e arriverebbe come uno
+        // strattone in mano.
+        if (track?.animate && ctaOffset === 0 && !ctaPreview) {
           const nudge = ctaFace === "match" ? -16 : 16;
           track.animate(
             [
@@ -4677,7 +5164,7 @@ function AppShell({ session }: { session: Session | null }) {
       window.clearTimeout(timer);
       document.removeEventListener("visibilitychange", sync);
     };
-  }, [carouselEnabled, isPhone, ctaFace, ctaTrackRef]);
+  }, [carouselEnabled, isPhone, ctaFace, ctaTrackRef, ctaOffset, ctaPreview]);
 
   const [editingMatch, setEditingMatch] = useState<PadelMatch | null>(null);
   const [plannedMatches, setPlannedMatches] = useState<PlannedMatch[]>([]);
@@ -4737,6 +5224,8 @@ function AppShell({ session }: { session: Session | null }) {
       tournamentsResult,
       courtsResult,
       setFlagsResult,
+      lineageResult,
+      originResult,
       titleStandingsResult,
       titleVotesResult,
       mvpMatchesResult,
@@ -4784,6 +5273,14 @@ function AppShell({ session }: { session: Session | null }) {
       // non e stata eseguita la colonna non esiste e i set risultano tutti
       // completi, che e esattamente com'erano prima.
       client.from("match_sets").select("match_id, set_number, incomplete"),
+      // La discendenza e la sua riga di nascita: da queste due esce chi ha
+      // registrato la partita la prima volta e quando, che e quello su cui si
+      // reggono i permessi di correzione ed eliminazione. In query separate come
+      // il campo e i set interrotti: senza la migrazione dello storico
+      // falliscono da sole e l'origine ricade su created_by e created_at, cioe
+      // su come funzionava prima.
+      client.from("matches").select("id, lineage_id"),
+      client.from("match_events").select("lineage_id, author_id, created_at").eq("kind", "created"),
       // I titoli. I totali passano da una funzione e non da una select perché
       // la tabella dei voti è illeggibile per chi non ne è l'autore: è così che
       // il voto resta anonimo. Finché migration-titoli.sql non è stata
@@ -4856,8 +5353,30 @@ function AppShell({ session }: { session: Session | null }) {
           ? []
           : ((mvpProgressResult.data ?? []) as MvpProgress[]).map((row) => [row.match_id, row]),
       );
-      const normalized = (matchesResult.data ?? []).map((match) => ({
+      // Vuote finche la migrazione dello storico non e stata eseguita: allora
+      // l'origine ricade su created_by/created_at della riga, che e come si
+      // comportava l'app prima dei permessi.
+      const lineageMap = new Map(
+        lineageResult.error
+          ? []
+          : ((lineageResult.data ?? []) as { id: string; lineage_id: string | null }[])
+              .map((row) => [row.id, row.lineage_id ?? row.id] as const),
+      );
+      // Una discendenza ha una riga di nascita sola, ma se per qualche motivo ne
+      // avesse due vale la prima: e quello l'istante da cui contano le 24 ore.
+      const originMap = new Map<string, { author_id: string | null; created_at: string }>();
+      if (!originResult.error) {
+        for (const event of (originResult.data ?? []) as { lineage_id: string; author_id: string | null; created_at: string }[]) {
+          const known = originMap.get(event.lineage_id);
+          if (!known || event.created_at < known.created_at) originMap.set(event.lineage_id, event);
+        }
+      }
+      const normalized = (matchesResult.data ?? []).map((match) => {
+        const origin = originMap.get(lineageMap.get(match.id) ?? match.id);
+        return {
         ...match,
+        origin_at: origin?.created_at ?? match.created_at ?? null,
+        origin_by: origin?.author_id ?? match.created_by ?? null,
         court: courtMap.get(match.id) ?? null,
         tournament_fixture_id: fixtureByMatch.get(match.id) ?? null,
         mvp_voting_enabled: mvpMatchMap.get(match.id)?.mvp_voting_enabled ?? false,
@@ -4874,7 +5393,8 @@ function AppShell({ session }: { session: Session | null }) {
           ...player,
           profile: profileMap.get(player.profile_id) ?? player.profile,
         })),
-      })) as unknown as PadelMatch[];
+        };
+      }) as unknown as PadelMatch[];
       setProfiles(withAvatars);
       setMatches(normalized);
       setPlannedMatchesReady(!plannedMatchesResult.error);
@@ -5219,6 +5739,48 @@ function AppShell({ session }: { session: Session | null }) {
     setPadelView("player");
     setView("padel");
   }, [currentUserId]);
+
+  // I due tasti del nastro, disegnati una volta sola: quello in scena e il
+  // vicino che arriva sono lo stesso tasto, e devono restarlo — se si
+  // scrivessero due volte basterebbe ritoccarne uno per vedere il tasto
+  // cambiare aspetto a meta scorrimento.
+  //
+  // Sta quaggiu e non accanto al nastro di proposito: legge
+  // `tournamentSchemaReady` e `setShowTournamentCreate`, e una funzione che usa
+  // cose dichiarate piu sotto e roba che il React Compiler non riesce a
+  // seguire — si arrende sul componente e smette di riconoscere come stabili
+  // tutti i setter dichiarati da li in giu. Verificato il 13 agosto 2026:
+  // scritta sopra, `npm run lint` usciva con diciotto errori
+  // react-hooks/preserve-manual-memoization su `loadData` e `openOwnCard`, che
+  // con questo tasto non c'entrano niente. Regola generale: una funzione
+  // scritta nel corpo del componente va dopo tutto quello che legge.
+  const ctaButton = (which: "match" | "tournament", ghost: boolean) =>
+    which === "match" ? (
+      <button
+        className="button button-primary cta-new-match cta-in-panel cta-between cta-aurora"
+        type="button"
+        tabIndex={ghost ? -1 : undefined}
+        onClick={ghost ? undefined : () => {
+          if (ctaSwipeHandled.current) return;
+          setShowMatch(true);
+        }}
+      >
+        + PLAY
+      </button>
+    ) : (
+      <button
+        className="button button-lime cta-new-match cta-in-panel cta-between cta-aurora"
+        type="button"
+        tabIndex={ghost ? -1 : undefined}
+        onClick={ghost ? undefined : () => {
+          if (ctaSwipeHandled.current) return;
+          setShowTournamentCreate(true);
+        }}
+        disabled={!tournamentSchemaReady}
+      >
+        + TOURNAMENT
+      </button>
+    );
 
   // --- Barra di navigazione mobile -----------------------------------------
   // La pastiglia viene spostata scrivendo direttamente sullo stile: passando
@@ -5939,7 +6501,7 @@ function AppShell({ session }: { session: Session | null }) {
                 <div className="section-head">
                   <div className="section-head-label"><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
                   <div className="court-actions">
-                    <button className="button button-primary cta-new-match cta-aurora" onClick={() => setShowMatch(true)}>+ Nuova partita</button>
+                    <button className="button button-primary cta-new-match cta-aurora" onClick={() => setShowMatch(true)}>+ PLAY</button>
                     {/* Il tabellone dei campi liberi. Sta accanto a "nuova
                         partita" perche e la domanda che viene prima: dove si
                         gioca stasera si guarda, poi si registra. */}
@@ -5966,29 +6528,20 @@ function AppShell({ session }: { session: Session | null }) {
                     Non gira da solo — una card che cambia da sola si guarda,
                     un tasto che cambia da solo si preme per sbaglio. */}
                 <div className="cta-carousel" ref={setCtaCard}>
-                  <div className="cta-carousel-track" ref={ctaTrackRef}>
-                    {ctaFace === "match" ? (
-                      <button
-                        className="button button-primary cta-new-match cta-in-panel cta-between cta-aurora"
-                        onClick={() => {
-                          if (ctaSwipeHandled.current) return;
-                          setShowMatch(true);
-                        }}
-                      >
-                        + NUOVA PARTITA
-                      </button>
-                    ) : (
-                      <button
-                        className="button button-lime cta-new-match cta-in-panel cta-between cta-aurora"
-                        onClick={() => {
-                          if (ctaSwipeHandled.current) return;
-                          setShowTournamentCreate(true);
-                        }}
-                        disabled={!tournamentSchemaReady}
-                      >
-                        + NUOVO TORNEO
-                      </button>
-                    )}
+                  <div
+                    className={`cta-carousel-track${ctaSettling ? " is-settling" : ""}`}
+                    ref={ctaTrackRef}
+                    style={{ transform: `translate3d(${ctaOffset}px, 0, 0)` }}
+                  >
+                    {ctaButton(ctaFace, false)}
+                    {/* Il vicino esiste solo mentre il nastro si muove: fermo
+                        starebbe fuori dallo schermo e la pagina diventerebbe
+                        scorrevole anche di lato. */}
+                    {ctaPreview ? (
+                      <div className={`cta-rail-ghost cta-rail-ghost-${ctaPreview.side}`} aria-hidden="true">
+                        {ctaButton(ctaPreview.face, true)}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
                 {/* Su mobile l'intestazione di sezione non c'e (`.section-head`
@@ -6063,7 +6616,7 @@ function AppShell({ session }: { session: Session | null }) {
                           <MatchCard
                             key={match.id}
                             match={match}
-                            onEdit={canManageMatch(match, currentUserId) ? (selected) => setEditingMatch(selected) : undefined}
+                            onEdit={(selected) => setEditingMatch(selected)}
                             onPlayVideo={(id) => setPlayingVideo(id)}
                             onVoteMvp={mvpSchemaReady ? setVotingMvpMatch : undefined}
                             viewerId={session?.user.id}
@@ -6095,7 +6648,7 @@ function AppShell({ session }: { session: Session | null }) {
                       onClick={() => setShowTournamentCreate(true)}
                       disabled={!tournamentSchemaReady}
                     >
-                      + Nuovo torneo
+                      + TOURNAMENT
                     </button>
                   </div>
                 </div>
@@ -6405,7 +6958,7 @@ function AppShell({ session }: { session: Session | null }) {
                   <MatchCard
                     key={match.id}
                     match={match}
-                    onEdit={canManageMatch(match, currentUserId) ? (selected) => setEditingMatch(selected) : undefined}
+                    onEdit={(selected) => setEditingMatch(selected)}
                     onPlayVideo={(id) => setPlayingVideo(id)}
                     onVoteMvp={mvpSchemaReady ? setVotingMvpMatch : undefined}
                     viewerId={session?.user.id}
@@ -6420,7 +6973,7 @@ function AppShell({ session }: { session: Session | null }) {
               <div className="player-history-head">
                 <div><p className="eyebrow dark">SPEZZONI</p><h2>{isOwnCard ? "Le mie plays" : `Le plays di ${selectedPlayer.display_name}`}</h2></div>
                 {isOwnCard && playsSchemaReady ? (
-                  <button className="button button-primary" onClick={() => setShowPlayCreate(true)}>＋ Play</button>
+                  <button className="button button-primary" onClick={() => setShowPlayCreate(true)}>＋ CLIP</button>
                 ) : (
                   <span>{selectedPlayerPlays.length} clip</span>
                 )}
@@ -6471,7 +7024,7 @@ function AppShell({ session }: { session: Session | null }) {
               ) : (
                 <p className="demo-profile-note">
                   {isOwnCard
-                    ? "Nessuno spezzone salvato: usa ＋ Play per segnare il minuto di un colpo riuscito."
+                    ? "Nessuno spezzone salvato: usa ＋ CLIP per segnare il minuto di un colpo riuscito."
                     : "Nessuno spezzone salvato."}
                 </p>
               )}
@@ -6493,7 +7046,7 @@ function AppShell({ session }: { session: Session | null }) {
                   <MatchCard
                     key={match.id}
                     match={match}
-                    onEdit={canManageMatch(match, currentUserId) ? (selected) => setEditingMatch(selected) : undefined}
+                    onEdit={(selected) => setEditingMatch(selected)}
                     onPlayVideo={(id) => setPlayingVideo(id)}
                     onVoteMvp={mvpSchemaReady ? setVotingMvpMatch : undefined}
                     viewerId={session?.user.id}
@@ -6807,7 +7360,7 @@ function AppShell({ session }: { session: Session | null }) {
                     <MatchCard
                       key={match.id}
                       match={match}
-                      onEdit={canManageMatch(match, currentUserId) ? (selected) => { setSheet(null); setEditingMatch(selected); } : undefined}
+                      onEdit={(selected) => { setSheet(null); setEditingMatch(selected); }}
                       onPlayVideo={(id) => setPlayingVideo(id)}
                       onVoteMvp={mvpSchemaReady ? setVotingMvpMatch : undefined}
                       viewerId={session?.user.id}
@@ -6973,6 +7526,7 @@ function AppShell({ session }: { session: Session | null }) {
         <NewMatchModal
           profiles={profiles}
           match={editingMatch}
+          viewerId={session?.user.id}
           plannedMatch={completingPlannedMatch}
           plannedMatchesReady={plannedMatchesReady}
           tournamentContext={tournamentMatch ?? editingTournamentContext}

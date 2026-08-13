@@ -2456,6 +2456,32 @@ button.ranking-row-link:focus-visible {
   margin: 4px 0 0;
 }
 
+/* Il risultato chiuso: passate le 24 ore il foglio non e piu un modulo. Non e
+   un errore e non e un avviso — e lo stato normale di quasi tutte le partite in
+   archivio — quindi non prende il rosso, prende il grigio. */
+.match-locked {
+  background: var(--veil-1);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  display: grid;
+  font-size: 13px;
+  gap: 4px;
+  margin: 0;
+  padding: 14px 16px;
+}
+
+.match-locked b {
+  color: var(--ink);
+}
+
+/* Quanto resta prima che si chiuda. Sotto al modulo e non sopra: e
+   un'informazione che serve dopo aver deciso di correggere, non prima. */
+.match-window {
+  color: var(--muted);
+  font-size: 12px;
+  margin: -4px 0 0;
+}
+
 .match-history-comment {
   color: var(--muted);
   font-size: 12px;
@@ -7530,8 +7556,46 @@ button.pizza-ranking-row {
      overflow-y: auto, e quando un figlio sporge di lato l'altro asse diventa
      scorrevole da solo. Chi ci riprova sappia che il problema non e trovare
      dove metterla, e questo. */
+  /* Il nastro con dentro i due tasti. `position: relative` perche il vicino si
+     appende a lui: non entra nel flusso, se no allargherebbe il nastro e lo
+     stacco fra i due tasti diventerebbe un salto della pagina. */
   .cta-carousel-track {
+    position: relative;
     will-change: transform;
+  }
+
+  /* La corsa che il nastro finisce da solo quando il dito lo lascia a meta.
+     Corta e quasi senza rimbalzo: e uno scorrimento, non un lancio. La
+     transizione si accende solo qui — mentre il dito e sul tasto il nastro deve
+     stargli attaccato, non inseguirlo. La durata e ripetuta in RAIL_SETTLE_MS
+     (page.tsx), che la usa per sapere quando togliere di mezzo il vicino. */
+  .cta-carousel-track.is-settling {
+    transition: transform 210ms cubic-bezier(0.22, 0.85, 0.3, 1);
+  }
+
+  /* Il tasto che sta arrivando, appoggiato di fianco a quello in scena e
+     staccato del passo della colonna. Non e una copia spenta: e lo stesso
+     tasto, disegnato uguale, perche a meta scorrimento si vedono tutti e due e
+     uno sbiadito si leggerebbe come un errore.
+     Perche non sta li sempre: .content ha overflow-y: auto, e quando un figlio
+     sporge di lato l'altro asse diventa scorrevole da solo — la pagina si
+     porterebbe dietro una barra orizzontale. Ritagliarlo dal carosello non e la
+     via d'uscita: l'alone del tasto esce dai suoi bordi di una trentina di
+     pixel e il ritaglio lo spegnerebbe. Quindi esiste solo mentre il dito lo
+     sta portando dentro (vedi useButtonRail). */
+  .cta-rail-ghost {
+    left: calc(100% + 10px);
+    /* Il vicino e un riflesso di quello vero: i tocchi restano tutti al tasto
+       in scena, anche quando il nastro e a meta strada. */
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    width: 100%;
+  }
+
+  .cta-rail-ghost-left {
+    left: auto;
+    right: calc(100% + 10px);
   }
 
   .match-panel-head {
@@ -8689,7 +8753,29 @@ button.pizza-ranking-row {
   }
 }
 
+/* Un giro intero del nastro degli emblemi: la fila scorre di tutta la sua
+   larghezza piu lo stacco, e li si ritrova la copia nella stessa posizione da
+   cui era partita la prima. Lo spostamento e la durata arrivano dal componente,
+   che li misura sul posto. */
+@keyframes badge-marquee {
+  to {
+    transform: translate3d(calc(var(--marquee-shift) * -1), 0, 0);
+  }
+}
+
 @media (max-width: 780px) {
+  /* Nel profilo non si scorre di lato, come in tutte le altre sezioni. Non
+     basta togliere il margine negativo della striscia degli emblemi: sporgono
+     di qualche pixel anche il grafico dell'Elo (margine negativo a destra) e il
+     suo SVG, che disegna volutamente fuori dai propri bordi. Uno solo di quei
+     pixel basta a rendere scorrevole `.content`, che e il contenitore che
+     scorre su mobile. Qui si chiude una volta per tutte.
+     `clip` e non `hidden`: hidden farebbe di questa sezione un contenitore di
+     scorrimento, e quello che deve scorrere e la pagina, non il profilo. */
+  .player-detail-page {
+    overflow-x: clip;
+  }
+
   .player-trophies .player-history-head {
     margin-top: 24px;
   }
@@ -8703,19 +8789,50 @@ button.pizza-ranking-row {
     max-width: 125px;
   }
 
+  /* La finestra del nastro degli emblemi. Comincia e finisce dove comincia e
+     finisce la colonna: prima sporgeva di venti pixel per lato con un margine
+     negativo, e quei venti pixel bastavano a far scorrere di lato l'intera
+     pagina del profilo — `.content` scorre in verticale, e quando un figlio
+     sporge l'altro asse diventa scorrevole da solo. Non erano gli emblemi a
+     muoversi dx/sx, era il profilo intero. */
+  .badge-marquee {
+    /* Ai due bordi gli emblemi sfumano invece di essere tranciati: tagliati di
+       netto sembrava che la striscia finisse li. */
+    mask-image: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent);
+    overflow: hidden;
+    /* Sopra e sotto lo spazio per il sollevamento dell'emblema sfiorato, che
+       altrimenti verrebbe tagliato dal ritaglio della finestra. */
+    padding: 4px 0 12px;
+  }
+
+  /* Il nastro: la fila degli emblemi piu la sua copia, in fila indiana. */
+  .badge-marquee-lane {
+    display: flex;
+    gap: 8px;
+    width: max-content;
+  }
+
+  /* Cammina solo se c'e qualcosa da portare in vista: la classe la mette il
+     componente dopo aver misurato (vedi BadgeList in page.tsx). */
+  .badge-marquee-lane.is-running {
+    animation: badge-marquee var(--marquee-duration) linear infinite;
+  }
+
+  /* Fermo mentre lo si guarda da vicino: il cartellino di un emblema che
+     scivola via mentre lo leggi non si legge. */
+  .badge-marquee-lane.is-running:hover,
+  .badge-marquee-lane.is-running:focus-within {
+    animation-play-state: paused;
+  }
+
   .player-trophies .badge-grid {
     flex-wrap: nowrap;
-    margin-inline: -20px;
-    overflow-x: auto;
-    padding: 4px 20px 12px;
-    scroll-snap-type: x proximity;
-    scrollbar-width: none;
+    gap: 8px;
   }
 
   .player-trophies .badge {
     flex-basis: 132px;
     min-height: 166px;
-    scroll-snap-align: start;
   }
 
   .badge-emblem {
@@ -8910,6 +9027,15 @@ button.pizza-ranking-row {
   .emblem-fill stop,
   .emblem-ring stop {
     animation: none;
+  }
+
+  /* Il nastro degli emblemi qui non cammina (lo decide gia BadgeList), quindi
+     quelli oltre il bordo si raggiungono col dito come prima. Senza questa
+     regola resterebbero dietro al ritaglio della finestra, irraggiungibili. */
+  .badge-marquee {
+    mask-image: none;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 
   .cta-new-match::after,

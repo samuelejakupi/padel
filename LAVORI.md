@@ -9,7 +9,7 @@ perdono passando da una sessione all'altra.
 "in sospeso" a "deciso". Quando scarti una strada, scrivi perché: serve a non
 ripercorrerla fra un mese.
 
-Ultimo aggiornamento: 11 agosto 2026
+Ultimo aggiornamento: 13 agosto 2026
 
 ---
 
@@ -932,10 +932,64 @@ Finché la sessione è aperta, i voti altrui si vedono solo se hai votato. Non �
 una regola dell'interfaccia: è una policy, altrimenti basterebbe guardare le
 chiamate di rete.
 
-### Le partite non si eliminano
-Si correggono, con un motivo facoltativo, e ogni correzione finisce in uno
-storico consultabile. Uno storico che si può riscrivere non è uno storico:
-`match_events` non ammette modifiche né cancellazioni.
+### Chi corregge una partita, chi la elimina
+Due regole diverse perché sono due cose diverse. **Correggere** lo può fare
+chiunque abbia giocato quella partita, entro 24 ore dalla registrazione: uno
+sbaglio di trascrizione lo vede chi era in campo, e chi era in campo deve poterlo
+sistemare senza rincorrere chi ha battuto il risultato. Passate le 24 ore il
+risultato è storia e non lo tocca più nessuno. **Eliminare** invece resta di chi
+ha registrato, per sempre: correggere quello che c'è scritto è una cosa, far
+sparire una partita è un'altra.
+
+Le due regole stanno sul database (`migration-permessi-partite.sql`), non solo
+nell'interfaccia: `delete_match` accetta solo l'autore, `delete_match_for_edit` i
+partecipanti entro le 24 ore. Sono due porte sullo stesso corpo perché correggere
+significa eliminare e riregistrare — è l'unico modo per far ricalcolare l'Elo in
+ordine cronologico.
+
+Chi ha registrato e quando **non si leggono da `matches`**: quella riga viene
+rifatta a ogni correzione, quindi `created_by` e `created_at` parlano dell'ultima
+modifica e la finestra non si chiuderebbe mai. Si leggono dalla riga `created` di
+`match_events`, che è appesa alla discendenza e attraversa tutte le correzioni.
+
+`migration-partite-modificabili-24h.sql` è la versione precedente della stessa
+idea (solo l'autore, tutto entro 24 ore) e resta nel repo marcata come superata:
+rilanciarla rimetterebbe le vecchie regole.
+
+### Il motivo della correzione lo scrive il registro
+Era una casella facoltativa da riempire a mano: restava quasi sempre vuota, e
+quando non lo era ripeteva quello che si leggeva già dal punteggio. Adesso il
+confronto fra il prima e il dopo lo fa `matchChangeSummary` — "punteggio 6-4 6-3
+→ 6-4 7-5 · campo aggiunto" — e nessuno deve scrivere niente.
+
+Lo storico resta comunque non riscrivibile: `match_events` non ammette modifiche
+né cancellazioni.
+
+### Il foglio della partita si apre a tutti
+Anche a chi non può più correggere: lì dentro c'è lo storico, ed è l'unico posto
+dove si legge come si è arrivati a quel risultato. Chi non può correggere trova
+una scheda invece di un modulo.
+
+### I due tasti in cima alla home sono un nastro, non una dissolvenza
+`+ PLAY` e `+ TOURNAMENT` stanno uno accanto all'altro, staccati del passo della
+colonna (10px, lo stesso fra un tasto e una card), e si scorre fra loro col dito.
+Prima uno sfumava nell'altro e sembrava che il tasto si trasformasse; così si
+vede che sono due. Il tasto che non è in scena esiste solo mentre il nastro si
+muove: fermo sporgerebbe dallo schermo e `.content`, che scorre in verticale,
+diventerebbe scorrevole anche di lato.
+
+Lo spostamento del nastro è uno stato React e non una scrittura sullo stile,
+così il cambio di faccia e lo spostamento finiscono nello stesso disegno: fatti
+in due passaggi, per un fotogramma si vedrebbe il tasto nuovo già in scena e il
+nastro ancora spostato, cioè il tasto fuori dallo schermo.
+
+### Gli emblemi del profilo camminano da soli
+Sul telefono non ci stanno in riga. Prima si trascinavano col dito, e chi non ci
+provava vedeva sempre e solo i primi tre. Adesso la fila cammina da sola, senza
+fine: è scritta due volte, e quando l'animazione torna a zero la copia sta dove
+stava la prima. Se ci stanno tutti il nastro resta fermo. Con questo è sparito
+anche lo scorrimento laterale della pagina del profilo: la striscia sporgeva di
+venti pixel per lato con un margine negativo, e bastavano quelli.
 
 ### Niente scorrimento laterale fra le sezioni
 Cambiava sezione per sbaglio mentre si leggeva. Resta solo il ritorno indietro
