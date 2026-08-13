@@ -292,6 +292,15 @@ button {
   background: var(--veil-3);
 }
 
+.button-danger {
+  background: color-mix(in srgb, var(--danger) 12%, var(--white));
+  color: var(--danger);
+}
+
+.button-danger:hover {
+  background: color-mix(in srgb, var(--danger) 20%, var(--white));
+}
+
 /* Come una card: serve dove il tasto sta sul fondo pagina, che ha lo
    stesso colore del grigio secondario e lo farebbe sparire. */
 .button-card {

@@ -1357,7 +1357,10 @@ function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch
       criterion,
       value: `${value} ${unit}`,
       progress: target ? clampProgress((value / target) * 100) : 0,
-      progressLabel: unlocked ? `Primato: ${value} ${unit}` : target ? `Ne mancano ${remaining}` : "In attesa del primo risultato",
+      // Quando il primato è già suo, il valore sopra basta: ripeterlo come
+      // "Primato" non aggiunge alcuna informazione. La seconda riga serve
+      // soltanto a chi deve ancora raggiungere il record.
+      progressLabel: unlocked ? "" : target ? `Ne mancano ${remaining}` : "In attesa del primo risultato",
       unlocked,
     };
   };
@@ -1478,7 +1481,7 @@ function BadgeList({ badges }: { badges: Badge[] }) {
           className={`badge badge-${badge.tone} ${badge.unlocked ? "is-unlocked" : "is-locked"}`}
           key={badge.id}
           tabIndex={0}
-          aria-label={`${badge.label}. ${badge.meaning} ${badge.progressLabel}`}
+          aria-label={`${badge.label}. ${badge.meaning}${badge.progressLabel ? ` ${badge.progressLabel}` : ""}`}
         >
           <div className="badge-emblem" aria-hidden="true">
             {emblem ? (
@@ -1491,7 +1494,7 @@ function BadgeList({ badges }: { badges: Badge[] }) {
             <strong>{badge.label}</strong>
             <p>{badge.meaning}</p>
             <span>{badge.criterion}</span>
-            <small>{badge.value} · {badge.progressLabel}</small>
+            <small>{badge.value}{badge.progressLabel ? ` · ${badge.progressLabel}` : ""}</small>
           </aside>
         </article>
         );
@@ -2149,6 +2152,16 @@ function MatchCard({
       ) : null}
     </article>
   );
+}
+
+const MATCH_MANAGEMENT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+function canManageMatch(match: PadelMatch, userId: string | null | undefined) {
+  if (!userId || match.created_by !== userId || !match.created_at) return false;
+  const createdAt = new Date(match.created_at).getTime();
+  return Number.isFinite(createdAt)
+    && Date.now() >= createdAt
+    && Date.now() < createdAt + MATCH_MANAGEMENT_WINDOW_MS;
 }
 
 function PlannedMatchCard({
@@ -3084,6 +3097,7 @@ function NewMatchModal({
   tournamentContext,
   onClose,
   onSaved,
+  onDeleted,
 }: {
   profiles: Profile[];
   match?: PadelMatch | null;
@@ -3092,6 +3106,7 @@ function NewMatchModal({
   tournamentContext?: TournamentMatchContext | null;
   onClose: () => void;
   onSaved: (kind: "result" | "planned") => void;
+  onDeleted: () => void;
 }) {
   const editing = Boolean(match);
   const completingPlanned = Boolean(plannedMatch);
@@ -3343,6 +3358,19 @@ function NewMatchModal({
     setBusy(false);
   }
 
+  async function removeMatch() {
+    if (!match || !supabase || !window.confirm("Eliminare definitivamente questa partita? La classifica verrà ricalcolata.")) return;
+    setError("");
+    setBusy(true);
+    const { error: deleteError } = await supabase.rpc("delete_match", { p_match_id: match.id });
+    if (deleteError) {
+      setError(deleteError.message);
+      setBusy(false);
+      return;
+    }
+    onDeleted();
+  }
+
   return (
     // Lo stesso foglio dal basso di partite e classifica, non piu un riquadro
     // al centro dello schermo: registrare un risultato e una delle cose che
@@ -3525,6 +3553,11 @@ function NewMatchModal({
           ) : null}
 
           <div className="modal-actions">
+            {editing ? (
+              <button type="button" className="button button-danger" onClick={() => void removeMatch()} disabled={busy}>
+                Elimina
+              </button>
+            ) : null}
             <button type="button" className="button button-ghost" onClick={onClose}>Annulla</button>
             <button className="button button-primary" disabled={busy || (randomTeams && players.length !== 4)}>
               {busy ? "Salvataggio…" : randomTeams ? "Crea partita" : "Salva risultato"}
@@ -5406,6 +5439,13 @@ function AppShell({ session }: { session: Session | null }) {
     );
   }
 
+  async function handleDeleted() {
+    setEditingMatch(null);
+    setTournamentMatch(null);
+    await loadData();
+    setNotice("Partita eliminata. Classifica e statistiche sono state ricalcolate.");
+  }
+
   async function uploadAvatar(file: File | undefined) {
     if (!file || !supabase || !session) return;
     const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
@@ -6023,7 +6063,7 @@ function AppShell({ session }: { session: Session | null }) {
                           <MatchCard
                             key={match.id}
                             match={match}
-                            onEdit={(selected) => setEditingMatch(selected)}
+                            onEdit={canManageMatch(match, currentUserId) ? (selected) => setEditingMatch(selected) : undefined}
                             onPlayVideo={(id) => setPlayingVideo(id)}
                             onVoteMvp={mvpSchemaReady ? setVotingMvpMatch : undefined}
                             viewerId={session?.user.id}
@@ -6365,7 +6405,7 @@ function AppShell({ session }: { session: Session | null }) {
                   <MatchCard
                     key={match.id}
                     match={match}
-                    onEdit={(selected) => setEditingMatch(selected)}
+                    onEdit={canManageMatch(match, currentUserId) ? (selected) => setEditingMatch(selected) : undefined}
                     onPlayVideo={(id) => setPlayingVideo(id)}
                     onVoteMvp={mvpSchemaReady ? setVotingMvpMatch : undefined}
                     viewerId={session?.user.id}
@@ -6453,7 +6493,7 @@ function AppShell({ session }: { session: Session | null }) {
                   <MatchCard
                     key={match.id}
                     match={match}
-                    onEdit={(selected) => setEditingMatch(selected)}
+                    onEdit={canManageMatch(match, currentUserId) ? (selected) => setEditingMatch(selected) : undefined}
                     onPlayVideo={(id) => setPlayingVideo(id)}
                     onVoteMvp={mvpSchemaReady ? setVotingMvpMatch : undefined}
                     viewerId={session?.user.id}
@@ -6767,7 +6807,7 @@ function AppShell({ session }: { session: Session | null }) {
                     <MatchCard
                       key={match.id}
                       match={match}
-                      onEdit={(selected) => { setSheet(null); setEditingMatch(selected); }}
+                      onEdit={canManageMatch(match, currentUserId) ? (selected) => { setSheet(null); setEditingMatch(selected); } : undefined}
                       onPlayVideo={(id) => setPlayingVideo(id)}
                       onVoteMvp={mvpSchemaReady ? setVotingMvpMatch : undefined}
                       viewerId={session?.user.id}
@@ -6938,6 +6978,7 @@ function AppShell({ session }: { session: Session | null }) {
           tournamentContext={tournamentMatch ?? editingTournamentContext}
           onClose={() => { setShowMatch(false); setEditingMatch(null); setTournamentMatch(null); setCompletingPlannedMatch(null); }}
           onSaved={(kind) => void handleSaved(kind)}
+          onDeleted={() => void handleDeleted()}
         />
       ) : null}
       {showTournamentCreate ? (

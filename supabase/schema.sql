@@ -319,6 +319,8 @@ as $$
 declare
   current_user_id uuid := auth.uid();
   replay_match record;
+  match_creator_id uuid;
+  match_created_at timestamptz;
   replay_team1 uuid[];
   replay_team2 uuid[];
   all_players uuid[];
@@ -338,8 +340,21 @@ begin
   perform pg_advisory_xact_lock(hashtext('theboyz_padel_results'));
   perform 1 from public.profiles order by id for update;
 
-  if not exists (select 1 from public.matches where id = p_match_id) then
+  select created_by, created_at
+  into match_creator_id, match_created_at
+  from public.matches
+  where id = p_match_id;
+
+  if not found then
     raise exception 'Partita non trovata';
+  end if;
+
+  if match_creator_id is distinct from current_user_id then
+    raise exception 'Solo chi ha creato la partita può modificarla o eliminarla';
+  end if;
+
+  if match_created_at + interval '24 hours' <= now() then
+    raise exception 'La partita è bloccata: sono trascorse più di 24 ore dalla creazione';
   end if;
 
   delete from public.matches where id = p_match_id;
@@ -417,6 +432,7 @@ end;
 $$;
 
 revoke all on function public.delete_match(uuid) from public;
+revoke all on function public.delete_match(uuid) from anon;
 grant execute on function public.delete_match(uuid) to authenticated;
 
 -- ELO V2: vale soltanto per le nuove partite registrate nel sito.
@@ -638,6 +654,8 @@ as $$
 declare
   current_user_id uuid := auth.uid();
   replay_match record;
+  match_creator_id uuid;
+  match_created_at timestamptz;
 begin
   if current_user_id is null then
     raise exception 'Devi accedere per eliminare una partita';
@@ -650,8 +668,21 @@ begin
   perform pg_advisory_xact_lock(hashtext('theboyz_padel_results'));
   perform 1 from public.profiles order by id for update;
 
-  if not exists (select 1 from public.matches where id = p_match_id) then
+  select created_by, created_at
+  into match_creator_id, match_created_at
+  from public.matches
+  where id = p_match_id;
+
+  if not found then
     raise exception 'Partita non trovata';
+  end if;
+
+  if match_creator_id is distinct from current_user_id then
+    raise exception 'Solo chi ha creato la partita può modificarla o eliminarla';
+  end if;
+
+  if match_created_at + interval '24 hours' <= now() then
+    raise exception 'La partita è bloccata: sono trascorse più di 24 ore dalla creazione';
   end if;
 
   update public.profiles as profile
@@ -693,6 +724,7 @@ end;
 $$;
 
 revoke all on function public.delete_match(uuid) from public;
+revoke all on function public.delete_match(uuid) from anon;
 grant execute on function public.delete_match(uuid) to authenticated;
 
 create or replace function public.is_pizza_editor()
