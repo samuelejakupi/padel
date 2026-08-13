@@ -1067,6 +1067,16 @@ function chronologicalMatches(matches: PadelMatch[]) {
   );
 }
 
+// Una partita secca vale meta nei progressi legati alle partite. I set
+// restano interi: SET D'ACCIAIO misura i set, non la durata del match.
+function emblemMatchWeight(match: PadelMatch) {
+  return match.sets.length === 1 ? 0.5 : 1;
+}
+
+function formatEmblemCount(value: number) {
+  return new Intl.NumberFormat("it-IT", { maximumFractionDigits: 1 }).format(value);
+}
+
 function buildBadgeMetrics(profiles: Profile[], matches: PadelMatch[]) {
   const metrics = new Map(profiles.map((profile) => [profile.id, emptyBadgeMetrics()]));
   const currentWinRuns = new Map<string, number>();
@@ -1083,6 +1093,7 @@ function buildBadgeMetrics(profiles: Profile[], matches: PadelMatch[]) {
   }));
 
   ordered.forEach((match) => {
+    const matchWeight = emblemMatchWeight(match);
     const activeBefore = profiles.filter((profile) => (played.get(profile.id) ?? 0) > 0);
     const leaderRatingBefore = activeBefore.length
       ? Math.max(...activeBefore.map((profile) => ratings.get(profile.id) ?? 1000))
@@ -1099,7 +1110,7 @@ function buildBadgeMetrics(profiles: Profile[], matches: PadelMatch[]) {
 
     (match.mvps ?? []).forEach((mvp) => {
       const item = metrics.get(mvp.profile_id);
-      if (item) item.mvpWins += 1;
+      if (item) item.mvpWins += matchWeight;
     });
 
     match.players.forEach((player) => {
@@ -1110,16 +1121,16 @@ function buildBadgeMetrics(profiles: Profile[], matches: PadelMatch[]) {
       // non le allunga e non le azzera, esattamente come nel database.
       const winRun = drawn
         ? currentWinRuns.get(player.profile_id) ?? 0
-        : won ? (currentWinRuns.get(player.profile_id) ?? 0) + 1 : 0;
+        : won ? (currentWinRuns.get(player.profile_id) ?? 0) + matchWeight : 0;
       const loseRun = drawn
         ? currentLoseRuns.get(player.profile_id) ?? 0
-        : won ? 0 : (currentLoseRuns.get(player.profile_id) ?? 0) + 1;
+        : won ? 0 : (currentLoseRuns.get(player.profile_id) ?? 0) + matchWeight;
       currentWinRuns.set(player.profile_id, winRun);
       currentLoseRuns.set(player.profile_id, loseRun);
       item.bestWinStreak = Math.max(item.bestWinStreak, winRun);
       item.bestLoseStreak = Math.max(item.bestLoseStreak, loseRun);
-      item.matchesPlayed += 1;
-      if (won && losingGoat) item.winsAgainstGoat += 1;
+      item.matchesPlayed += matchWeight;
+      if (won && losingGoat) item.winsAgainstGoat += matchWeight;
 
       // Il set interrotto sta fuori da tutti i conteggi sui set: non e stato
       // vinto da nessuno dei due, e contarlo come perso falserebbe la serie.
@@ -1154,7 +1165,7 @@ function buildBadgeMetrics(profiles: Profile[], matches: PadelMatch[]) {
       activeAfter.forEach((profile) => {
         if ((ratings.get(profile.id) ?? 1000) === top) {
           const item = metrics.get(profile.id);
-          if (item) item.firstPlaceMatches += 1;
+          if (item) item.firstPlaceMatches += matchWeight;
         }
       });
     }
@@ -1163,14 +1174,15 @@ function buildBadgeMetrics(profiles: Profile[], matches: PadelMatch[]) {
   type PairRun = { ids: string[]; matches: number; wins: number; losses: number };
   const pairs = new Map<string, PairRun>();
   ordered.forEach((match) => ([1, 2] as const).forEach((side) => {
+    const matchWeight = emblemMatchWeight(match);
     const ids = match.players.filter((player) => player.team === side).map((player) => player.profile_id).sort();
     if (ids.length !== 2) return;
     const key = ids.join("|");
     const pair = pairs.get(key) ?? { ids, matches: 0, wins: 0, losses: 0 };
-    pair.matches += 1;
+    pair.matches += matchWeight;
     if (!matchIsDraw(match)) {
-      pair.wins += match.winner_team === side ? 1 : 0;
-      pair.losses += match.winner_team === side ? 0 : 1;
+      pair.wins += match.winner_team === side ? matchWeight : 0;
+      pair.losses += match.winner_team === side ? 0 : matchWeight;
     }
     pairs.set(key, pair);
   }));
@@ -1355,12 +1367,12 @@ function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch
       label,
       meaning,
       criterion,
-      value: `${value} ${unit}`,
+      value: `${formatEmblemCount(value)} ${unit}`,
       progress: target ? clampProgress((value / target) * 100) : 0,
       // Quando il primato è già suo, il valore sopra basta: ripeterlo come
       // "Primato" non aggiunge alcuna informazione. La seconda riga serve
       // soltanto a chi deve ancora raggiungere il record.
-      progressLabel: unlocked ? "" : target ? `Ne mancano ${remaining}` : "In attesa del primo risultato",
+      progressLabel: unlocked ? "" : target ? `Ne mancano ${formatEmblemCount(remaining)}` : "In attesa del primo risultato",
       unlocked,
     };
   };
@@ -1401,9 +1413,9 @@ function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch
       id: "duo", tone: "violet", glyph: "duo", label: "COPPIA D'ORO",
       meaning: "I componenti della coppia con il rendimento migliore.",
       criterion: "Miglior percentuale di vittorie tra le coppie con almeno 5 partite insieme.",
-      value: own.bestPairMatches ? `${Math.round(own.bestPairRate * 100)}% · ${own.bestPairMatches} match` : "Nessuna coppia",
+      value: own.bestPairMatches ? `${Math.round(own.bestPairRate * 100)}% · ${formatEmblemCount(own.bestPairMatches)} match` : "Nessuna coppia",
       progress: own.ownsTopPair ? 100 : clampProgress(pairProgress),
-      progressLabel: own.ownsTopPair ? "Miglior coppia" : pairReady ? `${Math.round(topPairRate * 100)}% da raggiungere` : `${own.bestPairMatches}/5 partite di coppia`,
+      progressLabel: own.ownsTopPair ? "Miglior coppia" : pairReady ? `${Math.round(topPairRate * 100)}% da raggiungere` : `${formatEmblemCount(own.bestPairMatches)}/5 partite di coppia`,
       unlocked: own.ownsTopPair,
     },
     recordBadge("goat-slayer", "red", "goat-slayer", "AMMAZZA-GOAT", "Chi ha battuto più volte il numero uno.", "Conta solo quando l'avversario era GOAT prima dell'inizio della partita.", own.winsAgainstGoat, maxOf((item) => item.winsAgainstGoat), "GOAT battuti"),
@@ -1421,10 +1433,10 @@ function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch
       id: "centurion", tone: "steel", glyph: "centurion", label: "CENTURIONE",
       meaning: "Il riconoscimento personale per chi ha raggiunto 20 presenze.",
       criterion: "Si conquista disputando almeno 20 partite e non dipende dai risultati degli altri.",
-      value: `${profile.matches_played} partite`,
-      progress: clampProgress((profile.matches_played / 20) * 100),
-      progressLabel: profile.matches_played >= 20 ? "Traguardo conquistato" : `${profile.matches_played}/20 partite`,
-      unlocked: profile.matches_played >= 20,
+      value: `${formatEmblemCount(own.matchesPlayed)} partite`,
+      progress: clampProgress((own.matchesPlayed / 20) * 100),
+      progressLabel: own.matchesPlayed >= 20 ? "Traguardo conquistato" : `${formatEmblemCount(own.matchesPlayed)}/20 partite`,
+      unlocked: own.matchesPlayed >= 20,
     },
   ];
 }
@@ -3496,9 +3508,9 @@ function matchSummary(profiles: Profile[], playerIds: string[], sets: PadelSet[]
   return `${team1} vs ${team2} · ${score}`;
 }
 
-// Legge il tabellone scritto nel modulo. Il terzo set vale come set vinto
-// solo se e finito: se il campo e scaduto sul 2-1 quel set non lo ha vinto
-// nessuno, e con un set a testa la partita e un pareggio.
+// Legge il tabellone scritto nel modulo. Si puo registrare anche una partita
+// secca da un set: il database le assegna meta dell'Elo di una partita
+// standard. Il terzo set vale come set vinto solo se e finito.
 function readMatchScore(scores: string[][]) {
   const filled = scores
     .map(([team1, team2], index) => ({ index, team1, team2 }))
@@ -3519,11 +3531,13 @@ function readMatchScore(scores: string[][]) {
   const decided = decidedSets(sets);
   const team1Sets = decided.filter((set) => set.team1_games > set.team2_games).length;
   const team2Sets = decided.filter((set) => set.team2_games > set.team1_games).length;
-  const valid = sets.length >= 2
+  const singleSetMatch = sets.length === 1 && team1Sets + team2Sets === 1;
+  const standardMatch = Math.max(team1Sets, team2Sets) === 2 || (team1Sets === 1 && team2Sets === 1);
+  const valid = sets.length >= 1
     && sets.every((set) => Number.isInteger(set.team1_games) && Number.isInteger(set.team2_games)
       && set.team1_games >= 0 && set.team2_games >= 0
       && set.team1_games <= 20 && set.team2_games <= 20)
-    && (Math.max(team1Sets, team2Sets) === 2 || (team1Sets === 1 && team2Sets === 1));
+    && (singleSetMatch || standardMatch);
   return {
     sets,
     team1Sets,
@@ -3762,7 +3776,7 @@ function NewMatchModal({
 
     const { sets, valid, draw } = readMatchScore(scores);
     if (!valid) {
-      setError("Inserisci almeno due set: due vinti da una squadra, oppure uno a testa se avete smesso a metà.");
+      setError("Inserisci un set completo, due set vinti da una squadra, oppure un set a testa se avete smesso a metà.");
       return;
     }
     // Il girone all'italiana assegna i punti sulle vittorie: finche non

@@ -19,11 +19,12 @@ test("genera un sito statico pronto per GitHub Pages", async () => {
 });
 
 test("include configurazione Supabase e funzioni della webapp", async () => {
-  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, page] = await Promise.all([
+  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, singleSetMigration, page] = await Promise.all([
     readFile(new URL("supabase/schema.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pizza-sessioni.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pareggi.sql", root), "utf8"),
     readFile(new URL("supabase/migration-partite-casuali.sql", root), "utf8"),
+    readFile(new URL("supabase/migration-partite-un-set.sql", root), "utf8"),
     readFile(new URL("app/page.tsx", root), "utf8"),
   ]);
   assert.match(schema, /record_match/);
@@ -102,6 +103,19 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(page, /function setIsComplete/);
   assert.match(page, /function readMatchScore/);
   assert.match(page, /PAREGGIO/);
+  // Una partita secca e valida ma pesa la meta. Il dimezzamento vive nel
+  // database e viene eseguito anche durante il ricalcolo cronologico.
+  assert.match(page, /sets\.length === 1/);
+  assert.match(singleSetMigration, /jsonb_array_length\(p_sets\) not between 1 and 3/);
+  assert.match(singleSetMigration, /round\(match_player\.rating_delta \/ 2\.0\)/);
+  assert.match(singleSetMigration, /before update of rating_delta/);
+  assert.match(singleSetMigration, /recalculate_padel_ratings/);
+  assert.match(page, /function emblemMatchWeight/);
+  assert.match(page, /match\.sets\.length === 1 \? 0\.5 : 1/);
+  assert.match(page, /item\.matchesPlayed \+= matchWeight/);
+  assert.match(page, /item\.winsAgainstGoat \+= matchWeight/);
+  assert.match(page, /item\.firstPlaceMatches \+= matchWeight/);
+  assert.match(page, /pair\.matches \+= matchWeight/);
 
   // Le partite organizzate non entrano nello storico e nell'Elo finche non
   // viene inserito il risultato. L'estrazione e il completamento restano RPC
