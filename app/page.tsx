@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { CSSProperties, FormEvent, ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { CSSProperties, Fragment, FormEvent, ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import {
   hasSupabaseConfig,
@@ -3534,6 +3534,37 @@ function readMatchScore(scores: string[][]) {
   };
 }
 
+// Giorno e mese soltanto, come sulle card delle partite: l'anno di una partita
+// giocata la settimana scorsa non lo cerca nessuno.
+function matchDayLabel(iso: string) {
+  const day = new Intl.DateTimeFormat("it-IT", { day: "2-digit" }).format(new Date(`${iso}T12:00:00`));
+  const month = new Intl.DateTimeFormat("it-IT", { month: "short" }).format(new Date(`${iso}T12:00:00`)).replace(".", "");
+  return `${day} ${month.toUpperCase()}`;
+}
+
+// Il calendario. Disegnato a tratto come le altre icone dell'app e non preso da
+// una libreria: due pesi diversi di linea nella stessa riga si vedono.
+function CalendarGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
+      <path d="M3.5 9.5h17M8 3.5v3M16 3.5v3" />
+    </svg>
+  );
+}
+
+// Il segno di YouTube: grigio finche un video non c'e, rosso quando c'e. E
+// l'unico posto dell'app dove il rosso non vuol dire "attenzione" ma "e quello
+// di YouTube", quindi il colore sta scritto qui e non fra i colori di casa.
+function YouTubeGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="2" y="5" width="20" height="14" rx="4.5" fill="currentColor" />
+      <path d="M10 8.8 15.6 12 10 15.2z" fill="var(--white)" />
+    </svg>
+  );
+}
+
 function NewMatchModal({
   profiles,
   match,
@@ -3576,15 +3607,13 @@ function NewMatchModal({
           ...plannedMatch.players.filter((player) => player.team === 1).map((player) => player.profile_id),
           ...plannedMatch.players.filter((player) => player.team === 2).map((player) => player.profile_id),
         ]
-      : tournamentContext?.playerIds ?? profiles.slice(0, 4).map((profile) => profile.id);
+      : tournamentContext?.playerIds ?? ["", "", "", ""];
   const initialScores = match
     ? [0, 1, 2].map((index) => {
         const set = [...match.sets].sort((a, b) => a.set_number - b.set_number)[index];
         return set ? [String(set.team1_games), String(set.team2_games)] : ["", ""];
       })
-    : plannedMatch
-      ? [["", ""], ["", ""], ["", ""]]
-      : [["6", "4"], ["6", "3"], ["", ""]];
+    : [["", ""], ["", ""], ["", ""]];
 
   const [players, setPlayers] = useState(initialPlayers);
   const [randomTeams, setRandomTeams] = useState(false);
@@ -3594,14 +3623,26 @@ function NewMatchModal({
       ? new Date((match ?? plannedMatch)!.played_at).toISOString().slice(0, 10)
       : new Date().toISOString().slice(0, 10),
   );
-  const [notes, setNotes] = useState(match?.notes ?? plannedMatch?.notes ?? "");
+  const [notes] = useState(match?.notes ?? plannedMatch?.notes ?? "");
   const [videoUrl, setVideoUrl] = useState(match?.video_url ?? "");
   const [court, setCourt] = useState(match?.court ?? plannedMatch?.court ?? "");
+  // Data e video stanno chiusi dietro a un segno e si aprono solo se li tocchi:
+  // la data giusta e quasi sempre oggi e il video quasi sempre non c'e, quindi
+  // due righe di modulo aperte a vuoto sono due righe che nessuno riempie.
+  const [showDate, setShowDate] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
+  // Le sei caselle del tabellone, per passare da sola alla successiva.
+  const scoreRefs = useRef<(HTMLInputElement | null)[]>([]);
+  // Quando una cifra sola potrebbe diventarne due (l'1 e il 2 aprono a 10-20)
+  // il salto aspetta un attimo: se la seconda cifra arriva si scrive 10, se non
+  // arriva si passa avanti lo stesso. Senza attesa un 6-2 costringerebbe a
+  // tornare indietro col dito; con un'attesa su tutte le cifre un 6-4 sembra
+  // lento.
+  const jumpTimer = useRef(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [historyReady, setHistoryReady] = useState(true);
-  const courtListId = useId();
 
   // Lo storico si appende alla discendenza, non all'id: una partita modificata
   // cambia id ogni volta (vedi migration-storico-partite.sql).
@@ -3644,12 +3685,43 @@ function NewMatchModal({
       : current.length < 4 ? [...current, id] : current);
   }
 
+  useEffect(() => () => window.clearTimeout(jumpTimer.current), []);
+
+  // Il tabellone si riempie da sinistra a destra e si passa avanti da soli.
+  // L'ultima casella non salta da nessuna parte: li il gesto dopo e salvare.
+  function jumpToNext(index: number) {
+    const next = scoreRefs.current[index + 1];
+    if (!next) return;
+    next.focus();
+    next.select();
+  }
+
   function updateScore(setIndex: number, teamIndex: number, value: string) {
     setScores((current) =>
       current.map((set, index) =>
         index === setIndex ? set.map((score, team) => (team === teamIndex ? value : score)) : set,
       ),
     );
+
+    // Ogni cifra battuta annulla il salto in attesa: se ne sta arrivando una
+    // seconda, e la coppia a valere.
+    window.clearTimeout(jumpTimer.current);
+    const box = setIndex * 2 + teamIndex;
+    if (!value) return;
+    // Due cifre sono un numero finito, e piu di due non ne accetta.
+    if (value.length >= 2) {
+      jumpToNext(box);
+      return;
+    }
+    // Una cifra sola: dal 3 in su, e lo zero, non possono diventare un numero
+    // valido piu lungo, quindi il salto e immediato.
+    if (value !== "1" && value !== "2") {
+      jumpToNext(box);
+      return;
+    }
+    // L'1 e il 2 invece aprono a 10-20: si aspetta la seconda cifra, e se non
+    // arriva si passa avanti lo stesso.
+    jumpTimer.current = window.setTimeout(() => jumpToNext(box), 550);
   }
 
   // Lo stesso conteggio che poi finisce nel salvataggio: qui serve solo a
@@ -3869,10 +3941,70 @@ function NewMatchModal({
           ) : null}
           {canEdit ? (
           <>
-          <label>
-            Data della partita
-            <input type="date" value={playedAt} onChange={(e) => setPlayedAt(e.target.value)} required disabled={completingPlanned} />
-          </label>
+          {/* Quando, dove e il video. Sono le tre cose che quasi sempre restano
+              come sono — la data e oggi, il campo e quello di sempre, il video
+              non c'e — quindi non prendono tre righe di modulo con la loro
+              etichetta ciascuna: stanno in fila come i segni in cima a una card
+              di partita, e si aprono solo se le tocchi. */}
+          <div className="match-form-meta">
+            <button
+              type="button"
+              className={`match-form-day${showDate ? " is-open" : ""}`}
+              onClick={() => setShowDate((open) => !open)}
+              disabled={completingPlanned}
+              aria-expanded={showDate}
+              aria-label={`Data della partita: ${matchDayLabel(playedAt)}. Tocca per cambiarla`}
+            >
+              <CalendarGlyph />
+              <b>{matchDayLabel(playedAt)}</b>
+            </button>
+            {/* Il campo si sceglie, non si scrive: gli stessi centri del
+                tabellone dei campi liberi. Scritto a mano usciva ogni volta un
+                po' diverso, e le statistiche per campo non stavano in piedi. */}
+            <select
+              className={`match-form-court${court ? "" : " is-empty"}`}
+              value={court}
+              onChange={(e) => setCourt(e.target.value)}
+              disabled={completingPlanned}
+              aria-label="Campo"
+            >
+              <option value="">Campo</option>
+              {PADEL_COURTS.map((name) => <option key={name} value={name}>{name}</option>)}
+            </select>
+            {!randomTeams ? (
+              <button
+                type="button"
+                className={`match-form-yt${videoUrl ? " is-set" : ""}`}
+                onClick={() => setShowVideo((open) => !open)}
+                aria-expanded={showVideo}
+                aria-label={videoUrl ? "Video collegato. Tocca per cambiarlo" : "Collega un video YouTube"}
+                title={videoUrl || "Collega un video YouTube"}
+              >
+                <YouTubeGlyph />
+              </button>
+            ) : null}
+          </div>
+          {showDate ? (
+            <input
+              className="match-form-date-field"
+              type="date"
+              value={playedAt}
+              onChange={(e) => setPlayedAt(e.target.value)}
+              required
+              disabled={completingPlanned}
+              aria-label="Data della partita"
+            />
+          ) : null}
+          {showVideo && !randomTeams ? (
+            <input
+              className="match-form-video-field"
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              placeholder="https://youtu.be/..."
+              inputMode="url"
+              aria-label="Link del video YouTube"
+            />
+          ) : null}
           {!editing && !tournamentContext && !completingPlanned ? (
             <label className="random-teams-toggle">
               <input
@@ -3881,7 +4013,7 @@ function NewMatchModal({
                 disabled={plannedMatchesReady === false}
                 onChange={(event) => {
                   setRandomTeams(event.target.checked);
-                  setPlayers(event.target.checked ? [] : profiles.slice(0, 4).map((profile) => profile.id));
+                  setPlayers(event.target.checked ? [] : ["", "", "", ""]);
                 }}
               />
               <span>
@@ -3911,15 +4043,27 @@ function NewMatchModal({
               <p>Alla conferma verranno create due squadre casuali da due giocatori.</p>
             </fieldset>
           ) : (
-            <div className="teams-form">
+            <div className="match-form-teams">
               {[1, 2].map((team) => (
                 <fieldset key={team}>
                   <legend>Squadra {team}</legend>
                   {[0, 1].map((position) => {
                     const index = (team - 1) * 2 + position;
+                    const chosen = players[index] ?? "";
                     return (
-                      <select key={index} value={players[index] ?? ""} onChange={(e) => updatePlayer(index, e.target.value)} aria-label={`Giocatore ${position + 1} squadra ${team}`} disabled={Boolean(tournamentContext || completingPlanned)}>
-                        <option value="">Scegli giocatore</option>
+                      <select
+                        key={index}
+                        // Vuoto il segnaposto e scritto come un suggerimento, non
+                        // come un nome gia scelto: e la stessa distinzione che
+                        // fanno le caselle di testo, e senza si conferma una
+                        // squadra che nessuno ha composto.
+                        className={chosen ? "" : "is-empty"}
+                        value={chosen}
+                        onChange={(e) => updatePlayer(index, e.target.value)}
+                        aria-label={`Giocatore ${position + 1} squadra ${team}`}
+                        disabled={Boolean(tournamentContext || completingPlanned)}
+                      >
+                        <option value="">Player {position + 1}</option>
                         {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.display_name}</option>)}
                       </select>
                     );
@@ -3928,17 +4072,34 @@ function NewMatchModal({
               ))}
             </div>
           )}
-          {!randomTeams ? <div className="sets-form">
-            {/* Le quattro colonne dell'intestazione sono le stesse delle
-                righe, trattino compreso: con tre sole, le due etichette non
-                stavano sopra ai campi che nominavano. */}
+          {!randomTeams ? <div className="match-form-sets">
+            {/* Le quattro colonne dell'intestazione sono le stesse delle righe,
+                trattino compreso: con tre sole, le due etichette non stavano
+                sopra ai campi che nominavano. */}
             <span>SET</span><span>SQUADRA 1</span><span aria-hidden="true" /><span>SQUADRA 2</span>
             {scores.map((score, index) => (
               <div className="set-row" key={index}>
                 <b>{index + 1}</b>
-                <input type="number" min="0" max="20" value={score[0]} onChange={(e) => updateScore(index, 0, e.target.value)} aria-label={`Punti squadra 1 set ${index + 1}`} />
-                <span>—</span>
-                <input type="number" min="0" max="20" value={score[1]} onChange={(e) => updateScore(index, 1, e.target.value)} aria-label={`Punti squadra 2 set ${index + 1}`} />
+                {[0, 1].map((teamIndex) => (
+                  <Fragment key={teamIndex}>
+                    {teamIndex === 1 ? <span aria-hidden="true">—</span> : null}
+                    <input
+                      ref={(node) => { scoreRefs.current[index * 2 + teamIndex] = node; }}
+                      type="number"
+                      min="0"
+                      max="20"
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={score[teamIndex]}
+                      onChange={(e) => updateScore(index, teamIndex, e.target.value)}
+                      // Toccando una casella si riparte da capo: correggere un
+                      // 6 in un 7 vuol dire riscriverlo, non infilare una cifra
+                      // accanto a quella che c'e gia.
+                      onFocus={(e) => e.currentTarget.select()}
+                      aria-label={`Giochi squadra ${teamIndex + 1} set ${index + 1}`}
+                    />
+                  </Fragment>
+                ))}
               </div>
             ))}
           </div> : null}
@@ -3953,40 +4114,11 @@ function NewMatchModal({
                 : " · un set a testa e partita finita lì."}
             </p>
           ) : null}
-          <label>
-            Campo <span className="optional-label">facoltativo</span>
-            {/* Suggerimenti, non una gabbia: la casella resta libera, cosi
-                una trasferta fuori provincia si scrive comunque. L'elenco
-                serve a far uscire lo stesso nome tutte le volte, altrimenti
-                le statistiche per campo non staranno mai in piedi. */}
-            <input
-              value={court}
-              onChange={(e) => setCourt(e.target.value)}
-              list={courtListId}
-              placeholder="Es. DON QUIQUE - IMPERIA"
-              maxLength={60}
-              disabled={completingPlanned}
-            />
-            <datalist id={courtListId}>
-              {PADEL_COURTS.map((name) => <option key={name} value={name} />)}
-            </datalist>
-          </label>
-          {!randomTeams ? <label>
-            Video YouTube <span className="optional-label">facoltativo</span>
-            <input
-              value={videoUrl}
-              onChange={(e) => setVideoUrl(e.target.value)}
-              placeholder="https://youtu.be/..."
-              inputMode="url"
-            />
-          </label> : null}
-          <label>
-            {/* "facoltativo" si scrive sempre allo stesso modo, in tutti i
-                campi che lo sono: era l'unico a dirlo dentro all'etichetta
-                invece che nel segno accanto. */}
-            Nota <span className="optional-label">facoltativo</span>
-            <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Es. Rimonta incredibile al terzo set" />
-          </label>
+          {/* Campo e video sono saliti in cima, nella riga dei segni. La nota e
+              sparita: era una riga di modulo che restava vuota quasi sempre, e
+              quello che di una partita vale la pena ricordare sta nel
+              punteggio. Le note gia scritte non si perdono — il valore viaggia
+              lo stesso al salvataggio. */}
           {/* Niente piu casella per il motivo della correzione: cosa e cambiato
               lo scrive il registro da solo. */}
           {editing && windowLeft ? (

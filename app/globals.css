@@ -703,8 +703,7 @@ form label {
 }
 
 form input,
-form select,
-.teams-form select {
+form select {
   background: var(--white);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
@@ -723,8 +722,7 @@ form select,
    po' marcato, perche e un dato. */
 form input,
 form select,
-form textarea,
-.teams-form select {
+form textarea {
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
@@ -739,8 +737,7 @@ form textarea::placeholder {
 }
 
 form input:focus,
-form select:focus,
-.teams-form select:focus {
+form select:focus {
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(0, 87, 255, 0.1);
 }
@@ -3412,8 +3409,9 @@ button.podium-person {
    lo stesso fra un blocco e l'altro. Prima si alternavano 18, 22 e 28 e il
    modulo sembrava montato con pezzi di provenienza diversa. */
 .sheet-form label,
-.sheet-form .teams-form,
-.sheet-form .sets-form,
+.sheet-form .match-form-meta,
+.sheet-form .match-form-teams,
+.sheet-form .match-form-sets,
 .sheet-form .tournament-team-builder,
 .sheet-form .tournament-prize-form,
 .sheet-form .tournament-elo-choice {
@@ -3428,8 +3426,8 @@ button.podium-person {
 
 /* Stesso respiro interno delle card: i riquadri del modulo sono superfici
    come le altre, non caselle. */
-.sheet-form .teams-form fieldset,
-.sheet-form .sets-form {
+.sheet-form .match-form-teams fieldset,
+.sheet-form .match-form-sets {
   padding: var(--space-5);
 }
 
@@ -3437,6 +3435,227 @@ button.podium-person {
    pixel degli altri e in fila si vedeva. */
 .sheet-form .set-row input {
   min-height: 48px;
+}
+
+/* ---- Il foglio della partita ------------------------------------------------
+   Non un modulo con le sue etichette in colonna ma un tabellone, come le card
+   che poi la partita la mostreranno: prima quando e dove, poi chi, poi il
+   punteggio. Le stesse superfici bianche, gli stessi angoli e gli stessi
+   occhielli azzurri della sezione Padel, cosi registrare un risultato assomiglia
+   a leggerlo. */
+
+/* La riga dei segni: giorno, campo, video. Il campo si prende tutto lo spazio
+   che avanza perche e l'unico dei tre che porta parole. */
+.match-form-meta {
+  align-items: stretch;
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* Il giorno e un segno, non una casella: si legge come sulle card — numero
+   grande, mese piccolo — e si apre solo se lo tocchi. */
+.match-form-day {
+  align-items: center;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-2);
+  min-height: 48px;
+  padding: 0 var(--space-4);
+}
+
+.match-form-day svg {
+  color: var(--muted);
+  height: 17px;
+  width: 17px;
+}
+
+.match-form-day b {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+/* Aperto: il segno resta acceso finche la casella della data e in vista, se no
+   non si capisce da dove sia uscita. */
+.match-form-day.is-open {
+  border-color: var(--blue);
+  color: var(--blue-dark);
+}
+
+.match-form-day.is-open svg {
+  color: var(--blue-dark);
+}
+
+.match-form-day:disabled {
+  color: var(--ink-30);
+  cursor: default;
+}
+
+/* Il campo. Stessa altezza e stesso angolo del giorno: sono tre segni in fila,
+   non un segno e un modulo. */
+.match-form-court {
+  flex: 1 1 auto;
+  margin: 0;
+  min-width: 0;
+}
+
+/* Vuoto e un suggerimento, non una risposta gia data: stesso peso e stesso
+   grigio dei segnaposto delle caselle di testo. */
+.match-form-court.is-empty,
+.match-form-teams select.is-empty {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* Il segno di YouTube: grigio finche un video non c'e, rosso quando c'e. Il
+   rosso qui non e il nostro --danger — e il rosso di YouTube, e sta scritto
+   come colore di un dato, non di un'interfaccia. */
+.match-form-yt {
+  align-items: center;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--ink-30);
+  cursor: pointer;
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: center;
+  min-height: 48px;
+  transition: color 150ms ease;
+  width: 48px;
+}
+
+.match-form-yt svg {
+  height: 22px;
+  width: 22px;
+}
+
+.match-form-yt.is-set {
+  color: #ff0033;
+}
+
+/* Le due caselle che si aprono dai segni qui sopra. Rientrate di un filo e
+   senza etichetta: si sa gia cosa sono, le ha appena aperte il dito. */
+.match-form-date-field,
+.match-form-video-field {
+  /* Tirata su verso il segno che l'ha aperta: deve leggersi come la sua
+     continuazione, non come il campo successivo del modulo. Sotto invece
+     riprende il passo di tutti gli altri blocchi. */
+  margin-bottom: var(--space-5);
+  margin-top: calc(var(--space-5) * -1 + var(--space-2));
+}
+
+/* Le due squadre, una accanto all'altra come nel tabellone di una partita. */
+.match-form-teams {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 1fr 1fr;
+}
+
+.match-form-teams fieldset {
+  background: var(--white);
+  border: 0;
+  border-radius: var(--radius-md);
+  margin: 0;
+  min-width: 0;
+}
+
+/* L'occhiello della squadra: lo stesso di tutte le insegne piccole dell'app —
+   azzurro, minuscolo, spaziato. */
+.match-form-teams legend {
+  color: var(--blue-dark);
+  float: left;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  margin-bottom: var(--space-3);
+  padding: 0;
+  text-transform: uppercase;
+  width: 100%;
+}
+
+.match-form-teams select {
+  margin: 0;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+}
+
+.match-form-teams select + select {
+  margin-top: var(--space-2);
+}
+
+/* Il tabellone. Le caselle sono grandi e centrate come i numeri di un
+   punteggio, non come i campi di un modulo. */
+.match-form-sets {
+  background: var(--white);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: 30px 1fr 14px 1fr;
+}
+
+.match-form-sets > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  text-align: center;
+}
+
+.match-form-sets .set-row {
+  align-items: center;
+  display: grid;
+  gap: var(--space-2);
+  grid-column: 1 / -1;
+  grid-template-columns: 30px 1fr 14px 1fr;
+}
+
+.match-form-sets .set-row b {
+  color: var(--blue-dark);
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.match-form-sets .set-row > span {
+  color: var(--line);
+  text-align: center;
+}
+
+.match-form-sets .set-row input {
+  background: var(--veil-1);
+  border-color: transparent;
+  font-size: 20px;
+  font-weight: 900;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+}
+
+/* Lo zero suggerito sta indietro rispetto a un punteggio scritto davvero:
+   stesse cifre grandi, ma sbiadite. */
+.match-form-sets .set-row input::placeholder {
+  color: var(--ink-30);
+  font-weight: 900;
+}
+
+/* Le frecce del campo numerico non servono a nessuno su un tabellone e su
+   iPhone non ci sono nemmeno: tolte, la cifra resta centrata davvero. */
+.match-form-sets .set-row input::-webkit-outer-spin-button,
+.match-form-sets .set-row input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.match-form-sets .set-row input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
 }
 
 /* I due tasti in fondo occupano mezza riga ciascuno: allineati a destra,
@@ -6443,33 +6662,6 @@ button.pizza-ranking-row {
   width: 38px;
 }
 
-.teams-form {
-  display: grid;
-  gap: 14px;
-  grid-template-columns: 1fr 1fr;
-  margin-bottom: 22px;
-}
-
-.teams-form fieldset {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  margin: 0;
-  padding: 14px;
-}
-
-.teams-form legend {
-  color: var(--blue);
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 1px;
-  padding: 0 6px;
-  text-transform: uppercase;
-}
-
-.teams-form select {
-  margin: 0 0 8px;
-}
-
 .sheet-form label.random-teams-toggle {
   align-items: center;
   background: var(--white);
@@ -6589,23 +6781,6 @@ button.pizza-ranking-row {
 /* Le stesse quattro colonne delle righe qui sotto, trattino compreso: con
    tre colonne le etichette "squadra 1" e "squadra 2" non cadevano sopra ai
    campi che nominano. */
-.sets-form {
-  background: var(--white);
-  border-radius: var(--radius-md);
-  display: grid;
-  gap: 7px;
-  grid-template-columns: 34px 1fr 12px 1fr;
-  margin-bottom: 22px;
-  padding: 15px;
-}
-
-.sets-form > span {
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 900;
-  text-align: center;
-}
-
 .set-row {
   align-items: center;
   display: grid;
@@ -7050,8 +7225,7 @@ button.pizza-ranking-row {
   /* Sotto i 16px iOS ingrandisce da solo la pagina quando si tocca un
      campo, e poi non torna indietro: e la vera causa dello zoom. */
   form input,
-  form select,
-  .teams-form select {
+  form select {
     font-size: 16px;
   }
 
@@ -7087,8 +7261,8 @@ button.pizza-ranking-row {
   .settings-card,
   .login-card,
   .setup-page section,
-  .teams-form fieldset,
-  .sets-form,
+  .match-form-teams fieldset,
+  .match-form-sets,
   .pizza-page,
   .pizza-board,
   .pizza-podium-card,
@@ -7098,7 +7272,6 @@ button.pizza-ranking-row {
 
   form input,
   form select,
-  .teams-form select,
   .form-message,
   .notice,
   .season-menu,
@@ -8466,8 +8639,12 @@ button.pizza-ranking-row {
     padding: 24px 18px;
   }
 
-  .teams-form {
-    grid-template-columns: 1fr;
+  .match-form-teams fieldset {
+    padding: var(--space-4);
+  }
+
+  .match-form-teams select {
+    padding: 0 var(--space-2);
   }
 
   .login-page {

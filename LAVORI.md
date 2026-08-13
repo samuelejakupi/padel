@@ -970,6 +970,42 @@ Anche a chi non può più correggere: lì dentro c'è lo storico, ed è l'unico 
 dove si legge come si è arrivati a quel risultato. Chi non può correggere trova
 una scheda invece di un modulo.
 
+### Il foglio della partita è un tabellone, non un modulo
+Prima erano sette righe uguali — etichetta sopra, casella sotto — e sembrava un
+form di iscrizione. Adesso segue la sezione Padel: superfici bianche, occhielli
+azzurri, i numeri grandi come su una card di partita. L'ordine è quello con cui
+si racconta una partita: quando e dove, chi, quanto.
+
+Cosa è cambiato nel concreto:
+
+- **Data, campo e video sono tre segni in fila**, non tre righe. Sono le cose che
+  quasi sempre restano come sono (la data è oggi, il campo è quello di sempre, il
+  video non c'è), quindi stanno chiuse e si aprono solo se le tocchi. Il giorno
+  si legge come sulle card — `13 AGO`, niente anno.
+- **Il campo si sceglie da un elenco**, non si scrive: sono i centri del
+  tabellone dei campi liberi. Scritto a mano usciva ogni volta un po' diverso e
+  le statistiche per campo non stavano in piedi. Un campo fuori elenco non si può
+  più registrare — deciso così apposta.
+- **Il video è l'icona di YouTube**: grigia se non c'è, rossa se c'è. È l'unico
+  rosso dell'app che non vuol dire "attenzione": è il rosso del marchio, ed è per
+  questo che sta scritto in esadecimale invece di venire dai colori di casa.
+- **I quattro selettori partono vuoti**, con "Player 1" e "Player 2" scritti come
+  suggerimento e non come nome scelto. Prima erano precompilati con i primi
+  quattro profili: una squadra che nessuno aveva composto, che si confermava
+  senza guardarla.
+- **Il tabellone parte vuoto con lo zero suggerito** e passa da solo alla casella
+  successiva. Il salto è immediato per lo zero e per le cifre dal 3 in su, che
+  non possono diventare un numero più lungo; per l'1 e il 2 aspetta mezzo secondo,
+  perché aprono a 10-20 (il super tie-break). Con un salto immediato su tutte le
+  cifre un 10-8 finiva spezzato in due caselle; con un'attesa su tutte, un 6-4
+  sembrava lento.
+- **La nota non c'è più.** Restava vuota quasi sempre, e quello che di una
+  partita vale la pena ricordare sta nel punteggio. Le note già scritte non si
+  perdono: il valore continua a viaggiare al salvataggio.
+
+Gli altri fogli — creazione torneo, votazione pizza — sono ancora quelli vecchi:
+si rifanno uno alla volta, prendendo da qui.
+
 ### I due tasti in cima alla home sono un nastro, non una dissolvenza
 `+ PLAY` e `+ TOURNAMENT` stanno uno accanto all'altro, staccati del passo della
 colonna (10px, lo stesso fra un tasto e una card), e si scorre fra loro col dito.
