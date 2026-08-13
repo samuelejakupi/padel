@@ -8,6 +8,7 @@ import {
   type MatchEvent,
   type PadelMatch,
   type PadelSet,
+  type PlannedMatch,
   type PlayerPlay,
   type Profile,
   type Tournament,
@@ -2170,6 +2171,40 @@ function MatchCard({
   );
 }
 
+function PlannedMatchCard({
+  match,
+  onResult,
+}: {
+  match: PlannedMatch;
+  onResult: (match: PlannedMatch) => void;
+}) {
+  const team = (number: number) => match.players.filter((player) => player.team === number);
+
+  return (
+    <article className="planned-match-card">
+      <div className="planned-match-date">
+        <b>{new Intl.DateTimeFormat("it-IT", { day: "2-digit" }).format(new Date(match.played_at))}</b>
+        <span>{new Intl.DateTimeFormat("it-IT", { month: "short" }).format(new Date(match.played_at)).replace(".", "")}</span>
+      </div>
+      <div className="planned-match-content">
+        <div className="planned-match-status"><b>PARTITA DA GIOCARE</b>{match.court ? <span>{match.court}</span> : null}</div>
+        <div className="planned-match-teams">
+          {[1, 2].map((number) => (
+            <div key={number} className="planned-match-team">
+              <small>Squadra {number}</small>
+              <div className="mini-avatars">{team(number).map((player) => <Avatar key={player.profile_id} profile={player.profile} size="sm" />)}</div>
+              <b>{team(number).map((player) => player.profile.display_name).join(" · ")}</b>
+            </div>
+          ))}
+        </div>
+      </div>
+      <button type="button" className="button button-primary planned-match-result" onClick={() => onResult(match)}>
+        Inserisci risultato
+      </button>
+    </article>
+  );
+}
+
 function MvpVoteModal({
   match,
   viewerId,
@@ -3064,38 +3099,53 @@ function readMatchScore(scores: string[][]) {
 function NewMatchModal({
   profiles,
   match,
+  plannedMatch,
+  plannedMatchesReady,
   tournamentContext,
   onClose,
   onSaved,
 }: {
   profiles: Profile[];
   match?: PadelMatch | null;
+  plannedMatch?: PlannedMatch | null;
+  plannedMatchesReady?: boolean;
   tournamentContext?: TournamentMatchContext | null;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (kind: "result" | "planned") => void;
 }) {
   const editing = Boolean(match);
+  const completingPlanned = Boolean(plannedMatch);
   const initialPlayers = match
     ? [
         ...match.players.filter((player) => player.team === 1).map((player) => player.profile_id),
         ...match.players.filter((player) => player.team === 2).map((player) => player.profile_id),
       ]
-    : tournamentContext?.playerIds ?? profiles.slice(0, 4).map((profile) => profile.id);
+    : plannedMatch
+      ? [
+          ...plannedMatch.players.filter((player) => player.team === 1).map((player) => player.profile_id),
+          ...plannedMatch.players.filter((player) => player.team === 2).map((player) => player.profile_id),
+        ]
+      : tournamentContext?.playerIds ?? profiles.slice(0, 4).map((profile) => profile.id);
   const initialScores = match
     ? [0, 1, 2].map((index) => {
         const set = [...match.sets].sort((a, b) => a.set_number - b.set_number)[index];
         return set ? [String(set.team1_games), String(set.team2_games)] : ["", ""];
       })
-    : [["6", "4"], ["6", "3"], ["", ""]];
+    : plannedMatch
+      ? [["", ""], ["", ""], ["", ""]]
+      : [["6", "4"], ["6", "3"], ["", ""]];
 
   const [players, setPlayers] = useState(initialPlayers);
+  const [randomTeams, setRandomTeams] = useState(false);
   const [scores, setScores] = useState(initialScores);
   const [playedAt, setPlayedAt] = useState(
-    match ? new Date(match.played_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+    match || plannedMatch
+      ? new Date((match ?? plannedMatch)!.played_at).toISOString().slice(0, 10)
+      : new Date().toISOString().slice(0, 10),
   );
-  const [notes, setNotes] = useState(match?.notes ?? "");
+  const [notes, setNotes] = useState(match?.notes ?? plannedMatch?.notes ?? "");
   const [videoUrl, setVideoUrl] = useState(match?.video_url ?? "");
-  const [court, setCourt] = useState(match?.court ?? "");
+  const [court, setCourt] = useState(match?.court ?? plannedMatch?.court ?? "");
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -3138,6 +3188,12 @@ function NewMatchModal({
     setPlayers((current) => current.map((value, playerIndex) => (playerIndex === index ? id : value)));
   }
 
+  function toggleParticipant(id: string) {
+    setPlayers((current) => current.includes(id)
+      ? current.filter((playerId) => playerId !== id)
+      : current.length < 4 ? [...current, id] : current);
+  }
+
   function updateScore(setIndex: number, teamIndex: number, value: string) {
     setScores((current) =>
       current.map((set, index) =>
@@ -3154,7 +3210,31 @@ function NewMatchModal({
     event.preventDefault();
     setError("");
     if (players.length !== 4 || new Set(players).size !== 4 || players.some((id) => !id)) {
-      setError("Scegli quattro giocatori diversi.");
+      setError(randomTeams ? "Seleziona esattamente quattro partecipanti." : "Scegli quattro giocatori diversi.");
+      return;
+    }
+
+    if (randomTeams) {
+      if (!supabase) {
+        setError("Il database non è disponibile.");
+        return;
+      }
+      setBusy(true);
+      const { error: plannedError } = await supabase.rpc("create_random_match", {
+        p_played_at: new Date(`${playedAt}T20:00:00`).toISOString(),
+        p_participants: players,
+        p_court: court.trim() || null,
+        p_notes: notes.trim() || null,
+      });
+      if (plannedError) {
+        setError(plannedError.message.includes("create_random_match")
+          ? "Per creare squadre casuali esegui la migrazione migration-partite-casuali.sql in Supabase."
+          : plannedError.message);
+        setBusy(false);
+        return;
+      }
+      onSaved("planned");
+      setBusy(false);
       return;
     }
 
@@ -3178,6 +3258,22 @@ function NewMatchModal({
 
     setBusy(true);
     if (supabase) {
+      if (plannedMatch) {
+        const { error: completionError } = await supabase.rpc("complete_random_match", {
+          p_planned_match_id: plannedMatch.id,
+          p_sets: sets,
+          p_notes: notes.trim() || null,
+          p_video_url: cleanVideo || null,
+        });
+        if (completionError) {
+          setError(completionError.message);
+          setBusy(false);
+          return;
+        }
+        onSaved("result");
+        setBusy(false);
+        return;
+      }
       // Modificare = rimuovere e riregistrare: delete_match e record_match
       // ricalcolano entrambi l'Elo, quindi la classifica resta coerente.
       let lineage: string | null = null;
@@ -3263,7 +3359,7 @@ function NewMatchModal({
         });
       }
     }
-    onSaved();
+    onSaved("result");
     setBusy(false);
   }
 
@@ -3274,7 +3370,7 @@ function NewMatchModal({
     // chiude trascinando in giu o toccando fuori, come tutti gli altri
     // fogli — e niente occhiello sopra al titolo: il titolo dice gia tutto.
     <BottomSheet
-      title={editing ? "Modifica la partita" : "Registra una partita"}
+      title={editing ? "Modifica la partita" : completingPlanned ? "Inserisci il risultato" : "Registra una partita"}
       onClose={onClose}
     >
       <form className="sheet-form" onSubmit={save}>
@@ -3286,25 +3382,64 @@ function NewMatchModal({
           ) : null}
           <label>
             Data della partita
-            <input type="date" value={playedAt} onChange={(e) => setPlayedAt(e.target.value)} required />
+            <input type="date" value={playedAt} onChange={(e) => setPlayedAt(e.target.value)} required disabled={completingPlanned} />
           </label>
-          <div className="teams-form">
-            {[1, 2].map((team) => (
-              <fieldset key={team}>
-                <legend>Squadra {team}</legend>
-                {[0, 1].map((position) => {
-                  const index = (team - 1) * 2 + position;
+          {!editing && !tournamentContext && !completingPlanned ? (
+            <label className="random-teams-toggle">
+              <input
+                type="checkbox"
+                checked={randomTeams}
+                disabled={plannedMatchesReady === false}
+                onChange={(event) => {
+                  setRandomTeams(event.target.checked);
+                  setPlayers(event.target.checked ? [] : profiles.slice(0, 4).map((profile) => profile.id));
+                }}
+              />
+              <span>
+                <b>Crea squadre casualmente</b>
+                <small>{plannedMatchesReady === false
+                  ? "Richiede la migrazione migration-partite-casuali.sql."
+                  : "Seleziona i partecipanti: le due coppie verranno estratte alla conferma."}</small>
+              </span>
+            </label>
+          ) : null}
+          {randomTeams ? (
+            <fieldset className="random-participants">
+              <legend>Partecipanti <span>{players.length}/4</span></legend>
+              <div>
+                {profiles.map((profile) => {
+                  const selected = players.includes(profile.id);
                   return (
-                    <select key={index} value={players[index] ?? ""} onChange={(e) => updatePlayer(index, e.target.value)} aria-label={`Giocatore ${position + 1} squadra ${team}`} disabled={Boolean(tournamentContext)}>
-                      <option value="">Scegli giocatore</option>
-                      {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.display_name}</option>)}
-                    </select>
+                    <label key={profile.id} className={selected ? "is-selected" : ""}>
+                      <input type="checkbox" checked={selected} onChange={() => toggleParticipant(profile.id)} />
+                      <Avatar profile={profile} size="sm" />
+                      <b>{profile.display_name}</b>
+                      <i aria-hidden="true">✓</i>
+                    </label>
                   );
                 })}
-              </fieldset>
-            ))}
-          </div>
-          <div className="sets-form">
+              </div>
+              <p>Alla conferma verranno create due squadre casuali da due giocatori.</p>
+            </fieldset>
+          ) : (
+            <div className="teams-form">
+              {[1, 2].map((team) => (
+                <fieldset key={team}>
+                  <legend>Squadra {team}</legend>
+                  {[0, 1].map((position) => {
+                    const index = (team - 1) * 2 + position;
+                    return (
+                      <select key={index} value={players[index] ?? ""} onChange={(e) => updatePlayer(index, e.target.value)} aria-label={`Giocatore ${position + 1} squadra ${team}`} disabled={Boolean(tournamentContext || completingPlanned)}>
+                        <option value="">Scegli giocatore</option>
+                        {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.display_name}</option>)}
+                      </select>
+                    );
+                  })}
+                </fieldset>
+              ))}
+            </div>
+          )}
+          {!randomTeams ? <div className="sets-form">
             {/* Le quattro colonne dell'intestazione sono le stesse delle
                 righe, trattino compreso: con tre sole, le due etichette non
                 stavano sopra ai campi che nominavano. */}
@@ -3317,11 +3452,11 @@ function NewMatchModal({
                 <input type="number" min="0" max="20" value={score[1]} onChange={(e) => updateScore(index, 1, e.target.value)} aria-label={`Punti squadra 2 set ${index + 1}`} />
               </div>
             ))}
-          </div>
+          </div> : null}
           {/* L'esito si legge da solo dal tabellone, ma un pareggio nasce da
               un set lasciato a metà: scritto qui sopra al tasto, un 2-1
               battuto per sbaglio si vede prima di salvarlo e non dopo. */}
-          {preview.draw ? (
+          {!randomTeams && preview.draw ? (
             <p className="match-verdict">
               <b>Pareggio</b>
               {preview.unfinishedSet
@@ -3341,12 +3476,13 @@ function NewMatchModal({
               list={courtListId}
               placeholder="Es. DON QUIQUE - IMPERIA"
               maxLength={60}
+              disabled={completingPlanned}
             />
             <datalist id={courtListId}>
               {PADEL_COURTS.map((name) => <option key={name} value={name} />)}
             </datalist>
           </label>
-          <label>
+          {!randomTeams ? <label>
             Video YouTube <span className="optional-label">facoltativo</span>
             <input
               value={videoUrl}
@@ -3354,7 +3490,7 @@ function NewMatchModal({
               placeholder="https://youtu.be/..."
               inputMode="url"
             />
-          </label>
+          </label> : null}
           <label>
             {/* "facoltativo" si scrive sempre allo stesso modo, in tutti i
                 campi che lo sono: era l'unico a dirlo dentro all'etichetta
@@ -3410,7 +3546,9 @@ function NewMatchModal({
 
           <div className="modal-actions">
             <button type="button" className="button button-ghost" onClick={onClose}>Annulla</button>
-            <button className="button button-primary" disabled={busy}>{busy ? "Salvataggio…" : "Salva risultato"}</button>
+            <button className="button button-primary" disabled={busy || (randomTeams && players.length !== 4)}>
+              {busy ? "Salvataggio…" : randomTeams ? "Crea partita" : "Salva risultato"}
+            </button>
           </div>
         </form>
     </BottomSheet>
@@ -4529,6 +4667,9 @@ function AppShell({ session }: { session: Session | null }) {
   }, [carouselEnabled, isPhone, ctaFace, ctaTrackRef]);
 
   const [editingMatch, setEditingMatch] = useState<PadelMatch | null>(null);
+  const [plannedMatches, setPlannedMatches] = useState<PlannedMatch[]>([]);
+  const [completingPlannedMatch, setCompletingPlannedMatch] = useState<PlannedMatch | null>(null);
+  const [plannedMatchesReady, setPlannedMatchesReady] = useState(true);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const avatarFileRef = useRef<HTMLInputElement>(null);
@@ -4588,6 +4729,7 @@ function AppShell({ session }: { session: Session | null }) {
       mvpMatchesResult,
       mvpVotesResult,
       mvpProgressResult,
+      plannedMatchesResult,
     ] = await Promise.all([
       client.from("profiles").select("*").order("rating", { ascending: false }),
       client
@@ -4642,6 +4784,13 @@ function AppShell({ session }: { session: Session | null }) {
         .select("id, mvp_voting_enabled, mvp_voting_closed_at, mvps:match_mvps(profile_id, awarded_at)"),
       client.from("match_mvp_votes").select("match_id, target_id"),
       client.rpc("match_mvp_progress"),
+      // Le partite senza risultato vivono in una tabella separata: se la
+      // migrazione non c'e ancora, lo storico concluso continua a caricarsi.
+      client
+        .from("planned_matches")
+        .select("id, played_at, created_at, created_by, notes, court, players:planned_match_players(profile_id, team, profile:profiles(*))")
+        .order("played_at", { ascending: true })
+        .order("created_at", { ascending: true }),
     ]);
 
     if (profilesResult.error || matchesResult.error) {
@@ -4715,6 +4864,16 @@ function AppShell({ session }: { session: Session | null }) {
       })) as unknown as PadelMatch[];
       setProfiles(withAvatars);
       setMatches(normalized);
+      setPlannedMatchesReady(!plannedMatchesResult.error);
+      if (!plannedMatchesResult.error) {
+        setPlannedMatches((plannedMatchesResult.data ?? []).map((planned) => ({
+          ...planned,
+          players: (planned.players ?? []).map((player) => ({
+            ...player,
+            profile: profileMap.get(player.profile_id) ?? player.profile,
+          })),
+        })) as unknown as PlannedMatch[]);
+      }
       setMvpSchemaReady(mvpReady);
       setTournamentSchemaReady(!tournamentsResult.error);
       if (!tournamentsResult.error) {
@@ -4990,11 +5149,19 @@ function AppShell({ session }: { session: Session | null }) {
     return matches;
   }, [matches, matchesMode, currentUserId]);
 
+  const filteredPlannedMatches = useMemo(() => {
+    if (matchesMode === "mine" && currentUserId) {
+      return plannedMatches.filter((match) => match.created_by === currentUserId
+        || match.players.some((player) => player.profile_id === currentUserId));
+    }
+    return plannedMatches;
+  }, [plannedMatches, matchesMode, currentUserId]);
+
   // Nessuna partita, detto con le parole del filtro attivo: "non ce n'è" e
   // "non ne hai ancora giocate" sono due cose diverse.
   const emptyMatchesNote = matchesMode === "mine"
-    ? "Non hai ancora giocato nessuna partita."
-    : "Nessuna partita registrata.";
+    ? "Non hai partite da giocare o risultati registrati."
+    : "Nessuna partita creata o registrata.";
 
   // Le partite del foglio, divise per mese. Il filtro agisce prima del
   // raggruppamento, così i conteggi sui raccoglitori dicono quante partite ci
@@ -5237,19 +5404,25 @@ function AppShell({ session }: { session: Session | null }) {
     );
   }
 
-  async function handleSaved() {
+  async function handleSaved(kind: "result" | "planned") {
     const wasEditing = Boolean(editingMatch);
     const wasTournament = Boolean(tournamentMatch || editingTournamentContext);
+    const wasPlanned = Boolean(completingPlannedMatch);
     setShowMatch(false);
     setEditingMatch(null);
     setTournamentMatch(null);
+    setCompletingPlannedMatch(null);
     await loadData();
     setNotice(
-      wasEditing
-        ? "Correzione salvata. Classifica e statistiche sono state ricalcolate."
-        : wasTournament
-          ? "Risultato del torneo salvato. Classifica ed Elo sono stati aggiornati."
-          : "Partita salvata. La classifica è stata aggiornata.",
+      kind === "planned"
+        ? "Partita creata: le squadre casuali sono pronte. Dopo la partita potrai inserire il risultato."
+        : wasPlanned
+          ? "Risultato salvato. Classifica ed Elo sono stati aggiornati."
+          : wasEditing
+            ? "Correzione salvata. Classifica e statistiche sono state ricalcolate."
+            : wasTournament
+              ? "Risultato del torneo salvato. Classifica ed Elo sono stati aggiornati."
+              : "Partita salvata. La classifica è stata aggiornata.",
     );
   }
 
@@ -5753,12 +5926,12 @@ function AppShell({ session }: { session: Session | null }) {
                     <button className="button button-card" onClick={() => setSheet("campi")}>
                       Campi liberi
                     </button>
-                    {filteredMatches.length ? (
+                    {filteredMatches.length || filteredPlannedMatches.length ? (
                       <button
                         className="button button-card cta-see-all-top"
                         onClick={() => { setChosenMonth(undefined); setSheet("matches"); }}
                       >
-                        {`Vedi tutto (${filteredMatches.length})`}
+                        {`Vedi tutto (${filteredMatches.length + filteredPlannedMatches.length})`}
                       </button>
                     ) : null}
                   </div>
@@ -5816,6 +5989,17 @@ function AppShell({ session }: { session: Session | null }) {
                       del tutto: cambiava insieme ai pallini e diceva due
                       volte la stessa cosa. */}
                   <div className="match-panel-head"><h2>Ultime partite</h2></div>
+                  {filteredPlannedMatches.length ? (
+                    <div className="planned-match-list">
+                      {filteredPlannedMatches.map((planned) => (
+                        <PlannedMatchCard
+                          key={planned.id}
+                          match={planned}
+                          onResult={setCompletingPlannedMatch}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
                   {filteredMatches.length ? (
                     isPhone ? (
                       /* Come la classifica: tutta la card è il bersaglio e
@@ -5867,7 +6051,7 @@ function AppShell({ session }: { session: Session | null }) {
                         ))}
                       </div>
                     )
-                  ) : (
+                  ) : filteredPlannedMatches.length ? null : (
                     <div className="compact-empty panel-empty"><span>00</span><p>{emptyMatchesNote}</p></div>
                   )}
                   {/* Gli stessi pallini della classifica: dicono che la card
@@ -6573,6 +6757,20 @@ function AppShell({ session }: { session: Session | null }) {
               si accumulano, e scorrerne cento per arrivare a maggio non è
               cercare, è rassegnarsi. Aperto uno, gli altri si chiudono. */}
           <div className="month-groups">
+            {filteredPlannedMatches.length ? (
+              <section className="planned-matches-sheet">
+                <h3>Da giocare</h3>
+                <div className="planned-match-list">
+                  {filteredPlannedMatches.map((planned) => (
+                    <PlannedMatchCard
+                      key={planned.id}
+                      match={planned}
+                      onResult={(selected) => { setSheet(null); setCompletingPlannedMatch(selected); }}
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : null}
             {matchMonths.length ? matchMonths.map((group) => (
               <MonthGroup
                 key={group.key}
@@ -6594,7 +6792,7 @@ function AppShell({ session }: { session: Session | null }) {
                   ))}
                 </div>
               </MonthGroup>
-            )) : (
+            )) : filteredPlannedMatches.length ? null : (
               <div className="compact-empty panel-empty">
                 <span>00</span>
                 <p>{emptyMatchesNote}</p>
@@ -6748,13 +6946,15 @@ function AppShell({ session }: { session: Session | null }) {
           </div>
         </BottomSheet>
       ) : null}
-      {showMatch || editingMatch || tournamentMatch ? (
+      {showMatch || editingMatch || tournamentMatch || completingPlannedMatch ? (
         <NewMatchModal
           profiles={profiles}
           match={editingMatch}
+          plannedMatch={completingPlannedMatch}
+          plannedMatchesReady={plannedMatchesReady}
           tournamentContext={tournamentMatch ?? editingTournamentContext}
-          onClose={() => { setShowMatch(false); setEditingMatch(null); setTournamentMatch(null); }}
-          onSaved={() => void handleSaved()}
+          onClose={() => { setShowMatch(false); setEditingMatch(null); setTournamentMatch(null); setCompletingPlannedMatch(null); }}
+          onSaved={(kind) => void handleSaved(kind)}
         />
       ) : null}
       {showTournamentCreate ? (

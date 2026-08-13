@@ -1904,6 +1904,124 @@ button.ranking-row-link:focus-visible {
   transform: scale(1.01);
 }
 
+.planned-match-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.planned-match-card {
+  align-items: center;
+  background: linear-gradient(115deg, color-mix(in srgb, var(--blue) 11%, var(--white)), var(--white) 58%);
+  border: 1px solid color-mix(in srgb, var(--blue) 25%, var(--white));
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  min-height: 110px;
+  padding: var(--space-5);
+}
+
+.planned-match-date {
+  align-items: center;
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 60px;
+}
+
+.planned-match-date b {
+  font-size: 21px;
+}
+
+.planned-match-date span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.planned-match-content {
+  min-width: 0;
+}
+
+.planned-match-status {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.planned-match-status b {
+  color: var(--blue);
+  font-size: 9px;
+  letter-spacing: 0.8px;
+}
+
+.planned-match-status span {
+  color: var(--muted);
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planned-match-teams {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.planned-match-team {
+  align-items: center;
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: auto minmax(0, 1fr);
+  min-width: 0;
+}
+
+.planned-match-team small {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 900;
+  grid-column: 1 / -1;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.planned-match-team > b {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planned-match-result {
+  min-height: 40px;
+  padding-inline: var(--space-5);
+  white-space: nowrap;
+}
+
+.planned-matches-sheet {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-5);
+}
+
+.planned-matches-sheet > h3 {
+  color: var(--blue);
+  font-size: 10px;
+  letter-spacing: 0.8px;
+  margin: 0 0 var(--space-3);
+  text-transform: uppercase;
+}
+
+.planned-matches-sheet .planned-match-list {
+  margin-bottom: 0;
+}
+
 .match-date {
   align-items: center;
   border-right: 1px solid var(--line);
@@ -6263,6 +6381,122 @@ button.pizza-ranking-row {
   margin: 0 0 8px;
 }
 
+.sheet-form label.random-teams-toggle {
+  align-items: center;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  padding: var(--space-5);
+}
+
+.random-teams-toggle input {
+  accent-color: var(--blue);
+  flex: 0 0 auto;
+  height: 20px;
+  margin: 0;
+  min-height: 0;
+  width: 20px;
+}
+
+.random-teams-toggle span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.random-teams-toggle b {
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.random-teams-toggle small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-transform: none;
+}
+
+.sheet-form fieldset.random-participants {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  margin: 0 0 var(--space-5);
+  padding: var(--space-5);
+}
+
+.random-participants legend {
+  color: var(--blue);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  padding: 0 var(--space-1);
+  text-transform: uppercase;
+}
+
+.random-participants legend span {
+  color: var(--muted);
+  margin-left: var(--space-1);
+}
+
+.random-participants > div {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.random-participants label {
+  align-items: center;
+  background: var(--veil-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  margin: 0;
+  padding: var(--space-2);
+}
+
+.random-participants label.is-selected {
+  background: color-mix(in srgb, var(--blue) 9%, var(--white));
+  border-color: var(--blue);
+}
+
+.random-participants label > input {
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.random-participants label > b {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.random-participants label > i {
+  color: var(--blue);
+  font-style: normal;
+  font-weight: 900;
+  opacity: 0;
+}
+
+.random-participants label.is-selected > i {
+  opacity: 1;
+}
+
+.random-participants > p {
+  color: var(--muted);
+  font-size: 11px;
+  margin: var(--space-4) 0 0;
+}
+
 /* Le stesse quattro colonne delle righe qui sotto, trattino compreso: con
    tre colonne le etichette "squadra 1" e "squadra 2" non cadevano sopra ai
    campi che nominano. */
@@ -9203,5 +9437,32 @@ button.pizza-ranking-row {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+}
+
+@media (max-width: 780px) {
+  .planned-match-card {
+    align-items: stretch;
+    gap: var(--space-4);
+    grid-template-columns: 44px minmax(0, 1fr);
+    padding: var(--space-4);
+  }
+
+  .planned-match-result {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .planned-match-teams {
+    gap: var(--space-3);
+    grid-template-columns: 1fr;
+  }
+
+  .planned-match-team {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .random-participants > div {
+    grid-template-columns: 1fr;
   }
 }

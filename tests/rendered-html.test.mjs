@@ -19,10 +19,11 @@ test("genera un sito statico pronto per GitHub Pages", async () => {
 });
 
 test("include configurazione Supabase e funzioni della webapp", async () => {
-  const [schema, pizzaMigration, drawMigration, page] = await Promise.all([
+  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, page] = await Promise.all([
     readFile(new URL("supabase/schema.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pizza-sessioni.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pareggi.sql", root), "utf8"),
+    readFile(new URL("supabase/migration-partite-casuali.sql", root), "utf8"),
     readFile(new URL("app/page.tsx", root), "utf8"),
   ]);
   assert.match(schema, /record_match/);
@@ -101,4 +102,16 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(page, /function setIsComplete/);
   assert.match(page, /function readMatchScore/);
   assert.match(page, /PAREGGIO/);
+
+  // Le partite organizzate non entrano nello storico e nell'Elo finche non
+  // viene inserito il risultato. L'estrazione e il completamento restano RPC
+  // atomiche, come la registrazione delle partite normali.
+  assert.match(randomMatchesMigration, /create_random_match/);
+  assert.match(randomMatchesMigration, /order by random\(\)/);
+  assert.match(randomMatchesMigration, /complete_random_match/);
+  assert.match(randomMatchesMigration, /public\.record_match/);
+  assert.match(randomMatchesMigration, /delete from public\.planned_matches/);
+  assert.match(page, /Crea squadre casualmente/);
+  assert.match(page, /Seleziona esattamente quattro partecipanti/);
+  assert.match(page, /Inserisci risultato/);
 });

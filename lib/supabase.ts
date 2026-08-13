@@ -101,6 +101,24 @@ export type PadelMatch = {
   viewer_mvp_vote?: string | null;
 };
 
+export type PlannedMatchPlayer = {
+  profile_id: string;
+  team: 1 | 2;
+  profile: Profile;
+};
+
+// Una partita gia organizzata, ma ancora senza risultato. Vive separata
+// dalle partite concluse per non aggiornare classifica ed Elo prima del tempo.
+export type PlannedMatch = {
+  id: string;
+  played_at: string;
+  created_at: string;
+  created_by: string;
+  notes?: string | null;
+  court?: string | null;
+  players: PlannedMatchPlayer[];
+};
+
 export type TournamentTeam = {
   id: string;
   tournament_id: string;
