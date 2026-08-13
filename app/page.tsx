@@ -1501,51 +1501,38 @@ function BadgeList({ badges }: { badges: Badge[] }) {
 }
 
 function FieldRegister({
-  profile,
-  profiles,
-  matches,
+  badges,
 }: {
-  profile: Profile;
-  profiles: Profile[];
-  matches: PadelMatch[];
+  badges: Badge[];
 }) {
-  const own = buildBadgeMetrics(profiles, matches).metrics.get(profile.id) ?? emptyBadgeMetrics();
-  const registerEntries = [
-    {
-      id: "clean", glyph: "dominator" as BadgeGlyph, tone: "plain", label: "VITTORIE NETTE",
-      detail: `${own.straightSetWins} partite vinte senza perdere set`,
-      footer: `${own.straightSetWins} ${own.straightSetWins === 1 ? "VOLTA" : "VOLTE"}`, locked: false,
-    },
-    {
-      id: "pair", glyph: "duo" as BadgeGlyph, tone: "plain", label: "COPPIA MIGLIORE",
-      detail: own.bestPairMatches ? `${Math.round(own.bestPairRate * 100)}% di vittorie in ${own.bestPairMatches} match` : "Nessuna coppia registrata",
-      footer: own.bestPairMatches >= 5 ? "DATI CONSOLIDATI" : "SERVONO 5 MATCH", locked: false,
-    },
-    {
-      id: "centurion", glyph: "centurion" as BadgeGlyph, tone: "plain", label: "CENTURIONE",
-      detail: profile.matches_played >= 20 ? "Hai disputato almeno 20 partite." : "Gioca 20 partite.",
-      footer: profile.matches_played >= 20 ? "CONQUISTATO" : `${profile.matches_played}/20`,
-      locked: profile.matches_played < 20,
-    },
-  ];
+  // Il registro non ripete statistiche generiche: mette davanti gli emblemi
+  // ancora bloccati per cui il giocatore ha gia fatto strada. Quelli a zero
+  // restano in coda, cosi il foglio e utile anche a chi ha appena iniziato.
+  const registerEntries = [...badges]
+    .filter((badge) => !badge.unlocked && badge.id !== "trophy")
+    .sort((a, b) => b.progress - a.progress || a.label.localeCompare(b.label))
+    .slice(0, 3);
 
   return (
     <article className="field-register">
       <header className="field-register-head">
         <span>THEBOYZ PADEL CLUB</span>
         <b>REGISTRO DI CAMPO</b>
-        <i aria-hidden="true">{new Date().getFullYear()}</i>
+        <small>I traguardi più vicini</small>
       </header>
       <div className="field-register-page">
         {registerEntries.map((entry) => (
-          <div className={`field-register-card is-${entry.tone} ${entry.locked ? "is-locked" : ""}`} key={entry.id}>
+          <div className={`field-register-card is-${entry.tone}`} key={entry.id}>
             <span className="field-register-icon" aria-hidden="true">
-              {entry.locked ? <b>⌑</b> : <BadgeGlyphIcon name={entry.glyph} />}
+              <BadgeGlyphIcon name={entry.glyph} />
             </span>
             <div>
               <b>{entry.label}</b>
-              <p>{entry.detail}</p>
-              <small>{entry.footer}</small>
+              <p>{entry.value} · {entry.progressLabel}</p>
+              <span className="field-register-progress" aria-hidden="true">
+                <i style={{ width: `${entry.progress}%` }} />
+              </span>
+              <small>{entry.progress}% DEL PERCORSO</small>
             </div>
           </div>
         ))}
@@ -6280,7 +6267,9 @@ function AppShell({ session }: { session: Session | null }) {
 
             {/* Il riquadro dei pareggi compare solo a chi ne ha: finche non
                 se ne registra uno la fila resta di quattro, com'era. */}
-            <div className={`player-kpis${(selectedPlayer.draws ?? 0) > 0 ? " player-kpis-drawn" : ""}`}>
+            <section className="player-stats-card" aria-label="Statistiche del giocatore">
+              <header><span>NUMERI IN CAMPO</span><small>Carriera</small></header>
+              <div className={`player-kpis${(selectedPlayer.draws ?? 0) > 0 ? " player-kpis-drawn" : ""}`}>
               <article><b>{selectedPlayer.matches_played}</b><small>Partite</small></article>
               <article><b>{selectedPlayer.wins}</b><small>Vittorie</small></article>
               <article><b>{selectedPlayer.losses}</b><small>Sconfitte</small></article>
@@ -6288,7 +6277,8 @@ function AppShell({ session }: { session: Session | null }) {
                 ? <article><b>{selectedPlayer.draws}</b><small>Pareggi</small></article>
                 : null}
               <article><b>{padelWinRate(selectedPlayer.wins, selectedPlayer.losses)}%</b><small>Win rate</small></article>
-            </div>
+              </div>
+            </section>
 
             <section className="player-trophies">
               <div className="player-history-head">
@@ -6302,7 +6292,7 @@ function AppShell({ session }: { session: Session | null }) {
                 <div className="player-trophies-empty"><p>Nessun emblema ancora conquistato.</p></div>
               )}
 
-              <FieldRegister profile={selectedPlayer} profiles={profiles} matches={matches} />
+              <FieldRegister badges={selectedPlayerBadges} />
 
               <div className="bacheca-group-head">
                 <div><span>02</span><div><p className="eyebrow dark">TORNEI</p><h3>Sala trofei</h3></div></div>

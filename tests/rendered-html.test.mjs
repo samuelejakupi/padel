@@ -122,4 +122,7 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.doesNotMatch(page, /recordBadge\("clutch"/);
   assert.match(page, /!drawn && setResults\[0\] === false/);
   assert.match(page, /i pareggi sono esclusi/);
+  assert.match(page, /I traguardi più vicini/);
+  assert.match(page, /sort\(\(a, b\) => b\.progress - a\.progress/);
+  assert.match(page, /player-stats-card/);
 });
