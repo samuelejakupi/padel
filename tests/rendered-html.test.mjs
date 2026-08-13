@@ -118,4 +118,8 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   // in passato venivano intercettati dai vecchi SVG GOAT e Kraken.
   assert.doesNotMatch(page, /"goat-slayer": "kraken"/);
   assert.doesNotMatch(page, /badge\.glyph === "goat"/);
+  assert.doesNotMatch(page, /SANGUE FREDDO/);
+  assert.doesNotMatch(page, /recordBadge\("clutch"/);
+  assert.match(page, /!drawn && setResults\[0\] === false/);
+  assert.match(page, /i pareggi sono esclusi/);
 });

@@ -1007,7 +1007,6 @@ type BadgeGlyph =
   | "hook"
   | "dominator"
   | "comeback"
-  | "clutch"
   | "marathon"
   | "duo"
   | "goat-slayer"
@@ -1035,7 +1034,6 @@ type PlayerBadgeMetrics = {
   firstPlaceMatches: number;
   straightSetWins: number;
   comebackWins: number;
-  decidingSetWins: number;
   matchesPlayed: number;
   winsAgainstGoat: number;
   bestPairMatches: number;
@@ -1052,7 +1050,6 @@ function emptyBadgeMetrics(): PlayerBadgeMetrics {
     firstPlaceMatches: 0,
     straightSetWins: 0,
     comebackWins: 0,
-    decidingSetWins: 0,
     matchesPlayed: 0,
     winsAgainstGoat: 0,
     bestPairMatches: 0,
@@ -1140,8 +1137,9 @@ function buildBadgeMetrics(profiles: Profile[], matches: PadelMatch[]) {
         const ownSetWins = setResults.filter(Boolean).length;
         const lostSets = setResults.length - ownSetWins;
         if (ownSetWins >= 2 && lostSets === 0) item.straightSetWins += 1;
-        if (setResults[0] === false) item.comebackWins += 1;
-        if (setResults.length >= 3 && lostSets > 0) item.decidingSetWins += 1;
+        // Una rimonta esiste soltanto dentro una vittoria: i pareggi vengono
+        // esclusi a monte da `won`, anche se il primo set era stato perso.
+        if (!drawn && setResults[0] === false) item.comebackWins += 1;
       }
     });
 
@@ -1394,8 +1392,7 @@ function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch
     },
     recordBadge("hook", "bronze", "hook", "AL GANCIO", "La serie di sconfitte consecutive più lunga.", "Detieni il record storico di sconfitte una dopo l'altra.", own.bestLoseStreak, maxOf((item) => item.bestLoseStreak), "sconfitte di fila"),
     recordBadge("dominator", "ice", "dominator", "DOMINATORE", "Chi ha vinto più partite senza concedere set.", "Conta le vittorie concluse 2–0.", own.straightSetWins, maxOf((item) => item.straightSetWins), "vittorie 2–0"),
-    recordBadge("comeback", "ice", "comeback", "RE DELLA RIMONTA", "Chi ha ribaltato più partite dopo aver perso il primo set.", "Conta le vittorie ottenute partendo da 0–1 nei set.", own.comebackWins, maxOf((item) => item.comebackWins), "rimonte"),
-    recordBadge("clutch", "ice", "clutch", "SANGUE FREDDO", "Chi ha vinto più partite al set decisivo.", "Conta le vittorie in tre set, dopo averne concesso almeno uno.", own.decidingSetWins, maxOf((item) => item.decidingSetWins), "set decisivi"),
+    recordBadge("comeback", "ice", "comeback", "RE DELLA RIMONTA", "Chi ha ribaltato più partite dopo aver perso il primo set.", "Conta soltanto le vittorie ottenute partendo da 0–1 nei set; i pareggi sono esclusi.", own.comebackWins, maxOf((item) => item.comebackWins), "rimonte"),
     recordBadge("marathon", "steel", "marathon", "MARATONETA", "Il giocatore con più presenze.", "Detieni il maggior numero totale di partite disputate.", own.matchesPlayed, maxOf((item) => item.matchesPlayed), "partite"),
     {
       id: "duo", tone: "violet", glyph: "duo", label: "COPPIA D'ORO",
@@ -1463,7 +1460,6 @@ function BadgeGlyphIcon({ name }: { name: BadgeGlyph }) {
       {name === "hook" ? <><path d="M12 3v11.2a5.3 5.3 0 1 1-5.3-5.3" /><path d="m4.2 10.4 2.5-1.5.6 2.8" /><circle cx="12" cy="3.5" r="1.8" /></> : null}
       {name === "dominator" ? <><rect x="3.7" y="6" width="16.6" height="12" rx="2" /><text x="12" y="14.7" textAnchor="middle" stroke="none" fill="currentColor" fontSize="7" fontWeight="900">2–0</text></> : null}
       {name === "comeback" ? <><path d="M5 17c1.8-7.8 8.2-10.2 14-7" /><path d="m15.8 6.4 3.2 3.7-4.7 2M5 17l3-1.2L6.9 20" /></> : null}
-      {name === "clutch" ? <path d="m12 3 6.6 5.1L16 19l-4 2-4-2L5.4 8.1zM12 3v18M5.4 8.1h13.2M8 19l4-10.9L16 19" /> : null}
       {name === "marathon" ? <><path d="M7 3h10M7 21h10M8 3c0 5 1.7 6.7 4 9-2.3 2.3-4 4-4 9M16 3c0 5-1.7 6.7-4 9 2.3 2.3 4 4 4 9" /><path d="M3 8h4m10 0h4M4 6 2 8l2 2m16-4 2 2-2 2" /></> : null}
       {name === "duo" ? <><path d="M9.5 4 4 6.2v5c0 3.5 2.2 6.2 5.5 7.5 3.3-1.3 5.5-4 5.5-7.5v-5z" /><path d="M14.5 4 20 6.2v5c0 3.5-2.2 6.2-5.5 7.5M9.5 11.2l2.5 2.5 2.5-2.5" /></> : null}
       {name === "goat-slayer" ? <><path d="m5 6 2-3 3 2 2-3 2 3 3-2 2 3-3 3H8z" /><path d="M6 19c4.5-7.5 7-9 12-7-3.2.8-4.7 3.4-5 7M4 20 20 8" /></> : null}
