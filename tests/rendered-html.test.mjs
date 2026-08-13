@@ -66,11 +66,10 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(page, /"samu", "dani", "fabio"/);
   assert.match(page, /Contemporanea/);
   assert.match(page, /Nostalgica/);
-  assert.match(page, /key: "home", glyph: "home", label: "Home"/);
-  assert.match(page, /key: "matches", glyph: "rackets", label: "Partite"/);
-  assert.match(page, /key: "ranking", glyph: "ranking", label: "Classifica"/);
-  // Le destinazioni principali del Padel sono sempre raggiungibili dalla
-  // barra mobile; i fogli dal basso restano per dettagli e azioni contestuali.
+  assert.match(page, /key: "padel", glyph: "racket", label: "Padel"/);
+  // La navigazione interna al Padel non esiste piu: partite e ranking si
+  // aprono nel foglio dal basso, quindi la voce nella barra e una sola.
+  // Il presidio si sposta sul componente che ha preso quel ruolo.
   assert.match(page, /function BottomSheet/);
   assert.doesNotMatch(page, /function PadelSectionNav/);
   assert.match(pizzaMigration, /pizza_session_participants/);

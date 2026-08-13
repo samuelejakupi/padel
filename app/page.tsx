@@ -1472,19 +1472,16 @@ function BadgeGlyphIcon({ name }: { name: BadgeGlyph }) {
 }
 
 function BadgeList({ badges }: { badges: Badge[] }) {
-  const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
   return (
-    <>
-      <div className="badge-grid">
-        {badges.map((badge) => {
+    <div className="badge-grid">
+      {badges.map((badge) => {
         const emblem = EMBLEM_COMPONENT[badge.glyph];
         return (
-        <button
-          type="button"
+        <article
           className={`badge badge-${badge.tone} ${badge.unlocked ? "is-unlocked" : "is-locked"}`}
           key={badge.id}
+          tabIndex={0}
           aria-label={`${badge.label}. ${badge.meaning}${badge.progressLabel ? ` ${badge.progressLabel}` : ""}`}
-          onClick={() => setSelectedBadge(badge)}
         >
           <div className="badge-emblem" aria-hidden="true">
             {emblem ? (
@@ -1499,26 +1496,10 @@ function BadgeList({ badges }: { badges: Badge[] }) {
             <span>{badge.criterion}</span>
             <small>{badge.value}{badge.progressLabel ? ` · ${badge.progressLabel}` : ""}</small>
           </aside>
-        </button>
+        </article>
         );
-        })}
-      </div>
-      {selectedBadge ? (
-        <BottomSheet title={selectedBadge.label} eyebrow="DETTAGLIO EMBLEMA" onClose={() => setSelectedBadge(null)}>
-          <section className={`badge-detail badge-${selectedBadge.tone}`}>
-            <div className="badge-detail-art" aria-hidden="true">
-              {EMBLEM_COMPONENT[selectedBadge.glyph]
-                ? <Emblem name={EMBLEM_COMPONENT[selectedBadge.glyph]!} />
-                : <Image src={`${basePath}/emblems/${selectedBadge.glyph}.webp`} alt="" width={128} height={168} />}
-            </div>
-            <p>{selectedBadge.meaning}</p>
-            <span>{selectedBadge.criterion}</span>
-            <div className="badge-detail-progress"><i style={{ width: `${selectedBadge.progress}%` }} /></div>
-            <b>{selectedBadge.value}{selectedBadge.progressLabel ? ` · ${selectedBadge.progressLabel}` : ""}</b>
-          </section>
-        </BottomSheet>
-      ) : null}
-    </>
+      })}
+    </div>
   );
 }
 
@@ -5262,9 +5243,7 @@ function AppShell({ session }: { session: Session | null }) {
   // Il Padel è la home: partite e classifica si aprono lì dentro, quindi non
   // serve più una voce separata.
   const navItems = useMemo(() => ([
-    { key: "home", glyph: "home", label: "Home", active: view === "padel" && padelView === "overview", select: () => { setView("padel"); setPadelView("overview"); } },
-    { key: "matches", glyph: "rackets", label: "Partite", active: view === "padel" && padelView === "matches", select: () => { setView("padel"); setPadelView("matches"); } },
-    { key: "ranking", glyph: "ranking", label: "Classifica", active: view === "padel" && padelView === "ranking", select: () => { setView("padel"); setPadelView("ranking"); } },
+    { key: "padel", glyph: "racket", label: "Padel", active: view === "padel" && padelView !== "player", select: () => { setView("padel"); setPadelView("overview"); } },
     { key: "pizza", glyph: "pizza", label: "Pizza", active: view === "pizza", select: () => setView("pizza") },
     { key: "profile", glyph: "", label: "Profilo", active: isOwnCard, select: openOwnCard },
   ]), [view, padelView, isOwnCard, openOwnCard]);
