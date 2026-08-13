@@ -1221,7 +1221,6 @@ function clampProgress(value: number) {
 type EmblemName = "kraken" | "trophy" | "mvp";
 
 const EMBLEM_COMPONENT: Partial<Record<BadgeGlyph, EmblemName>> = {
-  "goat-slayer": "kraken",
   trophy: "trophy",
   mvp: "mvp",
 };
@@ -1486,9 +1485,7 @@ function BadgeList({ badges }: { badges: Badge[] }) {
           aria-label={`${badge.label}. ${badge.meaning} ${badge.progressLabel}`}
         >
           <div className="badge-emblem" aria-hidden="true">
-            {badge.glyph === "goat" ? (
-              <GoatEmblem className="badge-art" />
-            ) : emblem ? (
+            {emblem ? (
               <Emblem name={emblem} className="badge-art" />
             ) : (
               <Image className="badge-art" src={`${basePath}/emblems/${badge.glyph}.webp`} alt="" width={128} height={168} />

@@ -45,6 +45,7 @@ next-env.d.ts
 /dist/
 /.wrangler/
 /outputs/
+/downloads/
 /work/
 /.npm-cache/
 .dev-*.log

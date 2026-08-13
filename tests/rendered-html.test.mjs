@@ -114,4 +114,8 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(page, /Crea squadre casualmente/);
   assert.match(page, /Seleziona esattamente quattro partecipanti/);
   assert.match(page, /Inserisci risultato/);
+  // Gli emblemi GOAT devono usare le rispettive immagini della bacheca:
+  // in passato venivano intercettati dai vecchi SVG GOAT e Kraken.
+  assert.doesNotMatch(page, /"goat-slayer": "kraken"/);
+  assert.doesNotMatch(page, /badge\.glyph === "goat"/);
 });
