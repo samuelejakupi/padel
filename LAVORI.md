@@ -391,18 +391,35 @@ Il colore del battito è una variabile (`--mvp-glow`) che chi ospita l'avatar
 imposta: l'avatar non sa dove si trova. Con `prefers-reduced-motion` corona e
 contorno restano, smettono solo di battere.
 
-### La testata del profilo è la card della home, aperta
+### La testata del profilo è la card della home, punto
 Erano due cose diverse che dicevano le stesse cose a due schermate di distanza:
 card scura con i KPI in home, card a due colonne con l'Elo in un riquadro lime
-nel profilo. Ora il profilo è la stessa card — stesso fondo, stessa sfumatura,
-posizione e foto sulla stessa riga — solo più alta, perché in fondo ci stanno i
-numeri di carriera.
+nel profilo. Il riquadro lime è sparito — l'Elo apre la fila dei numeri — e i
+numeri di carriera sono entrati nella card, staccati da una riga sola, in lime
+come i KPI della home.
 
-"Numeri in campo · Carriera" non è più un riquadro bianco sotto alla card: sta
-dentro, staccato da una riga sola, con i numeri in lime come i KPI della home.
-L'Elo apre la fila e prende il posto del riquadro lime, che diceva la stessa
-cosa in un altro modo. I riquadri diventano cinque (sei per chi ha pareggi);
-su mobile vanno a due per riga e quello che resta spaiato prende tutta la riga.
+Non "come" la card della home: la stessa. Stesso saluto — con la stessa battuta
+pescata per questa visita — stesso occhiello "La tua posizione", stesso numerone
+accanto alla faccia. Sulla scheda di un altro il saluto non ha senso e resta il
+nome.
+
+Sono spariti i gettoni con dentro `#3 in classifica`, `Serie +2`,
+`In campo dal…`: ripetevano numeri che stanno già nella card, uno a due
+centimetri dall'altro. Al posto della frase che in home dice quanto manca al
+posto sopra, qui c'è come si gioca — mano e lato di campo — che è l'unica cosa
+che quei gettoni dicevano e che non è scritta da nessun'altra parte.
+
+Il tasto di modifica è nell'angolo in alto a destra con la sola matita: la
+parola "Modifica" portava via mezza riga e faceva partire il saluto spostato.
+Attenzione se lo si tocca: `.player-detail-hero > *` mette `position: relative`
+su tutti i figli per tenerli sopra alla filigrana, e vince su una classe sola —
+il tasto va scritto con il contenitore davanti o torna nel flusso.
+
+I numeri di carriera sono sei, due per riga, e le coppie sono volute: Elo con
+quante partite, win rate con le vittorie, serie con le sconfitte. I due numeri
+di una riga si leggono insieme. I pareggi restano fuori — sono pochi e
+allungavano la fila per niente — e l'insegna "Numeri in campo · Carriera" è
+sparita: diceva quello che i numeri dicono da soli.
 
 ### I titoli si votano dal fondo della classifica
 La classifica è l'unico punto dell'app dove il gruppo è tutto in fila, quindi è
@@ -1163,13 +1180,30 @@ così il cambio di faccia e lo spostamento finiscono nello stesso disegno: fatti
 in due passaggi, per un fotogramma si vedrebbe il tasto nuovo già in scena e il
 nastro ancora spostato, cioè il tasto fuori dallo schermo.
 
-### Gli emblemi del profilo camminano da soli
+### Gli emblemi camminano da soli, ma si possono anche prendere in mano
 Sul telefono non ci stanno in riga. Prima si trascinavano col dito, e chi non ci
 provava vedeva sempre e solo i primi tre. Adesso la fila cammina da sola, senza
-fine: è scritta due volte, e quando l'animazione torna a zero la copia sta dove
-stava la prima. Se ci stanno tutti il nastro resta fermo. Con questo è sparito
-anche lo scorrimento laterale della pagina del profilo: la striscia sporgeva di
-venti pixel per lato con un margine negativo, e bastavano quelli.
+fine: è scritta due volte, e quando il giro si chiude la copia sta dove stava la
+prima. Se ci stanno tutti il nastro resta fermo. Con questo è sparito anche lo
+scorrimento laterale della pagina del profilo: la striscia sporgeva di venti
+pixel per lato con un margine negativo, e bastavano quelli.
+
+**A far camminare il nastro è lo scorrimento della finestra, non una
+trasformazione della fila.** Con la trasformazione le due cose si pestavano i
+piedi: chi provava a scorrere a mano si vedeva la fila scappare via, perché il
+dito muoveva una cosa e l'animazione un'altra. Ora c'è un solo numero in gioco —
+`scrollLeft` — che avanza da solo qualche decimo di pixel per fotogramma e si
+ferma mentre lo tocchi; quando lasci, riparte da dove l'hai lasciato. Il
+componente distingue il proprio passo dal dito confrontando `scrollLeft` con
+l'ultimo valore che ha scritto lui.
+
+Lo scorrimento laterale della pagina non torna: la striscia è essa stessa un
+contenitore di scorrimento, quindi quello che esce lo tiene lei (e
+`overscroll-behavior-x: contain` impedisce che il gesto passi alla pagina).
+
+**Ai bordi gli emblemi spariscono dietro al vetro, non sfumano.** La sfumatura
+(`mask-image`) su fondo bianco li faceva scolorire, e sembrava che si
+spegnessero invece di uscire di scena.
 
 ### Niente scorrimento laterale fra le sezioni
 Cambiava sezione per sbaglio mentre si leggeva. Resta solo il ritorno indietro

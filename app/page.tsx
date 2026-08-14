@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { CSSProperties, Fragment, FormEvent, ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Fragment, FormEvent, ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import {
   hasSupabaseConfig,
@@ -1514,6 +1514,7 @@ const BADGE_MARQUEE_GAP = 8;
 // nastro resta fermo e la copia non viene nemmeno scritta.
 function BadgeList({ badges }: { badges: Badge[] }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const laneRef = useRef<HTMLDivElement | null>(null);
   // La prima fila sta in uno stato e non in un ref perche serve a far ripartire
   // la misura quando compare: con un ref l'effetto girerebbe prima che il nodo
   // esista.
@@ -1524,9 +1525,6 @@ function BadgeList({ badges }: { badges: Badge[] }) {
     const viewport = viewportRef.current;
     if (!row || !viewport) return;
     if (typeof window === "undefined") return;
-    // Chi chiede meno animazioni tiene la striscia ferma: la ritrova scorrevole
-    // col dito, vedi la regola in globals.css.
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     function measure() {
       if (!row || !viewport) return;
@@ -1546,18 +1544,85 @@ function BadgeList({ badges }: { badges: Badge[] }) {
     return () => observer.disconnect();
   }, [row, badges]);
 
+  // Il nastro cammina spostando lo scorrimento della finestra invece di
+  // traslare la fila. E la stessa striscia, ma cosi la si puo prendere e
+  // trascinare col dito: con una trasformazione le due cose si sarebbero
+  // pestate i piedi, e chi scorreva a mano si vedeva la fila scappare via.
+  // Chi chiede meno animazioni la trova ferma, e la scorre col dito.
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    const lane = laneRef.current;
+    if (!viewport || !lane || shift <= 0) return;
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let frame = 0;
+    let last = 0;
+    let paused = false;
+    let position = viewport.scrollLeft;
+    // L'ultimo valore scritto da noi. Serve a distinguere il nostro passo dal
+    // dito di chi scorre: senza, a ogni fotogramma riporteremmo la striscia
+    // dove l'avevamo lasciata noi.
+    let written = position;
+
+    const step = (now: number) => {
+      if (last && !paused) {
+        position += (BADGE_MARQUEE_SPEED * (now - last)) / 1000;
+        // La copia sta esattamente una fila piu in la: tornando indietro di
+        // una fila si ricomincia sugli stessi pixel e il giro non si vede.
+        if (position >= shift) position -= shift;
+        // Lo scorrimento va a pixel interi: scritto un valore con la
+        // virgola, il browser lo arrotonda, e a ventidue pixel al secondo si
+        // vedrebbe avanzare a scatti di un pixel ogni due fotogrammi. La
+        // parte intera la porta lo scorrimento, il resto — sempre meno di un
+        // pixel — lo porta una traslazione, che invece i decimali li tiene.
+        const intero = Math.floor(position);
+        viewport.scrollLeft = intero;
+        written = viewport.scrollLeft;
+        lane.style.transform = `translate3d(${-(position - intero)}px, 0, 0)`;
+      }
+      last = now;
+      frame = window.requestAnimationFrame(step);
+    };
+
+    const onScroll = () => {
+      if (Math.abs(viewport.scrollLeft - written) > 2) position = viewport.scrollLeft;
+    };
+
+    const pause = () => {
+      paused = true;
+    };
+
+    // `last` azzerato: senza, al primo fotogramma dopo la pausa il nastro
+    // salterebbe avanti di tutto il tempo passato fermo.
+    const resume = () => {
+      paused = false;
+      last = 0;
+    };
+
+    frame = window.requestAnimationFrame(step);
+    viewport.addEventListener("scroll", onScroll, { passive: true });
+    viewport.addEventListener("pointerenter", pause);
+    viewport.addEventListener("pointerleave", resume);
+    viewport.addEventListener("pointerdown", pause);
+    window.addEventListener("pointerup", resume);
+    window.addEventListener("pointercancel", resume);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      viewport.removeEventListener("scroll", onScroll);
+      viewport.removeEventListener("pointerenter", pause);
+      viewport.removeEventListener("pointerleave", resume);
+      viewport.removeEventListener("pointerdown", pause);
+      window.removeEventListener("pointerup", resume);
+      window.removeEventListener("pointercancel", resume);
+    };
+  }, [shift]);
+
   const running = shift > 0;
   return (
     <div className="badge-marquee" ref={viewportRef}>
-      <div
-        className={`badge-marquee-lane${running ? " is-running" : ""}`}
-        style={running
-          ? ({
-              "--marquee-shift": `${shift}px`,
-              "--marquee-duration": `${shift / BADGE_MARQUEE_SPEED}s`,
-            } as CSSProperties)
-          : undefined}
-      >
+      <div className="badge-marquee-lane" ref={laneRef}>
         <div className="badge-grid" ref={setRow}>
           {badges.map((badge) => <BadgeTile key={badge.id} badge={badge} ghost={false} />)}
         </div>
@@ -7056,23 +7121,28 @@ function AppShell({ session }: { session: Session | null }) {
           <section className="page-section player-detail-page">
             <article className="player-detail-hero">
               <BlockMark size="lg" />
+              {/* Il tasto di modifica sta nell'angolo, con la sola matita:
+                  accanto all'occhiello portava via mezza riga per una cosa
+                  che si cerca dove si cerca sempre. */}
+              {isOwnCard ? (
+                <button
+                  className="player-edit-button"
+                  type="button"
+                  onClick={() => setShowProfileEdit(true)}
+                  title="Modifica i dati del profilo"
+                  aria-label="Modifica i dati del profilo"
+                >
+                  <span aria-hidden="true">✎</span>
+                </button>
+              ) : null}
               <div className="hero-stat-copy player-detail-copy">
-                <p className="eyebrow eyebrow-with-action">
-                  {isOwnCard ? "IL TUO PROFILO" : "SCHEDA GIOCATORE"}
-                  {isOwnCard ? (
-                    <button
-                      className="player-edit-button"
-                      type="button"
-                      onClick={() => setShowProfileEdit(true)}
-                      title="Modifica i dati del profilo"
-                    >
-                      <span aria-hidden="true">✎</span> Modifica
-                    </button>
-                  ) : null}
-                </p>
-                <h1>{selectedPlayer.display_name}</h1>
-                {/* Posizione e foto sulla stessa riga, come nella card della
-                    home: e la stessa scheda, solo aperta. */}
+                {/* Lo stesso saluto della card in home, con la stessa battuta
+                    pescata per questa visita. Sulla scheda di un altro il
+                    saluto non ha senso: resta il nome. */}
+                <h1 className="hero-greeting">
+                  {isOwnCard ? heroGreeting.lead : selectedPlayer.display_name}
+                </h1>
+                <p className="eyebrow">{isOwnCard ? "LA TUA POSIZIONE" : "POSIZIONE IN CLASSIFICA"}</p>
                 <div className="hero-position-row">
                   <div className="position">
                     {selectedPlayer.matches_played && selectedPlayerRank
@@ -7090,30 +7160,30 @@ function AppShell({ session }: { session: Session | null }) {
                     </div>
                   </div>
                 </div>
-                <div className="player-traits">
-                  {padelTraits(selectedPlayer) ? <span>{padelTraits(selectedPlayer)}</span> : null}
-                  <span>{selectedPlayer.matches_played ? `#${selectedPlayerRank} in classifica` : "Non classificato"}</span>
-                  {selectedPlayer.matches_played ? <span>Serie {selectedPlayer.current_streak > 0 ? `+${selectedPlayer.current_streak}` : selectedPlayer.current_streak}</span> : null}
-                  <span>In campo dal {new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(new Date(selectedPlayer.created_at ?? "2026-01-01"))}</span>
-                </div>
+                {/* Dove la card della home dice quanto manca al posto sopra,
+                    qui c'e come si gioca: mano e lato di campo. E la riga che
+                    racconta il giocatore, e questa e la sua scheda. */}
+                <p>
+                  {padelTraits(selectedPlayer)
+                    ?? (isOwnCard
+                      ? "Mano e lato di campo si scelgono da Modifica."
+                      : "Mano e lato di campo non ancora scelti.")}
+                </p>
               </div>
-              {/* I numeri di carriera stanno dentro la card invece che in un
-                  riquadro bianco sotto: la card si allunga in basso e le
-                  statistiche pesano quanto la faccia di chi le ha fatte.
-                  L'Elo apre la fila, al posto del riquadro lime che diceva la
-                  stessa cosa in un altro modo. Il riquadro dei pareggi
-                  compare solo a chi ne ha. */}
+              {/* I numeri di carriera, due per riga. Senza insegna: "Numeri in
+                  campo · Carriera" diceva quello che i numeri dicono da soli.
+                  L'accoppiata di ogni riga e voluta — Elo con quante partite,
+                  win rate con le vittorie, serie con le sconfitte — perche i
+                  due numeri di una riga si leggono insieme. I pareggi restano
+                  fuori: sono pochi e allungavano la fila per niente. */}
               <section className="player-stats-card" aria-label="Statistiche del giocatore">
-                <header><span>NUMERI IN CAMPO</span><small>Carriera</small></header>
-                <div className={`player-kpis${(selectedPlayer.draws ?? 0) > 0 ? " player-kpis-drawn" : ""}`}>
+                <div className="player-kpis">
                   <article><b>{selectedPlayer.matches_played ? selectedPlayer.rating : "N/C"}</b><small>Elo</small></article>
-                  <article><b>{selectedPlayer.matches_played}</b><small>Partite</small></article>
-                  <article><b>{selectedPlayer.wins}</b><small>Vittorie</small></article>
-                  <article><b>{selectedPlayer.losses}</b><small>Sconfitte</small></article>
-                  {(selectedPlayer.draws ?? 0) > 0
-                    ? <article><b>{selectedPlayer.draws}</b><small>Pareggi</small></article>
-                    : null}
+                  <article><b>{selectedPlayer.matches_played}</b><small>N. partite</small></article>
                   <article><b>{padelWinRate(selectedPlayer.wins, selectedPlayer.losses)}%</b><small>Win rate</small></article>
+                  <article><b>{selectedPlayer.wins}</b><small>Vittorie</small></article>
+                  <article><b>{selectedPlayer.current_streak > 0 ? `+${selectedPlayer.current_streak}` : selectedPlayer.current_streak}</b><small>Serie</small></article>
+                  <article><b>{selectedPlayer.losses}</b><small>Sconfitte</small></article>
                 </div>
               </section>
             </article>

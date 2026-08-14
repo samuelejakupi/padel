@@ -4431,7 +4431,6 @@ button.podium-person {
   display: grid;
   gap: 24px;
   grid-template-columns: minmax(0, 1fr);
-  min-height: 340px;
   overflow: hidden;
   padding: var(--space-8);
   position: relative;
@@ -4445,35 +4444,41 @@ button.podium-person {
   margin-top: 14px;
 }
 
-/* Accanto all'occhiello "il tuo profilo": è lì che lo si cerca. */
-.eyebrow-with-action {
+/* Nell'angolo in alto a destra della card, con la sola matita: la parola
+   "Modifica" portava via mezza riga per una cosa che si cerca dove si cerca
+   sempre, e il saluto cominciava spostato. */
+/* Il nome del contenitore davanti non e un vezzo: `.player-detail-hero > *`
+   mette `position: relative` su tutti i figli per tenerli sopra alla
+   filigrana, e vince su una classe sola. Senza, questo tasto tornava nel
+   flusso e si piantava in cima a sinistra. */
+.player-detail-hero .player-edit-button {
   align-items: center;
-  display: flex;
-  gap: 12px;
-}
-
-.player-edit-button {
   background: rgba(255, 255, 255, 0.14);
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: 50%;
   color: var(--white);
   cursor: pointer;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.8px;
-  padding: 6px 12px;
+  display: flex;
+  font-size: 15px;
+  height: 38px;
+  justify-content: center;
+  line-height: 1;
+  position: absolute;
+  right: 18px;
+  top: 18px;
   transition: background 150ms ease;
+  width: 38px;
+  z-index: 3;
 }
 
 .player-edit-button:hover {
   background: rgba(255, 255, 255, 0.28);
 }
 
-.player-detail-hero h1 {
-  font-size: clamp(34px, 4vw, 58px);
-  letter-spacing: -3px;
-  line-height: 0.92;
-  margin: 6px 0 0;
+/* Il saluto e la sua misura arrivano da .hero-greeting, come in home: qui
+   il pezzo grosso e il numero di posizione, non il nome. */
+.player-detail-hero .hero-greeting {
+  padding-right: 52px;
 }
 
 .player-traits {
@@ -4495,55 +4500,37 @@ button.podium-person {
 }
 
 /* I numeri di carriera vivono dentro la card scura: niente fondo proprio,
-   solo le due righe che li staccano dal resto. */
+   solo la riga che li stacca dal resto. Nessuna insegna sopra: "Numeri in
+   campo · Carriera" diceva quello che i numeri dicono da soli. */
 .player-stats-card {
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   margin: 0;
 }
 
-.player-stats-card > header {
-  align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  display: flex;
-  justify-content: space-between;
-  padding: 15px 2px 12px;
-}
-
-.player-stats-card > header span,
-.player-stats-card > header small {
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-
-.player-stats-card > header small { color: rgba(255, 255, 255, 0.6); }
-
+/* Due per riga, tre righe. Le coppie sono volute — Elo con quante partite,
+   win rate con le vittorie, serie con le sconfitte — perché i due numeri di
+   una riga si leggono insieme. */
 .player-kpis {
   display: grid;
   gap: 0;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: 1fr 1fr;
   margin: 0;
-}
-
-/* Con i pareggi i riquadri diventano sei: restano su una riga sola invece
-   di lasciarne uno spaiato sotto agli altri cinque. */
-.player-kpis-drawn {
-  grid-template-columns: repeat(6, 1fr);
 }
 
 .player-kpis article {
   align-items: baseline;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   border-right: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   flex-wrap: wrap;
   gap: 4px 10px;
   justify-content: space-between;
-  min-height: 96px;
-  padding: 18px 16px;
+  min-height: 82px;
+  padding: 16px 14px;
 }
 
-.player-kpis article:last-child { border-right: 0; }
+.player-kpis article:nth-child(2n) { border-right: 0; }
+.player-kpis article:nth-last-child(-n + 2) { border-bottom: 0; }
 
 .player-kpis b {
   align-self: flex-end;
@@ -8395,27 +8382,6 @@ button.pizza-ranking-row {
     padding: 30px 25px 22px;
   }
 
-  /* Cinque riquadri (sei con i pareggi) su una riga sola qui sarebbero cifre
-     da leggere con la lente: due per riga, e quello che resta spaiato prende
-     tutta la riga invece di lasciare un buco. */
-  .player-kpis {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .player-kpis article {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  }
-
-  .player-kpis article:nth-child(2n) { border-right: 0; }
-
-  .player-kpis:not(.player-kpis-drawn) article:last-child {
-    border-bottom: 0;
-    border-right: 0;
-    grid-column: 1 / -1;
-  }
-
-  .player-kpis-drawn article:nth-last-child(-n + 2) { border-bottom: 0; }
-
   .elo-panel {
     padding: 24px 18px 18px;
   }
@@ -8838,18 +8804,9 @@ button.pizza-ranking-row {
     padding: 24px 20px 18px;
   }
 
-  .player-detail-hero h1 {
-    font-size: 38px;
-    letter-spacing: -2.5px;
-  }
-
-  .player-traits {
-    margin-top: 12px;
-  }
-
   .player-kpis article {
-    min-height: 84px;
-    padding: 15px 13px;
+    min-height: 76px;
+    padding: 14px 12px;
   }
 
   .player-kpis b {
@@ -8903,16 +8860,6 @@ button.pizza-ranking-row {
   }
 }
 
-/* Un giro intero del nastro degli emblemi: la fila scorre di tutta la sua
-   larghezza piu lo stacco, e li si ritrova la copia nella stessa posizione da
-   cui era partita la prima. Lo spostamento e la durata arrivano dal componente,
-   che li misura sul posto. */
-@keyframes badge-marquee {
-  to {
-    transform: translate3d(calc(var(--marquee-shift) * -1), 0, 0);
-  }
-}
-
 @media (max-width: 780px) {
   /* Nel profilo non si scorre di lato, come in tutte le altre sezioni. Non
      basta togliere il margine negativo della striscia degli emblemi: sporgono
@@ -8946,33 +8893,33 @@ button.pizza-ranking-row {
      sporge l'altro asse diventa scorrevole da solo. Non erano gli emblemi a
      muoversi dx/sx, era il profilo intero. */
   .badge-marquee {
-    /* Ai due bordi gli emblemi sfumano invece di essere tranciati: tagliati di
-       netto sembrava che la striscia finisse li. */
-    mask-image: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent);
-    overflow: hidden;
+    /* Gli emblemi spariscono dietro al bordo della finestra invece di
+       sfumare: la sfumatura, su fondo bianco, li faceva scolorire e
+       sembravano spegnersi. Qui la striscia e un vetro, e sotto al bordo del
+       vetro ci passano interi.
+       `overflow-x: auto` e anche quello che la rende trascinabile col dito;
+       essendo lei stessa un contenitore di scorrimento, la pagina attorno non
+       diventa scorrevole di lato — vedi .player-detail-page qui sopra. */
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
     /* Sopra e sotto lo spazio per il sollevamento dell'emblema sfiorato, che
        altrimenti verrebbe tagliato dal ritaglio della finestra. */
     padding: 4px 0 12px;
+    scrollbar-width: none;
   }
 
-  /* Il nastro: la fila degli emblemi piu la sua copia, in fila indiana. */
+  .badge-marquee::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Il nastro: la fila degli emblemi piu la sua copia, in fila indiana. A
+     farlo camminare e lo scorrimento della finestra, non una trasformazione:
+     vedi BadgeList in page.tsx, che ferma il passo mentre lo tocchi. */
   .badge-marquee-lane {
     display: flex;
     gap: 8px;
     width: max-content;
-  }
-
-  /* Cammina solo se c'e qualcosa da portare in vista: la classe la mette il
-     componente dopo aver misurato (vedi BadgeList in page.tsx). */
-  .badge-marquee-lane.is-running {
-    animation: badge-marquee var(--marquee-duration) linear infinite;
-  }
-
-  /* Fermo mentre lo si guarda da vicino: il cartellino di un emblema che
-     scivola via mentre lo leggi non si legge. */
-  .badge-marquee-lane.is-running:hover,
-  .badge-marquee-lane.is-running:focus-within {
-    animation-play-state: paused;
   }
 
   .player-trophies .badge-grid {
@@ -9185,15 +9132,6 @@ button.pizza-ranking-row {
   .avatar-mvp-label,
   .match-mvp-row.is-pending .match-mvp-button {
     animation: none;
-  }
-
-  /* Il nastro degli emblemi qui non cammina (lo decide gia BadgeList), quindi
-     quelli oltre il bordo si raggiungono col dito come prima. Senza questa
-     regola resterebbero dietro al ritaglio della finestra, irraggiungibili. */
-  .badge-marquee {
-    mask-image: none;
-    overflow-x: auto;
-    scrollbar-width: none;
   }
 
   .cta-new-match::after,
