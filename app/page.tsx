@@ -692,6 +692,18 @@ function padelTraits(profile: Profile) {
   return parts.length ? parts.join(" · ") : null;
 }
 
+// La corona dell'MVP, dentro la pastiglia oro al posto della parola. Tre
+// lettere in corpo 7 su un avatar da 36px si leggevano solo sapendo gia cosa
+// c'era scritto; la corona si riconosce alla stessa dimensione.
+function CrownGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 4.2 15 9.5l5.3-2.4c.8-.4 1.6.4 1.4 1.2l-1.7 7.1H4L2.3 8.3c-.2-.8.6-1.6 1.4-1.2L9 9.5z" />
+      <rect x="4" y="17.2" width="16" height="2.6" rx="1.3" />
+    </svg>
+  );
+}
+
 function Avatar({
   profile,
   size = "md",
@@ -711,7 +723,11 @@ function Avatar({
       ) : (
         <span>{initials(profile.display_name)}</span>
       )}
-      {mvp ? <b className="avatar-mvp-label" title="MVP della partita">MVP</b> : null}
+      {mvp ? (
+        <b className="avatar-mvp-label" title="MVP della partita">
+          <CrownGlyph />
+        </b>
+      ) : null}
       {rank === 1 ? (
         <b className="rank-badge rank-badge-award" title="Primo in classifica">
           <Image
@@ -2302,11 +2318,16 @@ function useButtonRail<T extends string>({
   return { setCard, trackRef, swipeHandled, preview, offset, settling };
 }
 
+// Quante caselle di punteggio mostra una card partita, comunque sia finita:
+// vedi scoreCells qui sotto.
+const MATCH_SETS_SHOWN = 3;
+
 function MatchCard({
   match,
   onEdit,
   onPlayVideo,
   onVoteMvp,
+  onOpenPlayer,
   viewerId,
   actionLabel,
   compact = false,
@@ -2315,6 +2336,10 @@ function MatchCard({
   onEdit?: (match: PadelMatch) => void;
   onPlayVideo?: (videoId: string) => void;
   onVoteMvp?: (match: PadelMatch) => void;
+  // Chi passa questa funzione dice che qui le facce si possono aprire. Non e
+  // sempre vero: la card della home e tutta un tasto che apre il foglio, e
+  // dentro un tasto non ci va un altro tasto.
+  onOpenPlayer?: (profile: Profile) => void;
   viewerId?: string;
   // Cosa succede toccando la card: non sempre e "modifica", quindi chi la
   // usa puo dirlo, altrimenti chi naviga con lo screen reader sentirebbe
@@ -2352,6 +2377,45 @@ function MatchCard({
     && !match.mvp_voting_closed_at
     && mvpNames.length === 0,
   );
+  // Le caselle del punteggio sono sempre tre, anche quando la partita e
+  // finita al primo set: con una casella sola la card veniva larga la meta
+  // delle altre e la fila non tornava. Quelle non giocate sono 0-0 sbiadite,
+  // come i set interrotti: stessa forma, ma si vede che non sono state
+  // giocate.
+  const scoreCells: { key: string; left: number; right: number; tone: string }[] = [...match.sets]
+    .sort((a, b) => a.set_number - b.set_number)
+    .map((set) => ({
+      key: String(set.set_number),
+      left: flipped ? set.team2_games : set.team1_games,
+      right: flipped ? set.team1_games : set.team2_games,
+      tone: setIsIncomplete(set) ? "unfinished" : "played",
+    }));
+  while (scoreCells.length < MATCH_SETS_SHOWN) {
+    scoreCells.push({ key: `empty-${scoreCells.length}`, left: 0, right: 0, tone: "empty" });
+  }
+
+  // Le facce della squadra. Nel foglio partite sono un varco verso la scheda
+  // del giocatore, come le righe della classifica; altrove restano immagini.
+  const renderAvatars = (players: typeof team1) => (
+    <div className="mini-avatars">
+      {players.map((player) => (onOpenPlayer ? (
+        <button
+          key={player.profile_id}
+          type="button"
+          className="mini-avatar-link"
+          // La card intera apre la correzione: senza fermare qui la
+          // propagazione, aprendo la scheda si aprirebbe anche quella.
+          onClick={(event) => { event.stopPropagation(); onOpenPlayer(player.profile); }}
+          aria-label={`Apri la scheda di ${player.profile.display_name}`}
+        >
+          <Avatar profile={player.profile} size="sm" mvp={mvpIds.has(player.profile_id)} />
+        </button>
+      ) : (
+        <Avatar key={player.profile_id} profile={player.profile} size="sm" mvp={mvpIds.has(player.profile_id)} />
+      )))}
+    </div>
+  );
+
   const formatTeam = (players: typeof team1) => (
     <span className="match-team-players">
       {players.map((player) => {
@@ -2412,25 +2476,21 @@ function MatchCard({
             sul terzo elemento, la classe drawn, che tinge i due contorni di
             giallo invece che di verde e rosso. */}
         <div className={`match-team ${draw ? "drawn" : match.winner_team === leftSide ? "winner" : ""}`}>
-          <div className="mini-avatars">{team1.map((player) => <Avatar key={player.profile_id} profile={player.profile} size="sm" mvp={mvpIds.has(player.profile_id)} />)}</div>
+          {renderAvatars(team1)}
           {formatTeam(team1)}
           {draw ? <em>PAREGGIO</em> : match.winner_team === leftSide ? <em>VITTORIA</em> : null}
         </div>
         <div className="match-score">
-          {match.sets
-            .sort((a, b) => a.set_number - b.set_number)
-            .map((set) => (
-              // Il set interrotto si scrive fra parentesi: dice a colpo
-              // d'occhio che quei giochi non hanno assegnato il set.
-              <span key={set.set_number} className={setIsIncomplete(set) ? "match-score-unfinished" : undefined}>
-                <b>{flipped ? set.team2_games : set.team1_games}</b>
-                <i>—</i>
-                <b>{flipped ? set.team1_games : set.team2_games}</b>
-              </span>
-            ))}
+          {scoreCells.map((cell) => (
+            <span key={cell.key} className={cell.tone === "played" ? undefined : `match-score-${cell.tone}`}>
+              <b>{cell.left}</b>
+              <i>—</i>
+              <b>{cell.right}</b>
+            </span>
+          ))}
         </div>
         <div className={`match-team team-right ${draw ? "drawn" : match.winner_team === rightSide ? "winner" : ""}`}>
-          <div className="mini-avatars">{team2.map((player) => <Avatar key={player.profile_id} profile={player.profile} size="sm" mvp={mvpIds.has(player.profile_id)} />)}</div>
+          {renderAvatars(team2)}
           {formatTeam(team2)}
           {draw ? <em>PAREGGIO</em> : match.winner_team === rightSide ? <em>VITTORIA</em> : null}
         </div>
@@ -6934,60 +6994,68 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "player" && selectedPlayer ? (
           <section className="page-section player-detail-page">
             <article className="player-detail-hero">
-              <BlockMark />
-              <div className="player-detail-identity">
-                <div className="profile-photo">
-                  <Avatar profile={selectedPlayer} size="xl" rank={selectedPlayerRank || undefined} />
-                  {isOwnCard && supabase ? (
-                    <button className="photo-button" type="button" onClick={() => setShowAvatarPicker(true)}>
-                      Cambia foto
+              <BlockMark size="lg" />
+              <div className="hero-stat-copy player-detail-copy">
+                <p className="eyebrow eyebrow-with-action">
+                  {isOwnCard ? "IL TUO PROFILO" : "SCHEDA GIOCATORE"}
+                  {isOwnCard ? (
+                    <button
+                      className="player-edit-button"
+                      type="button"
+                      onClick={() => setShowProfileEdit(true)}
+                      title="Modifica i dati del profilo"
+                    >
+                      <span aria-hidden="true">✎</span> Modifica
                     </button>
                   ) : null}
-                </div>
-                <div>
-                  <p className="eyebrow eyebrow-with-action">
-                    {isOwnCard ? "IL TUO PROFILO" : "SCHEDA GIOCATORE"}
-                    {isOwnCard ? (
-                      <button
-                        className="player-edit-button"
-                        type="button"
-                        onClick={() => setShowProfileEdit(true)}
-                        title="Modifica i dati del profilo"
-                      >
-                        <span aria-hidden="true">✎</span> Modifica
-                      </button>
-                    ) : null}
-                  </p>
-                  <h1>{selectedPlayer.display_name}</h1>
-                  <div className="player-traits">
-                    {padelTraits(selectedPlayer) ? <span>{padelTraits(selectedPlayer)}</span> : null}
-                    <span>{selectedPlayer.matches_played ? `#${selectedPlayerRank} in classifica` : "Non classificato"}</span>
-                    {selectedPlayer.matches_played ? <span>Serie {selectedPlayer.current_streak > 0 ? `+${selectedPlayer.current_streak}` : selectedPlayer.current_streak}</span> : null}
-                    <span>In campo dal {new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(new Date(selectedPlayer.created_at ?? "2026-01-01"))}</span>
+                </p>
+                <h1>{selectedPlayer.display_name}</h1>
+                {/* Posizione e foto sulla stessa riga, come nella card della
+                    home: e la stessa scheda, solo aperta. */}
+                <div className="hero-position-row">
+                  <div className="position">
+                    {selectedPlayer.matches_played && selectedPlayerRank
+                      ? <><span>#</span>{selectedPlayerRank}</>
+                      : "N/C"}
+                  </div>
+                  <div className="hero-player">
+                    <div className="profile-photo">
+                      <Avatar profile={selectedPlayer} size="xl" rank={selectedPlayerRank || undefined} />
+                      {isOwnCard && supabase ? (
+                        <button className="photo-button" type="button" onClick={() => setShowAvatarPicker(true)}>
+                          Cambia foto
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
+                <div className="player-traits">
+                  {padelTraits(selectedPlayer) ? <span>{padelTraits(selectedPlayer)}</span> : null}
+                  <span>{selectedPlayer.matches_played ? `#${selectedPlayerRank} in classifica` : "Non classificato"}</span>
+                  {selectedPlayer.matches_played ? <span>Serie {selectedPlayer.current_streak > 0 ? `+${selectedPlayer.current_streak}` : selectedPlayer.current_streak}</span> : null}
+                  <span>In campo dal {new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(new Date(selectedPlayer.created_at ?? "2026-01-01"))}</span>
+                </div>
               </div>
-              <div className="player-rating-card">
-                <span>ELO ATTUALE</span>
-                <b>{selectedPlayer.matches_played ? selectedPlayer.rating : "N/C"}</b>
-                <small>{selectedPlayer.matches_played ? `${selectedPlayer.rating - 1000 >= 0 ? "+" : ""}${selectedPlayer.rating - 1000} dalla quota iniziale` : "In attesa del debutto"}</small>
-              </div>
+              {/* I numeri di carriera stanno dentro la card invece che in un
+                  riquadro bianco sotto: la card si allunga in basso e le
+                  statistiche pesano quanto la faccia di chi le ha fatte.
+                  L'Elo apre la fila, al posto del riquadro lime che diceva la
+                  stessa cosa in un altro modo. Il riquadro dei pareggi
+                  compare solo a chi ne ha. */}
+              <section className="player-stats-card" aria-label="Statistiche del giocatore">
+                <header><span>NUMERI IN CAMPO</span><small>Carriera</small></header>
+                <div className={`player-kpis${(selectedPlayer.draws ?? 0) > 0 ? " player-kpis-drawn" : ""}`}>
+                  <article><b>{selectedPlayer.matches_played ? selectedPlayer.rating : "N/C"}</b><small>Elo</small></article>
+                  <article><b>{selectedPlayer.matches_played}</b><small>Partite</small></article>
+                  <article><b>{selectedPlayer.wins}</b><small>Vittorie</small></article>
+                  <article><b>{selectedPlayer.losses}</b><small>Sconfitte</small></article>
+                  {(selectedPlayer.draws ?? 0) > 0
+                    ? <article><b>{selectedPlayer.draws}</b><small>Pareggi</small></article>
+                    : null}
+                  <article><b>{padelWinRate(selectedPlayer.wins, selectedPlayer.losses)}%</b><small>Win rate</small></article>
+                </div>
+              </section>
             </article>
-
-            {/* Il riquadro dei pareggi compare solo a chi ne ha: finche non
-                se ne registra uno la fila resta di quattro, com'era. */}
-            <section className="player-stats-card" aria-label="Statistiche del giocatore">
-              <header><span>NUMERI IN CAMPO</span><small>Carriera</small></header>
-              <div className={`player-kpis${(selectedPlayer.draws ?? 0) > 0 ? " player-kpis-drawn" : ""}`}>
-              <article><b>{selectedPlayer.matches_played}</b><small>Partite</small></article>
-              <article><b>{selectedPlayer.wins}</b><small>Vittorie</small></article>
-              <article><b>{selectedPlayer.losses}</b><small>Sconfitte</small></article>
-              {(selectedPlayer.draws ?? 0) > 0
-                ? <article><b>{selectedPlayer.draws}</b><small>Pareggi</small></article>
-                : null}
-              <article><b>{padelWinRate(selectedPlayer.wins, selectedPlayer.losses)}%</b><small>Win rate</small></article>
-              </div>
-            </section>
 
             <section className="player-trophies">
               <div className="player-history-head">
@@ -7479,6 +7547,7 @@ function AppShell({ session }: { session: Session | null }) {
                       onEdit={(selected) => { setSheet(null); setEditingMatch(selected); }}
                       onPlayVideo={(id) => setPlayingVideo(id)}
                       onVoteMvp={mvpSchemaReady ? setVotingMvpMatch : undefined}
+                      onOpenPlayer={(profile) => { setSheet(null); openPlayer(profile); }}
                       viewerId={session?.user.id}
                     />
                   ))}

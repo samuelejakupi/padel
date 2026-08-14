@@ -524,24 +524,35 @@ button {
   width: 154px;
 }
 
+/* Il riconoscimento si vede dal contorno che batte, non da un secondo
+   anello: la corona sta gia sopra la foto, e due cerchi sovrapposti
+   staccavano l'avatar dal resto della card. Il colore del battito lo decide
+   chi ospita l'avatar; di suo e l'oro della pastiglia. */
 .avatar.avatar-mvp {
-  border-color: var(--pizza-yellow);
-  box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--pizza-yellow) 42%, transparent),
-    0 4px 12px color-mix(in srgb, var(--pizza-yellow) 34%, transparent);
+  --mvp-glow: var(--pizza-yellow);
+  animation: mvp-glow-pulse 1.7s ease-in-out infinite;
+  border-color: var(--mvp-glow);
 }
 
+@keyframes mvp-glow-pulse {
+  0%,
+  100% { border-color: var(--mvp-glow); }
+  50% { border-color: color-mix(in srgb, var(--mvp-glow) 28%, var(--white)); }
+}
+
+/* La pastiglia si stringe sulla corona: la parola "MVP" in corpo 7 sopra un
+   avatar da 36px si leggeva solo sapendo gia cosa c'era scritto. Batte allo
+   stesso passo del contorno, cosi le due cose si leggono come una sola. */
 .avatar-mvp-label {
+  animation: mvp-crown-pulse 1.7s ease-in-out infinite;
   background: var(--pizza-yellow);
   border: 2px solid var(--white);
   border-radius: var(--radius-pill);
   color: var(--ink);
-  font-size: 7px;
-  font-weight: 900;
+  display: inline-flex;
   left: 50%;
-  letter-spacing: 0.7px;
-  line-height: 1.1;
-  padding: 2px 5px;
+  line-height: 0;
+  padding: 3px;
   pointer-events: none;
   position: absolute;
   top: -12px;
@@ -549,17 +560,38 @@ button {
   z-index: 5;
 }
 
+.avatar-mvp-label svg {
+  display: block;
+  fill: currentColor;
+  height: 9px;
+  width: 9px;
+}
+
+@keyframes mvp-crown-pulse {
+  0%,
+  100% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.16); }
+}
+
 .avatar-md .avatar-mvp-label {
-  font-size: 8px;
-  padding: 2px 6px;
   top: -13px;
+}
+
+.avatar-md .avatar-mvp-label svg {
+  height: 11px;
+  width: 11px;
 }
 
 .avatar-lg .avatar-mvp-label,
 .avatar-xl .avatar-mvp-label {
-  font-size: 11px;
-  padding: 3px 8px;
+  padding: 4px;
   top: -15px;
+}
+
+.avatar-lg .avatar-mvp-label svg,
+.avatar-xl .avatar-mvp-label svg {
+  height: 15px;
+  width: 15px;
 }
 
 .rank-badge {
@@ -2106,6 +2138,12 @@ button.ranking-row-link:focus-visible {
   color: var(--ink-45);
 }
 
+/* Le caselle che completano i tre set quando la partita ne ha giocato uno
+   solo: stessa forma delle altre, sbiadite come i set interrotti. */
+.match-score-empty {
+  color: var(--ink-30);
+}
+
 /* L'esito annunciato dentro al modulo, prima di salvare. Non e un errore:
    e il giallo del pareggio, appoggiato su un velo dello stesso colore. */
 .match-verdict {
@@ -2142,9 +2180,32 @@ button.ranking-row-link:focus-visible {
   margin-left: -14px;
 }
 
-.team-right .mini-avatars .avatar + .avatar {
-  margin-left: 0;
-  margin-right: -14px;
+/* Nel foglio partite la faccia apre la scheda del giocatore. E un tasto, ma
+   deve restare una faccia: niente fondo, niente contorno, e la stessa
+   sovrapposizione di prima, che ora la porta il tasto al posto dell'avatar. */
+.mini-avatar-link {
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  padding: 0;
+}
+
+.mini-avatars .mini-avatar-link + .mini-avatar-link {
+  margin-left: -14px;
+}
+
+/* Faccia e nome vanno a paripasso. La squadra di destra e specchiata
+   (direction: rtl) per portare le facce verso il centro, ma quel rovescio
+   riguarda le colonne, non l'ordine dei giocatori: le facce restano
+   nell'ordine dei nomi, che sono in ltr. Prima la fila delle facce si
+   girava con il contenitore e sulla destra la prima faccia finiva sopra al
+   secondo nome — su mobile, con i nomi incolonnati, l'inversione si vedeva
+   ancora meglio. */
+.team-right .mini-avatars {
+  direction: ltr;
 }
 
 .match-score {
@@ -4311,29 +4372,32 @@ button.podium-person {
   max-width: 800px;
 }
 
+/* La testata del profilo e la stessa card della home, aperta: fondo scuro
+   con la sfumatura, posizione e foto sulla stessa riga, i numeri di carriera
+   in fondo. Prima erano due cose diverse — card a due colonne con l'Elo in un
+   riquadro lime qui, card scura con i KPI li — che dicevano le stesse cose a
+   due schermate di distanza. */
 .player-detail-hero {
-  align-items: stretch;
-  background: var(--ink);
+  background:
+    radial-gradient(circle at 78% 35%, rgba(24, 223, 228, 0.2), transparent 32%),
+    linear-gradient(135deg, var(--ink), var(--ink-soft));
   border-radius: var(--radius);
   color: var(--white);
   display: grid;
-  gap: 30px;
-  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 340px;
   overflow: hidden;
-  padding: 34px;
+  padding: var(--space-8);
   position: relative;
 }
 
-.player-detail-identity {
-  align-items: center;
-  display: flex;
-  gap: 25px;
-  min-width: 0;
+.player-detail-copy {
+  align-content: start;
 }
 
-.player-detail-identity .avatar-xl,
-.player-detail-identity .profile-photo {
-  flex: 0 0 auto;
+.player-detail-hero .hero-position-row {
+  margin-top: 14px;
 }
 
 /* Accanto all'occhiello "il tuo profilo": è lì che lo si cerca. */
@@ -4360,11 +4424,11 @@ button.podium-person {
   background: rgba(255, 255, 255, 0.28);
 }
 
-.player-detail-identity h1 {
-  font-size: clamp(40px, 5vw, 72px);
-  letter-spacing: -4px;
-  line-height: 0.9;
-  margin: 0;
+.player-detail-hero h1 {
+  font-size: clamp(34px, 4vw, 58px);
+  letter-spacing: -3px;
+  line-height: 0.92;
+  margin: 6px 0 0;
 }
 
 .player-traits {
@@ -4385,49 +4449,16 @@ button.podium-person {
   text-transform: uppercase;
 }
 
-.player-rating-card {
-  align-items: flex-start;
-  background: var(--lime);
-  border-radius: var(--radius-md);
-  color: var(--ink);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 24px;
-}
-
-.player-rating-card > span {
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 1.5px;
-}
-
-.player-rating-card b {
-  font-size: 58px;
-  letter-spacing: -4px;
-  line-height: 0.95;
-  margin: 12px 0 8px;
-}
-
-.player-rating-card small {
-  color: var(--ink-soft);
-  font-size: 10px;
-  font-weight: 800;
-}
-
+/* I numeri di carriera vivono dentro la card scura: niente fondo proprio,
+   solo le due righe che li staccano dal resto. */
 .player-stats-card {
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: 0 14px 38px rgba(11, 27, 44, 0.07);
-  margin: 14px 0 24px;
-  overflow: hidden;
-  padding: 0 18px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  margin: 0;
 }
 
 .player-stats-card > header {
   align-items: center;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   justify-content: space-between;
   padding: 15px 2px 12px;
@@ -4441,36 +4472,37 @@ button.podium-person {
   text-transform: uppercase;
 }
 
-.player-stats-card > header small { color: var(--muted); }
+.player-stats-card > header small { color: rgba(255, 255, 255, 0.6); }
 
 .player-kpis {
   display: grid;
   gap: 0;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   margin: 0;
 }
 
-/* Con i pareggi i riquadri diventano cinque: restano su una riga sola invece
-   di lasciarne uno spaiato sotto agli altri quattro. */
+/* Con i pareggi i riquadri diventano sei: restano su una riga sola invece
+   di lasciarne uno spaiato sotto agli altri cinque. */
 .player-kpis-drawn {
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
 }
 
 .player-kpis article {
   align-items: baseline;
-  border-right: 1px solid var(--line);
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   flex-wrap: wrap;
   gap: 4px 10px;
   justify-content: space-between;
   min-height: 96px;
-  padding: 18px 20px;
+  padding: 18px 16px;
 }
 
 .player-kpis article:last-child { border-right: 0; }
 
 .player-kpis b {
   align-self: flex-end;
+  color: var(--lime);
   font-size: 32px;
   letter-spacing: -1.5px;
   margin-top: auto;
@@ -4478,7 +4510,7 @@ button.podium-person {
 
 .player-kpis small {
   align-self: flex-end;
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 9px;
   font-weight: 900;
   letter-spacing: 0.7px;
@@ -7161,8 +7193,6 @@ button.pizza-ranking-row {
   .badge,
   .ranking-table,
   .player-detail-hero,
-  .player-rating-card,
-  .player-kpis article,
   .player-teams-list,
   .player-teams .demo-profile-note,
   .player-trophies-empty,
@@ -7854,6 +7884,21 @@ button.pizza-ranking-row {
     border-color: var(--drawn);
   }
 
+  /* Qui l'MVP non aggiunge un contorno suo: fa battere quello dell'esito,
+     che sulla card c'e gia. Nel foglio partite, dove l'esito sta scritto
+     accanto ai nomi, il battito resta oro come la pastiglia. */
+  .match-card.match-card-compact .match-team .avatar.avatar-mvp {
+    --mvp-glow: var(--danger);
+  }
+
+  .match-card.match-card-compact .match-team.winner .avatar.avatar-mvp {
+    --mvp-glow: var(--positive);
+  }
+
+  .match-card.match-card-compact .match-team.drawn .avatar.avatar-mvp {
+    --mvp-glow: var(--drawn);
+  }
+
   /* Nel ranking bastano i primi quattro: per gli altri c'e "Vedi tutto".
      Ad elenco aperto il taglio deve sparire, altrimenti il tasto non
      mostrerebbe niente di nuovo. */
@@ -7881,7 +7926,6 @@ button.pizza-ranking-row {
   /* Anche gli elenchi delle altre pagine seguono il passo di 10px, invece
      dei 12/14/16 sparsi che si erano accumulati. */
   .plays-grid,
-  .player-kpis,
   .match-history-list,
   .podium-1 + .podium-card {
     gap: 10px;
@@ -8294,51 +8338,31 @@ button.pizza-ranking-row {
   }
 
   .player-detail-hero {
+    gap: 20px;
     grid-template-columns: 1fr;
-    padding: 28px;
+    padding: 30px 25px 22px;
   }
 
-  .player-rating-card {
-    align-items: center;
-    display: grid;
-    gap: 5px 18px;
-    grid-template-columns: auto 1fr;
-    justify-content: start;
-  }
-
-  .player-rating-card > span,
-  .player-rating-card small {
-    grid-column: 2;
-  }
-
-  .player-rating-card > span {
-    align-self: end;
-  }
-
-  .player-rating-card b {
-    grid-row: 1 / span 2;
-    margin: 0;
-  }
-
+  /* Cinque riquadri (sei con i pareggi) su una riga sola qui sarebbero cifre
+     da leggere con la lente: due per riga, e quello che resta spaiato prende
+     tutta la riga invece di lasciare un buco. */
   .player-kpis {
     grid-template-columns: 1fr 1fr;
   }
 
-  .player-stats-card {
-    padding-inline: 14px;
-  }
-
   .player-kpis article {
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   }
 
   .player-kpis article:nth-child(2n) { border-right: 0; }
-  .player-kpis:not(.player-kpis-drawn) article:nth-child(n + 3) { border-bottom: 0; }
-  .player-kpis-drawn article:last-child {
+
+  .player-kpis:not(.player-kpis-drawn) article:last-child {
     border-bottom: 0;
     border-right: 0;
     grid-column: 1 / -1;
   }
+
+  .player-kpis-drawn article:nth-last-child(-n + 2) { border-bottom: 0; }
 
   .elo-panel {
     padding: 24px 18px 18px;
@@ -8758,21 +8782,11 @@ button.pizza-ranking-row {
   }
 
   .player-detail-hero {
-    gap: 22px;
-    padding: 24px 20px;
-  }
-
-  .player-detail-identity {
-    align-items: flex-start;
     gap: 16px;
+    padding: 24px 20px 18px;
   }
 
-  .player-detail-identity .avatar-xl {
-    height: 74px;
-    width: 74px;
-  }
-
-  .player-detail-identity h1 {
+  .player-detail-hero h1 {
     font-size: 38px;
     letter-spacing: -2.5px;
   }
@@ -8781,13 +8795,9 @@ button.pizza-ranking-row {
     margin-top: 12px;
   }
 
-  .player-rating-card b {
-    font-size: 48px;
-  }
-
   .player-kpis article {
-    min-height: 100px;
-    padding: 15px;
+    min-height: 84px;
+    padding: 15px 13px;
   }
 
   .player-kpis b {
@@ -9114,6 +9124,13 @@ button.pizza-ranking-row {
 
   .emblem-fill stop,
   .emblem-ring stop {
+    animation: none;
+  }
+
+  /* L'MVP resta riconoscibile lo stesso: il contorno oro e la corona
+     restano, smettono solo di battere. */
+  .avatar.avatar-mvp,
+  .avatar-mvp-label {
     animation: none;
   }
 

@@ -9,7 +9,7 @@ perdono passando da una sessione all'altra.
 "in sospeso" a "deciso". Quando scarti una strada, scrivi perché: serve a non
 ripercorrerla fra un mese.
 
-Ultimo aggiornamento: 13 agosto 2026
+Ultimo aggiornamento: 14 agosto 2026
 
 ---
 
@@ -259,6 +259,53 @@ comportamento delle migrazioni dei pareggi e delle plays.
 ---
 
 ## Deciso, e perché
+
+### La card partita mostra sempre tre set
+Anche quelle finite al primo. Le caselle che avanzano sono `0—0` sbiadite, come
+i set interrotti: con una casella sola la card veniva larga la metà delle altre
+e la fila non tornava più. Il punteggio è la parte che si legge a colpo
+d'occhio, e a colpo d'occhio le card devono avere tutte la stessa forma.
+
+Sbiadite e non piene perché un `0—0` normale sarebbe un set giocato e finito a
+zero, che è un'altra cosa: la forma è uguale, il colore dice che lì non si è
+giocato.
+
+### Faccia e nome vanno a paripasso
+La squadra di destra è specchiata (`direction: rtl`) per portare le facce verso
+il centro. Quel rovescio però riguarda le colonne, non l'ordine dei giocatori:
+la fila delle facce si girava insieme al contenitore, e sulla destra la prima
+faccia finiva sopra al secondo nome. Su mobile, dove i nomi stanno incolonnati e
+le facce in riga, l'inversione si vedeva ancora meglio. `.team-right
+.mini-avatars` torna in `ltr`: le colonne restano specchiate, i giocatori no.
+
+### L'MVP è una corona che batte, non un secondo anello
+La pastiglia oro tiene una corona nera al posto della parola "MVP": tre lettere
+in corpo 7 sopra un avatar da 36px si leggevano solo sapendo già cosa c'era
+scritto.
+
+Il contorno dell'avatar batte invece di raddoppiarsi, e il colore lo decide
+dove sei: nella card della home l'esito è già scritto nel bordo (verde, rosso,
+giallo) e batte quello — un anello oro sotto a un anello colorato faceva
+sembrare l'avatar staccato dalla card. Nel foglio partite, dove l'esito sta
+scritto accanto ai nomi, il battito è oro come la pastiglia. Prima le due viste
+mostravano lo stesso riconoscimento in due modi diversi.
+
+Il colore del battito è una variabile (`--mvp-glow`) che chi ospita l'avatar
+imposta: l'avatar non sa dove si trova. Con `prefers-reduced-motion` corona e
+contorno restano, smettono solo di battere.
+
+### La testata del profilo è la card della home, aperta
+Erano due cose diverse che dicevano le stesse cose a due schermate di distanza:
+card scura con i KPI in home, card a due colonne con l'Elo in un riquadro lime
+nel profilo. Ora il profilo è la stessa card — stesso fondo, stessa sfumatura,
+posizione e foto sulla stessa riga — solo più alta, perché in fondo ci stanno i
+numeri di carriera.
+
+"Numeri in campo · Carriera" non è più un riquadro bianco sotto alla card: sta
+dentro, staccato da una riga sola, con i numeri in lime come i KPI della home.
+L'Elo apre la fila e prende il posto del riquadro lime, che diceva la stessa
+cosa in un altro modo. I riquadri diventano cinque (sei per chi ha pareggi);
+su mobile vanno a due per riga e quello che resta spaiato prende tutta la riga.
 
 ### I titoli si votano dal fondo della classifica
 La classifica è l'unico punto dell'app dove il gruppo è tutto in fila, quindi è
