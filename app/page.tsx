@@ -714,8 +714,7 @@ function Avatar({
       {mvp ? <b className="avatar-mvp-label" title="MVP della partita">MVP</b> : null}
       {rank === 1 ? (
         <b className="rank-badge rank-badge-award" title="Primo in classifica">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="https://cdn-icons-gif.flaticon.com/18830/18830460.gif" alt="Primo in classifica" />
+          <GoatEmblem className="rank-goat-emblem" />
         </b>
       ) : null}
     </span>

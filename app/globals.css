@@ -579,20 +579,20 @@ button {
   z-index: 3;
 }
 
-/* Il badge resta il cerchio lime: il multiply va sull'immagine interna, così
-   il fondo bianco della GIF si fonde col giallo e non con la foto profilo. */
+/* Il primo in classifica porta lo stesso emblema GOAT della bacheca. */
 .rank-badge-award {
-  border-width: 3px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  filter: drop-shadow(0 3px 5px rgba(11, 27, 43, 0.32));
   height: 58px;
-  overflow: hidden;
-  padding: 2px;
+  overflow: visible;
+  padding: 0;
   width: 58px;
 }
 
-.rank-badge-award img {
+.rank-badge-award .rank-goat-emblem {
   height: 100%;
-  mix-blend-mode: multiply;
-  object-fit: contain;
   width: 100%;
 }
 
