@@ -5919,6 +5919,13 @@ function AppShell({ session }: { session: Session | null }) {
   const pointsToNext = nextRankedPlayer && currentUser
     ? Math.max(0, nextRankedPlayer.rating - currentUser.rating)
     : 0;
+  // Lo stesso conto per la scheda aperta, che non e per forza la propria.
+  const playerNextRanked = selectedPlayer
+    ? [...sorted].reverse().find((profile) => profile.rating > selectedPlayer.rating) ?? null
+    : null;
+  const playerPointsToNext = playerNextRanked && selectedPlayer
+    ? Math.max(0, playerNextRanked.rating - selectedPlayer.rating)
+    : 0;
   // Ultimo posto e vantaggio risicato guardano solo chi ha gia giocato:
   // rankedProfiles (piu sopra) contiene gia i soli profili in classifica.
   const isLastRanked = Boolean(
@@ -7142,7 +7149,13 @@ function AppShell({ session }: { session: Session | null }) {
                 <h1 className="hero-greeting">
                   {isOwnCard ? heroGreeting.lead : selectedPlayer.display_name}
                 </h1>
-                <p className="eyebrow">{isOwnCard ? "LA TUA POSIZIONE" : "POSIZIONE IN CLASSIFICA"}</p>
+                {/* Al posto dell'occhiello "la tua posizione" c'e come si
+                    gioca: mano e lato di campo. La posizione la dice il
+                    numerone due righe sotto, non serve annunciarla. */}
+                <p className="eyebrow">
+                  {padelTraits(selectedPlayer)?.toUpperCase()
+                    ?? (isOwnCard ? "LA TUA POSIZIONE" : "POSIZIONE IN CLASSIFICA")}
+                </p>
                 <div className="hero-position-row">
                   <div className="position">
                     {selectedPlayer.matches_played && selectedPlayerRank
@@ -7160,14 +7173,18 @@ function AppShell({ session }: { session: Session | null }) {
                     </div>
                   </div>
                 </div>
-                {/* Dove la card della home dice quanto manca al posto sopra,
-                    qui c'e come si gioca: mano e lato di campo. E la riga che
-                    racconta il giocatore, e questa e la sua scheda. */}
+                {/* La stessa riga della card in home: quanto manca al posto
+                    sopra. Sulla scheda di un altro cambia solo la persona. */}
                 <p>
-                  {padelTraits(selectedPlayer)
-                    ?? (isOwnCard
-                      ? "Mano e lato di campo si scelgono da Modifica."
-                      : "Mano e lato di campo non ancora scelti.")}
+                  {!selectedPlayer.matches_played
+                    ? (isOwnCard
+                      ? "Gioca la prima partita per entrare nella classifica."
+                      : "Entra in classifica al primo risultato.")
+                    : selectedPlayerRank === 1
+                      ? (isOwnCard ? "Sei in testa alla classifica." : "È in testa alla classifica.")
+                      : isOwnCard
+                        ? <>Sei a <b>{playerPointsToNext} punti</b> dal prossimo posto.</>
+                        : <>È a <b>{playerPointsToNext} punti</b> dal prossimo posto.</>}
                 </p>
               </div>
               {/* I numeri di carriera, due per riga. Senza insegna: "Numeri in

@@ -405,9 +405,12 @@ nome.
 
 Sono spariti i gettoni con dentro `#3 in classifica`, `Serie +2`,
 `In campo dal…`: ripetevano numeri che stanno già nella card, uno a due
-centimetri dall'altro. Al posto della frase che in home dice quanto manca al
-posto sopra, qui c'è come si gioca — mano e lato di campo — che è l'unica cosa
-che quei gettoni dicevano e che non è scritta da nessun'altra parte.
+centimetri dall'altro. L'unica cosa che dicevano e che non è scritta da
+nessun'altra parte — mano e lato di campo — ha preso il posto dell'occhiello
+"La tua posizione", in maiuscolo e in lime come lui: la posizione la dice il
+numerone due righe sotto, non serve annunciarla. La frase sotto al numero resta
+quella della home ("Sei a X punti dal prossimo posto"), che sulla scheda di un
+altro cambia solo persona.
 
 Il tasto di modifica è nell'angolo in alto a destra con la sola matita: la
 parola "Modifica" portava via mezza riga e faceva partire il saluto spostato.
