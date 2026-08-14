@@ -1232,7 +1232,6 @@ type EmblemName = "kraken" | "trophy" | "mvp";
 
 const EMBLEM_COMPONENT: Partial<Record<BadgeGlyph, EmblemName>> = {
   trophy: "trophy",
-  mvp: "mvp",
 };
 
 // Il contorno esterno e quello interno sono gli stessi per tutti: cambia
@@ -2693,7 +2692,8 @@ function MvpVoteModal({
       <form className="sheet-form mvp-vote-form" onSubmit={submit}>
         <p className="mvp-vote-intro">
           Scegli il migliore della partita. L&apos;MVP viene assegnato appena un giocatore raggiunge 3 voti
-          oppure quando hanno votato tutti. Se il primo posto è pari, non viene assegnato.
+          oppure quando hanno votato tutti. La votazione scade comunque dopo 12 ore; in caso di parità
+          al primo posto, l&apos;MVP non viene assegnato.
         </p>
         <fieldset className="mvp-candidates" disabled={busy}>
           <legend>Partecipanti</legend>
