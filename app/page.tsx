@@ -2377,6 +2377,9 @@ function MatchCard({
     && !match.mvp_voting_closed_at
     && mvpNames.length === 0,
   );
+  // Puoi votare e non l'hai ancora fatto: e l'unico caso in cui la partita ha
+  // qualcosa da chiederti, ed e quello che accende la riga.
+  const viewerMustVote = canVoteMvp && !match.viewer_mvp_vote;
   // Le caselle del punteggio sono sempre tre, anche quando la partita e
   // finita al primo set: con una casella sola la card veniva larga la meta
   // delle altre e la fila non tornava. Quelle non giocate sono 0-0 sbiadite,
@@ -2519,14 +2522,14 @@ function MatchCard({
       </div>
       )}
       {!compact && (mvpNames.length > 0 || canVoteMvp || closedWithoutMvp) ? (
-        <div className={`match-mvp-row${mvpNames.length ? " is-awarded" : ""}`}>
+        <div className={`match-mvp-row${mvpNames.length ? " is-awarded" : ""}${viewerMustVote ? " is-pending" : ""}`}>
           {mvpNames.length ? (
             <span><b>MVP</b> {mvpNames.join(" · ")}</span>
           ) : closedWithoutMvp ? (
             <span><b>MVP non assegnato</b> · votazione terminata in parità</span>
           ) : (
             <span>
-              <b>MVP della partita</b>
+              <b>{viewerMustVote ? "Manca il tuo voto" : "MVP della partita"}</b>
               {typeof match.mvp_votes_cast === "number"
                 ? ` ${match.mvp_votes_cast}/${match.mvp_total_voters ?? match.players.length} voti`
                 : " Votazione aperta"}
@@ -5731,6 +5734,39 @@ function AppShell({ session }: { session: Session | null }) {
       (vote) => vote.session_id === openSession.id && vote.voter_id === session?.user.id,
     ),
   );
+  // Le partite che aspettano il voto di chi guarda: ha giocato, la votazione
+  // e aperta e lui non ha ancora votato. Alimentano il pallino sull'icona
+  // Padel e la pastiglia sul riquadro delle partite; dentro alla card ci
+  // pensa MatchCard, che la stessa cosa la sa gia per conto suo.
+  // La scadenza a 12 ore non si guarda qui: a chiuderle e il lavoro che gira
+  // ogni minuto su Supabase, e mvp_voting_closed_at arriva da li.
+  const pendingMvpMatches = useMemo(
+    () => matches.filter((match) => match.mvp_voting_enabled
+      && !match.mvp_voting_closed_at
+      && (match.mvps ?? []).length === 0
+      && !match.viewer_mvp_vote
+      && match.players.some((player) => player.profile_id === session?.user.id)),
+    [matches, session?.user.id],
+  );
+  // Il numero sull'icona in Home. La Badging API esiste solo per la web app
+  // salvata sulla schermata Home — iOS e iPadOS dalla 16.4, Android con la
+  // PWA installata — e su iPhone il numero si vede solo se sono state
+  // concesse le notifiche. Dove non c'e, il metodo non esiste sull'oggetto e
+  // non succede niente: nessun controllo di piattaforma da tenere aggiornato.
+  // Senza service worker il numero si aggiorna quando l'app e aperta, e resta
+  // sull'icona dopo che la chiudi. Per farlo cambiare ad app chiusa servono le
+  // notifiche push vere: vedi LAVORI.md.
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    const icona = navigator as Navigator & {
+      setAppBadge?: (count?: number) => Promise<void>;
+      clearAppBadge?: () => Promise<void>;
+    };
+    const totale = pendingMvpMatches.length + pendingPizzaVotes.length;
+    if (totale > 0) icona.setAppBadge?.(totale).catch(() => {});
+    else icona.clearAppBadge?.().catch(() => {});
+  }, [pendingMvpMatches.length, pendingPizzaVotes.length]);
+
   const currentRank = currentUser?.matches_played ? rankOf(sorted, currentUser.id) : 0;
 
   // Il tabellone dei titoli: per ognuno, chi lo detiene e con quanti voti.
@@ -6753,6 +6789,16 @@ function AppShell({ session }: { session: Session | null }) {
                       del tutto: cambiava insieme ai pallini e diceva due
                       volte la stessa cosa. */}
                   <div className="match-panel-head"><h2>Ultime partite</h2></div>
+                  {/* Il riquadro delle partite dice che una di quelle partite
+                      ti sta aspettando. Sta qui e non dentro alla card: su
+                      mobile la card e tutta un tasto che apre il foglio, ed e
+                      nel foglio che si vota. */}
+                  {pendingMvpMatches.length ? (
+                    <b className="panel-dot">
+                      {pendingMvpMatches.length}
+                      <small>MVP DA VOTARE</small>
+                    </b>
+                  ) : null}
                   {filteredPlannedMatches.length ? (
                     <div className="planned-match-list">
                       {filteredPlannedMatches.map((planned) => (
@@ -7448,6 +7494,13 @@ function AppShell({ session }: { session: Session | null }) {
               {item.key === "pizza" && pendingPizzaVotes.length ? (
                 <b className="nav-dot" aria-label={`${pendingPizzaVotes.length} votazioni da fare`}>
                   {pendingPizzaVotes.length}
+                </b>
+              ) : null}
+              {/* Lo stesso pallino per gli MVP che aspettano il tuo voto, in
+                  oro perche l'oro qui dentro vuol dire MVP. */}
+              {item.key === "padel" && pendingMvpMatches.length ? (
+                <b className="nav-dot nav-dot-mvp" aria-label={`${pendingMvpMatches.length} MVP da votare`}>
+                  {pendingMvpMatches.length}
                 </b>
               ) : null}
             </span>

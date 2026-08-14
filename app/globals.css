@@ -1397,6 +1397,32 @@ form select:focus {
   display: contents;
 }
 
+/* "Manca il tuo voto" sul riquadro delle partite. Su desktop il riquadro e
+   display: contents e questa pastiglia diventa figlia della colonna: si
+   appoggia in alto a destra sopra l'elenco. Su mobile sta dentro al riquadro
+   bianco, sopra la card che si apre. In tutti e due i casi la spinge a destra
+   il margine automatico, che funziona sia in blocco sia in flex. */
+.panel-dot {
+  align-items: center;
+  align-self: flex-end;
+  background: var(--pizza-yellow);
+  border-radius: var(--radius-pill);
+  color: var(--ink);
+  display: flex;
+  font-size: 12px;
+  font-weight: 900;
+  gap: 7px;
+  margin: 0 0 8px auto;
+  padding: 5px 12px;
+  width: fit-content;
+}
+
+.panel-dot small {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.9px;
+}
+
 /* Il titolo dentro al riquadro serve solo su mobile: su desktop la
    sezione ha gia la sua intestazione sopra. */
 .match-panel-head {
@@ -2269,6 +2295,25 @@ button.ranking-row-link:focus-visible {
 
 .match-mvp-row.is-awarded {
   color: #8a5b00;
+}
+
+/* Quando manca il tuo voto la riga si accende d'oro e il tasto batte, come la
+   corona: e la stessa cosa che ti sta aspettando, detta dove la puoi fare. */
+.match-mvp-row.is-pending,
+.match-mvp-row.is-pending > span b {
+  color: #8a5b00;
+}
+
+.match-mvp-row.is-pending .match-mvp-button {
+  animation: mvp-button-pulse 1.7s ease-in-out infinite;
+  background: var(--pizza-yellow);
+  color: var(--ink);
+}
+
+@keyframes mvp-button-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--pizza-yellow) 55%, transparent); }
+  70%,
+  100% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--pizza-yellow) 0%, transparent); }
 }
 
 .match-mvp-button {
@@ -6819,6 +6864,13 @@ button.pizza-ranking-row {
 }
 
 /* Pallino delle votazioni pizza in sospeso. */
+/* L'oro vuol dire MVP: il pallino delle votazioni pizza resta rosso, questo
+   no, altrimenti sarebbero due allarmi uguali per due cose diverse. */
+.nav-dot-mvp {
+  background: var(--pizza-yellow);
+  color: var(--ink);
+}
+
 .nav-dot {
   align-items: center;
   background: var(--danger);
@@ -9127,10 +9179,11 @@ button.pizza-ranking-row {
     animation: none;
   }
 
-  /* L'MVP resta riconoscibile lo stesso: il contorno oro e la corona
-     restano, smettono solo di battere. */
+  /* L'MVP resta riconoscibile lo stesso: il contorno oro, la corona e il
+     tasto del voto restano, smettono solo di battere. */
   .avatar.avatar-mvp,
-  .avatar-mvp-label {
+  .avatar-mvp-label,
+  .match-mvp-row.is-pending .match-mvp-button {
     animation: none;
   }
 

@@ -223,10 +223,29 @@ il trofeo del primo in classifica, la medaglia del podio pizza. Quando
 arriveranno quelle definitive va tolto anche `mix-blend-mode: multiply`, che
 serve solo a mascherare il loro fondo bianco.
 
-### Notifiche push per le votazioni pizza
-Concordate ma non fatte. Richiedono service worker, chiavi VAPID e una Edge
-Function su Supabase che le invii; su iPhone funzionano solo con la web app
-salvata sulla schermata Home. Per ora c'è il pallino sull'icona Pizza.
+### Notifiche push vere: manca solo il service worker (pizza e MVP)
+Concordate ma non fatte. Il pezzo che manca è sempre lo stesso e servirebbe a
+tutte e due le votazioni, pizza e MVP:
+
+1. un service worker in `public/` (l'export statico non è un problema: è un
+   file, non una route) registrato all'avvio;
+2. una coppia di chiavi VAPID — la pubblica nel frontend, la privata nei
+   secret di Supabase;
+3. una tabella `push_subscriptions` (profilo, endpoint, chiavi) e una RPC per
+   salvarci l'iscrizione;
+4. una Edge Function che le spedisce, sul modello di `wansport-slots`;
+5. `pg_cron`, che già gira ogni minuto per le votazioni MVP scadute, per
+   chiamarla: un promemoria qualche minuto dopo la registrazione della
+   partita e uno prima che scadano le 12 ore.
+
+Su iPhone il permesso va chiesto da un tocco vero (un tasto nel profilo,
+"Attiva le notifiche") e tutto funziona **solo con la web app salvata sulla
+schermata Home**: da Safari non arriva niente. Nell'Unione Europea funziona:
+Apple aveva annunciato di volerle togliere con iOS 17.4 e ha fatto marcia
+indietro prima che uscisse.
+
+Nel frattempo ci sono i pallini in-app e il numero sull'icona in Home (vedi
+qui sotto), che è tutto quello che si può fare senza service worker.
 
 ### L'account di Mene va creato a mano dal Dashboard
 Il roster è cresciuto a nove: `groupUsers` in `app/page.tsx` e
@@ -272,6 +291,41 @@ comportamento delle migrazioni dei pareggi e delle plays.
 ---
 
 ## Deciso, e perché
+
+### Chi non ha ancora votato l'MVP se lo sente dire in tre punti
+La votazione MVP dura 12 ore e nessuno apre l'app apposta. Il promemoria sta
+quindi lungo la strada che si fa comunque, e sempre in oro, che qui dentro
+vuol dire MVP:
+
+- **il pallino sull'icona Padel** nella barra, con quante partite ti
+  aspettano. È lo stesso pallino delle votazioni pizza, che resta rosso: due
+  allarmi uguali per due cose diverse non si distinguerebbero;
+- **la pastiglia sul riquadro delle partite** in home, sopra l'elenco. Sta lì
+  e non dentro alla card perché su mobile la card è tutta un tasto che apre il
+  foglio, ed è nel foglio che si vota;
+- **la riga della card, dentro al foglio**: si accende d'oro, dice "Manca il
+  tuo voto" invece di "MVP della partita" e il tasto batte come la corona.
+
+Il conto guarda solo `mvp_voting_closed_at`, non la scadenza a 12 ore: a
+chiudere le votazioni scadute è il lavoro che gira ogni minuto su Supabase, e
+quella colonna arriva da lì. Un minuto di sfasamento al massimo, e nel caso
+peggiore si vede un promemoria per una votazione appena scaduta.
+
+### Il numero sull'icona in Home, senza notifiche push
+`navigator.setAppBadge()` mette il numero sull'icona della web app salvata
+sulla schermata Home: MVP da votare più votazioni pizza da fare. Costa cinque
+righe e non richiede niente lato server.
+
+Funziona su iOS e iPadOS dalla 16.4 e su Android con la PWA installata, e
+**solo** se la web app è stata salvata in Home; su iPhone il numero compare
+inoltre solo a notifiche concesse. Dove non c'è, il metodo non esiste
+sull'oggetto `navigator` e non succede niente: nessun controllo di
+piattaforma da tenere aggiornato.
+
+Il limite, che è anche il motivo per cui le push restano in sospeso: senza
+service worker il numero si aggiorna quando l'app è aperta. Resta sull'icona
+dopo che la chiudi — quindi il promemoria lo vedi comunque — ma non compare da
+solo quando qualcun altro registra una partita.
 
 ### Correggere una partita non riapre la votazione MVP
 Aggiungere il campo o il link del video a una partita già votata faceva
