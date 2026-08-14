@@ -714,7 +714,13 @@ function Avatar({
       {mvp ? <b className="avatar-mvp-label" title="MVP della partita">MVP</b> : null}
       {rank === 1 ? (
         <b className="rank-badge rank-badge-award" title="Primo in classifica">
-          <GoatEmblem className="rank-goat-emblem" />
+          <Image
+            className="rank-goat-emblem"
+            src={`${basePath}/emblems/goat.webp`}
+            alt=""
+            width={128}
+            height={128}
+          />
         </b>
       ) : null}
     </span>
@@ -1239,41 +1245,6 @@ const EMBLEM_HEX_INNER = "64 12.64 114.59 35.56 100 96.24 64 115.02 28 96.24 13.
 const EMBLEM_HEX_OUTER = "64 0 0 29 18.03 104.03 64 128 109.97 104.03 128 29";
 const EMBLEM_FRAME =
   "M64,12.64l50.59,22.92-14.58,60.68-36,18.78-36-18.78-14.58-60.68L64,12.64h0ZM64,0L0,29l18.03,75.03,45.97,23.97,45.97-23.97,18.03-75.03L64,0h0Z";
-
-function GoatEmblem({ className }: { className?: string }) {
-  return (
-    <svg
-      className={`emblem goat-emblem${className ? ` ${className}` : ""}`}
-      viewBox="0 0 128 168"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path className="goat-shield" d="M64 5 119 29v91c0 20-18 34-55 45-37-11-55-25-55-45V29Z" />
-      <path className="goat-border" d="M64 13 111 34v84c0 16-16 28-47 38-31-10-47-22-47-38V34Z" />
-      <path className="goat-crown" d="m55 23 9-13 9 13-9 13Z" />
-
-      <g className="goat-portrait">
-        <path className="goat-horn-outline" d="M91 75C111 43 99 23 70 26 43 29 26 46 27 68" />
-        <path className="goat-horn" d="M91 75C111 43 99 23 70 26 43 29 26 46 27 68" />
-        <path
-          className="goat-body"
-          d="M34 139c-7-22-7-48 4-66l-8-14 21 9c10-11 25-16 40-8 10 5 14 14 17 24l10 7c3 5 0 12-6 15l-13 1c-4 10-11 16-20 19l-2 21c-15 5-30 2-43-8Z"
-        />
-        <path className="goat-ear" d="m51 69-21-10 8 23Z" />
-        <path className="goat-face-cut" d="M86 63c-7 11-9 26-5 43 7 5 15 5 21 0l-10-7 15-11c-4-12-11-21-21-25Z" />
-        <path className="goat-muzzle" d="m103 84 15 7c3 5 0 12-6 15l-17 1 7-8-10-6Z" />
-        <path className="goat-beard" d="m61 113 19 10-5 28-18-21Z" />
-        <path className="goat-fur" d="m47 85 12 17m-14 3 14 16m6-43 8 16m-6 7-7 17" />
-        <path className="goat-brow" d="m79 78 14-4" />
-        <ellipse className="goat-eye" cx="87" cy="81" rx="3.6" ry="2.4" />
-        <path className="goat-nostril" d="m108 96 5 1" />
-      </g>
-
-      <path className="goat-laurel" d="M30 132c8 8 17 13 28 17m40-17c-8 8-17 13-28 17" />
-      <path className="goat-leaves" d="m34 135-10-2 8 8m10 0-10 1 10 6m52-13 10-2-8 8m-10 0 10 1-10 6" />
-    </svg>
-  );
-}
 
 function Emblem({ name, rank = "#1", className }: { name: EmblemName; rank?: string; className?: string }) {
   // I due gradienti sono riferiti per id, e lo stesso emblema compare piu
