@@ -249,6 +249,19 @@ suo accesso non funziona.
 
 ---
 
+### `migration-mvp-correzione.sql` va eseguita **prima** del push
+Non dopo: il codice chiama `stash_match_mvp` e `restore_match_mvp` appena il
+push finisce, e finché le funzioni non esistono Supabase risponde "Could not
+find the function". Le due chiamate falliscono da sole senza bloccare la
+correzione — la partita si salva lo stesso — ma per quel po' di tempo la
+votazione MVP continua a ripartire da zero a ogni correzione, che è
+esattamente il guaio che questa migrazione chiude.
+
+La migrazione aggiunge anche `matches.mvp_voting_opened_at` e riscrive le due
+funzioni della scadenza a 12 ore perché guardino quella invece di
+`created_at`. Rilanciare `migration-mvp-scadenza-12h.sql` dopo di questa le
+riporterebbe indietro: se serve rifare tutto da zero, va eseguita per ultima.
+
 ### `migration-titoli.sql` va eseguita prima che i titoli funzionino
 Finché non gira nel SQL Editor di Supabase, il tasto "VOTA I TITOLI" in fondo
 al foglio della classifica risponde con un avviso invece di aprirsi. Le due
@@ -259,6 +272,36 @@ comportamento delle migrazioni dei pareggi e delle plays.
 ---
 
 ## Deciso, e perché
+
+### Correggere una partita non riapre la votazione MVP
+Aggiungere il campo o il link del video a una partita già votata faceva
+ripartire la votazione da zero e cancellava l'MVP assegnato. Non era un caso
+limite: correggere una partita significa cancellarla e riregistrarla — è
+l'unico modo per far ricalcolare l'Elo in ordine cronologico — e `match_mvps`
+e `match_mvp_votes` sono appese all'id della partita con `on delete cascade`.
+La riga nuova nasceva con `mvp_voting_enabled` a true e nessuna chiusura:
+una partita appena giocata, agli occhi del database.
+
+Lo stato della votazione passa quindi da un ripostiglio: `stash_match_mvp`
+prima della cancellazione, `restore_match_mvp` dopo la riregistrazione, e in
+mezzo il frontend che fa il giro che già faceva. Passano di lì i voti, l'MVP
+assegnato, la chiusura e l'istante di apertura.
+
+Il ripostiglio non ha vincoli verso `matches` di proposito: la riga deve
+sopravvivere alla cancellazione della partita, che è tutto il punto. Nessuno
+lo legge dal client (RLS accesa, nessuna policy) e le righe più vecchie di un
+giorno si buttano da sole. Un ripostiglio più vecchio di un'ora non viene
+riaperto: una correzione è immediata, e uno stato vecchio non deve finire su
+una partita a caso.
+
+Voti e MVP tornano indietro solo per chi è ancora in campo: una correzione può
+anche aver cambiato i giocatori, e un voto per chi non ha più giocato non vuol
+dire niente. Se l'MVP era proprio lui, cade anche la chiusura e la votazione
+riparte — è l'unico caso in cui è giusto che riparta.
+
+Le 12 ore contano da `mvp_voting_opened_at`, non più da `created_at`: dopo una
+correzione la riga è nuova ma la votazione è la stessa, e senza questa colonna
+correggere una partita avrebbe regalato altre 12 ore di voto.
 
 ### La card partita mostra sempre tre set
 Anche quelle finite al primo. Le caselle che avanzano sono `0—0` sbiadite, come

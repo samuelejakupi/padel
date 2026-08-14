@@ -3853,6 +3853,11 @@ function NewMatchModal({
         // La porta della correzione, non quella dell'eliminazione: qui la
         // partita esce soltanto perche sta per rientrare corretta, e a passarci
         // sono tutti quelli che hanno giocato.
+        // Lo stato della votazione MVP si mette da parte adesso: voti e MVP
+        // sono appesi all'id della partita con on delete cascade, e fra due
+        // righe quell'id non esiste piu. Se la migrazione non e stata
+        // eseguita la chiamata fallisce da sola e non blocca la correzione.
+        await supabase.rpc("stash_match_mvp", { p_match_id: match.id });
         const { error: deleteError } = await supabase.rpc("delete_match_for_edit", { p_match_id: match.id });
         if (deleteError) {
           setError(deleteError.message);
@@ -3878,11 +3883,21 @@ function NewMatchModal({
       // partita resta salvata comunque, senza bloccare nulla.
       const matchId = typeof newId === "string" ? newId : null;
 
-      // Correggere una partita storica la elimina e la ricrea. Senza questo
-      // passaggio sembrerebbe una partita nuova e aprirebbe retroattivamente
-      // la votazione MVP, contro la regola della migrazione.
-      if (matchId && match?.mvp_voting_enabled === false) {
-        await supabase.rpc("disable_match_mvp_voting", { p_match_id: matchId });
+      // Correggere una partita la elimina e la ricrea: senza questo passaggio
+      // la riga nuova sembra una partita appena giocata e la votazione MVP
+      // riparte da zero — un MVP gia assegnato sparisce e un voto gia chiuso
+      // si riapre. restore_match_mvp riporta sulla riga nuova quello che
+      // c'era: voti, MVP, chiusura e istante di apertura.
+      if (matchId && match) {
+        const { error: mvpCarryError } = await supabase.rpc("restore_match_mvp", {
+          p_old_match_id: match.id,
+          p_new_match_id: matchId,
+        });
+        // Finche migration-mvp-correzione.sql non e stata eseguita resta il
+        // comportamento di prima: almeno l'esclusione storica non si perde.
+        if (mvpCarryError && match.mvp_voting_enabled === false) {
+          await supabase.rpc("disable_match_mvp_voting", { p_match_id: matchId });
+        }
       }
 
       if (matchId && tournamentContext) {
