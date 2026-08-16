@@ -5138,6 +5138,7 @@ function buildTournamentStandings(tournament: Tournament, matches: PadelMatch[])
 // gia creato, e sarebbe strano trovare due moduli diversi per le stesse voci.
 function TournamentFormModal({
   profiles,
+  savedTeams,
   tournament,
   viewerId,
   onClose,
@@ -5145,6 +5146,10 @@ function TournamentFormModal({
   onDeleted,
 }: {
   profiles: Profile[];
+  // Le coppie gia formate (vedi "le mie squadre"): un torneo si gioca con
+  // quelle, e riscriverne il nome a mano ogni volta era il modo piu sicuro
+  // per ritrovarsi lo stesso doppio con tre nomi diversi.
+  savedTeams: PadelTeam[];
   tournament?: Tournament | null;
   viewerId?: string | null;
   onClose: () => void;
@@ -5163,11 +5168,11 @@ function TournamentFormModal({
     ? [...tournament.teams]
         .sort((a, b) => a.sort_order - b.sort_order)
         .map((team) => ({ playerA: team.player_a, playerB: team.player_b, name: team.name }))
-    : [0, 1, 2].map((teamIndex) => ({
-        playerA: profiles[teamIndex * 2]?.id ?? "",
-        playerB: profiles[teamIndex * 2 + 1]?.id ?? "",
-        name: "",
-      }));
+    // Vuote, non riempite con i primi sei della lista: quelle coppie non le
+    // aveva scelte nessuno, e bastava non accorgersene per iscrivere al
+    // torneo tre doppi a caso. Adesso ogni casella e un suggerimento —
+    // Player 1, Player 2 — come nel foglio della partita.
+    : [0, 1, 2].map(() => ({ playerA: "", playerB: "", name: "" }));
   const [name, setName] = useState(tournament?.name ?? "Torneo TheBoyz");
   const [teams, setTeams] = useState(initialTeams);
   const [trophyName, setTrophyName] = useState(tournament?.trophy_name ?? "Coppa TheBoyz");
@@ -5182,8 +5187,47 @@ function TournamentFormModal({
   // per accorgersi che l'andata e ritorno con quattro coppie sono dodici sere.
   const fixtureCount = (teams.length * (teams.length - 1) / 2) * legs;
 
+  // A, B, C, D. Il numero lo tiene il database (sort_order); qui dentro le
+  // squadre si chiamano per lettera, cosi non si confondono con i due Player
+  // che stanno dentro a ciascuna.
+  function teamLetter(index: number) {
+    return String.fromCharCode(65 + index);
+  }
+
+  function pairKeyOf(playerA: string, playerB: string) {
+    return playerA && playerB ? [playerA, playerB].sort().join("|") : "";
+  }
+
+  function savedTeamOf(playerA: string, playerB: string) {
+    const key = pairKeyOf(playerA, playerB);
+    return key ? savedTeams.find((saved) => saved.id === key) ?? null : null;
+  }
+
   function updateTeam(index: number, key: "playerA" | "playerB" | "name", value: string) {
-    setTeams((current) => current.map((team, teamIndex) => teamIndex === index ? { ...team, [key]: value } : team));
+    setTeams((current) => current.map((team, teamIndex) => {
+      if (teamIndex !== index) return team;
+      const next = { ...team, [key]: value };
+      if (key === "name") return next;
+      // Cambiati i giocatori, il nome segue: se la coppia e gia formata prende
+      // il suo, e se non lo e piu si porta via quello di prima invece di
+      // restare addosso alla coppia sbagliata. Un nome scritto a mano su una
+      // coppia senza squadra non si tocca.
+      const before = savedTeamOf(team.playerA, team.playerB);
+      const after = savedTeamOf(next.playerA, next.playerB);
+      if (after) return { ...next, name: after.name ?? "" };
+      if (before && team.name === (before.name ?? "")) return { ...next, name: "" };
+      return next;
+    }));
+  }
+
+  // Scelta la squadra, i due giocatori si compilano da soli: e la stessa cosa
+  // detta dall'altro verso.
+  function pickSavedTeam(index: number, teamId: string) {
+    const saved = savedTeams.find((team) => team.id === teamId);
+    if (!saved) return;
+    setTeams((current) => current.map((team, teamIndex) => teamIndex === index
+      ? { playerA: saved.players[0].id, playerB: saved.players[1].id, name: saved.name ?? "" }
+      : team));
   }
 
   // Quando una migrazione non e stata eseguita il database risponde con il
@@ -5217,12 +5261,16 @@ function TournamentFormModal({
     if (!supabase) return;
     setBusy(true);
     const teamPayload = teams.map((team, index) => {
-      const playerA = profiles.find((profile) => profile.id === team.playerA);
-      const playerB = profiles.find((profile) => profile.id === team.playerB);
       return {
         player_a: team.playerA,
         player_b: team.playerB,
-        name: team.name.trim() || `${playerA?.display_name ?? "?"} & ${playerB?.display_name ?? "?"}`,
+        // Lasciato vuoto vale quello che dice il segnaposto. Prima ci finivano
+        // i due nomi dei giocatori, che nelle tabelle del torneo stanno gia
+        // scritti sotto al nome della squadra: due volte la stessa cosa, e in
+        // una colonna che non ci sta.
+        name: team.name.trim()
+          || savedTeamOf(team.playerA, team.playerB)?.name?.trim()
+          || `Team ${teamLetter(index)}`,
         sort_order: index + 1,
       };
     });
@@ -5303,23 +5351,59 @@ function TournamentFormModal({
             <p className="tournament-rule-note">Le squadre non si cambiano più: nel torneo c&apos;è già un risultato.</p>
           ) : null}
           <div className="tournament-team-builder">
-            {teams.map((team, index) => (
-              <fieldset key={index} disabled={Boolean(playedFixtures)}>
-                <legend>Squadra {index + 1}</legend>
-                <div className="tournament-team-selects">
-                  <select value={team.playerA} onChange={(event) => updateTeam(index, "playerA", event.target.value)} aria-label={`Primo giocatore squadra ${index + 1}`}>
-                    <option value="">Primo giocatore</option>
-                    {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.display_name}</option>)}
-                  </select>
-                  <select value={team.playerB} onChange={(event) => updateTeam(index, "playerB", event.target.value)} aria-label={`Secondo giocatore squadra ${index + 1}`}>
-                    <option value="">Secondo giocatore</option>
-                    {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.display_name}</option>)}
-                  </select>
-                </div>
-                <input value={team.name} onChange={(event) => updateTeam(index, "name", event.target.value)} placeholder="Nome squadra facoltativo" maxLength={50} aria-label={`Nome squadra ${index + 1}`} />
-                {teams.length > 3 ? <button className="tournament-team-remove" type="button" onClick={() => setTeams((current) => current.filter((_, teamIndex) => teamIndex !== index))}>Rimuovi</button> : null}
-              </fieldset>
-            ))}
+            {teams.map((team, index) => {
+              // I giocatori gia impegnati in un'altra squadra di questo torneo:
+              // servono a non proporre una coppia che poi il database rifiuta.
+              const takenElsewhere = new Set(
+                teams.flatMap((other, otherIndex) => otherIndex === index ? [] : [other.playerA, other.playerB]).filter(Boolean),
+              );
+              const chosenTeam = savedTeamOf(team.playerA, team.playerB);
+              const pickable = savedTeams.filter((saved) =>
+                saved.id === chosenTeam?.id || !saved.players.some((profile) => takenElsewhere.has(profile.id)));
+              return (
+                <fieldset key={index} disabled={Boolean(playedFixtures)}>
+                  <legend>Squadra {teamLetter(index)}</legend>
+                  {/* Prima le squadre gia formate: nove volte su dieci il
+                      doppio che scende in campo e uno di quelli, e sceglierlo
+                      da qui riempie tutto il resto. */}
+                  {savedTeams.length ? (
+                    <select
+                      className={`tournament-team-pick${chosenTeam ? "" : " is-empty"}`}
+                      value={chosenTeam?.id ?? ""}
+                      onChange={(event) => pickSavedTeam(index, event.target.value)}
+                      aria-label={`Squadra già formata, squadra ${teamLetter(index)}`}
+                    >
+                      <option value="">Squadra formata</option>
+                      {pickable.map((saved) => (
+                        <option key={saved.id} value={saved.id}>{teamLabel(saved)}</option>
+                      ))}
+                    </select>
+                  ) : null}
+                  <div className="tournament-team-selects">
+                    {(["playerA", "playerB"] as const).map((key, position) => (
+                      <select
+                        key={key}
+                        className={team[key] ? "" : "is-empty"}
+                        value={team[key]}
+                        onChange={(event) => updateTeam(index, key, event.target.value)}
+                        aria-label={`Giocatore ${position + 1} squadra ${teamLetter(index)}`}
+                      >
+                        <option value="">Player {position + 1}</option>
+                        {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.display_name}</option>)}
+                      </select>
+                    ))}
+                  </div>
+                  <input
+                    value={team.name}
+                    onChange={(event) => updateTeam(index, "name", event.target.value)}
+                    placeholder={chosenTeam ? teamLabel(chosenTeam) : `Team ${teamLetter(index)}`}
+                    maxLength={50}
+                    aria-label={`Nome squadra ${teamLetter(index)}`}
+                  />
+                  {teams.length > 3 ? <button className="tournament-team-remove" type="button" onClick={() => setTeams((current) => current.filter((_, teamIndex) => teamIndex !== index))}>Rimuovi</button> : null}
+                </fieldset>
+              );
+            })}
           </div>
 
           <div className="tournament-prize-form">
@@ -6181,6 +6265,10 @@ function AppShell({ session }: { session: Session | null }) {
   const rankedTeams = useMemo(() => rankedPadelTeams(teams), [teams]);
   const rankedSeasonTeams = useMemo(() => rankedPadelTeams(seasonTeams), [seasonTeams]);
   const rankingRows = rankingMode === "single" ? seasonProfiles.length : rankedSeasonTeams.length;
+  // Le coppie formate, buone per tutti: la scheda del giocatore, il modulo del
+  // torneo. Due giocatori qualsiasi restano una coppia possibile, non una
+  // squadra.
+  const savedTeams = useMemo(() => teams.filter((team) => team.isSaved), [teams]);
   // Solo le squadre formate davvero. Le coppie che hanno soltanto giocato
   // insieme una volta non sono squadre di nessuno: restano nello storico
   // delle partite, e se qualcuno le vuole se le forma dal tasto qui sotto —
@@ -8337,6 +8425,7 @@ function AppShell({ session }: { session: Session | null }) {
       {showTournamentCreate || editingTournament ? (
         <TournamentFormModal
           profiles={profiles}
+          savedTeams={savedTeams}
           tournament={editingTournament}
           viewerId={session?.user.id}
           onClose={() => { setShowTournamentCreate(false); setEditingTournament(null); }}

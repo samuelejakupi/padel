@@ -339,6 +339,23 @@ ordinate su una media di punti mai messa alla prova.
 Sciogliere una squadra toglie nome, foto e la riga in classifica. **Le partite
 non si toccano**: sono appese ai due giocatori, non alla squadra.
 
+### Nel torneo si iscrivono le squadre, non quattro nomi alla volta
+Il modulo del torneo e "le mie squadre" parlavano di due cose diverse: di là si
+formavano le coppie, di qua si ricomponevano a mano ogni volta, riscrivendone
+il nome. Il modo più sicuro per ritrovarsi lo stesso doppio con tre nomi
+diversi in tre tornei.
+
+Adesso ogni squadra del torneo ha sopra l'elenco delle **coppie già formate**:
+ne scegli una e i due giocatori si compilano da soli. Vale anche al contrario —
+se scegli due giocatori che una squadra ce l'hanno, il nome arriva da solo. E
+se cambi giocatore, il nome della squadra di prima se ne va invece di restare
+addosso alla coppia sbagliata.
+
+Le caselle dei giocatori partono **vuote**, con i segnaposto `Player 1` e
+`Player 2` del foglio della partita. Prima erano precompilate con i primi sei
+della lista: coppie che non aveva scelto nessuno, e bastava non accorgersene
+per iscrivere al torneo tre doppi a caso.
+
 ### Il torneo si sceglie: set secco o due su tre, sola andata o andata e ritorno
 Prima era una formula sola — girone all'italiana, due set su tre, un solo
 scontro diretto — e non era una scelta, era quello che c'era.

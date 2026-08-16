@@ -3722,7 +3722,8 @@ button.podium-person {
 /* Vuoto e un suggerimento, non una risposta gia data: stesso peso e stesso
    grigio dei segnaposto delle caselle di testo. */
 .match-form-court.is-empty,
-.match-form-teams select.is-empty {
+.match-form-teams select.is-empty,
+.tournament-team-builder select.is-empty {
   color: var(--muted);
   font-weight: 400;
 }
@@ -3940,6 +3941,15 @@ button.podium-person {
 .tournament-team-builder input,
 .tournament-team-builder select {
   margin-top: var(--space-2);
+}
+
+/* La scorciatoia sta sopra ai due giocatori perche e la strada che si prende
+   quasi sempre: la coppia esiste gia, la si sceglie per nome e il resto si
+   riempie da solo. Chi mette insieme due che non hanno mai giocato scende di
+   una riga e li sceglie a mano. */
+.tournament-team-pick {
+  margin-bottom: var(--space-2);
+  width: 100%;
 }
 
 .tournament-team-selects {
