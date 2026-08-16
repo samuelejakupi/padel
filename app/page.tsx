@@ -5615,6 +5615,13 @@ function TournamentsPage({
                         <p className="eyebrow dark">TORNEO IN CORSO</p><h2>{tournament.name}</h2><span>{playedMatches}/{tournament.fixtures.length} partite · Elo ×{tournament.elo_multiplier} · {tournamentFormatLabel(tournament).toLowerCase()}</span>
                         <span className="tournament-progress" aria-label={`${progress}% completato`}><i style={{ width: `${progress}%` }} /></span>
                       </div>
+                      {/* Anche qui, non solo nella scheda: un torneo in corso
+                          sta tutto in questa card — classifica e calendario
+                          compresi — e nessuno pensa di doverla aprire per
+                          correggerlo o eliminarlo. */}
+                      {canEditTournament(tournament, viewerId) || canDeleteTournament(tournament, viewerId) ? (
+                        <button className="button button-ghost tournament-card-edit" type="button" onClick={() => onEdit(tournament)}>Modifica</button>
+                      ) : null}
                     </div>
                     <div className="tournament-layout">
                       <div
