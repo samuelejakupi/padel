@@ -142,6 +142,9 @@ export type TournamentFixture = {
   team1_id: string;
   team2_id: string;
   match_id: string | null;
+  // 1 = andata, 2 = ritorno. Vale 1 anche per i tornei creati prima di
+  // migration-tornei-formato.sql, che il ritorno non ce l'avevano.
+  leg?: number;
 };
 
 export type Tournament = {
@@ -151,6 +154,11 @@ export type Tournament = {
   trophy_name: string;
   trophy_badge: "cup" | "crown" | "shield" | "star";
   elo_multiplier: number;
+  // Quanti set si giocano nelle partite del torneo: 1 (set secco) o 3 (due
+  // set su tre). Facoltativi finche migration-tornei-formato.sql non e stata
+  // eseguita, e in quel caso valgono i vecchi 3 set e la sola andata.
+  sets_format?: number;
+  legs?: number;
   created_by: string;
   created_at: string;
   teams: TournamentTeam[];

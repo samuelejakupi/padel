@@ -19,12 +19,14 @@ test("genera un sito statico pronto per GitHub Pages", async () => {
 });
 
 test("include configurazione Supabase e funzioni della webapp", async () => {
-  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, singleSetMigration, page] = await Promise.all([
+  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, singleSetMigration, tournamentFormatMigration, tournamentPrizeMigration, page] = await Promise.all([
     readFile(new URL("supabase/schema.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pizza-sessioni.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pareggi.sql", root), "utf8"),
     readFile(new URL("supabase/migration-partite-casuali.sql", root), "utf8"),
     readFile(new URL("supabase/migration-partite-un-set.sql", root), "utf8"),
+    readFile(new URL("supabase/migration-tornei-formato.sql", root), "utf8"),
+    readFile(new URL("supabase/migration-tornei-premio-elo.sql", root), "utf8"),
     readFile(new URL("app/page.tsx", root), "utf8"),
   ]);
   assert.match(schema, /record_match/);
@@ -139,4 +141,35 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(page, /I traguardi più vicini/);
   assert.match(page, /sort\(\(a, b\) => b\.progress - a\.progress/);
   assert.match(page, /player-stats-card/);
+
+  // Il torneo si sceglie: set secco o due su tre, sola andata o andata e
+  // ritorno. Il best of 5 non c'e apposta — ammetterlo vorrebbe dire allargare
+  // il vincolo dei set su tutte le partite del sito.
+  assert.match(tournamentFormatMigration, /sets_format in \(1, 3\)/);
+  assert.match(tournamentFormatMigration, /legs in \(1, 2\)/);
+  assert.match(tournamentFormatMigration, /match_number between 1 and 12/);
+  assert.doesNotMatch(tournamentFormatMigration, /sets_format in \(1, 3, 5\)/);
+  assert.match(page, /setsFormat/);
+  assert.match(page, /Andata e ritorno/);
+  // Le stesse due regole delle partite: 24 ore per correggere, e lo puo fare
+  // chi ci gioca; eliminare resta di chi ha creato, senza scadenza.
+  assert.match(tournamentFormatMigration, /Le modifiche si chiudono 24 ore dopo la creazione del torneo/);
+  assert.match(tournamentFormatMigration, /Solo chi ha creato il torneo può eliminarlo/);
+  assert.match(page, /function canEditTournament/);
+  assert.match(page, /function canDeleteTournament/);
+  // Il premio di fine torneo non e un totale che si somma una volta: vive
+  // dentro il ricalcolo, all'istante dell'ultima partita del torneo.
+  assert.match(tournamentPrizeMigration, /when 1 then 30 when 2 then 15/);
+  assert.match(tournamentPrizeMigration, /tournament_closing_match/);
+  assert.match(tournamentPrizeMigration, /recalculate_padel_ratings/);
+  assert.match(page, /TOURNAMENT_ELO_AWARDS = \[30, 15\]/);
+
+  // Una squadra si forma, non si scopre: nella scheda ci sono solo le coppie
+  // con una riga in padel_teams, e in classifica ci entrano dopo la prima
+  // partita insieme. Il nome da solo non basta piu.
+  assert.match(page, /function TeamCreateModal/);
+  assert.match(page, /team\.isSaved && team\.players\.some/);
+  assert.match(page, /isRanked: team\.isRanked && team\.matches_played > 0/);
+  assert.match(page, /function teamRating/);
+  assert.match(page, /profile\.matches_played > 0/);
 });

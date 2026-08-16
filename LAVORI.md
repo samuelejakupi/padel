@@ -9,7 +9,7 @@ perdono passando da una sessione all'altra.
 "in sospeso" a "deciso". Quando scarti una strada, scrivi perché: serve a non
 ripercorrerla fra un mese.
 
-Ultimo aggiornamento: 14 agosto 2026
+Ultimo aggiornamento: 16 agosto 2026
 
 ---
 
@@ -288,9 +288,113 @@ query dei titoli falliscono da sole e non si portano dietro il resto del
 caricamento, quindi l'app continua a funzionare come prima: è lo stesso
 comportamento delle migrazioni dei pareggi e delle plays.
 
+### `migration-squadre-libere.sql` serve solo per sciogliere una squadra
+Aggiunge il permesso di eliminazione su `padel_teams`. Senza, tutto il resto
+funziona — si creano squadre nuove, si danno nome e foto — ma il tasto
+"Sciogli" risponde con l'avviso di eseguire la migrazione. È l'unica delle tre
+che non blocca niente se resta indietro.
+
+### Le due migrazioni dei tornei vanno eseguite **prima** del push
+`migration-tornei-formato.sql` e poi `migration-tornei-premio-elo.sql`, in
+quest'ordine, nel SQL Editor di Supabase. Finché non girano, la pagina Tornei
+non carica più niente: la query legge `sets_format`, `legs` e `leg`, che senza
+migrazione non esistono, e la sezione mostra l'avviso al posto dei tornei. È lo
+stesso patto delle altre migrazioni — il codice arriva in produzione appena
+finisce il push, la funzione dev'esserci già.
+
+La seconda finisce con un `select public.recalculate_padel_ratings()`, quindi
+**appena eseguita i tornei già conclusi assegnano il premio all'indietro**:
++30 Elo a testa ai primi, +15 ai secondi. Non è un effetto collaterale da
+sopportare, è la regola — la classifica si ricostruisce sempre da zero, e lo
+stesso torneo deve valere la stessa cosa oggi e fra sei mesi.
+
 ---
 
 ## Deciso, e perché
+
+### Una squadra si forma, non si scopre
+Prima una coppia esisteva solo se aveva già giocato: le squadre si ricavavano
+dalle partite, e `padel_teams` serviva soltanto a darle un nome e una foto.
+Chi non aveva ancora giocato con qualcuno non poteva formare la squadra — che è
+esattamente il momento in cui uno la vuole formare.
+
+Adesso nella scheda ci sono **solo le squadre formate davvero**, cioè quelle
+con una riga in `padel_teams`, e c'è un tasto "+ Nuova" per farne una scegliendo
+compagno, nome e foto. Le coppie che hanno solo giocato insieme una volta non
+compaiono più: non erano squadre di nessuno, erano un elenco di chi ti era
+capitato accanto. Se poi qualcuno la forma, **le partite se le ritrova appese
+da sole**: la chiave è la coppia di giocatori, non la riga.
+
+**Il punteggio di una coppia appena formata** è la media dei due, ma un
+giocatore senza partite non ha un punteggio da mediare: vale allora quello di
+chi ce l'ha, e se non ce l'ha nessuno dei due si legge `N/C`, come per il
+singolo non classificato. È il motivo per cui `PadelTeam.rating` adesso può
+essere nullo.
+
+**In classifica squadre si entra con il nome più la prima partita.** Il nome da
+solo non basta più: senza quel secondo requisito bastavano dieci coppie
+inventate per riempire la classifica di squadre che non hanno mai giocato,
+ordinate su una media di punti mai messa alla prova.
+
+Sciogliere una squadra toglie nome, foto e la riga in classifica. **Le partite
+non si toccano**: sono appese ai due giocatori, non alla squadra.
+
+### Il torneo si sceglie: set secco o due su tre, sola andata o andata e ritorno
+Prima era una formula sola — girone all'italiana, due set su tre, un solo
+scontro diretto — e non era una scelta, era quello che c'era.
+
+Adesso alla creazione si decidono due cose in più, e restano scritte sul
+torneo (`sets_format`, `legs`) e non sulla singola partita: sono regole del
+torneo, non casi. Il foglio del risultato mostra una riga sola quando si gioca
+al set secco, e `assign_tournament_match` rifiuta un risultato del formato
+sbagliato — la regola non può vivere solo nel modulo.
+
+**Il best of 5 non c'è, ed è una decisione.** Chiesto e ritirato subito: non lo
+giocherà mai nessuno, e ammetterlo avrebbe voluto dire allargare a cinque il
+vincolo dei set su `match_sets` e la validazione di `record_match`, cioè
+toccare il cuore di tutte le partite del sito per un formato che non si usa.
+
+L'Elo resta quello delle partite normali: il set secco vale la metà — ci pensa
+già il trigger di `migration-partite-un-set.sql` — il due su tre vale uno, e
+sopra si applica il moltiplicatore del torneo come prima.
+
+### I tornei si correggono per 24 ore e li elimina chi li ha creati
+Le stesse due regole delle partite, spostate sul torneo. Correggere lo può fare
+chi l'ha montato **e chi ci gioca dentro**: sono le stesse persone che si
+accorgono che una coppia è sbagliata o che il trofeo si chiama in un altro
+modo. Eliminare resta di chi l'ha creato, senza scadenza.
+
+Due cose non si toccano quando c'è già un risultato: le **squadre**, perché il
+girone andrebbe rifatto da capo e le partite giocate resterebbero appese al
+nulla; e il **ritorno**, se nel ritorno si è già giocato. Aggiungerlo invece si
+può sempre: le partite nuove si accodano al calendario e l'andata resta dov'è.
+
+**Eliminare un torneo porta via anche le sue partite.** È la scelta scomoda ma
+l'unica onesta: quelle partite sono state giocate in un formato deciso dal
+torneo e pesate con il suo moltiplicatore. Lasciarle indietro come partite
+normali vorrebbe dire cambiare a posteriori quanto sono valse. Il foglio lo
+dice prima di procedere, con quante sono.
+
+### Il premio di fine torneo vive dentro il ricalcolo, non accanto
++30 Elo a testa ai primi, +15 ai secondi. Il punto delicato non è il premio, è
+dove metterlo: l'Elo di questo sito non è un totale che si accumula:
+`recalculate_padel_ratings()` riazzera tutti a 1000 e ripassa lo storico a ogni
+partita salvata, corretta o eliminata. Un bonus scritto una volta su
+`profiles.rating` sarebbe sparito entro sera.
+
+Quindi non si assegna, si **ricalcola insieme a tutto il resto**, leggendo la
+classifica dai risultati. Nessuna tabella dei premi da tenere allineata: se una
+partita del torneo viene corretta e la classifica cambia, cambiano anche i
+premi, da soli.
+
+E viene applicato **nell'istante dell'ultima partita del torneo**, non in fondo
+allo storico: chi vince a marzo arriva alla partita di aprile con i suoi 30
+punti già in tasca, e l'Elo atteso di quella partita ne tiene conto.
+
+Un effetto di questo: `delete_match` adesso ricalcola. Prima si limitava a
+scalare i delta della partita tolta, e bastava finché l'Elo era la somma delle
+partite. Adesso togliere l'ultima partita di un torneo lo riapre, e i 30 punti
+del primo non hanno più motivo di stare lì.
 
 ### Chi non ha ancora votato l'MVP se lo sente dire in tre punti
 La votazione MVP dura 12 ore e nessuno apre l'app apposta. Il promemoria sta
@@ -417,6 +521,15 @@ parola "Modifica" portava via mezza riga e faceva partire il saluto spostato.
 Attenzione se lo si tocca: `.player-detail-hero > *` mette `position: relative`
 su tutti i figli per tenerli sopra alla filigrana, e vince su una classe sola —
 il tasto va scritto con il contenitore davanti o torna nel flusso.
+
+**Le due card vanno allineate al pixel, ed è più facile sbagliare di quanto
+sembri.** Sotto i 520px i fianchi erano 20px contro i 18 della home, e un
+`margin-top: 14px` sulla riga della posizione si fondeva con i 12 di margine
+dell'occhiello sopra — margini fra fratelli si fondono, vince il più grande —
+spostando tutto in giù di due pixel. Due pixel non si notano guardando una card
+sola: si notano passando dall'una all'altra, perché la faccia salta. Se si
+tocca il riquadro di una delle due, si misurano tutte e due affiancate (vedi
+"Misurare invece di dedurre" nelle note di lavoro).
 
 I numeri di carriera sono sei, due per riga, e le coppie sono volute: Elo con
 quante partite, win rate con le vittorie, serie con le sconfitte. I due numeri

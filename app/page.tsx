@@ -555,7 +555,10 @@ type PadelTeamRecord = {
 type PadelTeam = {
   id: string;
   players: Profile[];
-  rating: number;
+  // Nullo quando nessuno dei due ha ancora giocato: il 1000 di partenza non e
+  // un punteggio, e il posto vuoto prima del primo risultato. Si legge N/C,
+  // come per il singolo non classificato.
+  rating: number | null;
   matches_played: number;
   wins: number;
   losses: number;
@@ -563,12 +566,29 @@ type PadelTeam = {
   current_streak: number;
   name?: string | null;
   imageUrl?: string | null;
-  // Una coppia entra in classifica solo quando uno dei due le ha dato un
-  // nome dal proprio profilo, in "le mie squadre". Finche resta senza nome
-  // esiste comunque — le partite le ha giocate — ma vive solo nella scheda
-  // dei due giocatori, dove la si puo battezzare.
+  // La coppia e stata formata davvero: esiste una riga in padel_teams, creata
+  // da uno dei due. Le coppie che hanno solo giocato insieme senza formarsi
+  // restano nei risultati e nello storico, ma non sono squadre di nessuno e
+  // non compaiono nelle schede.
+  isSaved: boolean;
+  // In classifica ci va la squadra formata che ha giocato almeno una volta.
+  // Il nome da solo non basta piu: senza partite si riempirebbe la classifica
+  // di coppie inventate, ordinate su una media di punti mai messa alla prova.
   isRanked: boolean;
 };
+
+// La forza di una coppia e la media dei due, ma un giocatore senza partite non
+// ha un punteggio da mediare: vale il punteggio di chi ce l'ha, e se non ce
+// l'ha nessuno dei due non c'e niente da dire.
+function teamRating(players: Profile[]) {
+  const rated = players.filter((profile) => profile.matches_played > 0);
+  if (!rated.length) return null;
+  return Math.round(rated.reduce((sum, profile) => sum + profile.rating, 0) / rated.length);
+}
+
+function teamRatingLabel(team: PadelTeam) {
+  return team.rating === null ? "N/C" : String(team.rating);
+}
 
 // Le coppie da mettere in classifica: quelle battezzate. Le altre restano
 // nella scheda del giocatore, che e il posto da cui si danno i nomi.
@@ -634,9 +654,34 @@ function buildPadelTeams(
           current_streak: drawn ? 0 : won ? 1 : -1,
           name: record?.name ?? null,
           imageUrl: record?.image_url ?? null,
+          isSaved: Boolean(record),
           isRanked: Boolean(record?.name?.trim()),
         });
       }
+    });
+  });
+
+  // Le coppie formate che non hanno ancora giocato. Non escono dalle partite —
+  // partite non ne hanno — ma esistono lo stesso: qualcuno le ha messe
+  // insieme, e devono comparire nella sua scheda con zero partite.
+  records.forEach((record) => {
+    const key = `${record.player_a}|${record.player_b}`;
+    if (teams.has(key)) return;
+    const players = [record.player_a, record.player_b].map((id) => byId.get(id)).filter(Boolean) as Profile[];
+    if (players.length !== 2) return;
+    teams.set(key, {
+      id: key,
+      players,
+      rating: null,
+      matches_played: 0,
+      wins: 0,
+      losses: 0,
+      draws: 0,
+      current_streak: 0,
+      name: record.name ?? null,
+      imageUrl: record.image_url ?? null,
+      isSaved: true,
+      isRanked: false,
     });
   });
 
@@ -648,18 +693,18 @@ function buildPadelTeams(
     .filter((team) => team.players.length === 2)
     .map((team) => ({
       ...team,
-      rating: Math.round(
-        team.players.reduce((sum, profile) => sum + profile.rating, 0) / team.players.length,
-      ),
+      rating: teamRating(team.players),
+      // Il nome fa entrare in classifica, ma solo dopo la prima partita.
+      isRanked: team.isRanked && team.matches_played > 0,
     }))
     .sort(
       (a, b) =>
-        b.rating - a.rating ||
+        (b.rating ?? -1) - (a.rating ?? -1) ||
         a.players[0].display_name.localeCompare(b.players[0].display_name, "it"),
     );
 }
 
-function ranksByRating(items: { rating: number }[]) {
+function ranksByRating(items: { rating: number | null }[]) {
   let lastRating: number | null = null;
   let rank = 0;
   return items.map((item) => {
@@ -2647,14 +2692,20 @@ function canDeleteMatch(match: PadelMatch, viewerId?: string | null) {
   return (match.origin_by ?? match.created_by) === viewerId;
 }
 
-// Quanto manca alla chiusura, detto come lo direbbe una persona.
-function matchWindowLeft(match: PadelMatch) {
-  const left = matchOpenUntil(match) - Date.now();
+// Quanto manca alla chiusura, detto come lo direbbe una persona. La stessa
+// frase serve alle partite e ai tornei: la finestra e la stessa e non ha
+// motivo di leggersi in due modi diversi.
+function windowLeftLabel(deadline: number) {
+  const left = deadline - Date.now();
   if (left <= 0) return null;
   const hours = Math.floor(left / (60 * 60 * 1000));
   if (hours >= 1) return `${hours} ${hours === 1 ? "ora" : "ore"}`;
   const minutes = Math.max(1, Math.round(left / (60 * 1000)));
   return `${minutes} ${minutes === 1 ? "minuto" : "minuti"}`;
+}
+
+function matchWindowLeft(match: PadelMatch) {
+  return windowLeftLabel(matchOpenUntil(match));
 }
 
 // Cosa e cambiato fra il risultato di prima e quello appena salvato, scritto da
@@ -2854,10 +2905,12 @@ function TeamAvatars({ team, size = "sm" }: { team: PadelTeam; size?: "sm" | "lg
 function TeamEditor({
   team,
   onSave,
+  onDelete,
   disabled,
 }: {
   team: PadelTeam;
-  onSave: (team: PadelTeam, name: string, file?: File) => Promise<void>;
+  onSave: (pairId: string, name: string, file?: File) => Promise<void>;
+  onDelete: (team: PadelTeam) => Promise<void>;
   disabled?: boolean;
 }) {
   const [name, setName] = useState(team.name ?? "");
@@ -2866,14 +2919,14 @@ function TeamEditor({
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
-    await onSave(team, name);
+    await onSave(team.id, name);
     setBusy(false);
   }
 
   async function pickImage(file?: File) {
     if (!file) return;
     setBusy(true);
-    await onSave(team, name, file);
+    await onSave(team.id, name, file);
     setBusy(false);
   }
 
@@ -2897,12 +2950,163 @@ function TeamEditor({
           disabled={disabled || busy}
           aria-label="Nome della squadra"
         />
-        <small>{team.matches_played} partite · {team.rating} pt</small>
+        <small>{team.matches_played} partite · {teamRatingLabel(team)} pt</small>
         <button className="button button-dark" disabled={disabled || busy}>
           {busy ? "Salvo…" : "Salva"}
         </button>
+        {/* Sciogliere la coppia toglie nome, foto e la riga in classifica. Le
+            partite giocate restano dove sono: sono appese ai giocatori, non
+            alla squadra. */}
+        <button
+          type="button"
+          className="team-editor-remove"
+          disabled={disabled || busy}
+          onClick={() => void onDelete(team)}
+          aria-label={`Sciogli ${teamLabel(team)}`}
+        >
+          Sciogli
+        </button>
       </div>
     </form>
+  );
+}
+
+// Formare una squadra non richiede piu di averci gia giocato insieme: si
+// sceglie il compagno, le si da un nome e una faccia, e da quel momento
+// esiste. Le partite, se ci sono gia state, se le trova appese da sole — la
+// coppia e la stessa, e la chiave sono i due giocatori.
+function TeamCreateModal({
+  profiles,
+  teams,
+  viewerId,
+  onClose,
+  onCreate,
+}: {
+  profiles: Profile[];
+  teams: PadelTeam[];
+  viewerId: string;
+  onClose: () => void;
+  onCreate: (pairId: string, name: string, file?: File) => Promise<void>;
+}) {
+  const [partnerId, setPartnerId] = useState("");
+  const [name, setName] = useState("");
+  const [file, setFile] = useState<File | undefined>(undefined);
+  // L'anteprima e l'immagine scelta, non uno stato a parte: derivarla evita di
+  // chiamare un setState dentro all'effetto, che il lint (giustamente) rifiuta.
+  // All'effetto resta solo il lavoro che gli compete, disfare quello che ha
+  // creato il browser.
+  const preview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const me = profiles.find((profile) => profile.id === viewerId) ?? null;
+  const partner = profiles.find((profile) => profile.id === partnerId) ?? null;
+  const pairId = partner && me ? [me.id, partner.id].sort().join("|") : "";
+  // I compagni con cui la squadra c'e gia: non se ne formano due uguali.
+  const takenPartners = new Set(
+    teams
+      .filter((team) => team.isSaved && team.players.some((profile) => profile.id === viewerId))
+      .flatMap((team) => team.players.map((profile) => profile.id)),
+  );
+  const candidates = profiles.filter(
+    (profile) => profile.id !== viewerId && !takenPartners.has(profile.id),
+  );
+  // Se i due hanno gia giocato insieme la coppia esiste gia nei risultati:
+  // il riquadro mostra quello che ha fatto, non zero.
+  const existing = pairId ? teams.find((team) => team.id === pairId) ?? null : null;
+  const rating = me && partner ? teamRating([me, partner]) : null;
+  const ratingNote = !me || !partner
+    ? "Scegli il compagno"
+    : rating === null
+      ? "Nessuno dei due ha ancora giocato"
+      : [me, partner].every((profile) => profile.matches_played > 0)
+        ? "Media dei vostri Elo"
+        : `Solo l'Elo di ${[me, partner].find((profile) => profile.matches_played > 0)?.display_name}`;
+
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setError("");
+    if (!partner || !pairId) {
+      setError("Scegli con chi giochi.");
+      return;
+    }
+    if (name.trim().length < 2) {
+      setError("Il nome della squadra è di almeno due lettere.");
+      return;
+    }
+    setBusy(true);
+    await onCreate(pairId, name.trim(), file);
+    setBusy(false);
+  }
+
+  return (
+    <BottomSheet title="Nuova squadra" onClose={onClose}>
+      <form className="sheet-form team-create-form" onSubmit={submit}>
+        <label>
+          Compagno di squadra
+          <select value={partnerId} onChange={(event) => setPartnerId(event.target.value)} required>
+            <option value="">Scegli chi gioca con te</option>
+            {candidates.map((profile) => (
+              <option key={profile.id} value={profile.id}>{profile.display_name}</option>
+            ))}
+          </select>
+        </label>
+        {!candidates.length ? (
+          <p className="tournament-rule-note">Hai già una squadra con tutti quanti.</p>
+        ) : null}
+
+        <label>
+          Nome della squadra
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder={partner && me ? `${me.display_name} & ${partner.display_name}` : "Come vi chiamate"}
+            maxLength={40}
+          />
+        </label>
+
+        <div className="team-create-photo">
+          <label title="Scegli la foto della squadra">
+            {preview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <span className="team-image team-image-lg"><img src={preview} alt="" /></span>
+            ) : (
+              <span className="avatar avatar-lg team-initials">
+                <span>{[me, partner].filter(Boolean).map((profile) => profile!.display_name.trim().charAt(0).toUpperCase()).join("") || "?"}</span>
+              </span>
+            )}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(event) => setFile(event.target.files?.[0])}
+            />
+          </label>
+          <div>
+            <span className="tournament-field-label">Foto della squadra</span>
+            <small>Facoltativa: senza, restano le vostre iniziali.</small>
+          </div>
+        </div>
+
+        {/* Il punteggio di una coppia appena formata e la media dei due, e non
+            e un dato acquisito: e quello che vale oggi, prima di aver giocato
+            una partita insieme. */}
+        <div className="tournament-choice team-create-preview">
+          <div><p className="eyebrow dark">PUNTO DI PARTENZA</p><h3>{rating === null ? "N/C" : `${rating} pt`}</h3><small>{ratingNote}</small></div>
+          <span className="team-create-played">
+            <b>{existing?.matches_played ?? 0}</b>
+            <small>{(existing?.matches_played ?? 0) === 1 ? "PARTITA" : "PARTITE"}</small>
+          </span>
+        </div>
+
+        {error ? <p className="form-message error">{error}</p> : null}
+        <div className="modal-actions">
+          <button className="button button-ghost" type="button" onClick={onClose}>Annulla</button>
+          <button className="button button-lime" disabled={busy}>{busy ? "Creazione…" : "Crea squadra"}</button>
+        </div>
+      </form>
+    </BottomSheet>
   );
 }
 
@@ -3720,12 +3924,14 @@ function NewMatchModal({
           ...plannedMatch.players.filter((player) => player.team === 2).map((player) => player.profile_id),
         ]
       : tournamentContext?.playerIds ?? ["", "", "", ""];
-  const initialScores = match
-    ? [0, 1, 2].map((index) => {
-        const set = [...match.sets].sort((a, b) => a.set_number - b.set_number)[index];
-        return set ? [String(set.team1_games), String(set.team2_games)] : ["", ""];
-      })
-    : [["", ""], ["", ""], ["", ""]];
+  // Quante righe ha il tabellone. Tre di regola; una sola quando il torneo si
+  // gioca al set secco, perche la seconda riga sarebbe una casella che il
+  // database rifiuta.
+  const setRows = tournamentContext?.setsFormat === 1 ? 1 : 3;
+  const initialScores = Array.from({ length: setRows }, (_, index) => {
+    const set = match ? [...match.sets].sort((a, b) => a.set_number - b.set_number)[index] : null;
+    return set ? [String(set.team1_games), String(set.team2_games)] : ["", ""];
+  });
 
   const [players, setPlayers] = useState(initialPlayers);
   const [randomTeams, setRandomTeams] = useState(false);
@@ -4784,6 +4990,8 @@ type TournamentMatchContext = {
   fixtureId: string;
   tournamentName: string;
   eloMultiplier: number;
+  // Quanti set si giocano: decide quante righe ha il tabellone del foglio.
+  setsFormat: number;
   playerIds: [string, string, string, string];
 };
 
@@ -4925,33 +5133,72 @@ function buildTournamentStandings(tournament: Tournament, matches: PadelMatch[])
   );
 }
 
-function TournamentCreateModal({
+// Lo stesso foglio serve a creare un torneo e a correggerlo, come per le
+// partite: si arriva qui dal tasto della pagina tornei o dalla scheda di uno
+// gia creato, e sarebbe strano trovare due moduli diversi per le stesse voci.
+function TournamentFormModal({
   profiles,
+  tournament,
+  viewerId,
   onClose,
   onSaved,
+  onDeleted,
 }: {
   profiles: Profile[];
+  tournament?: Tournament | null;
+  viewerId?: string | null;
   onClose: () => void;
-  onSaved: () => Promise<void>;
+  onSaved: (kind: "created" | "edited") => Promise<void>;
+  onDeleted: () => Promise<void>;
 }) {
-  const initialTeams = [0, 1, 2].map((teamIndex) => ({
-    playerA: profiles[teamIndex * 2]?.id ?? "",
-    playerB: profiles[teamIndex * 2 + 1]?.id ?? "",
-    name: "",
-  }));
-  const [name, setName] = useState("Torneo TheBoyz");
+  const editing = Boolean(tournament);
+  const canEdit = !tournament || canEditTournament(tournament, viewerId);
+  const canDelete = Boolean(tournament && canDeleteTournament(tournament, viewerId));
+  const windowLeft = tournament ? windowLeftLabel(tournamentOpenUntil(tournament)) : null;
+  // Con un risultato gia dentro, le squadre non si toccano piu: il girone
+  // andrebbe rifatto da capo e le partite gia giocate resterebbero appese al
+  // nulla. Il database rifiuta comunque il cambio (update_tournament).
+  const playedFixtures = tournament?.fixtures.filter((fixture) => fixture.match_id).length ?? 0;
+  const initialTeams = tournament
+    ? [...tournament.teams]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((team) => ({ playerA: team.player_a, playerB: team.player_b, name: team.name }))
+    : [0, 1, 2].map((teamIndex) => ({
+        playerA: profiles[teamIndex * 2]?.id ?? "",
+        playerB: profiles[teamIndex * 2 + 1]?.id ?? "",
+        name: "",
+      }));
+  const [name, setName] = useState(tournament?.name ?? "Torneo TheBoyz");
   const [teams, setTeams] = useState(initialTeams);
-  const [trophyName, setTrophyName] = useState("Coppa TheBoyz");
-  const [trophyBadge, setTrophyBadge] = useState<TournamentTrophyKind>("cup");
-  const [eloMultiplier, setEloMultiplier] = useState<1 | 2>(2);
+  const [trophyName, setTrophyName] = useState(tournament?.trophy_name ?? "Coppa TheBoyz");
+  const [trophyBadge, setTrophyBadge] = useState<TournamentTrophyKind>(tournament?.trophy_badge ?? "cup");
+  const [eloMultiplier, setEloMultiplier] = useState<1 | 2>(tournament?.elo_multiplier === 1 ? 1 : 2);
+  const [setsFormat, setSetsFormat] = useState<1 | 3>(tournament && tournamentSetsFormat(tournament) === 1 ? 1 : 3);
+  const [legs, setLegs] = useState<1 | 2>(tournament && tournamentLegs(tournament) === 2 ? 2 : 1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  // Il conto delle partite lo fa il modulo mentre lo compili: e l'unico modo
+  // per accorgersi che l'andata e ritorno con quattro coppie sono dodici sere.
+  const fixtureCount = (teams.length * (teams.length - 1) / 2) * legs;
 
   function updateTeam(index: number, key: "playerA" | "playerB" | "name", value: string) {
     setTeams((current) => current.map((team, teamIndex) => teamIndex === index ? { ...team, [key]: value } : team));
   }
 
-  async function createTournament(event: FormEvent) {
+  // Quando una migrazione non e stata eseguita il database risponde con il
+  // nome della funzione che non trova: si dice cosa manca invece di girare
+  // quel messaggio cosi com'e.
+  function saveErrorMessage(message: string) {
+    return message.includes("update_tournament")
+      || message.includes("delete_tournament")
+      || message.includes("p_sets_format")
+      || message.includes("p_legs")
+      ? "Per il formato, l'andata e ritorno e le modifiche esegui migration-tornei-formato.sql nel SQL Editor di Supabase."
+      : message;
+  }
+
+  async function saveTournament(event: FormEvent) {
     event.preventDefault();
     setError("");
     const playerIds = teams.flatMap((team) => [team.playerA, team.playerB]);
@@ -4979,38 +5226,85 @@ function TournamentCreateModal({
         sort_order: index + 1,
       };
     });
-    const { error: createError } = await supabase.rpc("create_round_robin_tournament", {
-      p_name: name.trim(),
-      p_trophy_name: trophyName.trim(),
-      p_trophy_badge: trophyBadge,
-      p_elo_multiplier: eloMultiplier,
-      p_teams: teamPayload,
-    });
-    if (createError) {
-      setError(createError.message);
+    const { error: saveError } = tournament
+      ? await supabase.rpc("update_tournament", {
+          p_tournament_id: tournament.id,
+          p_name: name.trim(),
+          p_trophy_name: trophyName.trim(),
+          p_trophy_badge: trophyBadge,
+          p_elo_multiplier: eloMultiplier,
+          p_sets_format: setsFormat,
+          p_legs: legs,
+          p_teams: teamPayload,
+        })
+      : await supabase.rpc("create_round_robin_tournament", {
+          p_name: name.trim(),
+          p_trophy_name: trophyName.trim(),
+          p_trophy_badge: trophyBadge,
+          p_elo_multiplier: eloMultiplier,
+          p_sets_format: setsFormat,
+          p_legs: legs,
+          p_teams: teamPayload,
+        });
+    if (saveError) {
+      setError(saveErrorMessage(saveError.message));
       setBusy(false);
       return;
     }
-    await onSaved();
+    await onSaved(tournament ? "edited" : "created");
+  }
+
+  // Eliminare un torneo porta via i suoi risultati: sono partite giocate in un
+  // formato deciso dal torneo e pesate con il suo moltiplicatore. Quante sono
+  // si dice prima, non dopo.
+  async function removeTournament() {
+    if (!tournament || !supabase) return;
+    const question = playedFixtures
+      ? `Eliminare il torneo? Spariscono anche le ${playedFixtures} partite già giocate e la classifica verrà ricalcolata.`
+      : "Eliminare definitivamente questo torneo?";
+    if (!window.confirm(question)) return;
+    setError("");
+    setBusy(true);
+    const { error: deleteError } = await supabase.rpc("delete_tournament", { p_tournament_id: tournament.id });
+    if (deleteError) {
+      setError(saveErrorMessage(deleteError.message));
+      setBusy(false);
+      return;
+    }
+    await onDeleted();
   }
 
   return (
     // Stesso foglio della partita: si arriva qui dallo stesso tasto, scorrendo
     // di lato, e sarebbe strano trovare due pannelli diversi a un dito di
     // distanza.
-    <BottomSheet title="Crea un torneo" onClose={onClose}>
-      <form className="sheet-form tournament-create-form" onSubmit={createTournament}>
+    <BottomSheet title={editing ? "Modifica il torneo" : "Crea un torneo"} onClose={onClose}>
+      <form className="sheet-form tournament-create-form" onSubmit={saveTournament}>
+          {/* Passate le 24 ore il foglio resta, ma non si tocca piu niente:
+              un torneo in corso e fatto anche di quello che gli altri hanno
+              gia giocato dentro. */}
+          {!canEdit ? (
+            <p className="match-locked">
+              <b>Il torneo è chiuso alle modifiche.</b>
+              Restano aperte 24 ore dalla creazione, e solo per chi l&apos;ha creato o ci gioca.
+            </p>
+          ) : null}
+          {canEdit ? (
+          <>
           <label>Nome del torneo<input value={name} onChange={(event) => setName(event.target.value)} maxLength={70} required /></label>
 
           <div className="tournament-form-head">
-            <div><p className="eyebrow dark">PARTECIPANTI E SQUADRE</p><h3>{teams.length} coppie · {teams.length * (teams.length - 1) / 2} partite</h3></div>
-            {teams.length < 4 && profiles.length >= (teams.length + 1) * 2 ? (
+            <div><p className="eyebrow dark">PARTECIPANTI E SQUADRE</p><h3>{teams.length} coppie · {fixtureCount} partite</h3></div>
+            {!playedFixtures && teams.length < 4 && profiles.length >= (teams.length + 1) * 2 ? (
               <button className="button button-ghost" type="button" onClick={() => setTeams((current) => [...current, { playerA: "", playerB: "", name: "" }])}>+ Squadra</button>
             ) : null}
           </div>
+          {playedFixtures ? (
+            <p className="tournament-rule-note">Le squadre non si cambiano più: nel torneo c&apos;è già un risultato.</p>
+          ) : null}
           <div className="tournament-team-builder">
             {teams.map((team, index) => (
-              <fieldset key={index}>
+              <fieldset key={index} disabled={Boolean(playedFixtures)}>
                 <legend>Squadra {index + 1}</legend>
                 <div className="tournament-team-selects">
                   <select value={team.playerA} onChange={(event) => updateTeam(index, "playerA", event.target.value)} aria-label={`Primo giocatore squadra ${index + 1}`}>
@@ -5043,17 +5337,50 @@ function TournamentCreateModal({
             </div>
           </div>
 
-          <div className="tournament-elo-choice">
+          {/* Il formato non e una scelta di comodo: un set secco vale meta Elo
+              di una partita intera, e il torneo lo eredita. */}
+          <div className="tournament-choice">
+            <div><p className="eyebrow dark">FORMATO</p><h3>Quanti set si giocano?</h3><small>Il set secco pesa la metà, come una partita secca fuori dal torneo.</small></div>
+            <div className="ranking-switch" role="group" aria-label="Formato delle partite">
+              <button type="button" className={setsFormat === 1 ? "active" : ""} onClick={() => setSetsFormat(1)}>Set secco</button>
+              <button type="button" className={setsFormat === 3 ? "active" : ""} onClick={() => setSetsFormat(3)}>2 su 3</button>
+            </div>
+          </div>
+
+          <div className="tournament-choice">
+            <div><p className="eyebrow dark">CALENDARIO</p><h3>Quante volte si incontrano?</h3><small>Al ritorno le squadre si scambiano di posto e le partite raddoppiano.</small></div>
+            <div className="ranking-switch" role="group" aria-label="Incontri del girone">
+              <button type="button" className={legs === 1 ? "active" : ""} onClick={() => setLegs(1)}>Solo andata</button>
+              <button type="button" className={legs === 2 ? "active" : ""} onClick={() => setLegs(2)}>Andata e ritorno</button>
+            </div>
+          </div>
+
+          <div className="tournament-choice">
             <div><p className="eyebrow dark">ELO IN PALIO</p><h3>Quanto valgono le partite?</h3><small>Il moltiplicatore si applica sia ai punti guadagnati sia a quelli persi.</small></div>
             <div className="ranking-switch" role="group" aria-label="Moltiplicatore Elo">
               <button type="button" className={eloMultiplier === 1 ? "active" : ""} onClick={() => setEloMultiplier(1)}>Normale ×1</button>
               <button type="button" className={eloMultiplier === 2 ? "active" : ""} onClick={() => setEloMultiplier(2)}>Doppio ×2</button>
             </div>
           </div>
+          {editing && windowLeft ? (
+            <p className="match-window">Le modifiche si chiudono fra {windowLeft}.</p>
+          ) : null}
+          </>
+          ) : null}
           {error ? <p className="form-message error">{error}</p> : null}
           <div className="modal-actions">
-            <button className="button button-ghost" type="button" onClick={onClose}>Annulla</button>
-            <button className="button button-lime" disabled={busy}>{busy ? "Creazione…" : "Crea torneo"}</button>
+            {/* Eliminare resta di chi ha creato il torneo, senza scadenza:
+                chi ci gioca puo correggere quello che c'e scritto, non far
+                sparire il trofeo di tutti. */}
+            {canDelete ? (
+              <button type="button" className="button button-danger" onClick={() => void removeTournament()} disabled={busy}>
+                Elimina
+              </button>
+            ) : null}
+            <button className="button button-ghost" type="button" onClick={onClose}>{canEdit ? "Annulla" : "Chiudi"}</button>
+            {canEdit ? (
+              <button className="button button-lime" disabled={busy}>{busy ? "Salvataggio…" : editing ? "Salva modifiche" : "Crea torneo"}</button>
+            ) : null}
           </div>
         </form>
     </BottomSheet>
@@ -5066,6 +5393,45 @@ function tournamentIsCompleted(tournament: Tournament, matches: PadelMatch[]) {
     tournament.fixtures.length
     && tournament.fixtures.every((fixture) => fixture.match_id && matchIds.has(fixture.match_id)),
   );
+}
+
+// I tornei creati prima di migration-tornei-formato.sql non hanno le due
+// colonne: valgono per loro le regole di allora, due set su tre e sola andata.
+// Il premio di fine torneo, in punti Elo: primi e secondi. I numeri veri
+// stanno in migration-tornei-premio-elo.sql, che e anche l'unico posto dove
+// vengono davvero assegnati — qui servono solo a dirlo prima di giocare.
+const TOURNAMENT_ELO_AWARDS = [30, 15];
+
+function tournamentSetsFormat(tournament: Tournament) {
+  return tournament.sets_format === 1 ? 1 : 3;
+}
+
+function tournamentLegs(tournament: Tournament) {
+  return tournament.legs === 2 ? 2 : 1;
+}
+
+function tournamentFormatLabel(tournament: Tournament) {
+  const sets = tournamentSetsFormat(tournament) === 1 ? "Set secco" : "Due set su tre";
+  return `${sets} · ${tournamentLegs(tournament) === 2 ? "andata e ritorno" : "solo andata"}`;
+}
+
+// Le stesse due regole delle partite, applicate al torneo: si corregge entro
+// 24 ore dalla creazione e lo puo fare chi l'ha montato o chi ci gioca; si
+// elimina solo se l'hai creato tu, senza scadenza. Il controllo vero sta sul
+// database (migration-tornei-formato.sql): qui si decide solo cosa mostrare.
+function tournamentOpenUntil(tournament: Tournament) {
+  return new Date(tournament.created_at).getTime() + MATCH_EDIT_WINDOW_MS;
+}
+
+function canEditTournament(tournament: Tournament, viewerId?: string | null) {
+  if (!viewerId) return false;
+  if (Date.now() > tournamentOpenUntil(tournament)) return false;
+  return tournament.created_by === viewerId
+    || tournament.teams.some((team) => team.player_a === viewerId || team.player_b === viewerId);
+}
+
+function canDeleteTournament(tournament: Tournament, viewerId?: string | null) {
+  return Boolean(viewerId) && tournament.created_by === viewerId;
 }
 
 function TournamentStandingsContent({
@@ -5083,6 +5449,9 @@ function TournamentStandingsContent({
 }) {
   const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
   const standings = buildTournamentStandings(tournament, matches);
+  // Il premio si mostra solo a conti chiusi: finche manca una partita la
+  // classifica e provvisoria e i 30 punti non sono di nessuno.
+  const completed = tournamentIsCompleted(tournament, matches);
   return (
     <>
       <div className="player-history-head">
@@ -5094,12 +5463,12 @@ function TournamentStandingsContent({
         {standings.map((row, index) => (
           <div className={`tournament-table-row${index === 0 && row.played ? " is-leader" : ""}`} key={row.team.id}>
             <b>{index + 1}</b>
-            <span className="tournament-team-cell"><strong>{row.team.name}</strong><small>{profileMap.get(row.team.player_a)?.display_name} · {profileMap.get(row.team.player_b)?.display_name}</small></span>
+            <span className="tournament-team-cell"><strong>{row.team.name}{completed && TOURNAMENT_ELO_AWARDS[index] ? <em className="tournament-award">+{TOURNAMENT_ELO_AWARDS[index]}</em> : null}</strong><small>{profileMap.get(row.team.player_a)?.display_name} · {profileMap.get(row.team.player_b)?.display_name}</small></span>
             <span>{row.played}</span><span>{row.wins}</span><span>{row.directWins}</span><span>{row.gamesWon}</span>
           </div>
         ))}
       </div>
-      <p className="tournament-rule-note">Parità: scontri diretti, poi numero totale di game vinti.</p>
+      <p className="tournament-rule-note">Parità: scontri diretti, poi numero totale di game vinti. A torneo finito i primi prendono +{TOURNAMENT_ELO_AWARDS[0]} Elo a testa, i secondi +{TOURNAMENT_ELO_AWARDS[1]}.</p>
     </>
   );
 }
@@ -5116,31 +5485,47 @@ function TournamentFixtures({
   const matchMap = new Map(matches.map((match) => [match.id, match]));
   const teamMap = new Map(tournament.teams.map((team) => [team.id, team]));
   const playedMatches = tournament.fixtures.filter((fixture) => fixture.match_id && matchMap.has(fixture.match_id)).length;
+  const legs = tournamentLegs(tournament);
+  const ordered = [...tournament.fixtures].sort((a, b) => a.match_number - b.match_number);
+  // Con il ritorno le stesse coppie tornano una seconda volta: senza una riga
+  // che divide, il calendario sembra un elenco con le partite doppie.
+  const groups = legs === 2
+    ? [
+        { label: "ANDATA", fixtures: ordered.filter((fixture) => (fixture.leg ?? 1) === 1) },
+        { label: "RITORNO", fixtures: ordered.filter((fixture) => (fixture.leg ?? 1) === 2) },
+      ]
+    : [{ label: null, fixtures: ordered }];
   return (
     <section className="tournament-fixtures">
-      <div className="player-history-head"><div><p className="eyebrow dark">CALENDARIO</p><h2>Tutte contro tutte</h2></div><span>{playedMatches}/{tournament.fixtures.length}</span></div>
+      <div className="player-history-head"><div><p className="eyebrow dark">CALENDARIO</p><h2>{legs === 2 ? "Andata e ritorno" : "Tutte contro tutte"}</h2></div><span>{playedMatches}/{tournament.fixtures.length}</span></div>
       <div className="tournament-fixture-list">
-        {[...tournament.fixtures].sort((a, b) => a.match_number - b.match_number).map((fixture) => {
-          const team1 = teamMap.get(fixture.team1_id);
-          const team2 = teamMap.get(fixture.team2_id);
-          const match = fixture.match_id ? matchMap.get(fixture.match_id) : null;
-          if (!team1 || !team2) return null;
-          const score = match ? [...match.sets].sort((a, b) => a.set_number - b.set_number).map((set) => `${set.team1_games}-${set.team2_games}`).join("  ") : null;
-          return (
-            <article className={`tournament-fixture${match ? " is-played" : ""}`} key={fixture.id}>
-              <span className="tournament-match-number">{String(fixture.match_number).padStart(2, "0")}</span>
-              <div><b className={match?.winner_team === 1 ? "winner" : ""}>{team1.name}</b><small>vs</small><b className={match?.winner_team === 2 ? "winner" : ""}>{team2.name}</b></div>
-              {match ? <strong className="tournament-score">{score}</strong> : onRecord ? (
-                <button className="button button-dark" onClick={() => onRecord({
-                  fixtureId: fixture.id,
-                  tournamentName: tournament.name,
-                  eloMultiplier: tournament.elo_multiplier,
-                  playerIds: [team1.player_a, team1.player_b, team2.player_a, team2.player_b],
-                })}>Inserisci risultato</button>
-              ) : <span className="tournament-awaiting">Da giocare</span>}
-            </article>
-          );
-        })}
+        {groups.map((group) => (
+          <Fragment key={group.label ?? "girone"}>
+            {group.label ? <p className="tournament-leg-label">{group.label}</p> : null}
+            {group.fixtures.map((fixture) => {
+              const team1 = teamMap.get(fixture.team1_id);
+              const team2 = teamMap.get(fixture.team2_id);
+              const match = fixture.match_id ? matchMap.get(fixture.match_id) : null;
+              if (!team1 || !team2) return null;
+              const score = match ? [...match.sets].sort((a, b) => a.set_number - b.set_number).map((set) => `${set.team1_games}-${set.team2_games}`).join("  ") : null;
+              return (
+                <article className={`tournament-fixture${match ? " is-played" : ""}`} key={fixture.id}>
+                  <span className="tournament-match-number">{String(fixture.match_number).padStart(2, "0")}</span>
+                  <div><b className={match?.winner_team === 1 ? "winner" : ""}>{team1.name}</b><small>vs</small><b className={match?.winner_team === 2 ? "winner" : ""}>{team2.name}</b></div>
+                  {match ? <strong className="tournament-score">{score}</strong> : onRecord ? (
+                    <button className="button button-dark" onClick={() => onRecord({
+                      fixtureId: fixture.id,
+                      tournamentName: tournament.name,
+                      eloMultiplier: tournament.elo_multiplier,
+                      setsFormat: tournamentSetsFormat(tournament),
+                      playerIds: [team1.player_a, team1.player_b, team2.player_a, team2.player_b],
+                    })}>Inserisci risultato</button>
+                  ) : <span className="tournament-awaiting">Da giocare</span>}
+                </article>
+              );
+            })}
+          </Fragment>
+        ))}
       </div>
     </section>
   );
@@ -5150,15 +5535,19 @@ function TournamentsPage({
   tournaments,
   profiles,
   matches,
+  viewerId,
   schemaReady,
   onCreate,
+  onEdit,
   onRecord,
 }: {
   tournaments: Tournament[];
   profiles: Profile[];
   matches: PadelMatch[];
+  viewerId?: string | null;
   schemaReady: boolean;
   onCreate: () => void;
+  onEdit: (tournament: Tournament) => void;
   onRecord: (context: TournamentMatchContext) => void;
 }) {
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -5177,11 +5566,16 @@ function TournamentsPage({
           <BlockMark size="lg" />
           <div className="section-hero-head">
             <div><p className="eyebrow">{completed ? "TORNEO COMPLETATO" : "TORNEO IN CORSO"}</p><h1>{detailTournament.name}</h1><p>{playedMatches}/{detailTournament.fixtures.length} partite · Elo ×{detailTournament.elo_multiplier}</p></div>
+            {/* Il tasto sta qui e non nella riga della home: si corregge un
+                torneo dopo averlo aperto e aver visto cosa c'e da correggere. */}
+            {canEditTournament(detailTournament, viewerId) || canDeleteTournament(detailTournament, viewerId) ? (
+              <button className="button button-ghost" type="button" onClick={() => onEdit(detailTournament)}>Modifica</button>
+            ) : null}
           </div>
         </article>
         <article className="tournament-board-head">
           <div className="tournament-prize-card"><TournamentTrophyBadge kind={detailTournament.trophy_badge} /><span><small>{completed ? "TROFEO ASSEGNATO" : "TROFEO IN PALIO"}</small><b>{detailTournament.trophy_name}</b></span></div>
-          <div className="tournament-title-card"><p className="eyebrow dark">FORMULA</p><h2>Girone all’italiana</h2><span>Vittorie · scontri diretti · game vinti</span></div>
+          <div className="tournament-title-card"><p className="eyebrow dark">FORMULA</p><h2>Girone all’italiana</h2><span>{tournamentFormatLabel(detailTournament)}</span></div>
         </article>
         <div className="tournament-layout">
           <section className="tournament-standings">
@@ -5204,7 +5598,7 @@ function TournamentsPage({
       </article>
 
       {!schemaReady ? (
-        <p className="demo-profile-note">Per creare i tornei esegui <code>migration-tornei.sql</code> nel SQL Editor di Supabase.</p>
+        <p className="demo-profile-note">Per creare i tornei esegui <code>migration-tornei.sql</code> e <code>migration-tornei-formato.sql</code> nel SQL Editor di Supabase.</p>
       ) : (
         <>
           {activeTournaments.length ? (
@@ -5218,7 +5612,7 @@ function TournamentsPage({
                     <div className="tournament-board-head">
                       <div className="tournament-prize-card"><TournamentTrophyBadge kind={tournament.trophy_badge} /><span><small>TROFEO IN PALIO</small><b>{tournament.trophy_name}</b></span></div>
                       <div className="tournament-title-card">
-                        <p className="eyebrow dark">TORNEO IN CORSO</p><h2>{tournament.name}</h2><span>{playedMatches}/{tournament.fixtures.length} partite · Elo ×{tournament.elo_multiplier}</span>
+                        <p className="eyebrow dark">TORNEO IN CORSO</p><h2>{tournament.name}</h2><span>{playedMatches}/{tournament.fixtures.length} partite · Elo ×{tournament.elo_multiplier} · {tournamentFormatLabel(tournament).toLowerCase()}</span>
                         <span className="tournament-progress" aria-label={`${progress}% completato`}><i style={{ width: `${progress}%` }} /></span>
                       </div>
                     </div>
@@ -5459,6 +5853,10 @@ function AppShell({ session }: { session: Session | null }) {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [tournamentSchemaReady, setTournamentSchemaReady] = useState(true);
   const [showTournamentCreate, setShowTournamentCreate] = useState(false);
+  const [showTeamCreate, setShowTeamCreate] = useState(false);
+  // Il torneo che si sta correggendo: lo stesso foglio della creazione, con
+  // dentro quello che c'e gia.
+  const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
   const [tournamentMatch, setTournamentMatch] = useState<TournamentMatchContext | null>(null);
 
   const loadData = useCallback(async () => {
@@ -5522,7 +5920,7 @@ function AppShell({ session }: { session: Session | null }) {
         .select("session_id, voter_id, location, pizza, dessert, price, bonus_fabio"),
       client
         .from("padel_tournaments")
-        .select("id, name, status, trophy_name, trophy_badge, elo_multiplier, created_by, created_at, teams:tournament_teams(id, tournament_id, name, player_a, player_b, sort_order), fixtures:tournament_fixtures(id, tournament_id, match_number, team1_id, team2_id, match_id)")
+        .select("id, name, status, trophy_name, trophy_badge, elo_multiplier, sets_format, legs, created_by, created_at, teams:tournament_teams(id, tournament_id, name, player_a, player_b, sort_order), fixtures:tournament_fixtures(id, tournament_id, match_number, team1_id, team2_id, match_id, leg)")
         .order("created_at", { ascending: false }),
       // Il campo da gioco sta in una query a parte: se la migrazione non e
       // stata eseguita questa fallisce da sola, senza portarsi dietro il
@@ -5776,8 +6174,12 @@ function AppShell({ session }: { session: Session | null }) {
   const rankedTeams = useMemo(() => rankedPadelTeams(teams), [teams]);
   const rankedSeasonTeams = useMemo(() => rankedPadelTeams(seasonTeams), [seasonTeams]);
   const rankingRows = rankingMode === "single" ? seasonProfiles.length : rankedSeasonTeams.length;
+  // Solo le squadre formate davvero. Le coppie che hanno soltanto giocato
+  // insieme una volta non sono squadre di nessuno: restano nello storico
+  // delle partite, e se qualcuno le vuole se le forma dal tasto qui sotto —
+  // le partite gia giocate se le ritrova appese.
   const playerTeams = useMemo(
-    () => teams.filter((team) => team.players.some((profile) => profile.id === selectedPlayerId)),
+    () => teams.filter((team) => team.isSaved && team.players.some((profile) => profile.id === selectedPlayerId)),
     [teams, selectedPlayerId],
   );
   const contemporaryPizzaEntries = useMemo(
@@ -5805,13 +6207,18 @@ function AppShell({ session }: { session: Session | null }) {
   // pensa MatchCard, che la stessa cosa la sa gia per conto suo.
   // La scadenza a 12 ore non si guarda qui: a chiuderle e il lavoro che gira
   // ogni minuto su Supabase, e mvp_voting_closed_at arriva da li.
+  // L'id di chi guarda, letto una volta: dentro al useMemo il React Compiler
+  // non riesce a restringere `session?.user.id` e si tiene tutto `session?.user`,
+  // che cambia piu spesso della dipendenza scritta a mano. Il lint segnala lo
+  // scarto e salta l'ottimizzazione dell'intero componente.
+  const viewerMvpId = session?.user.id;
   const pendingMvpMatches = useMemo(
     () => matches.filter((match) => match.mvp_voting_enabled
       && !match.mvp_voting_closed_at
       && (match.mvps ?? []).length === 0
       && !match.viewer_mvp_vote
-      && match.players.some((player) => player.profile_id === session?.user.id)),
-    [matches, session?.user.id],
+      && match.players.some((player) => player.profile_id === viewerMvpId)),
+    [matches, viewerMvpId],
   );
   // Il numero sull'icona in Home. La Badging API esiste solo per la web app
   // salvata sulla schermata Home — iOS e iPadOS dalla 16.4, Android con la
@@ -5891,6 +6298,7 @@ function AppShell({ session }: { session: Session | null }) {
         fixtureId,
         tournamentName: tournament.name,
         eloMultiplier: tournament.elo_multiplier,
+        setsFormat: tournamentSetsFormat(tournament),
         playerIds: [team1.player_a, team1.player_b, team2.player_a, team2.player_b],
       };
     }
@@ -6377,9 +6785,9 @@ function AppShell({ session }: { session: Session | null }) {
     if (!error) await loadData();
   }
 
-  async function saveTeam(team: PadelTeam, name: string, file?: File) {
+  async function saveTeam(pairId: string, name: string, file?: File) {
     if (!supabase || !session) return;
-    const [player_a, player_b] = team.id.split("|");
+    const [player_a, player_b] = pairId.split("|");
     let image_path: string | undefined;
 
     if (file) {
@@ -6408,13 +6816,36 @@ function AppShell({ session }: { session: Session | null }) {
     );
 
     // Il nome non e un vezzo: e quello che fa entrare la coppia in
-    // classifica. Meglio dirlo qui, dove si sceglie, che lasciarlo scoprire.
+    // classifica — insieme alla prima partita giocata, che il nome da solo
+    // non basta.
     setNotice(
       error
         ? error.message
         : name.trim()
-          ? "Squadra salvata: da ora è in classifica."
+          ? "Squadra salvata: entra in classifica dalla prima partita insieme."
           : "Squadra senza nome: resta fuori dalla classifica.",
+    );
+    if (!error) await loadData();
+  }
+
+  // Sciogliere una coppia toglie nome, foto e la riga in classifica. Le
+  // partite giocate restano dove sono: sono appese ai due giocatori, non alla
+  // riga di padel_teams.
+  async function deleteTeam(team: PadelTeam) {
+    if (!supabase) return;
+    if (!window.confirm(`Sciogliere ${teamLabel(team)}? Restano nome e foto da rifare, le partite giocate non si toccano.`)) return;
+    const [player_a, player_b] = team.id.split("|");
+    const { error } = await supabase
+      .from("padel_teams")
+      .delete()
+      .eq("player_a", player_a)
+      .eq("player_b", player_b);
+    setNotice(
+      error
+        ? error.message.includes("policy")
+          ? "Per sciogliere una squadra esegui migration-squadre-libere.sql in Supabase."
+          : error.message
+        : "Squadra sciolta.",
     );
     if (!error) await loadData();
   }
@@ -7118,8 +7549,10 @@ function AppShell({ session }: { session: Session | null }) {
             tournaments={tournaments}
             profiles={profiles}
             matches={matches}
+            viewerId={session?.user.id}
             schemaReady={tournamentSchemaReady}
             onCreate={() => setShowTournamentCreate(true)}
+            onEdit={(tournament) => setEditingTournament(tournament)}
             onRecord={(context) => { setEditingMatch(null); setTournamentMatch(context); }}
           />
         ) : null}
@@ -7247,7 +7680,11 @@ function AppShell({ session }: { session: Session | null }) {
             <div className="player-teams">
               <div className="player-history-head">
                 <div><p className="eyebrow dark">DOPPI</p><h2>{isOwnCard ? "Le mie squadre" : `Le squadre di ${selectedPlayer.display_name}`}</h2></div>
-                <span>{playerTeams.length} {playerTeams.length === 1 ? "squadra" : "squadre"}</span>
+                {isOwnCard && teamSchemaReady ? (
+                  <button className="button button-ghost" type="button" onClick={() => setShowTeamCreate(true)}>+ Nuova</button>
+                ) : (
+                  <span>{playerTeams.length} {playerTeams.length === 1 ? "squadra" : "squadre"}</span>
+                )}
               </div>
               {!teamSchemaReady && isOwnCard ? (
                 <p className="demo-profile-note">
@@ -7262,20 +7699,23 @@ function AppShell({ session }: { session: Session | null }) {
                         key={team.id}
                         team={team}
                         disabled={!supabase}
-                        onSave={(selected, name, file) => saveTeam(selected, name, file)}
+                        onSave={(pairId, name, file) => saveTeam(pairId, name, file)}
+                        onDelete={(selected) => deleteTeam(selected)}
                       />
                     ) : (
                       <div key={team.id} className="player-team-row">
                         <TeamAvatars team={team} />
                         <b>{teamLabel(team)}</b>
-                        <span>{team.rating} pt · {team.wins}/{team.matches_played} vinte</span>
+                        <span>{teamRatingLabel(team)} pt · {team.wins}/{team.matches_played} vinte</span>
                       </div>
                     )
                   ))}
                 </div>
               ) : (
                 <p className="demo-profile-note">
-                  Le squadre nascono dalle partite: gioca un doppio e comparirà qui.
+                  {isOwnCard
+                    ? "Nessuna squadra ancora. Formane una con “+ Nuova”: se avete già giocato insieme, le partite se le ritrova da sole."
+                    : "Nessuna squadra ancora."}
                 </p>
               )}
             </div>
@@ -7875,14 +8315,37 @@ function AppShell({ session }: { session: Session | null }) {
           onDeleted={() => void handleDeleted()}
         />
       ) : null}
-      {showTournamentCreate ? (
-        <TournamentCreateModal
+      {showTeamCreate && session ? (
+        <TeamCreateModal
           profiles={profiles}
-          onClose={() => setShowTournamentCreate(false)}
-          onSaved={async () => {
+          teams={teams}
+          viewerId={session.user.id}
+          onClose={() => setShowTeamCreate(false)}
+          onCreate={async (pairId, name, file) => {
+            await saveTeam(pairId, name, file);
+            setShowTeamCreate(false);
+          }}
+        />
+      ) : null}
+      {showTournamentCreate || editingTournament ? (
+        <TournamentFormModal
+          profiles={profiles}
+          tournament={editingTournament}
+          viewerId={session?.user.id}
+          onClose={() => { setShowTournamentCreate(false); setEditingTournament(null); }}
+          onSaved={async (kind) => {
             setShowTournamentCreate(false);
+            setEditingTournament(null);
             await loadData();
-            setNotice("Torneo creato: calendario e classifica sono pronti.");
+            setNotice(kind === "created"
+              ? "Torneo creato: calendario e classifica sono pronti."
+              : "Torneo aggiornato.");
+          }}
+          onDeleted={async () => {
+            setShowTournamentCreate(false);
+            setEditingTournament(null);
+            await loadData();
+            setNotice("Torneo eliminato: la classifica è stata ricalcolata.");
           }}
         />
       ) : null}

@@ -3101,6 +3101,9 @@ button.podium-person {
 .team-editor-row {
   align-items: center;
   display: flex;
+  /* Con il tasto per sciogliere la riga ha quattro pezzi: sul telefono va a
+     capo invece di schiacciare la casella del nome. */
+  flex-wrap: wrap;
   gap: 12px;
 }
 
@@ -3126,6 +3129,111 @@ button.podium-person {
   flex: 0 0 auto;
   min-height: 42px;
   padding: 0 16px;
+}
+
+/* Sciogliere una coppia non merita un tasto pieno accanto a Salva: sta lì
+   come una parola, in rosso, e non compete con lui per lo sguardo. */
+.team-editor-remove {
+  background: none;
+  border: 0;
+  color: var(--danger);
+  cursor: pointer;
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+  min-height: 42px;
+  padding: 0 4px;
+  text-transform: uppercase;
+}
+
+/* Sul telefono la riga della squadra e una griglia dichiarata, non quattro
+   pezzi che vanno a capo come capita: nome sopra, e sotto in fila i numeri,
+   Sciogli e Salva. Misurata a 390px: 92px di altezza, gli stessi che aveva
+   quando i pezzi erano tre, e i numeri vanno a capo invece di essere tagliati
+   se un giorno diventano piu lunghi. */
+@media (max-width: 780px) {
+  .team-editor-row {
+    display: grid;
+    gap: var(--space-2);
+    grid-template-areas:
+      "nome nome nome"
+      "stat sciogli salva";
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .team-editor-row input {
+    flex: none;
+    grid-area: nome;
+    width: 100%;
+  }
+
+  .team-editor-row small {
+    grid-area: stat;
+    line-height: 1.3;
+    min-width: 0;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .team-editor-row .button {
+    grid-area: salva;
+    padding: 0 14px;
+  }
+
+  .team-editor-remove {
+    grid-area: sciogli;
+  }
+
+  /* Sotto i 780px la testata diventa una colonna e il tasto finisce sotto al
+     titolo: li dentro un tasto largo cento pixel galleggia. Piena larghezza
+     come gli altri comandi delle testate. */
+  .player-teams .player-history-head .button {
+    width: 100%;
+  }
+}
+
+/* La foto della squadra nel foglio di creazione: si tocca l'avatar, non c'è
+   un tasto "sfoglia". Stesso gesto del riquadro che modifica una squadra. */
+.team-create-photo {
+  align-items: center;
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.team-create-photo label {
+  cursor: pointer;
+  margin: 0;
+}
+
+.team-create-photo input[type="file"] {
+  display: none;
+}
+
+.team-create-photo small {
+  color: var(--muted);
+  display: block;
+  font-size: 10px;
+  margin-top: var(--space-1);
+}
+
+.team-create-played {
+  flex: 0 0 auto;
+  text-align: center;
+}
+
+.team-create-played b {
+  display: block;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.team-create-played small {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1px;
 }
 
 .team-avatars {
@@ -3520,7 +3628,7 @@ button.podium-person {
 .sheet-form .match-form-sets,
 .sheet-form .tournament-team-builder,
 .sheet-form .tournament-prize-form,
-.sheet-form .tournament-elo-choice {
+.sheet-form .tournament-choice {
   margin-bottom: var(--space-5);
 }
 
@@ -3775,7 +3883,7 @@ button.podium-person {
 }
 
 .tournament-form-head,
-.tournament-elo-choice,
+.tournament-choice,
 .tournament-prize-preview,
 .tournament-board-head,
 .tournament-prize-card,
@@ -3790,14 +3898,14 @@ button.podium-person {
 }
 
 .tournament-form-head h3,
-.tournament-elo-choice h3 {
+.tournament-choice h3 {
   font-size: 18px;
   letter-spacing: -0.5px;
   margin: 0;
 }
 
 .tournament-form-head .eyebrow,
-.tournament-elo-choice .eyebrow {
+.tournament-choice .eyebrow {
   margin-bottom: var(--space-1);
 }
 
@@ -3940,7 +4048,7 @@ button.podium-person {
   width: 46px;
 }
 
-.tournament-elo-choice {
+.tournament-choice {
   background: var(--white);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -3950,7 +4058,7 @@ button.podium-person {
   padding: var(--space-5);
 }
 
-.tournament-elo-choice small {
+.tournament-choice small {
   color: var(--muted);
   display: block;
   font-size: 10px;
@@ -4141,6 +4249,17 @@ button.podium-person {
   margin-top: 2px;
 }
 
+/* Il premio di fine torneo, appoggiato al nome della squadra. Verde come i
+   guadagni Elo della classifica: e la stessa cosa, arrivata per un'altra
+   strada. */
+.tournament-award {
+  color: var(--positive);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  margin-left: var(--space-2);
+}
+
 .tournament-table-row.is-leader .tournament-team-cell small {
   color: var(--ink-soft);
 }
@@ -4155,6 +4274,20 @@ button.podium-person {
 .tournament-fixture-list {
   display: grid;
   gap: var(--space-2);
+}
+
+/* La riga che divide l'andata dal ritorno. Sta dentro l'elenco, non sopra: ha
+   il peso di un'etichetta e non quello di un titolo di sezione. */
+.tournament-leg-label {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  margin: var(--space-3) 0 0;
+}
+
+.tournament-leg-label:first-child {
+  margin-top: 0;
 }
 
 .tournament-fixture {
@@ -4440,9 +4573,6 @@ button.podium-person {
   align-content: start;
 }
 
-.player-detail-hero .hero-position-row {
-  margin-top: 14px;
-}
 
 /* Nell'angolo in alto a destra della card, con la sola matita: la parola
    "Modifica" portava via mezza riga per una cosa che si cerca dove si cerca
@@ -6182,8 +6312,8 @@ button.pizza-ranking-row {
 /* Su touch non esiste l'hover: la scritta resta leggibile ma discreta. */
 @media (hover: none) {
   .photo-button {
-    opacity: 1;
     background: rgba(11, 27, 44, 0.42);
+    opacity: 0.68;
   }
 }
 
@@ -8032,7 +8162,7 @@ button.pizza-ranking-row {
     gap: var(--space-5);
   }
 
-  .tournament-elo-choice,
+  .tournament-choice,
   .tournament-form-head {
     align-items: stretch;
     flex-direction: column;
@@ -8042,7 +8172,7 @@ button.pizza-ranking-row {
     gap: var(--space-3);
   }
 
-  .tournament-elo-choice .ranking-switch {
+  .tournament-choice .ranking-switch {
     margin-top: var(--space-3);
   }
 
@@ -8801,7 +8931,7 @@ button.pizza-ranking-row {
 
   .player-detail-hero {
     gap: 16px;
-    padding: 24px 20px 18px;
+    padding: 24px 18px 18px;
   }
 
   .player-kpis article {
