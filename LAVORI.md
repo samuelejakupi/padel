@@ -288,6 +288,11 @@ query dei titoli falliscono da sole e non si portano dietro il resto del
 caricamento, quindi l'app continua a funzionare come prima: è lo stesso
 comportamento delle migrazioni dei pareggi e delle plays.
 
+### `migration-tornei-sorteggio.sql` va eseguita per avere il calendario sorteggiato
+Cambia solo il corpo di `build_tournament_fixtures`: la firma è la stessa,
+quindi senza di lei tutto continua a funzionare — ma i tornei nuovi escono
+ancora con il girone in ordine fisso. Non blocca niente.
+
 ### `migration-squadre-libere.sql` serve solo per sciogliere una squadra
 Aggiunge il permesso di eliminazione su `padel_teams`. Senza, tutto il resto
 funziona — si creano squadre nuove, si danno nome e foto — ma il tasto
@@ -338,6 +343,24 @@ ordinate su una media di punti mai messa alla prova.
 
 Sciogliere una squadra toglie nome, foto e la riga in classifica. **Le partite
 non si toccano**: sono appese ai due giocatori, non alla squadra.
+
+### Il calendario del torneo si sorteggia
+Il girone usciva sempre nello stesso ordine — A-B, A-C, B-C — perché era un
+doppio giro annidato sulle squadre come erano state iscritte: la prima del
+modulo apriva sempre il torneo e stava sempre a sinistra. Con le stesse persone
+che si iscrivono più o meno nello stesso ordine, ogni torneo veniva uguale al
+precedente.
+
+Adesso si sorteggiano **quale incontro si gioca per primo** e **da che parte
+sta ciascuna squadra**. Il ritorno no: quello resta lo specchio esatto
+dell'andata, stesse partite nello stesso ordine con le squadre scambiate — è il
+senso del ritorno, e vale anche quando lo si aggiunge dopo a un torneo già
+iniziato.
+
+Un dettaglio che sembra un vezzo e non lo è: la sottoquery del sorteggio è
+`materialized`. Senza, il pianificatore può srotolarla e rivalutare `random()`
+a ogni riferimento — cioè ordinare gli incontri con un sorteggio e girare le
+squadre con un altro.
 
 ### Nel torneo si iscrivono le squadre, non quattro nomi alla volta
 Il modulo del torneo e "le mie squadre" parlavano di due cose diverse: di là si

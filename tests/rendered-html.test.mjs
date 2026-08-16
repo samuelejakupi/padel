@@ -19,7 +19,7 @@ test("genera un sito statico pronto per GitHub Pages", async () => {
 });
 
 test("include configurazione Supabase e funzioni della webapp", async () => {
-  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, singleSetMigration, tournamentFormatMigration, tournamentPrizeMigration, page] = await Promise.all([
+  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, singleSetMigration, tournamentFormatMigration, tournamentPrizeMigration, tournamentDrawMigration, page] = await Promise.all([
     readFile(new URL("supabase/schema.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pizza-sessioni.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pareggi.sql", root), "utf8"),
@@ -27,6 +27,7 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
     readFile(new URL("supabase/migration-partite-un-set.sql", root), "utf8"),
     readFile(new URL("supabase/migration-tornei-formato.sql", root), "utf8"),
     readFile(new URL("supabase/migration-tornei-premio-elo.sql", root), "utf8"),
+    readFile(new URL("supabase/migration-tornei-sorteggio.sql", root), "utf8"),
     readFile(new URL("app/page.tsx", root), "utf8"),
   ]);
   assert.match(schema, /record_match/);
@@ -163,6 +164,12 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(tournamentPrizeMigration, /tournament_closing_match/);
   assert.match(tournamentPrizeMigration, /recalculate_padel_ratings/);
   assert.match(page, /TOURNAMENT_ELO_AWARDS = \[30, 15\]/);
+  // Il calendario si sorteggia: ordine degli incontri e lato di ciascuna
+  // squadra. Il `materialized` regge tutto — senza, random() viene rivalutata
+  // a ogni riferimento e l'ordine non c'entra piu niente con i lati.
+  assert.match(tournamentDrawMigration, /with sorteggio as materialized/);
+  assert.match(tournamentDrawMigration, /order by ordine/);
+  assert.match(tournamentDrawMigration, /if p_first_leg = 2 then/);
 
   // Una squadra si forma, non si scopre: nella scheda ci sono solo le coppie
   // con una riga in padel_teams, e in classifica ci entrano dopo la prima
