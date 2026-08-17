@@ -17,7 +17,8 @@
 -- ne tiene conto.
 --
 -- La parita si scioglie come nella pagina dei tornei: vittorie, poi scontri
--- diretti fra chi e appaiato, poi game vinti, poi l'ordine di iscrizione.
+-- diretti fra chi e appaiato, poi differenza game, game vinti e infine
+-- l'ordine di iscrizione.
 --
 -- Esegui questo file nel SQL Editor di Supabase, dopo migration-tornei-formato.sql.
 
@@ -58,7 +59,12 @@ as $$
         when esito.team1_id = squadra.id then esito.team1_games
         when esito.team2_id = squadra.id then esito.team2_games
         else 0
-      end), 0) as games_won
+      end), 0) as games_won,
+      coalesce(sum(case
+        when esito.team1_id = squadra.id then esito.team2_games
+        when esito.team2_id = squadra.id then esito.team1_games
+        else 0
+      end), 0) as games_lost
     from public.tournament_teams as squadra
     left join results as esito
       on esito.team1_id = squadra.id or esito.team2_id = squadra.id
@@ -86,7 +92,12 @@ as $$
   select
     per_team.id,
     row_number() over (
-      order by per_team.wins desc, direct.direct_wins desc, per_team.games_won desc, per_team.sort_order
+      order by
+        per_team.wins desc,
+        direct.direct_wins desc,
+        (per_team.games_won - per_team.games_lost) desc,
+        per_team.games_won desc,
+        per_team.sort_order
     )::integer
   from per_team
   join direct on direct.id = per_team.id;

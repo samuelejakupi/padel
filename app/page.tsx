@@ -2840,9 +2840,9 @@ function MvpVoteModal({
     <BottomSheet title="Vota l'MVP" onClose={onClose}>
       <form className="sheet-form mvp-vote-form" onSubmit={submit}>
         <p className="mvp-vote-intro">
-          Scegli il migliore della partita. L&apos;MVP viene assegnato appena un giocatore raggiunge 3 voti
-          oppure quando hanno votato tutti. La votazione scade comunque dopo 12 ore; in caso di parità
-          al primo posto, l&apos;MVP non viene assegnato.
+          Scegli il migliore della partita. Per essere MVP un giocatore deve ricevere almeno 3 voti.
+          La votazione si chiude quando qualcuno li raggiunge, quando hanno votato tutti o dopo 12 ore;
+          se nessuno arriva a 3 voti, l&apos;MVP non viene assegnato.
         </p>
         <fieldset className="mvp-candidates" disabled={busy}>
           <legend>Partecipanti</legend>
@@ -5128,6 +5128,7 @@ function buildTournamentStandings(tournament: Tournament, matches: PadelMatch[])
   return standings.sort((a, b) =>
     b.wins - a.wins
     || b.directWins - a.directWins
+    || (b.gamesWon - b.gamesLost) - (a.gamesWon - a.gamesLost)
     || b.gamesWon - a.gamesWon
     || a.team.sort_order - b.team.sort_order,
   );
@@ -5543,16 +5544,16 @@ function TournamentStandingsContent({
         {actionLabel ? <span className="tournament-open-label">{actionLabel} →</span> : null}
       </div>
       <div className="tournament-table">
-        <div className="tournament-table-head"><span>#</span><span>Squadra</span><span>G</span><span>V</span><span>SD</span><span>Game</span></div>
+        <div className="tournament-table-head"><span>#</span><span>Squadra</span><span>G</span><span>V</span><span>SD</span><span>Diff.</span></div>
         {standings.map((row, index) => (
           <div className={`tournament-table-row${index === 0 && row.played ? " is-leader" : ""}`} key={row.team.id}>
             <b>{index + 1}</b>
             <span className="tournament-team-cell"><strong>{row.team.name}{completed && TOURNAMENT_ELO_AWARDS[index] ? <em className="tournament-award">+{TOURNAMENT_ELO_AWARDS[index]}</em> : null}</strong><small>{profileMap.get(row.team.player_a)?.display_name} · {profileMap.get(row.team.player_b)?.display_name}</small></span>
-            <span>{row.played}</span><span>{row.wins}</span><span>{row.directWins}</span><span>{row.gamesWon}</span>
+            <span>{row.played}</span><span>{row.wins}</span><span>{row.directWins}</span><span>{row.gamesWon - row.gamesLost > 0 ? "+" : ""}{row.gamesWon - row.gamesLost}</span>
           </div>
         ))}
       </div>
-      <p className="tournament-rule-note">Parità: scontri diretti, poi numero totale di game vinti. A torneo finito i primi prendono +{TOURNAMENT_ELO_AWARDS[0]} Elo a testa, i secondi +{TOURNAMENT_ELO_AWARDS[1]}.</p>
+      <p className="tournament-rule-note">Parità: scontri diretti, poi differenza game e infine game vinti. A torneo finito i primi prendono +{TOURNAMENT_ELO_AWARDS[0]} Elo a testa, i secondi +{TOURNAMENT_ELO_AWARDS[1]}.</p>
     </>
   );
 }
@@ -5676,7 +5677,7 @@ function TournamentsPage({
       <article className="section-hero tournament-hero">
         <BlockMark size="lg" />
         <div className="section-hero-head">
-          <div><p className="eyebrow">THEBOYZ CUP</p><h1>Tornei</h1><p>Girone all’italiana: vittorie, scontri diretti, game vinti.</p></div>
+          <div><p className="eyebrow">THEBOYZ CUP</p><h1>Tornei</h1><p>Girone all’italiana: vittorie, scontri diretti, differenza game.</p></div>
           <button className="button button-primary tournament-new-button" onClick={onCreate} disabled={!schemaReady}>+ TOURNAMENT</button>
         </div>
       </article>
@@ -6410,6 +6411,7 @@ function AppShell({ session }: { session: Session | null }) {
     const championTeams = standings.filter((row) =>
       row.wins === winner.wins
       && row.directWins === winner.directWins
+      && row.gamesWon - row.gamesLost === winner.gamesWon - winner.gamesLost
       && row.gamesWon === winner.gamesWon,
     );
     return championTeams.some((row) => row.team.player_a === selectedPlayer.id || row.team.player_b === selectedPlayer.id);

@@ -19,7 +19,7 @@ test("genera un sito statico pronto per GitHub Pages", async () => {
 });
 
 test("include configurazione Supabase e funzioni della webapp", async () => {
-  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, singleSetMigration, tournamentFormatMigration, tournamentPrizeMigration, tournamentDrawMigration, page] = await Promise.all([
+  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, singleSetMigration, tournamentFormatMigration, tournamentPrizeMigration, tournamentDifferenceMigration, tournamentDrawMigration, page] = await Promise.all([
     readFile(new URL("supabase/schema.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pizza-sessioni.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pareggi.sql", root), "utf8"),
@@ -27,6 +27,7 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
     readFile(new URL("supabase/migration-partite-un-set.sql", root), "utf8"),
     readFile(new URL("supabase/migration-tornei-formato.sql", root), "utf8"),
     readFile(new URL("supabase/migration-tornei-premio-elo.sql", root), "utf8"),
+    readFile(new URL("supabase/migration-tornei-differenza-game.sql", root), "utf8"),
     readFile(new URL("supabase/migration-tornei-sorteggio.sql", root), "utf8"),
     readFile(new URL("app/page.tsx", root), "utf8"),
   ]);
@@ -164,6 +165,13 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(tournamentPrizeMigration, /tournament_closing_match/);
   assert.match(tournamentPrizeMigration, /recalculate_padel_ratings/);
   assert.match(page, /TOURNAMENT_ELO_AWARDS = \[30, 15\]/);
+  // Dopo gli scontri diretti conta la differenza fra game fatti e subiti;
+  // la stessa espressione deve restare sia nel database sia nell'interfaccia.
+  assert.match(tournamentPrizeMigration, /games_won - per_team\.games_lost/);
+  assert.match(tournamentDifferenceMigration, /games_won - per_team\.games_lost/);
+  assert.match(tournamentDifferenceMigration, /recalculate_padel_ratings/);
+  assert.match(page, /gamesWon - b\.gamesLost/);
+  assert.match(page, /differenza game/i);
   // Il calendario si sorteggia: ordine degli incontri e lato di ciascuna
   // squadra. Il `materialized` regge tutto — senza, random() viene rivalutata
   // a ogni riferimento e l'ordine non c'entra piu niente con i lati.
