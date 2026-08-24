@@ -9,11 +9,34 @@ perdono passando da una sessione all'altra.
 "in sospeso" a "deciso". Quando scarti una strada, scrivi perché: serve a non
 ripercorrerla fra un mese.
 
-Ultimo aggiornamento: 16 agosto 2026
+Ultimo aggiornamento: 24 agosto 2026
 
 ---
 
 ## In sospeso
+
+### Gaming e Cashout esistono, ma sono vuote
+Il 24 agosto sono entrate nella barra e nella home, con pagina e classifica
+proprie. Quello che non hanno ancora sono i dati: niente tabelle, niente RPC,
+niente form. Al loro posto c'è `SectionPreview`, che dice cosa ci sarà — una
+voce che apre il vuoto sembra un difetto, una che dice cosa arriva è un
+appuntamento. Il componente va tolto quando le sezioni saranno vere.
+
+Quello che è già stato deciso, e che lo schema dovrà rispettare:
+
+**Gaming.** Partite multi-gioco, non un gioco solo: si registra il gioco, chi
+ha giocato e chi ha vinto. Le partite restano divise per gioco, e la
+classifica è doppia — una generale su tutto, una per singolo gioco. Il
+campione di FIFA non deve diventare campione di poker per inerzia.
+
+**Cashout.** Una versione nostra di Splitwise, pensata per la vacanza: si
+registra la spesa (chi ha pagato, quanto, per chi) e il saldo di ognuno si
+aggiorna subito, così si aggiusta in corsa invece che l'ultimo giorno. A fine
+viaggio l'app propone il pareggio col numero minimo di passaggi. La
+"classifica" della sezione è il saldo: in cima chi ha anticipato di più, in
+fondo chi è in debito, e il totale deve sempre fare zero — se non lo fa, c'è
+un errore nelle spese.
+
 
 ### ~~Il tabellone dei campi liberi non funziona finché non lo si accende~~
 **Chiuso il 10 agosto 2026: tutti e cinque i centri si vedono.** Le tre
@@ -210,12 +233,12 @@ mostra quali due partite resterebbero: da guardare prima di far partire il
 resto. Finché non è stato eseguito, in app si vedono partite e tornei che non
 sono mai esistiti.
 
-### Tre agganci CSS morti
-`theme-dark`, `.app-shell-hub` e `.is-open` hanno regole in `globals.css` ma
-nessun JavaScript le applica più: sono avanzi di quando esisteva la schermata
-di smistamento e la classifica in home si apriva sul posto. Comprese le
-regole dentro i blocchi mobile. Non fanno danni, ma chi legge il CSS ci
-perde tempo. Da togliere in un commit a parte, quando non c'è altro in volo.
+### ~~Tre agganci CSS morti~~ — due su tre sono tornati vivi
+`theme-dark` e `.app-shell-hub` non sono più avanzi: il 24 agosto la home di
+smistamento è rientrata e li riusa, insieme a tutte le regole `.hub-*`. Buon
+motivo per non aver fatto quel commit di pulizia. Resta morto soltanto
+`.is-open`, avanzo della classifica in home che si apriva sul posto: quello
+si può togliere quando non c'è altro in volo.
 
 ### Segnaposto da sostituire
 Le icone animate di Flaticon sono provvisorie e caricate dal loro sito:
@@ -1224,10 +1247,42 @@ restavano bloccate fino al limite rigido di dieci minuti. Il 6 agosto 2026 il
 progetto è stato migrato su Vercel, che pubblica automaticamente `main` e crea
 anteprime per gli altri branch. Pages rimane solo come fallback manuale.
 
-### Il Padel è la home
-Non c'è più una schermata di smistamento: si entra nel court. Partite e
-classifica si aprono in un foglio dal basso, non in pagine separate, quindi la
-voce "Padel" nella barra è una sola.
+### ~~Il Padel è la home~~ — rientrata il 24 agosto 2026
+Era vero finché le sezioni erano due. Con quattro — Padel, Pizza, Gaming,
+Cashout — entrare dentro una di loro voleva dire far cominciare l'app in un
+posto scelto a caso fra i quattro, e le altre tre sarebbero finite dietro a
+una voce di menu. Lo smistamento è tornato, e stavolta è la home vera.
+
+Il CSS non è mai stato buttato: `.app-shell-hub`, `.hub-*` e `theme-dark`
+erano rimasti nel file come agganci morti, segnalati fra le cose da togliere.
+Sono stati riaccesi invece che riscritti — è il motivo per cui la home nuova
+sembra quella vecchia, e non è un caso.
+
+### La barra cambia con la sezione
+In home ha due voci, Home e Profilo. Dentro una sezione ne ha quattro: Home,
+la sezione, la sua Classifica, Profilo. Non sono quattro voci fisse con due
+nascoste: sono due elenchi diversi, e il numero di colonne della griglia lo
+scrive il JSX in `--nav-count` perché in CSS non c'è modo di contarle.
+
+La terza voce è sempre la classifica **di dove ti trovi**: nel Padel il
+ranking Elo, nella Pizza la classifica pizzerie, e così via. Una classifica
+generale del gruppo è stata considerata e scartata: sommare punti di padel,
+pizzerie e partite a FIFA dà un numero che non significa niente.
+
+**Il profilo si apre da ogni sezione senza cambiarla.** La scheda giocatore
+vive dentro il Padel, ma è il profilo di tutte e quattro: aprendola dal
+Cashout la barra deve restare quella del Cashout. Per questo esiste
+`lastSection`, che ricorda da dove sei entrato mentre la scheda è a video.
+
+### La classifica pizzerie è una pagina a sé
+Prima stava in fondo alla pagina della Pizza, sotto le votazioni. Con la voce
+"Classifica" nella barra sarebbe stata raggiungibile in due modi diversi
+dalla stessa pagina, quindi è stata staccata: la pagina Pizza sono le
+votazioni, la Classifica è la classifica. In fondo alle votazioni resta una
+scorciatoia, perché chi ha appena votato vuole vedere com'è finita.
+
+Il titolo "Pizzeria Ranking." è andato con la classifica, che è la cosa che
+nomina; le votazioni si chiamano "Pizza Night."
 
 ### Parimerito densi (1, 1, 2)
 Due primi a pari punti sono entrambi primi e chi segue è secondo. Nello sport

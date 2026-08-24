@@ -19,7 +19,7 @@ test("genera un sito statico pronto per GitHub Pages", async () => {
 });
 
 test("include configurazione Supabase e funzioni della webapp", async () => {
-  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, singleSetMigration, tournamentFormatMigration, tournamentPrizeMigration, tournamentDifferenceMigration, tournamentDrawMigration, page] = await Promise.all([
+  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, singleSetMigration, tournamentFormatMigration, tournamentPrizeMigration, tournamentDifferenceMigration, tournamentDrawMigration, page, css] = await Promise.all([
     readFile(new URL("supabase/schema.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pizza-sessioni.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pareggi.sql", root), "utf8"),
@@ -30,6 +30,7 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
     readFile(new URL("supabase/migration-tornei-differenza-game.sql", root), "utf8"),
     readFile(new URL("supabase/migration-tornei-sorteggio.sql", root), "utf8"),
     readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/globals.css", root), "utf8"),
   ]);
   assert.match(schema, /record_match/);
   assert.match(schema, /delete_match/);
@@ -71,7 +72,21 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(page, /"samu", "dani", "fabio"/);
   assert.match(page, /Contemporanea/);
   assert.match(page, /Nostalgica/);
-  assert.match(page, /key: "padel", glyph: "racket", label: "Padel"/);
+  // Le quattro sezioni stanno in un elenco solo: se qualcuno ne aggiunge una
+  // scrivendola a mano da un'altra parte, qui si accorge che manca.
+  assert.match(page, /key: "padel", label: "Padel", glyph: "racket"/);
+  assert.match(page, /key: "pizza", label: "Pizza", glyph: "pizza"/);
+  assert.match(page, /key: "gaming", label: "Gaming", glyph: "gamepad"/);
+  assert.match(page, /key: "cashout", label: "Cashout", glyph: "wallet"/);
+  // Dopo il login si entra nello smistamento, non dentro una sezione.
+  assert.match(page, /useState<View>\("home"\)/);
+  // La barra ha due voci in home e quattro dentro una sezione: le colonne le
+  // conta il JSX, e il CSS le legge da li.
+  assert.match(page, /"--nav-count": navItems\.length/);
+  assert.match(css, /grid-template-columns: repeat\(var\(--nav-count/);
+  // La terza voce e sempre la classifica della sezione in cui ti trovi.
+  assert.match(page, /label: "Classifica"/);
+  assert.match(page, /function SectionPreview/);
   // La navigazione interna al Padel non esiste piu: partite e ranking si
   // aprono nel foglio dal basso, quindi la voce nella barra e una sola.
   // Il presidio si sposta sul componente che ha preso quel ruolo.

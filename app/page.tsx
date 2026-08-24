@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Fragment, FormEvent, ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Fragment, type CSSProperties, FormEvent, ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import {
   hasSupabaseConfig,
@@ -19,8 +19,14 @@ import MonthGroup from "./MonthGroup";
 import WansportBoard from "./WansportBoard";
 import WansportAccesso from "./WansportAccesso";
 
-type View = "padel" | "pizza";
+// Le quattro sezioni del gruppo. La home non e una di loro: e lo smistamento
+// che le apre, e da li la barra in basso cambia voci.
+type Section = "padel" | "pizza" | "gaming" | "cashout";
+type View = "home" | Section;
 type PadelView = "overview" | "ranking" | "matches" | "tournaments" | "player";
+// Pizza, Gaming e Cashout hanno la stessa forma: la pagina della sezione e la
+// sua classifica, le due voci centrali della barra.
+type SectionView = "overview" | "ranking";
 type PizzaRankingMode = "contemporary" | "classic";
 type PizzaRankingEntry = {
   name: string;
@@ -130,6 +136,19 @@ function finalPizzaScore(votes: PizzaSessionVote[], session: PizzaSession, profi
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const groupUsers = ["Samu", "Dani", "Atti", "Matte", "Fabio", "Alban", "Mattia", "Manu", "Mene"] as const;
+
+// Le sezioni in un posto solo: da qui pescano sia le card della home sia la
+// voce centrale della barra, cosi il nome non puo divergere fra i due posti.
+const sections = [
+  { key: "padel", label: "Padel", glyph: "racket", claim: "Partite, tornei e ranking Elo." },
+  { key: "pizza", label: "Pizza", glyph: "pizza", claim: "Votazioni a fine serata e classifica pizzerie." },
+  { key: "gaming", label: "Gaming", glyph: "gamepad", claim: "Sfide multi-gioco e classifica del gruppo." },
+  { key: "cashout", label: "Cashout", glyph: "wallet", claim: "Spese condivise e conti da pareggiare." },
+] as const satisfies readonly { key: Section; label: string; glyph: GlyphName; claim: string }[];
+
+function sectionMeta(section: Section) {
+  return sections.find((item) => item.key === section) ?? sections[0];
+}
 const pizzaRanking: readonly PizzaRankingEntry[] = [
   { name: "Portego De Mà", location: 16, pizza: 25, dessert: 8, price: 22, fabio: 7, total: 78, address: "Calata Giovanni Battista Cuneo, 29, 18100 Imperia (IM)" },
   { name: "Oasi La Pizza", location: 17, pizza: 21, dessert: 7, price: 19, fabio: 6, total: 70, address: "Piazza Sant'Antonio, 15, 18100 Imperia (IM)" },
@@ -788,7 +807,7 @@ function Avatar({
   );
 }
 
-type GlyphName = "home" | "ranking" | "racket" | "rackets" | "person" | "people" | "pizza";
+type GlyphName = "home" | "ranking" | "racket" | "rackets" | "person" | "people" | "pizza" | "gamepad" | "wallet";
 
 // La racchetta singola, riusata anche per la coppia.
 const RACKET_HEAD = "M9.6 16.2C7 15 5.3 12.4 5.3 9.4 5.3 5.7 8.3 2.7 12 2.7s6.7 3 6.7 6.7c0 3-1.7 5.6-4.3 6.8Z";
@@ -893,6 +912,30 @@ function NavGlyph({ name }: { name: GlyphName }) {
               <circle cx="12" cy="12.8" r="0.95" />
             </g>
           </g>
+        </>
+      ) : null}
+      {/* Pad: corpo schiacciato ai lati, croce a sinistra e due tasti a
+          destra. Le impugnature non sono due lobi staccati ma lo stesso
+          contorno che scende: a 24px due pezzi separati diventano macchie. */}
+      {name === "gamepad" ? (
+        <>
+          <path d="M8.3 7.4h7.4a4.9 4.9 0 0 1 4.8 4l1 5.6a2.5 2.5 0 0 1-4.5 1.9l-1.6-2.2a1.7 1.7 0 0 0-1.4-.7h-3.6a1.7 1.7 0 0 0-1.4.7l-1.6 2.2a2.5 2.5 0 0 1-4.5-1.9l1-5.6a4.9 4.9 0 0 1 4.8-4Z" />
+          <path d="M7.6 11.6v2.5" />
+          <path d="M6.35 12.85h2.5" />
+          <g fill="currentColor" stroke="none">
+            <circle cx="16.1" cy="11.9" r="0.95" />
+            <circle cx="17.6" cy="14.1" r="0.95" />
+          </g>
+        </>
+      ) : null}
+      {/* Portafoglio: la busta chiusa e il bottone sul lato destro. Non una
+          banconota — le spese qui dentro non sono in contanti, sono un conto
+          che si tiene. */}
+      {name === "wallet" ? (
+        <>
+          <path d="M4.6 8.1a2 2 0 0 1 2-2h9.6a2 2 0 0 1 2 2v0.9" />
+          <rect x="3.4" y="8.1" width="17.2" height="11.5" rx="2.4" />
+          <path d="M20.6 12.6h-3.4a1.6 1.6 0 0 0 0 3.2h3.4" />
         </>
       ) : null}
       {/* Un busto: il singolo. */}
@@ -5764,10 +5807,67 @@ function TournamentsPage({
   );
 }
 
+// Gaming e Cashout hanno la barra, la pagina e la classifica, ma non ancora i
+// dati: schema e funzioni arrivano nel passo successivo. Questa pagina esiste
+// perche una voce che apre il vuoto sembra un difetto, mentre una che dice
+// cosa ci sara e un appuntamento. Sparisce quando la sezione avra i suoi dati.
+function SectionPreview({
+  eyebrow,
+  title,
+  lead,
+  points,
+  emptyTitle,
+  emptyCopy,
+}: {
+  eyebrow: string;
+  title: string;
+  lead: string;
+  points: readonly { title: string; copy: string }[];
+  emptyTitle: string;
+  emptyCopy: string;
+}) {
+  return (
+    <section className="page-section">
+      <article className="section-hero">
+        <BlockMark size="lg" />
+        <div className="section-hero-head">
+          <div>
+            <p className="eyebrow">{eyebrow}</p>
+            <h1>{title}</h1>
+            <p>{lead}</p>
+          </div>
+        </div>
+      </article>
+      <div className="preview-points">
+        {points.map((point) => (
+          <article className="preview-point" key={point.title}>
+            <h3>{point.title}</h3>
+            <p>{point.copy}</p>
+          </article>
+        ))}
+      </div>
+      <div className="empty-board">
+        <span>00</span>
+        <h2>{emptyTitle}</h2>
+        <p>{emptyCopy}</p>
+      </div>
+    </section>
+  );
+}
+
 function AppShell({ session }: { session: Session | null }) {
-  // Il Court è la home: si entra direttamente lì.
-  const [view, setView] = useState<View>("padel");
+  // Dopo il login si entra nello smistamento, non dentro una sezione: da li si
+  // sceglie dove andare e la barra in basso si riempie di conseguenza.
+  const [view, setView] = useState<View>("home");
   const [padelView, setPadelView] = useState<PadelView>("overview");
+  const [pizzaView, setPizzaView] = useState<SectionView>("overview");
+  const [gamingView, setGamingView] = useState<SectionView>("overview");
+  const [cashoutView, setCashoutView] = useState<SectionView>("overview");
+  // La scheda giocatore vive dentro il Padel, ma ci si arriva da qualunque
+  // sezione: senza ricordarsi da dove si veniva, aprire il profilo dal
+  // Cashout riportava la barra su quella del Padel. Questo e l'ultimo
+  // smistamento scelto, e resta null finche si e in home.
+  const [lastSection, setLastSection] = useState<Section | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [matches, setMatches] = useState<PadelMatch[]>([]);
   const [mvpSchemaReady, setMvpSchemaReady] = useState(true);
@@ -6368,6 +6468,22 @@ function AppShell({ session }: { session: Session | null }) {
 
   const selectedPlayer = profiles.find((profile) => profile.id === selectedPlayerId) ?? null;
   const isOwnCard = view === "padel" && padelView === "player" && selectedPlayerId === session?.user.id;
+  // La scheda giocatore e una pagina del Padel, ma fa da profilo per tutte le
+  // sezioni: mentre e aperta la barra resta quella della sezione da cui si e
+  // partiti, non quella del Padel.
+  const isPlayerCard = view === "padel" && padelView === "player";
+  const navSection: Section | null = isPlayerCard
+    ? lastSection
+    : (view === "home" ? null : view);
+  // Quale delle due voci centrali e accesa. Archivio partite e tornei stanno
+  // sotto la voce della sezione: sono pagine del Padel, non una classifica.
+  const sectionView: SectionView = navSection === "padel"
+    ? (padelView === "ranking" ? "ranking" : "overview")
+    : navSection === "pizza"
+      ? pizzaView
+      : navSection === "gaming"
+        ? gamingView
+        : cashoutView;
   const selectedPlayerRank = selectedPlayer?.matches_played ? rankOf(sorted, selectedPlayer.id) : 0;
   const selectedPlayerMatches = selectedPlayer
     ? matches.filter((match) => match.players.some((player) => player.profile_id === selectedPlayer.id))
@@ -6544,6 +6660,49 @@ function AppShell({ session }: { session: Session | null }) {
     setView("padel");
   }, [currentUserId]);
 
+  // Torna allo smistamento. Azzera anche l'ultima sezione: in home la barra
+  // ha due voci sole, e senza azzerarlo resterebbero quelle della sezione da
+  // cui si e usciti.
+  const goHome = useCallback(() => {
+    setLastSection(null);
+    setView("home");
+    scrollPageTo(0, "instant" as ScrollBehavior);
+  }, []);
+
+  // Apre una sezione dalla sua pagina principale.
+  const openSection = useCallback((section: Section) => {
+    setLastSection(section);
+    setView(section);
+    if (section === "padel") setPadelView("overview");
+    if (section === "pizza") setPizzaView("overview");
+    if (section === "gaming") setGamingView("overview");
+    if (section === "cashout") setCashoutView("overview");
+    scrollPageTo(0, "instant" as ScrollBehavior);
+  }, []);
+
+  // Apre la classifica della sezione: e la terza voce della barra, uguale per
+  // tutte e quattro.
+  const openSectionRanking = useCallback((section: Section) => {
+    setLastSection(section);
+    setView(section);
+    if (section === "padel") setPadelView("ranking");
+    if (section === "pizza") setPizzaView("ranking");
+    if (section === "gaming") setGamingView("ranking");
+    if (section === "cashout") setCashoutView("ranking");
+    scrollPageTo(0, "instant" as ScrollBehavior);
+  }, []);
+
+  // Lo smistamento e scuro fino ai bordi dello schermo, barre di sistema
+  // comprese: il colore lo porta html, non il riquadro. Dipende anche dal
+  // caricamento perche la schermata di attesa usa lo stesso interruttore e,
+  // smontandosi, se lo porterebbe via lasciando la home chiara.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (view !== "home" || loading) return;
+    root.classList.add("theme-dark");
+    return () => root.classList.remove("theme-dark");
+  }, [view, loading]);
+
   // I due tasti del nastro, disegnati una volta sola: quello in scena e il
   // vicino che arriva sono lo stesso tasto, e devono restarlo — se si
   // scrivessero due volte basterebbe ritoccarne uno per vedere il tasto
@@ -6606,13 +6765,35 @@ function AppShell({ session }: { session: Session | null }) {
     axis: "pending" | "horizontal" | "vertical";
   } | null>(null);
 
-  // Il Padel è la home: partite e classifica si aprono lì dentro, quindi non
-  // serve più una voce separata.
-  const navItems = useMemo(() => ([
-    { key: "padel", glyph: "racket", label: "Padel", active: view === "padel" && padelView !== "player", select: () => { setView("padel"); setPadelView("overview"); } },
-    { key: "pizza", glyph: "pizza", label: "Pizza", active: view === "pizza", select: () => setView("pizza") },
-    { key: "profile", glyph: "", label: "Profilo", active: isOwnCard, select: openOwnCard },
-  ]), [view, padelView, isOwnCard, openOwnCard]);
+  // La barra cambia con la sezione. In home ha due voci, Home e Profilo;
+  // dentro una sezione ne ha quattro, con al centro la sezione stessa e la
+  // sua classifica. Le voci non sono quattro fisse con due nascoste: sono
+  // proprio due elenchi diversi, ed e per questo che le colonne della griglia
+  // le conta la barra a ogni render.
+  const navItems = useMemo(() => {
+    const home = { key: "home", glyph: "home" as GlyphName, label: "Home", active: view === "home", select: goHome };
+    const profile = { key: "profile", glyph: "" as GlyphName, label: "Profilo", active: isOwnCard, select: openOwnCard };
+    if (!navSection) return [home, profile];
+    const meta = sectionMeta(navSection);
+    return [
+      home,
+      {
+        key: meta.key,
+        glyph: meta.glyph as GlyphName,
+        label: meta.label,
+        active: !isPlayerCard && sectionView === "overview",
+        select: () => openSection(navSection),
+      },
+      {
+        key: "ranking",
+        glyph: "ranking" as GlyphName,
+        label: "Classifica",
+        active: !isPlayerCard && sectionView === "ranking",
+        select: () => openSectionRanking(navSection),
+      },
+      profile,
+    ];
+  }, [view, navSection, sectionView, isPlayerCard, isOwnCard, openOwnCard, goHome, openSection, openSectionRanking]);
 
   const navActiveIndex = navItems.findIndex((item) => item.active);
 
@@ -6988,33 +7169,28 @@ function AppShell({ session }: { session: Session | null }) {
     setPadelView("player");
   }
 
-  // Il Court fa da home.
-  function goHome() {
-    setView("padel");
-    setPadelView("overview");
-  }
-
   function openPadelPage(next: "matches" | "ranking" | "tournaments") {
+    setLastSection("padel");
     setView("padel");
     setPadelView(next);
     scrollPageTo(0, "instant" as ScrollBehavior);
   }
 
-  type MobileDestination = "padel" | "pizza" | "profile";
+  type MobileDestination = "section" | "home" | "profile";
 
-  // Fra Padel, Pizza e Profilo si passa solo dalla barra: lo scorrimento
-  // laterale faceva cambiare sezione per sbaglio mentre si leggeva. Resta
-  // solo il ritorno indietro dagli archivi, che è un gesto senza ambiguità.
+  // Fra le sezioni si passa solo dalla barra: lo scorrimento laterale faceva
+  // cambiare sezione per sbaglio mentre si leggeva. Resta solo il ritorno
+  // indietro dagli archivi, che è un gesto senza ambiguità.
   function mobileDestination(direction: "left" | "right"): MobileDestination | null {
     const isPadelArchive = view === "padel"
       && (padelView === "matches" || padelView === "ranking" || padelView === "tournaments");
-    if (isPadelArchive) return direction === "right" ? "padel" : null;
+    if (isPadelArchive) return direction === "right" ? "section" : null;
     return null;
   }
 
   function openMobileDestination(destination: MobileDestination) {
-    if (destination === "padel") goHome();
-    if (destination === "pizza") setView("pizza");
+    if (destination === "home") goHome();
+    if (destination === "section") openSection(navSection ?? "padel");
     if (destination === "profile") openOwnCard();
   }
 
@@ -7140,7 +7316,7 @@ function AppShell({ session }: { session: Session | null }) {
 
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${view === "home" ? " app-shell-hub" : ""}`}>
       {/* La sfocatura sotto la barra di sistema dell'iPhone: sfoca tutto
           quello che passa dietro all'ora e alle icone, e finisce dove finisce
           l'area sicura — la pagina vera, che comincia piu sotto, non la tocca.
@@ -7156,19 +7332,18 @@ function AppShell({ session }: { session: Session | null }) {
         <span />
       </div>
       <header className="topbar">
+        {/* Le stesse voci della barra in basso, senza il profilo: su desktop
+            quello e gia la pastiglia col nome qui a destra. */}
         <nav className="desktop-nav" aria-label="Navigazione principale">
-          <button
-            className={view === "padel" && padelView !== "player" ? "active" : ""}
-            onClick={goHome}
-          >
-            Padel
-          </button>
-          <button
-            className={view === "pizza" ? "active" : ""}
-            onClick={() => setView("pizza")}
-          >
-            Pizza
-          </button>
+          {navItems.filter((item) => item.key !== "profile").map((item) => (
+            <button
+              key={item.key}
+              className={item.active ? "active" : ""}
+              onClick={item.select}
+            >
+              {item.label}
+            </button>
+          ))}
         </nav>
         <button
           className={`profile-chip ${isOwnCard ? "active" : ""}`}
@@ -7275,6 +7450,68 @@ function AppShell({ session }: { session: Session | null }) {
       >
         {loading ? (
           <LoadingScreen />
+        ) : null}
+
+        {/* Lo smistamento. Non fa da riassunto delle sezioni: sono quattro
+            porte e una scheda profilo, e basta. Un'anteprima per ognuna
+            avrebbe reso la prima schermata la piu lenta da caricare, che e
+            l'opposto di quello che deve fare. */}
+        {!loading && view === "home" ? (
+          <section className="hub-page">
+            <div className="hub-hero">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="hub-mark" src={`${basePath}/theboyz-mark.png`} alt="" width={600} height={600} aria-hidden="true" />
+              <div className="hub-hero-copy">
+                <p className="eyebrow">THEBOYZ</p>
+                <h1>Scegli<br /><span>il campo.</span></h1>
+                <p>
+                  Quattro sezioni, un gruppo solo. La barra qui sotto cambia con la
+                  sezione che apri e ti porta sempre alla classifica giusta.
+                </p>
+                <div className="hub-members">
+                  <div className="mini-avatars">
+                    {profiles.slice(0, 5).map((profile) => (
+                      <Avatar key={profile.id} profile={profile} size="sm" />
+                    ))}
+                  </div>
+                  <span><b>{profiles.length}</b> membri</span>
+                </div>
+              </div>
+            </div>
+
+            <button className="hub-profile" onClick={openOwnCard}>
+              <div className="hub-profile-info">
+                <small>IL TUO PROFILO</small>
+                <b>{currentUser.display_name}</b>
+                <span>Padel {currentRank ? `#${currentRank}` : "N/C"}</span>
+              </div>
+              <Avatar profile={currentUser} size="xl" rank={currentRank || undefined} />
+            </button>
+
+            <div className="hub-cards">
+              {sections.map((item) => (
+                <button
+                  key={item.key}
+                  className={`hub-card hub-card-${item.key}`}
+                  onClick={() => openSection(item.key)}
+                >
+                  <span className="hub-card-icon"><NavGlyph name={item.glyph} /></span>
+                  <span className="hub-card-copy">
+                    <h3>{item.label}</h3>
+                    <small>{item.claim}</small>
+                  </span>
+                  {/* Gli stessi pallini della barra: da qui si vede subito
+                      dove c'e qualcosa che aspetta te. */}
+                  {item.key === "pizza" && pendingPizzaVotes.length ? (
+                    <b className="hub-card-dot">{pendingPizzaVotes.length}</b>
+                  ) : null}
+                  {item.key === "padel" && pendingMvpMatches.length ? (
+                    <b className="hub-card-dot hub-card-dot-mvp">{pendingMvpMatches.length}</b>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          </section>
         ) : null}
 
         {!loading && view === "padel" && padelView === "overview" ? (
@@ -7928,7 +8165,9 @@ function AppShell({ session }: { session: Session | null }) {
           </section>
         ) : null}
 
-        {!loading && view === "pizza" ? (
+        {/* La pagina della sezione: le votazioni. La classifica e diventata la
+            voce accanto nella barra, e sta nel blocco qui sotto. */}
+        {!loading && view === "pizza" && pizzaView === "overview" ? (
           <><section className="pizza-page">
             <BlockMark size="lg" />
             <div className="pizza-hero">
@@ -7942,7 +8181,9 @@ function AppShell({ session }: { session: Session | null }) {
                 <span>Info</span>
               </button>
               <div className="pizza-hero-title">
-                <h1>Pizzeria<br /><span>Ranking.</span></h1>
+                {/* Il titolo dice cosa si fa qui. "Pizzeria Ranking" e passato
+                    alla pagina della classifica, che e la cosa che nomina. */}
+                <h1>Pizza<br /><span>Night.</span></h1>
               </div>
               <div className="pizza-hero-actions">
                 <div className="pizza-hero-buttons">
@@ -7990,6 +8231,39 @@ function AppShell({ session }: { session: Session | null }) {
                 })}
               </div>
             ) : null}
+
+            {openPizzaSessions.length ? null : (
+              <p className="pizza-no-sessions">
+                Nessuna votazione aperta. Se ne apre una a fine serata, quando si sa
+                dove si è mangiato.
+              </p>
+            )}
+
+            {/* Chi arriva qui per vedere com'e finita non deve cercare la
+                voce nella barra: la scorciatoia sta dove finisce l'elenco. */}
+            <button className="button pizza-see-ranking" type="button" onClick={() => openSectionRanking("pizza")}>
+              Vedi la classifica pizzerie
+            </button>
+          </section></>
+        ) : null}
+
+        {!loading && view === "pizza" && pizzaView === "ranking" ? (
+          <><section className="pizza-page">
+            <BlockMark size="lg" />
+            <div className="pizza-hero">
+              <button
+                className="button pizza-info-trigger"
+                type="button"
+                onClick={() => setShowPizzaInfo(true)}
+                aria-haspopup="dialog"
+              >
+                <span className="pizza-info-icon" aria-hidden="true">i</span>
+                <span>Info</span>
+              </button>
+              <div className="pizza-hero-title">
+                <h1>Pizzeria<br /><span>Ranking.</span></h1>
+              </div>
+            </div>
 
             <div className="pizza-ranking-toolbar">
               <div>
@@ -8065,12 +8339,75 @@ function AppShell({ session }: { session: Session | null }) {
           </section></>
         ) : null}
 
+        {!loading && view === "gaming" && gamingView === "overview" ? (
+          <SectionPreview
+            eyebrow="THEBOYZ GAMING"
+            title="Il salotto conta come un campo"
+            lead="Ogni partita giocata insieme, su qualsiasi gioco, con lo stesso peso di una di padel: si registra, si archivia, fa classifica."
+            points={[
+              { title: "Una partita, un gioco", copy: "Si sceglie il gioco, chi ha giocato e chi ha vinto. FIFA, Fortnite, poker, carte: la sezione non è legata a un titolo solo." },
+              { title: "Ogni gioco ha la sua storia", copy: "Le partite restano divise per gioco, così il campione di FIFA non diventa campione di poker per inerzia." },
+              { title: "Le sfide si registrano dal telefono", copy: "Stesso giro dei risultati di padel: si apre la sezione, si registra, e la classifica si aggiorna da sola." },
+            ]}
+            emptyTitle="Nessuna partita registrata"
+            emptyCopy="La sezione è pronta, i dati no: il registro delle partite arriva col prossimo aggiornamento."
+          />
+        ) : null}
+
+        {!loading && view === "gaming" && gamingView === "ranking" ? (
+          <SectionPreview
+            eyebrow="THEBOYZ GAMING"
+            title="La classifica del salotto"
+            lead="Chi vince sale, chi perde scende: la stessa regola del padel, applicata a tutto quello che si gioca insieme."
+            points={[
+              { title: "Una classifica generale", copy: "Somma di tutte le partite, qualunque sia il gioco: dice chi vince più spesso, non chi è più bravo a una cosa sola." },
+              { title: "E una per gioco", copy: "Sotto la generale, il dettaglio: chi comanda a FIFA può essere l'ultimo a poker, e va scritto." },
+              { title: "Aggiornata a fine partita", copy: "Nessun calcolo a mano: si registra il risultato e la classifica cambia." },
+            ]}
+            emptyTitle="Classifica ancora vuota"
+            emptyCopy="Servono le prime partite. Appena il registro sarà attivo, questa pagina si riempie da sola."
+          />
+        ) : null}
+
+        {!loading && view === "cashout" && cashoutView === "overview" ? (
+          <SectionPreview
+            eyebrow="THEBOYZ CASHOUT"
+            title="I conti, senza il foglio di carta"
+            lead="Chi ha pagato cosa durante una vacanza o una serata, e quanto manca perché siamo tutti pari. Aggiornato mentre si spende, non a fine viaggio."
+            points={[
+              { title: "Si segna la spesa, non il debito", copy: "Chi ha pagato, quanto, e per chi: il resto lo calcola l'app. Nessuno deve ricordarsi di dividere per cinque." },
+              { title: "Il saldo si vede subito", copy: "In qualunque momento sai chi sta spendendo più degli altri e chi meno: si aggiusta in corsa, non alla fine quando nessuno ricorda più niente." },
+              { title: "Alla fine, chi paga chi", copy: "Il pareggio dei conti viene proposto col numero minimo di passaggi, invece di nove bonifici incrociati." },
+            ]}
+            emptyTitle="Nessuna spesa registrata"
+            emptyCopy="La sezione è pronta, i dati no: spese, saldi e pareggio dei conti arrivano col prossimo aggiornamento."
+          />
+        ) : null}
+
+        {!loading && view === "cashout" && cashoutView === "ranking" ? (
+          <SectionPreview
+            eyebrow="THEBOYZ CASHOUT"
+            title="Chi è avanti e chi è indietro"
+            lead="La classifica qui non premia: dice soltanto quanto ha anticipato ognuno rispetto a quello che gli tocca."
+            points={[
+              { title: "In alto chi ha anticipato", copy: "Chi ha messo più soldi di quelli che gli spettavano sta in cima, e deve rientrare." },
+              { title: "In fondo chi e in debito", copy: "Nessun giudizio: è solo il rovescio della stessa somma." },
+              { title: "Il totale resta zero", copy: "Se i conti non tornano a zero c'è un errore nelle spese, e si vede subito da qui." },
+            ]}
+            emptyTitle="Nessun conto aperto"
+            emptyCopy="Serve almeno una spesa registrata. Appena la sezione sarà attiva, il saldo compare qui."
+          />
+        ) : null}
+
       </main>
 
       <nav
         className="mobile-nav"
         aria-label="Navigazione mobile"
         ref={navRef}
+        /* Le voci cambiano di numero fra home e sezioni: le colonne le conta
+           il JSX, perche in CSS non c'e modo di sapere quante sono. */
+        style={{ "--nav-count": navItems.length } as CSSProperties}
         onPointerDown={(event) => {
           navPointerStart.current = event.clientX;
           navDragging.current = false;

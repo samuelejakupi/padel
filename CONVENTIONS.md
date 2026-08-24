@@ -11,7 +11,7 @@ Documento di riferimento per chiunque (persona o assistente AI) modifichi questa
 
 ## Struttura file
 
-- `app/page.tsx` e un unico componente client (`"use client"`) che contiene tutte le sezioni (hub, padel, pizza, profilo) gestite con stato interno (`view`, `padelView`), non con route separate. Nuove sezioni vanno aggiunte come nuovo `View` piu blocco condizionale, seguendo lo stesso pattern.
+- `app/page.tsx` e un unico componente client (`"use client"`) che contiene tutte le sezioni (home, padel, pizza, gaming, cashout, profilo) gestite con stato interno (`view` piu una vista per sezione: `padelView`, `pizzaView`, `gamingView`, `cashoutView`), non con route separate. Una sezione nuova si aggiunge in tre punti: una chiave in `Section`, una riga nell'elenco `sections` (etichetta, glifo, claim) e i blocchi condizionali nel `main`. Barra di navigazione e card della home si riempiono da sole.
 - `app/layout.tsx`: solo metadata e struttura HTML root, non toccarlo per logica applicativa.
 - `lib/supabase.ts`: client Supabase piu tipi condivisi (`Profile`, `PadelMatch`, `PadelSet`, `MatchPlayer`). Aggiungi qui i tipi che servono in piu punti.
 - `supabase/schema.sql`: unica fonte di verita per DB, funzioni RPC e policy RLS. E scritto per essere idempotente (rieseguibile senza errori: `create table if not exists`, `create or replace function`, `drop policy if exists` + `create policy`). Ogni modifica allo schema va fatta con lo stesso stile.

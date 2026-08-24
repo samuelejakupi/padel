@@ -1167,8 +1167,10 @@ form select:focus {
   grid-template-columns: 1fr 1fr;
 }
 
-/* Card ridotte all'essenziale: cerchio con l'icona a sinistra, titolo su due
-   righe a destra. */
+/* Card ridotte all'essenziale: icona a sinistra, nome e riga di spiegazione a
+   destra. L'altezza e scesa da 275px a 210px quando le sezioni sono passate da
+   due a quattro: alla misura di prima la seconda fila finiva sotto la piega e
+   meta dello smistamento non si vedeva senza scorrere. */
 .hub-card {
   align-items: center;
   background: var(--white);
@@ -1177,40 +1179,89 @@ form select:focus {
   color: var(--ink);
   cursor: pointer;
   display: flex;
-  gap: 28px;
+  gap: var(--space-6);
   justify-content: center;
-  min-height: 275px;
+  min-height: 210px;
   overflow: hidden;
   /* Compensazione ottica: il gruppo icona+titolo va spostato a sinistra,
      altrimenti a centratura geometrica sembra spostato a destra.
      Lo scarto è metà della differenza fra i due padding: qui 20px. */
-  padding: 40px 52px 40px 12px;
+  padding: var(--space-7) 52px var(--space-7) 12px;
   position: relative;
   text-align: left;
   transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
+.hub-card-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
 .hub-card h3 {
-  font-size: 52px;
+  font-size: 44px;
   font-style: italic;
   font-weight: 900;
-  letter-spacing: -2.8px;
+  letter-spacing: -2.4px;
   line-height: 0.9;
   margin: 0;
   text-transform: uppercase;
 }
 
-.hub-card:hover {
-  box-shadow: var(--shadow);
-  transform: scale(1.02);
+/* La riga sotto il nome dice a cosa serve la sezione. Serve soprattutto alle
+   due nuove: "Cashout" da solo non dice niente a chi apre l'app la prima
+   volta. */
+.hub-card-copy small {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  line-height: 1.4;
+  opacity: 0.62;
+  text-transform: uppercase;
 }
 
-/* Entrambe gialle: così multiply assorbe il fondo bianco delle GIF senza
-   bisogno del cerchio dietro l'icona. */
+@media (hover: hover) {
+  .hub-card:hover {
+    box-shadow: var(--shadow);
+    transform: scale(1.02);
+  }
+}
+
+/* Le due storiche gialle, le due nuove azzurre: il colore divide le sezioni
+   che c'erano da quelle appena aperte senza bisogno di scriverlo. */
 .hub-card-padel,
 .hub-card-pizza {
   background: var(--lime);
   color: var(--ink);
+}
+
+.hub-card-gaming,
+.hub-card-cashout {
+  background: var(--blue);
+  color: var(--ink);
+}
+
+/* Pallino delle cose che aspettano te, in alto a destra nella card. Stessa
+   lettura del pallino sulla barra in basso. */
+.hub-card-dot {
+  background: var(--danger);
+  border-radius: var(--radius-pill);
+  color: var(--white);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  min-width: 20px;
+  padding: 3px 6px;
+  position: absolute;
+  right: 16px;
+  text-align: center;
+  top: 16px;
+}
+
+.hub-card-dot-mvp {
+  background: var(--ink);
+  color: var(--lime);
 }
 
 /* Niente position/z-index qui: creerebbero un contesto di sovrapposizione
@@ -1220,9 +1271,9 @@ form select:focus {
   align-items: center;
   display: flex;
   flex: 0 0 auto;
-  height: 132px;
+  height: 108px;
   justify-content: center;
-  width: 132px;
+  width: 108px;
 }
 
 .hub-card-icon img {
@@ -1230,6 +1281,77 @@ form select:focus {
   mix-blend-mode: multiply;
   object-fit: contain;
   width: 112px;
+}
+
+/* I glifi della barra ingranditi: hanno tratto proporzionale al riquadro, e a
+   108px restano sottili come a 24. Il tratto va quindi ingrossato a mano. */
+/* Le tre righe che spiegano una sezione non ancora attiva. Stessa card del
+   resto del sito, tre colonne su schermo largo e una in colonna sul telefono:
+   il numero lo decide la larghezza, non un valore fisso. */
+.preview-points {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  /* Stesso stacco che il riquadro scuro tiene sotto di se: le tre righe e il
+     riquadro vuoto sono blocchi della stessa pagina, non due cose attaccate. */
+  margin-bottom: 28px;
+}
+
+.preview-point {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-6);
+}
+
+.preview-point h3 {
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: -0.2px;
+  margin: 0 0 var(--space-2);
+}
+
+.preview-point p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Scorciatoia in fondo alle votazioni: larga quanto la colonna, cosi non
+   sembra un tasto perso a meta pagina. Sta dentro il blocco scuro, quindi si
+   veste come il tasto Info li sopra e non come i tasti su fondo chiaro. */
+.pizza-see-ranking {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--white);
+  justify-content: center;
+  width: 100%;
+}
+
+@media (hover: hover) {
+  .pizza-see-ranking:hover {
+    background: rgba(255, 255, 255, 0.16);
+  }
+}
+
+/* Quando non c'e nessuna votazione aperta la pagina resterebbe un titolo e
+   due tasti: questa riga dice che e normale, non che manca qualcosa. */
+.pizza-no-sessions {
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius);
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 var(--space-5);
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.hub-card-icon .nav-glyph {
+  height: 92px;
+  stroke-width: 1.4;
+  width: 92px;
 }
 
 /* Sul podio l'avatar è da 84px: il badge va rimpicciolito di conseguenza. */
@@ -7304,15 +7426,18 @@ button.pizza-ranking-row {
     grid-template-columns: 1fr;
   }
 
+  /* In colonna le card sono quattro una sotto l'altra: alla misura di prima
+     lo smistamento era lungo due schermate e mezzo. Piu basse, si vedono
+     tutte con un solo scorrimento. */
   .hub-card {
     gap: 18px;
-    min-height: 200px;
-    padding: 30px 42px 30px 6px;
+    min-height: 132px;
+    padding: var(--space-5) var(--space-6) var(--space-5) 6px;
   }
 
   .hub-card-icon {
-    height: 124px;
-    width: 124px;
+    height: 84px;
+    width: 84px;
   }
 
   .hub-card-icon img {
@@ -7320,9 +7445,15 @@ button.pizza-ranking-row {
     width: 100px;
   }
 
+  .hub-card-icon .nav-glyph {
+    height: 66px;
+    width: 66px;
+  }
+
   .hub-card h3 {
-    font-size: 46px;
+    font-size: 34px;
     font-weight: 900;
+    letter-spacing: -1.6px;
   }
 
   .block-mark {
@@ -7546,7 +7677,9 @@ button.pizza-ranking-row {
       0 2px 6px rgba(11, 27, 44, 0.06),
       inset 0 0.5px 0 rgba(255, 255, 255, 0.7);
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    /* Il numero di voci lo scrive il JSX: in home sono due, dentro una
+       sezione quattro. Il valore di scorta serve al primo disegno. */
+    grid-template-columns: repeat(var(--nav-count, 3), 1fr);
     left: 11px;
     overflow: hidden;
     padding: var(--nav-inset);
@@ -8792,18 +8925,23 @@ button.pizza-ranking-row {
   }
 
   .hub-card h3 {
-    font-size: 40px;
+    font-size: 30px;
     font-weight: 900;
   }
 
   .hub-card-icon {
-    height: 108px;
-    width: 108px;
+    height: 76px;
+    width: 76px;
   }
 
   .hub-card-icon img {
     height: 88px;
     width: 88px;
+  }
+
+  .hub-card-icon .nav-glyph {
+    height: 58px;
+    width: 58px;
   }
 
   .page-title h1 {
