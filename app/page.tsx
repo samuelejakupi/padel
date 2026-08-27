@@ -27,7 +27,7 @@ type PadelView = "overview" | "ranking" | "matches" | "tournaments" | "player";
 // Pizza, Gaming e Cashout hanno la stessa forma: la pagina della sezione e la
 // sua classifica, le due voci centrali della barra.
 type SectionView = "overview" | "ranking";
-type PizzaRankingMode = "contemporary" | "classic";
+type PizzaRankingMode = "contemporary" | "classic" | "personal";
 type PizzaRankingEntry = {
   name: string;
   place?: string;
@@ -61,6 +61,7 @@ type PizzaRestaurantRecord = {
 
 type PizzaDisplayEntry = PizzaRankingEntry & {
   id?: string;
+  sessionId?: string;
   isNew?: boolean;
   votesCount?: number;
   votes?: PizzaVote[];
@@ -73,6 +74,7 @@ type PizzaSession = {
   opened_by: string;
   opened_at: string;
   completed_at: string | null;
+  is_solo: boolean;
   participants: PizzaSessionParticipant[];
 };
 
@@ -308,29 +310,31 @@ function buildContemporaryPizzaRanking(
     isNew: false,
     votesCount: 3,
   }));
-  const interactive = restaurants.map((restaurant) => {
+  const interactive = restaurants.flatMap((restaurant) => {
     // Di una pizzeria conta l'ultima votazione. Finché non hanno votato tutti,
     // il database non restituisce i voti altrui e il risultato resta sospeso.
     const own = sessions
-      .filter((session) => session.restaurant_id === restaurant.id)
+      .filter((session) => session.restaurant_id === restaurant.id && !session.is_solo)
       .sort((a, b) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime());
     const session = own[0];
+    if (!session) return [];
     const votes = session ? sessionVotes.filter((vote) => vote.session_id === session.id) : [];
-    const pending = !session || sessionIsOpen(session) || votes.length === 0;
+    const pending = sessionIsOpen(session) || votes.length === 0;
 
     const average = averagePizzaVotes(votes);
 
-    return {
+    return [{
       id: restaurant.id,
+      sessionId: session.id,
       name: restaurant.name,
       place: restaurant.place ?? undefined,
       ...average,
       fabio: 0,
-      total: session ? finalPizzaScore(votes, session, profiles) : 0,
+      total: finalPizzaScore(votes, session, profiles),
       isNew: true,
       pending,
-      votesCount: session?.participants.filter((participant) => participant.voted_at).length ?? 0,
-    } as PizzaDisplayEntry;
+      votesCount: session.participants.filter((participant) => participant.voted_at).length,
+    } as PizzaDisplayEntry];
   });
 
   return sortPizzaEntries([...historical, ...interactive]);
@@ -362,7 +366,7 @@ function buildClassicPizzaRanking(
 
   const interactive = restaurants.flatMap((restaurant) => {
     const session = sessions
-      .filter((item) => item.restaurant_id === restaurant.id)
+      .filter((item) => item.restaurant_id === restaurant.id && !item.is_solo)
       .filter((item) => [...classicIds].every((id) => item.participants.some((participant) => participant.voter_id === id)))
       .sort((a, b) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())[0];
     if (!session) return [];
@@ -372,6 +376,7 @@ function buildClassicPizzaRanking(
     const pending = sessionIsOpen(session) || votes.length !== 3;
     return [{
       id: restaurant.id,
+      sessionId: session.id,
       name: restaurant.name,
       place: restaurant.place ?? undefined,
       ...averagePizzaVotes(votes),
@@ -386,6 +391,45 @@ function buildClassicPizzaRanking(
   });
 
   return sortPizzaEntries([...historical, ...interactive]);
+}
+
+function buildPersonalPizzaRanking(
+  restaurants: PizzaRestaurantRecord[],
+  sessions: PizzaSession[],
+  sessionVotes: PizzaSessionVote[],
+  profiles: Profile[],
+  viewerId: string,
+): PizzaDisplayEntry[] {
+  const personal = restaurants.flatMap((restaurant) => {
+    const session = sessions
+      .filter((item) => (
+        item.restaurant_id === restaurant.id
+        && item.is_solo
+        && item.opened_by === viewerId
+      ))
+      .sort((a, b) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())[0];
+    if (!session) return [];
+
+    const votes = sessionVotes.filter(
+      (vote) => vote.session_id === session.id && vote.voter_id === viewerId,
+    );
+    const pending = sessionIsOpen(session) || votes.length === 0;
+
+    return [{
+      id: restaurant.id,
+      sessionId: session.id,
+      name: restaurant.name,
+      place: restaurant.place ?? undefined,
+      ...averagePizzaVotes(votes),
+      fabio: votes[0]?.bonus_fabio ?? 0,
+      total: pending ? 0 : finalPizzaScore(votes, session, profiles),
+      isNew: true,
+      pending,
+      votesCount: votes.length,
+    } as PizzaDisplayEntry];
+  });
+
+  return sortPizzaEntries(personal);
 }
 
 function initials(name: string) {
@@ -4754,10 +4798,11 @@ function PizzaSessionCreateModal({
   profiles: Profile[];
   viewerId: string;
   onClose: () => void;
-  onSaved: () => Promise<void>;
+  onSaved: (kind: "group" | "solo") => Promise<void>;
 }) {
   const [name, setName] = useState("");
   const [place, setPlace] = useState("");
+  const [kind, setKind] = useState<"group" | "solo">("group");
   const [participantIds, setParticipantIds] = useState<string[]>([viewerId]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -4773,20 +4818,26 @@ function PizzaSessionCreateModal({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!supabase || !name.trim() || !participantIds.length) return;
+    if (!supabase || !name.trim()) return;
+    if (kind === "group" && participantIds.length < 2) {
+      setError("Seleziona almeno un altro partecipante per la votazione di gruppo.");
+      return;
+    }
     setBusy(true);
     setError("");
+    const selectedParticipants = kind === "solo" ? [viewerId] : participantIds;
     const { error: rpcError } = await supabase.rpc("open_pizza_session", {
       p_name: name.trim(),
       p_place: place.trim() || null,
-      p_participant_ids: participantIds,
+      p_participant_ids: selectedParticipants,
+      p_is_solo: kind === "solo",
     });
     if (rpcError) {
       setError(rpcError.message);
       setBusy(false);
       return;
     }
-    await onSaved();
+    await onSaved(kind);
   }
 
   return (
@@ -4795,36 +4846,64 @@ function PizzaSessionCreateModal({
         <div className="modal-head">
           <div>
             <p className="eyebrow dark">NUOVA VOTAZIONE</p>
-            <h2 id="pizza-create-title">Pizzeria e partecipanti</h2>
+            <h2 id="pizza-create-title">Nuova votazione</h2>
           </div>
           <button className="icon-button" onClick={onClose} aria-label="Chiudi">×</button>
         </div>
         <form onSubmit={submit}>
           <label>Nome pizzeria<input value={name} onChange={(event) => setName(event.target.value)} placeholder="Es. La Nuova Pala" maxLength={80} required /></label>
           <label>Località <span className="optional-label">facoltativa</span><input value={place} onChange={(event) => setPlace(event.target.value)} placeholder="Es. Sanremo" maxLength={80} /></label>
-          <fieldset className="pizza-participant-picker">
-            <legend>Partecipanti alla votazione</legend>
-            <div>
-              {profiles.map((profile) => {
-                const selected = participantIds.includes(profile.id);
-                return (
-                  <label className={selected ? "is-selected" : ""} key={profile.id}>
-                    <input
-                      type="checkbox"
-                      checked={selected}
-                      disabled={profile.id === viewerId}
-                      onChange={() => toggleParticipant(profile.id)}
-                    />
-                    <Avatar profile={profile} size="sm" />
-                    <span>{profile.display_name}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
-          <p className="field-hint pizza-participant-note">
-            La votazione si chiude automaticamente quando tutti i partecipanti hanno votato.
-          </p>
+          <div className="pizza-session-kind" role="group" aria-label="Tipo di votazione">
+            <button
+              type="button"
+              className={kind === "group" ? "active" : ""}
+              aria-pressed={kind === "group"}
+              onClick={() => { setKind("group"); setError(""); }}
+            >
+              <b>Con il gruppo</b>
+              <span>Scegli i partecipanti</span>
+            </button>
+            <button
+              type="button"
+              className={kind === "solo" ? "active" : ""}
+              aria-pressed={kind === "solo"}
+              onClick={() => { setKind("solo"); setError(""); }}
+            >
+              <b>In solitaria</b>
+              <span>Solo nella tua classifica</span>
+            </button>
+          </div>
+          {kind === "group" ? (
+            <>
+              <fieldset className="pizza-participant-picker">
+                <legend>Partecipanti alla votazione</legend>
+                <div>
+                  {profiles.map((profile) => {
+                    const selected = participantIds.includes(profile.id);
+                    return (
+                      <label className={selected ? "is-selected" : ""} key={profile.id}>
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          disabled={profile.id === viewerId}
+                          onChange={() => toggleParticipant(profile.id)}
+                        />
+                        <Avatar profile={profile} size="sm" />
+                        <span>{profile.display_name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
+              <p className="field-hint pizza-participant-note">
+                La votazione si chiude automaticamente quando tutti i partecipanti hanno votato.
+              </p>
+            </>
+          ) : (
+            <p className="field-hint pizza-participant-note">
+              Il voto sarà visibile soltanto nella tua classifica Personale.
+            </p>
+          )}
           {error ? <p className="form-message error">{error}</p> : null}
           <div className="modal-actions">
             <button type="button" className="button button-ghost" onClick={onClose}>Annulla</button>
@@ -6104,7 +6183,7 @@ function AppShell({ session }: { session: Session | null }) {
         .order("created_at", { ascending: false }),
       client
         .from("pizza_sessions")
-        .select("id, restaurant_id, opened_by, opened_at, completed_at, participants:pizza_session_participants(voter_id, voted_at)")
+        .select("id, restaurant_id, opened_by, opened_at, completed_at, is_solo, participants:pizza_session_participants(voter_id, voted_at)")
         .order("opened_at", { ascending: false }),
       // La RLS nasconde i voti altrui finché tutti i partecipanti non hanno votato.
       client
@@ -6386,7 +6465,26 @@ function AppShell({ session }: { session: Session | null }) {
     () => buildClassicPizzaRanking(pizzaRestaurants, pizzaSessions, pizzaSessionVotes, profiles),
     [pizzaRestaurants, pizzaSessions, pizzaSessionVotes, profiles],
   );
-  const pizzaEntries = pizzaRankingMode === "classic" ? classicPizzaEntries : contemporaryPizzaEntries;
+  const viewerId = session?.user.id ?? "";
+  const personalPizzaEntries = useMemo(
+    () => buildPersonalPizzaRanking(
+      pizzaRestaurants,
+      pizzaSessions,
+      pizzaSessionVotes,
+      profiles,
+      viewerId,
+    ),
+    [pizzaRestaurants, pizzaSessions, pizzaSessionVotes, profiles, viewerId],
+  );
+  const hasPersonalPizzaRanking = personalPizzaEntries.length > 0;
+  const activePizzaRankingMode = pizzaRankingMode === "personal" && !hasPersonalPizzaRanking
+    ? "contemporary"
+    : pizzaRankingMode;
+  const pizzaEntries = activePizzaRankingMode === "classic"
+    ? classicPizzaEntries
+    : activePizzaRankingMode === "personal"
+      ? personalPizzaEntries
+      : contemporaryPizzaEntries;
   const currentUser = profiles.find((profile) => profile.id === session?.user.id);
   // Votazioni ancora aperte: alimentano sia la card in cima alla pagina pizza
   // sia il pallino sull'icona della barra.
@@ -7045,10 +7143,12 @@ function AppShell({ session }: { session: Session | null }) {
   }
 
   // Toccare una riga apre l'ultima votazione associata alla pizzeria.
-  function showPizzaSession(restaurantId: string) {
-    const found = pizzaSessions
-      .filter((item) => item.restaurant_id === restaurantId)
-      .sort((a, b) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())[0];
+  function showPizzaSession(restaurantId: string, sessionId?: string) {
+    const found = sessionId
+      ? pizzaSessions.find((item) => item.id === sessionId)
+      : pizzaSessions
+          .filter((item) => item.restaurant_id === restaurantId)
+          .sort((a, b) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())[0];
     if (found) {
       setVotingSession(found);
       return;
@@ -7464,10 +7564,6 @@ function AppShell({ session }: { session: Session | null }) {
               <div className="hub-hero-copy">
                 <p className="eyebrow">THEBOYZ</p>
                 <h1>Scegli<br /><span>il campo.</span></h1>
-                <p>
-                  Quattro sezioni, un gruppo solo. La barra qui sotto cambia con la
-                  sezione che apri e ti porta sempre alla classifica giusta.
-                </p>
                 <div className="hub-members">
                   <div className="mini-avatars">
                     {profiles.slice(0, 5).map((profile) => (
@@ -8189,7 +8285,7 @@ function AppShell({ session }: { session: Session | null }) {
                 <div className="pizza-hero-buttons">
                   <button className="button button-primary pizza-open-vote" onClick={() => {
                     if (!pizzaSchemaReady || !pizzaSessionsReady) {
-                      setNotice("Per votare esegui la migrazione migration-pizza-sessioni.sql in Supabase.");
+                      setNotice("Per votare esegui la migrazione migration-pizza-personale.sql in Supabase.");
                       return;
                     }
                     setShowSessionPicker(true);
@@ -8220,7 +8316,10 @@ function AppShell({ session }: { session: Session | null }) {
                       type="button"
                       onClick={() => setVotingSession(openSession)}
                     >
-                      <span className="pizza-session-state">{isParticipant ? (voted ? "HAI VOTATO" : "DA VOTARE") : "IN CORSO"}</span>
+                      <span className="pizza-session-state">
+                        {openSession.is_solo ? "PERSONALE · " : ""}
+                        {isParticipant ? (voted ? "HAI VOTATO" : "DA VOTARE") : "IN CORSO"}
+                      </span>
                       <b>{restaurant.name}</b>
                       <span className="pizza-session-date">
                         {new Intl.DateTimeFormat("it-IT", { dateStyle: "long" }).format(new Date(openSession.opened_at))}
@@ -8268,21 +8367,38 @@ function AppShell({ session }: { session: Session | null }) {
             <div className="pizza-ranking-toolbar">
               <div>
                 <p className="eyebrow">CLASSIFICA</p>
-                <h2>{pizzaRankingMode === "classic" ? "Il trio originale" : "Tutto il tavolo"}</h2>
+                <h2>
+                  {activePizzaRankingMode === "classic"
+                    ? "Il trio originale"
+                    : activePizzaRankingMode === "personal"
+                      ? "La tua classifica"
+                      : "Tutto il tavolo"}
+                </h2>
               </div>
               <div className="ranking-switch pizza-ranking-switch" role="group" aria-label="Classifica pizzerie">
                 <button
-                  className={pizzaRankingMode === "contemporary" ? "active" : ""}
+                  className={activePizzaRankingMode === "contemporary" ? "active" : ""}
+                  aria-pressed={activePizzaRankingMode === "contemporary"}
                   onClick={() => setPizzaRankingMode("contemporary")}
                 >
                   Contemporanea
                 </button>
                 <button
-                  className={pizzaRankingMode === "classic" ? "active" : ""}
+                  className={activePizzaRankingMode === "classic" ? "active" : ""}
+                  aria-pressed={activePizzaRankingMode === "classic"}
                   onClick={() => setPizzaRankingMode("classic")}
                 >
                   Nostalgica
                 </button>
+                {hasPersonalPizzaRanking ? (
+                  <button
+                    className={activePizzaRankingMode === "personal" ? "active" : ""}
+                    aria-pressed={activePizzaRankingMode === "personal"}
+                    onClick={() => setPizzaRankingMode("personal")}
+                  >
+                    Personale
+                  </button>
+                ) : null}
               </div>
             </div>
 
@@ -8321,7 +8437,7 @@ function AppShell({ session }: { session: Session | null }) {
                       type="button"
                       className={rowClass}
                       key={`${restaurant.name}-${index}`}
-                      onClick={() => showPizzaSession(restaurant.id!)}
+                      onClick={() => showPizzaSession(restaurant.id!, restaurant.sessionId)}
                       aria-label={`Vedi la votazione di ${restaurant.name}`}
                     >
                       {rowContent}
@@ -8331,9 +8447,11 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
             </div>
             <p className="pizza-source-note">
-              {pizzaRankingMode === "classic"
+              {activePizzaRankingMode === "classic"
                 ? "Classifica calcolata soltanto con i voti di Samu, Dani e Fabio nelle sessioni in cui erano presenti tutti e tre."
-                : "Classifica calcolata con tutti i partecipanti presenti alla votazione."}
+                : activePizzaRankingMode === "personal"
+                  ? "Classifica calcolata soltanto con le votazioni che hai aperto in solitaria."
+                  : "Classifica calcolata con tutti i partecipanti presenti alla votazione."}
               {" "}Il punteggio finale viene arrotondato all&apos;intero più vicino: da 0,5 si arrotonda per eccesso.
             </p>
           </section></>
@@ -8481,6 +8599,7 @@ function AppShell({ session }: { session: Session | null }) {
               <button className="icon-button" onClick={() => setShowPizzaInfo(false)} aria-label="Chiudi">×</button>
             </div>
             <p className="pizza-info-copy">I voti ordinari valgono 93 punti. Con Fabio si aggiungono i suoi 7 punti; senza Fabio i 93 vengono riportati a 100.</p>
+            <p className="pizza-info-copy">Le votazioni in solitaria restano private e alimentano soltanto la classifica Personale di chi le apre.</p>
             <div className="pizza-criteria">
               {pizzaCriteria.map((criterion) => (
                 <div className={`pizza-criterion criterion-${criterion.tone}`} key={criterion.label}>
@@ -8977,10 +9096,12 @@ function AppShell({ session }: { session: Session | null }) {
           profiles={profiles}
           viewerId={session.user.id}
           onClose={() => setShowSessionPicker(false)}
-          onSaved={async () => {
+          onSaved={async (kind) => {
             setShowSessionPicker(false);
             await loadData();
-            setNotice("Votazione aperta. Si chiuderà quando tutti i partecipanti avranno votato.");
+            setNotice(kind === "solo"
+              ? "Votazione personale aperta. Il voto finirà soltanto nella tua classifica."
+              : "Votazione aperta. Si chiuderà quando tutti i partecipanti avranno votato.");
           }}
         />
       ) : null}
@@ -8998,7 +9119,9 @@ function AppShell({ session }: { session: Session | null }) {
             onSaved={async () => {
               setVotingSession(null);
               await loadData();
-              setNotice("Voto salvato. La votazione si chiuderà quando avranno votato tutti.");
+              setNotice(votingSession.is_solo
+                ? "Voto salvato nella tua classifica Personale."
+                : "Voto salvato. La votazione si chiuderà quando avranno votato tutti.");
             }}
           />
         );

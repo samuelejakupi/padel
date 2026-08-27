@@ -72,6 +72,7 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(page, /"samu", "dani", "fabio"/);
   assert.match(page, /Contemporanea/);
   assert.match(page, /Nostalgica/);
+  assert.match(page, /Personale/);
   // Le quattro sezioni stanno in un elenco solo: se qualcuno ne aggiunge una
   // scrivendola a mano da un'altra parte, qui si accorge che manca.
   assert.match(page, /key: "padel", label: "Padel", glyph: "racket"/);

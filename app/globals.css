@@ -5878,6 +5878,42 @@ button.podium-person {
   width: 100%;
 }
 
+.pizza-session-kind {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: var(--space-5);
+}
+
+.pizza-session-kind button {
+  background: var(--veil-1);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--ink);
+  cursor: pointer;
+  display: grid;
+  gap: 3px;
+  min-height: 74px;
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+}
+
+.pizza-session-kind button.active {
+  background: rgba(24, 223, 228, 0.1);
+  border-color: var(--blue-dark);
+}
+
+.pizza-session-kind b {
+  font-size: 13px;
+}
+
+.pizza-session-kind span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 .pizza-participant-picker {
   border: 0;
   margin: var(--space-5) 0 0;
@@ -8723,7 +8759,7 @@ button.pizza-ranking-row {
 
   .pizza-ranking-switch {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
     width: 100%;
   }
 

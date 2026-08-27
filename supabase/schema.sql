@@ -54,8 +54,12 @@ create table if not exists public.pizza_restaurants (
   name text not null check (char_length(trim(name)) between 2 and 80),
   place text check (place is null or char_length(trim(place)) <= 80),
   created_by uuid not null references public.profiles(id),
+  is_personal boolean not null default false,
   created_at timestamptz not null default now()
 );
+
+alter table public.pizza_restaurants
+  add column if not exists is_personal boolean not null default false;
 
 create table if not exists public.pizza_votes (
   restaurant_id uuid not null references public.pizza_restaurants(id) on delete cascade,
@@ -848,7 +852,10 @@ drop policy if exists "Membri leggono le pizzerie" on public.pizza_restaurants;
 create policy "Membri leggono le pizzerie"
 on public.pizza_restaurants for select
 to authenticated
-using (true);
+using (
+  not is_personal
+  or created_by = (select auth.uid())
+);
 
 drop policy if exists "Membri leggono i voti pizzeria" on public.pizza_votes;
 create policy "Membri leggono i voti pizzeria"
