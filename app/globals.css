@@ -5389,6 +5389,9 @@ button.podium-person {
 .trophy-room-image {
   filter: drop-shadow(0 9px 9px rgba(11, 27, 44, 0.16));
   height: 168px;
+  /* Il PNG originale e RGB con un bianco pieno: multiply fa passare il fondo
+     della bacheca attraverso quel bianco senza scolorire vetro e oro. */
+  mix-blend-mode: multiply;
   object-fit: contain;
   transition: transform 160ms ease;
   width: 128px;
