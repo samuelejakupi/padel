@@ -1180,7 +1180,10 @@ form select:focus {
   cursor: pointer;
   display: flex;
   gap: var(--space-6);
-  justify-content: center;
+  /* Il testo deve iniziare sempre sulla stessa colonna. Centrando l'intero
+     gruppo, i titoli corti come Padel slittavano rispetto a Pizza, Gaming e
+     Cashout perché cambiava la larghezza complessiva icona+testo. */
+  justify-content: flex-start;
   min-height: 210px;
   overflow: hidden;
   /* Compensazione ottica: il gruppo icona+titolo va spostato a sinistra,
@@ -5439,44 +5442,78 @@ button.podium-person {
 
 .trophy-room-list {
   display: grid;
-  gap: var(--space-3);
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(150px, 190px));
 }
 
 .trophy-room-card {
   align-items: center;
-  background: var(--ink);
+  aspect-ratio: 4 / 5;
+  background: #fff;
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  color: var(--white);
   display: flex;
-  gap: var(--space-5);
-  min-height: 132px;
-  padding: var(--space-5);
+  justify-content: center;
+  min-height: 0;
+  overflow: hidden;
+  padding: 10px;
+  position: relative;
+  transition: box-shadow 180ms ease, transform 180ms ease;
+}
+
+.trophy-room-card:hover,
+.trophy-room-card:focus-visible {
+  box-shadow: 0 16px 36px rgba(11, 27, 44, 0.16);
+  outline: none;
+  transform: translateY(-3px);
+}
+
+.trophy-room-image {
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
 }
 
 .trophy-room-card .tournament-trophy {
-  height: 78px;
-  width: 78px;
+  height: 82px;
+  width: 82px;
 }
 
-.trophy-room-card > span {
+.trophy-room-tooltip {
+  background: rgba(11, 27, 44, 0.94);
+  bottom: 8px;
+  color: var(--white);
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  gap: 3px;
+  left: 8px;
+  opacity: 0;
+  padding: 10px 12px;
+  pointer-events: none;
+  position: absolute;
+  right: 8px;
+  transform: translateY(8px);
+  transition: opacity 160ms ease, transform 160ms ease;
 }
 
-.trophy-room-card small {
-  color: var(--blue);
-  font-size: 9px;
+.trophy-room-card:hover .trophy-room-tooltip,
+.trophy-room-card:focus-visible .trophy-room-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.trophy-room-tooltip b {
+  font-size: 12px;
   font-weight: 900;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
+  letter-spacing: -0.2px;
 }
 
-.trophy-room-card b {
-  font-size: 16px;
-  letter-spacing: -0.4px;
-  margin-top: var(--space-1);
+.trophy-room-tooltip small {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
 }
 
 .elo-panel {
@@ -6093,6 +6130,43 @@ button.podium-person {
   min-width: 40px;
   padding: 6px 0;
   text-align: center;
+}
+
+.pizza-current-average {
+  align-items: flex-end;
+  background: var(--veil-1);
+  border-radius: var(--radius);
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+}
+
+.pizza-current-average > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+}
+
+.pizza-current-average > b {
+  font-size: 32px;
+  letter-spacing: -1.5px;
+  line-height: 1;
+}
+
+.pizza-current-average small {
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+.pizza-vote-modal .modal-actions {
+  flex-wrap: wrap;
+}
+
+.pizza-vote-modal .modal-actions .button-danger {
+  margin-right: auto;
 }
 
 /* Media in tempo reale dentro la modale. */
@@ -9183,6 +9257,11 @@ button.pizza-ranking-row {
 
   .modal-actions .button {
     flex: 1;
+  }
+
+  .pizza-vote-modal .modal-actions .button-danger {
+    flex-basis: 100%;
+    margin-right: 0;
   }
 }
 

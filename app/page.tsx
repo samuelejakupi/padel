@@ -75,6 +75,11 @@ type PizzaSession = {
   opened_at: string;
   completed_at: string | null;
   is_solo: boolean;
+  average_location: number | null;
+  average_pizza: number | null;
+  average_dessert: number | null;
+  average_price: number | null;
+  final_score: number | null;
   participants: PizzaSessionParticipant[];
 };
 
@@ -93,19 +98,19 @@ type PizzaSessionVote = {
   bonus_fabio: number;
 };
 
-// Le quattro categorie ordinarie mantengono i vecchi pesi e valgono 93 punti.
-// Gli eventuali 7 punti di Fabio completano il totale; senza Fabio il valore
-// ordinario viene riscalato da 93 a 100.
-const PIZZA_WEIGHTS = { location: 21, pizza: 30, dessert: 12, price: 30 } as const;
-const PIZZA_BASE_TOTAL = 93;
+// Ogni criterio si vota da 0 a 10. I pesi storici sommano 31: location 7,
+// pizza 10, dolce 4 e prezzo 10. Postgres usa gli stessi rapporti per fissare
+// il risultato definitivo; questa copia serve soltanto all'anteprima istantanea.
+const PIZZA_WEIGHTS = { location: 7, pizza: 10, dessert: 4, price: 10 } as const;
+const PIZZA_WEIGHT_TOTAL = 31;
 
-function pizzaScore(vote: { location: number; pizza: number; dessert: number; price: number }) {
+function weightedPizzaAverage(vote: { location: number; pizza: number; dessert: number; price: number }) {
   return (
-    (vote.location / 10) * PIZZA_WEIGHTS.location
-    + (vote.pizza / 10) * PIZZA_WEIGHTS.pizza
-    + (vote.dessert / 10) * PIZZA_WEIGHTS.dessert
-    + (vote.price / 10) * PIZZA_WEIGHTS.price
-  );
+    vote.location * PIZZA_WEIGHTS.location
+    + vote.pizza * PIZZA_WEIGHTS.pizza
+    + vote.dessert * PIZZA_WEIGHTS.dessert
+    + vote.price * PIZZA_WEIGHTS.price
+  ) / PIZZA_WEIGHT_TOTAL;
 }
 
 function sessionIsOpen(session: PizzaSession) {
@@ -123,17 +128,23 @@ function sessionHasFabio(session: PizzaSession, profiles: Profile[]) {
   });
 }
 
-function finalPizzaScore(votes: PizzaSessionVote[], session: PizzaSession, profiles: Profile[]) {
+function finalPizzaScore(
+  votes: PizzaSessionVote[],
+  session: PizzaSession,
+  profiles: Profile[],
+  useStoredResult = true,
+) {
+  if (useStoredResult && typeof session.final_score === "number") return session.final_score;
   if (!votes.length) return 0;
-  const ordinary = votes.reduce((sum, vote) => sum + pizzaScore(vote), 0) / votes.length;
+  const ordinary = weightedPizzaAverage(averagePizzaVotes(votes));
   if (!sessionHasFabio(session, profiles)) {
-    return roundPizzaScore((ordinary / PIZZA_BASE_TOTAL) * 100);
+    return roundPizzaScore(ordinary * 10);
   }
   const fabioId = session.participants.find(({ voter_id }) => (
     profiles.find((profile) => profile.id === voter_id)?.display_name.toLowerCase() === "fabio"
   ))?.voter_id;
   const fabioBonus = votes.find((vote) => vote.voter_id === fabioId)?.bonus_fabio ?? 0;
-  return roundPizzaScore(ordinary + fabioBonus);
+  return roundPizzaScore(ordinary * 9.3 + fabioBonus);
 }
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -167,10 +178,10 @@ const pizzaRanking: readonly PizzaRankingEntry[] = [
 ];
 
 const pizzaCriteria = [
-  { label: "Location", max: PIZZA_WEIGHTS.location, source: "1–10", tone: "cyan" },
-  { label: "Pizza", max: PIZZA_WEIGHTS.pizza, source: "1–10", tone: "lime" },
-  { label: "Dolce", max: PIZZA_WEIGHTS.dessert, source: "1–10", tone: "pink" },
-  { label: "Prezzo", max: PIZZA_WEIGHTS.price, source: "1–10", tone: "yellow" },
+  { label: "Location", max: 10, source: "PESO 7/31", tone: "cyan" },
+  { label: "Pizza", max: 10, source: "PESO 10/31", tone: "lime" },
+  { label: "Dolce", max: 10, source: "PESO 4/31", tone: "pink" },
+  { label: "Prezzo", max: 10, source: "PESO 10/31", tone: "yellow" },
   { label: "Bonus Fabio", max: 7, source: "0–7", tone: "blue" },
 ] as const;
 const pizzaMedalTones = ["gold", "silver", "bronze"] as const;
@@ -285,6 +296,24 @@ function averagePizzaVotes(votes: PizzaSessionVote[]) {
     : { location: 0, pizza: 0, dessert: 0, price: 0 };
 }
 
+function sessionPizzaAverage(session: PizzaSession, votes: PizzaSessionVote[], useStoredResult = true) {
+  const stored = [
+    session.average_location,
+    session.average_pizza,
+    session.average_dessert,
+    session.average_price,
+  ];
+  if (useStoredResult && stored.every((value) => typeof value === "number")) {
+    return {
+      location: Number(session.average_location),
+      pizza: Number(session.average_pizza),
+      dessert: Number(session.average_dessert),
+      price: Number(session.average_price),
+    };
+  }
+  return averagePizzaVotes(votes);
+}
+
 function sortPizzaEntries(entries: PizzaDisplayEntry[]) {
   return entries.sort((a, b) => {
     const aReady = !a.pending;
@@ -321,7 +350,7 @@ function buildContemporaryPizzaRanking(
     const votes = session ? sessionVotes.filter((vote) => vote.session_id === session.id) : [];
     const pending = sessionIsOpen(session) || votes.length === 0;
 
-    const average = averagePizzaVotes(votes);
+    const average = sessionPizzaAverage(session, votes);
 
     return [{
       id: restaurant.id,
@@ -379,11 +408,11 @@ function buildClassicPizzaRanking(
       sessionId: session.id,
       name: restaurant.name,
       place: restaurant.place ?? undefined,
-      ...averagePizzaVotes(votes),
+      ...sessionPizzaAverage(session, votes, false),
       fabio: votes.find((vote) => (
         profiles.find((profile) => profile.id === vote.voter_id)?.display_name.toLowerCase() === "fabio"
       ))?.bonus_fabio ?? 0,
-      total: pending ? 0 : finalPizzaScore(votes, session, profiles),
+      total: pending ? 0 : finalPizzaScore(votes, session, profiles, false),
       isNew: true,
       pending,
       votesCount: votes.length,
@@ -420,7 +449,7 @@ function buildPersonalPizzaRanking(
       sessionId: session.id,
       name: restaurant.name,
       place: restaurant.place ?? undefined,
-      ...averagePizzaVotes(votes),
+      ...sessionPizzaAverage(session, votes),
       fabio: votes[0]?.bonus_fabio ?? 0,
       total: pending ? 0 : finalPizzaScore(votes, session, profiles),
       isNew: true,
@@ -4915,18 +4944,18 @@ function PizzaSessionCreateModal({
   );
 }
 
-// Cursore da 1 a 10 con il peso del campo scritto accanto: si vede subito
-// quanto quella voce sposta il totale.
+// Tutti i criteri ordinari usano la stessa scala 0-10; accanto resta il peso
+// relativo, così non viene più confuso con il valore inseribile.
 function PizzaScoreField({
   label,
-  weight,
-  min = 1,
+  caption,
+  min = 0,
   max = 10,
   value,
   onChange,
 }: {
   label: string;
-  weight: number;
+  caption: string;
   min?: number;
   max?: number;
   value: number;
@@ -4936,7 +4965,7 @@ function PizzaScoreField({
     <div className="pizza-score-field">
       <div className="pizza-score-head">
         <b>{label}</b>
-        <span>fino a {weight} punti</span>
+        <span>{caption}</span>
       </div>
       <div className="pizza-score-input">
         <input
@@ -4962,6 +4991,7 @@ function PizzaVoteModal({
   viewerId,
   onClose,
   onSaved,
+  onDeleted,
 }: {
   restaurant: PizzaRestaurantRecord;
   session: PizzaSession;
@@ -4970,6 +5000,7 @@ function PizzaVoteModal({
   viewerId: string;
   onClose: () => void;
   onSaved: () => Promise<void>;
+  onDeleted: () => Promise<void>;
 }) {
   const previous = votes.find((vote) => vote.voter_id === viewerId);
   const [scores, setScores] = useState({
@@ -4980,24 +5011,22 @@ function PizzaVoteModal({
     bonus_fabio: previous?.bonus_fabio ?? 0,
   });
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
   const open = sessionIsOpen(voteSession);
   const hasVoted = Boolean(previous);
   const participant = voteSession.participants.some((item) => item.voter_id === viewerId);
+  const canDelete = open && voteSession.opened_by === viewerId;
   const viewerIsFabio = voters.find((profile) => profile.id === viewerId)?.display_name.toLowerCase() === "fabio";
   const completedVotes = voteSession.participants.filter((item) => item.voted_at).length;
   const missingVotes = voteSession.participants.length - completedVotes;
   const canSeeResult = !open;
 
-  const average = votes.length
-    ? {
-        location: votes.reduce((sum, vote) => sum + vote.location, 0) / votes.length,
-        pizza: votes.reduce((sum, vote) => sum + vote.pizza, 0) / votes.length,
-        dessert: votes.reduce((sum, vote) => sum + vote.dessert, 0) / votes.length,
-        price: votes.reduce((sum, vote) => sum + vote.price, 0) / votes.length,
-      }
+  const average = !open && (votes.length || typeof voteSession.final_score === "number")
+    ? sessionPizzaAverage(voteSession, votes)
     : null;
+  const currentAverage = weightedPizzaAverage(scores);
 
   function updateScore(key: keyof typeof scores, value: number) {
     setScores((current) => ({ ...current, [key]: value }));
@@ -5024,6 +5053,21 @@ function PizzaVoteModal({
     await onSaved();
   }
 
+  async function removeSession() {
+    if (!supabase || !canDelete || !window.confirm("Eliminare questa votazione in corso? I voti già inseriti verranno cancellati.")) return;
+    setDeleting(true);
+    setError("");
+    const { error: deleteError } = await supabase.rpc("delete_open_pizza_session", {
+      p_session_id: voteSession.id,
+    });
+    if (deleteError) {
+      setError(deleteError.message);
+      setDeleting(false);
+      return;
+    }
+    await onDeleted();
+  }
+
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section className="modal pizza-vote-modal" role="dialog" aria-modal="true" aria-labelledby="pizza-vote-title">
@@ -5042,22 +5086,27 @@ function PizzaVoteModal({
         {open && participant ? (
           <form onSubmit={submit}>
             <div className="pizza-score-fields">
-              <PizzaScoreField label="Location" weight={PIZZA_WEIGHTS.location} value={scores.location} onChange={(value) => updateScore("location", value)} />
-              <PizzaScoreField label="Pizza" weight={PIZZA_WEIGHTS.pizza} value={scores.pizza} onChange={(value) => updateScore("pizza", value)} />
-              <PizzaScoreField label="Dolce" weight={PIZZA_WEIGHTS.dessert} value={scores.dessert} onChange={(value) => updateScore("dessert", value)} />
-              <PizzaScoreField label="Prezzo" weight={PIZZA_WEIGHTS.price} value={scores.price} onChange={(value) => updateScore("price", value)} />
+              <PizzaScoreField label="Location" caption="0–10 · peso 7/31" value={scores.location} onChange={(value) => updateScore("location", value)} />
+              <PizzaScoreField label="Pizza" caption="0–10 · peso 10/31" value={scores.pizza} onChange={(value) => updateScore("pizza", value)} />
+              <PizzaScoreField label="Dolce" caption="0–10 · peso 4/31" value={scores.dessert} onChange={(value) => updateScore("dessert", value)} />
+              <PizzaScoreField label="Prezzo" caption="0–10 · peso 10/31" value={scores.price} onChange={(value) => updateScore("price", value)} />
               {viewerIsFabio ? (
-                <PizzaScoreField label="Bonus Fabio" weight={7} min={0} max={7} value={scores.bonus_fabio} onChange={(value) => updateScore("bonus_fabio", value)} />
+                <PizzaScoreField label="Bonus Fabio" caption="0–7" max={7} value={scores.bonus_fabio} onChange={(value) => updateScore("bonus_fabio", value)} />
               ) : null}
             </div>
-            <p className="pizza-vote-hint">
-              I tuoi voti ordinari valgono {roundPizzaScore(pizzaScore(scores))} su 93
-              {viewerIsFabio ? `, più ${scores.bonus_fabio} punti Fabio.` : "."}
-            </p>
+            <div className="pizza-current-average" aria-live="polite">
+              <span>VOTO MEDIO ATTUALE</span>
+              <b>{currentAverage.toFixed(1)}<small>/10</small></b>
+            </div>
             {error ? <p className="form-message error">{error}</p> : null}
             <div className="modal-actions">
+              {canDelete ? (
+                <button type="button" className="button button-danger" onClick={() => void removeSession()} disabled={busy || deleting}>
+                  {deleting ? "Eliminazione…" : "Elimina votazione"}
+                </button>
+              ) : null}
               <button type="button" className="button button-ghost" onClick={onClose}>Chiudi</button>
-              <button className="button button-primary" disabled={busy}>
+              <button className="button button-primary" disabled={busy || deleting}>
                 {busy ? "Salvataggio…" : hasVoted ? "Aggiorna il voto" : "Vota"}
               </button>
             </div>
@@ -5600,6 +5649,14 @@ function tournamentIsCompleted(tournament: Tournament, matches: PadelMatch[]) {
     tournament.fixtures.length
     && tournament.fixtures.every((fixture) => fixture.match_id && matchIds.has(fixture.match_id)),
   );
+}
+
+function tournamentVictoryDate(tournament: Tournament, matches: PadelMatch[]) {
+  const matchDates = tournament.fixtures.flatMap((fixture) => {
+    const match = matches.find((item) => item.id === fixture.match_id);
+    return match ? [new Date(match.played_at).getTime()] : [];
+  });
+  return new Date(matchDates.length ? Math.max(...matchDates) : tournament.created_at);
 }
 
 // I tornei creati prima di migration-tornei-formato.sql non hanno le due
@@ -6183,7 +6240,7 @@ function AppShell({ session }: { session: Session | null }) {
         .order("created_at", { ascending: false }),
       client
         .from("pizza_sessions")
-        .select("id, restaurant_id, opened_by, opened_at, completed_at, is_solo, participants:pizza_session_participants(voter_id, voted_at)")
+        .select("id, restaurant_id, opened_by, opened_at, completed_at, is_solo, average_location, average_pizza, average_dessert, average_price, final_score, participants:pizza_session_participants(voter_id, voted_at)")
         .order("opened_at", { ascending: false }),
       // La RLS nasconde i voti altrui finché tutti i partecipanti non hanno votato.
       client
@@ -6191,7 +6248,7 @@ function AppShell({ session }: { session: Session | null }) {
         .select("session_id, voter_id, location, pizza, dessert, price, bonus_fabio"),
       client
         .from("padel_tournaments")
-        .select("id, name, status, trophy_name, trophy_badge, elo_multiplier, sets_format, legs, created_by, created_at, teams:tournament_teams(id, tournament_id, name, player_a, player_b, sort_order), fixtures:tournament_fixtures(id, tournament_id, match_number, team1_id, team2_id, match_id, leg)")
+        .select("id, name, status, trophy_name, trophy_badge, trophy_image_path, elo_multiplier, sets_format, legs, created_by, created_at, teams:tournament_teams(id, tournament_id, name, player_a, player_b, sort_order), fixtures:tournament_fixtures(id, tournament_id, match_number, team1_id, team2_id, match_id, leg)")
         .order("created_at", { ascending: false }),
       // Il campo da gioco sta in una query a parte: se la migrazione non e
       // stata eseguita questa fallisce da sola, senza portarsi dietro il
@@ -8088,12 +8145,34 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
               {selectedPlayerTrophies.length ? (
                 <div className="trophy-room-list">
-                  {selectedPlayerTrophies.map((tournament) => (
-                    <article className="trophy-room-card" key={tournament.id}>
-                      <TournamentTrophyBadge kind={tournament.trophy_badge} />
-                      <span><small>{tournament.name}</small><b>{tournament.trophy_name}</b></span>
-                    </article>
-                  ))}
+                  {selectedPlayerTrophies.map((tournament) => {
+                    const victoryDate = new Intl.DateTimeFormat("it-IT", { dateStyle: "long" })
+                      .format(tournamentVictoryDate(tournament, matches));
+                    return (
+                      <article
+                        className="trophy-room-card"
+                        key={tournament.id}
+                        tabIndex={0}
+                        aria-label={`${tournament.name}, vittoria del ${victoryDate}`}
+                      >
+                        {tournament.trophy_image_path ? (
+                          <Image
+                            className="trophy-room-image"
+                            src={`${basePath}/${tournament.trophy_image_path}`}
+                            alt={`Coppa del ${tournament.name}`}
+                            width={320}
+                            height={480}
+                          />
+                        ) : (
+                          <TournamentTrophyBadge kind={tournament.trophy_badge} />
+                        )}
+                        <span className="trophy-room-tooltip" role="tooltip">
+                          <b>{tournament.name}</b>
+                          <small>Vittoria del {victoryDate}</small>
+                        </span>
+                      </article>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="trophy-room-empty">
@@ -8285,7 +8364,7 @@ function AppShell({ session }: { session: Session | null }) {
                 <div className="pizza-hero-buttons">
                   <button className="button button-primary pizza-open-vote" onClick={() => {
                     if (!pizzaSchemaReady || !pizzaSessionsReady) {
-                      setNotice("Per votare esegui la migrazione migration-pizza-personale.sql in Supabase.");
+                      setNotice("Per votare esegui la migrazione migration-pizza-voti-0-10.sql in Supabase.");
                       return;
                     }
                     setShowSessionPicker(true);
@@ -8598,7 +8677,7 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
               <button className="icon-button" onClick={() => setShowPizzaInfo(false)} aria-label="Chiudi">×</button>
             </div>
-            <p className="pizza-info-copy">I voti ordinari valgono 93 punti. Con Fabio si aggiungono i suoi 7 punti; senza Fabio i 93 vengono riportati a 100.</p>
+            <p className="pizza-info-copy">Ogni criterio si vota da 0 a 10. Il backend applica i pesi 7/31, 10/31, 4/31 e 10/31; con Fabio si aggiungono i suoi 7 punti.</p>
             <p className="pizza-info-copy">Le votazioni in solitaria restano private e alimentano soltanto la classifica Personale di chi le apre.</p>
             <div className="pizza-criteria">
               {pizzaCriteria.map((criterion) => (
@@ -9122,6 +9201,11 @@ function AppShell({ session }: { session: Session | null }) {
               setNotice(votingSession.is_solo
                 ? "Voto salvato nella tua classifica Personale."
                 : "Voto salvato. La votazione si chiuderà quando avranno votato tutti.");
+            }}
+            onDeleted={async () => {
+              setVotingSession(null);
+              await loadData();
+              setNotice("Votazione eliminata.");
             }}
           />
         );

@@ -19,7 +19,7 @@ test("genera un sito statico pronto per GitHub Pages", async () => {
 });
 
 test("include configurazione Supabase e funzioni della webapp", async () => {
-  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, singleSetMigration, tournamentFormatMigration, tournamentPrizeMigration, tournamentDifferenceMigration, tournamentDrawMigration, page, css] = await Promise.all([
+  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, singleSetMigration, tournamentFormatMigration, tournamentPrizeMigration, tournamentDifferenceMigration, tournamentDrawMigration, trophyImageMigration, page, css] = await Promise.all([
     readFile(new URL("supabase/schema.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pizza-sessioni.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pareggi.sql", root), "utf8"),
@@ -29,6 +29,7 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
     readFile(new URL("supabase/migration-tornei-premio-elo.sql", root), "utf8"),
     readFile(new URL("supabase/migration-tornei-differenza-game.sql", root), "utf8"),
     readFile(new URL("supabase/migration-tornei-sorteggio.sql", root), "utf8"),
+    readFile(new URL("supabase/migration-trofei-immagine.sql", root), "utf8"),
     readFile(new URL("app/page.tsx", root), "utf8"),
     readFile(new URL("app/globals.css", root), "utf8"),
   ]);
@@ -96,6 +97,15 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(pizzaMigration, /pizza_session_participants/);
   assert.match(pizzaMigration, /save_pizza_session_vote/);
   assert.match(pizzaMigration, /completed_at is null/);
+  assert.match(pizzaMigration, /location between 0 and 10/);
+  assert.match(pizzaMigration, /result_location \* 7/);
+  assert.match(pizzaMigration, /result_price \* 10/);
+  assert.match(pizzaMigration, /delete_open_pizza_session/);
+  assert.match(page, /VOTO MEDIO ATTUALE/);
+  assert.match(page, /0–10 · peso 7\/31/);
+  assert.match(trophyImageMigration, /trophies\/coppa-theboyz\.png/);
+  assert.match(page, /tournamentVictoryDate/);
+  assert.match(page, /trophy_image_path/);
   assert.match(pizzaMigration, /name ilike '%spizza%'/);
   assert.doesNotMatch(page, /remainingLabel|closes_at|due ore per votare/i);
   assert.doesNotMatch(page, /Pizzium/i);

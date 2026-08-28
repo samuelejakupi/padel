@@ -153,6 +153,7 @@ export type Tournament = {
   status: "active" | "completed";
   trophy_name: string;
   trophy_badge: "cup" | "crown" | "shield" | "star";
+  trophy_image_path?: string | null;
   elo_multiplier: number;
   // Quanti set si giocano nelle partite del torneo: 1 (set secco) o 3 (due
   // set su tre). Facoltativi finche migration-tornei-formato.sql non e stata

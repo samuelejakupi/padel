@@ -37,12 +37,14 @@ ai file `.env` pubblicati, alle GitHub Actions o al codice frontend.
 3. Esegui la query.
 4. Crea una seconda query con `supabase/migration-pizza-sessioni.sql` ed eseguila. Va rilanciata anche su un progetto esistente per sostituire il vecchio timer con i partecipanti.
 5. Sui progetti esistenti esegui `supabase/migration-pizza-personale.sql` per aggiungere votazioni singole, classifica Personale e relative regole di privacy.
-6. Esegui anche `supabase/migration-tornei.sql` per abilitare tornei, calendario e moltiplicatore Elo.
-7. Esegui `supabase/migration-partite-casuali.sql` dopo `supabase/migration-pareggi.sql` per creare partite con squadre casuali e registrarne il risultato in seguito.
-8. Esegui `supabase/migration-partite-un-set.sql` per consentire partite secche da un set, con Elo e progressi degli emblemi dimezzati.
-9. In **Authentication → URL Configuration**, imposta **Site URL** con l’indirizzo Vercel finale, per esempio:
+6. Esegui `supabase/migration-pizza-voti-0-10.sql` per uniformare i criteri a 0–10, calcolare il risultato nel backend e consentire al creatore di eliminare una votazione aperta.
+7. Esegui anche `supabase/migration-tornei.sql` per abilitare tornei, calendario e moltiplicatore Elo.
+8. Esegui `supabase/migration-partite-casuali.sql` dopo `supabase/migration-pareggi.sql` per creare partite con squadre casuali e registrarne il risultato in seguito.
+9. Esegui `supabase/migration-partite-un-set.sql` per consentire partite secche da un set, con Elo e progressi degli emblemi dimezzati.
+10. Esegui `supabase/migration-trofei-immagine.sql` per associare ai tornei le immagini della sala trofei.
+11. In **Authentication → URL Configuration**, imposta **Site URL** con l’indirizzo Vercel finale, per esempio:
    `https://nome-progetto.vercel.app/`
-10. In **Project Settings → API**, copia:
+12. In **Project Settings → API**, copia:
    - Project URL
    - anon / publishable key
 
