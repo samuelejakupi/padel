@@ -148,6 +148,7 @@ function finalPizzaScore(
 }
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+const PROFILE_MATCH_PREVIEW = 5;
 const groupUsers = ["Samu", "Dani", "Atti", "Matte", "Fabio", "Alban", "Mattia", "Manu", "Mene"] as const;
 
 // Le sezioni in un posto solo: da qui pescano sia le card della home sia la
@@ -1658,22 +1659,30 @@ function BadgeTile({ badge, ghost }: { badge: Badge; ghost: boolean }) {
   );
 }
 
-// Quanto cammina il nastro degli emblemi, in pixel al secondo. Lento: e una
-// vetrina, non un tabellone che scorre — si deve fare in tempo a riconoscere un
-// emblema senza rincorrerlo.
-const BADGE_MARQUEE_SPEED = 22;
-// Lo stacco fra un emblema e l'altro, e anche fra la fine di una fila e
+// Quanto camminano i nastri di emblemi e trofei, in pixel al secondo. Lenti:
+// sono vetrine, non tabelloni da rincorrere.
+const CABINET_MARQUEE_SPEED = 22;
+// Lo stacco fra un oggetto e l'altro, e anche fra la fine di una fila e
 // l'inizio della sua copia: se fosse diverso il giro si vedrebbe.
-const BADGE_MARQUEE_GAP = 8;
+const CABINET_MARQUEE_GAP = 8;
 
-// La bacheca degli emblemi. Sul telefono non ci stanno in riga, e prima si
-// trascinavano col dito: chi non ci provava vedeva sempre e solo i primi tre.
-// Adesso la fila cammina da sola, senza fine.
+// Il nastro comune a emblemi e trofei. Sul telefono la fila cammina da sola e
+// resta anche trascinabile col dito.
 // Il giro si chiude perche la fila e scritta due volte: quando l'animazione
 // torna a zero la seconda copia sta esattamente dove stava la prima, quindi il
 // salto cade su pixel identici e non si vede. Se gli emblemi ci stanno tutti il
 // nastro resta fermo e la copia non viene nemmeno scritta.
-function BadgeList({ badges }: { badges: Badge[] }) {
+function CabinetMarquee<T>({
+  items,
+  rowClassName,
+  keyOf,
+  renderItem,
+}: {
+  items: T[];
+  rowClassName: string;
+  keyOf: (item: T) => string;
+  renderItem: (item: T, ghost: boolean) => ReactNode;
+}) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const laneRef = useRef<HTMLDivElement | null>(null);
   // La prima fila sta in uno stato e non in un ref perche serve a far ripartire
@@ -1693,17 +1702,17 @@ function BadgeList({ badges }: { badges: Badge[] }) {
       const finestra = viewport.getBoundingClientRect().width;
       // Il pixel di margine e per gli arrotondamenti: senza, una fila larga
       // quanto la finestra partiva a camminare per un decimo di pixel.
-      setShift(fila > finestra + 1 ? fila + BADGE_MARQUEE_GAP : 0);
+      setShift(fila > finestra + 1 ? fila + CABINET_MARQUEE_GAP : 0);
     }
 
     measure();
-    // Gli emblemi sono immagini: la fila e piu corta finche non sono arrivate, e
+    // Gli oggetti possono contenere immagini: la fila e piu corta finche non sono arrivate, e
     // una misura sola presa troppo presto direbbe che ci stanno.
     const observer = new ResizeObserver(measure);
     observer.observe(row);
     observer.observe(viewport);
     return () => observer.disconnect();
-  }, [row, badges]);
+  }, [row, items.length]);
 
   // Il nastro cammina spostando lo scorrimento della finestra invece di
   // traslare la fila. E la stessa striscia, ma cosi la si puo prendere e
@@ -1728,7 +1737,7 @@ function BadgeList({ badges }: { badges: Badge[] }) {
 
     const step = (now: number) => {
       if (last && !paused) {
-        position += (BADGE_MARQUEE_SPEED * (now - last)) / 1000;
+        position += (CABINET_MARQUEE_SPEED * (now - last)) / 1000;
         // La copia sta esattamente una fila piu in la: tornando indietro di
         // una fila si ricomincia sugli stessi pixel e il giro non si vede.
         if (position >= shift) position -= shift;
@@ -1782,18 +1791,29 @@ function BadgeList({ badges }: { badges: Badge[] }) {
 
   const running = shift > 0;
   return (
-    <div className="badge-marquee" ref={viewportRef}>
-      <div className="badge-marquee-lane" ref={laneRef}>
-        <div className="badge-grid" ref={setRow}>
-          {badges.map((badge) => <BadgeTile key={badge.id} badge={badge} ghost={false} />)}
+    <div className="cabinet-marquee" ref={viewportRef}>
+      <div className="cabinet-marquee-lane" ref={laneRef}>
+        <div className={rowClassName} ref={setRow}>
+          {items.map((item) => <Fragment key={keyOf(item)}>{renderItem(item, false)}</Fragment>)}
         </div>
         {running ? (
-          <div className="badge-grid">
-            {badges.map((badge) => <BadgeTile key={badge.id} badge={badge} ghost />)}
+          <div className={rowClassName}>
+            {items.map((item) => <Fragment key={keyOf(item)}>{renderItem(item, true)}</Fragment>)}
           </div>
         ) : null}
       </div>
     </div>
+  );
+}
+
+function BadgeList({ badges }: { badges: Badge[] }) {
+  return (
+    <CabinetMarquee
+      items={badges}
+      rowClassName="badge-grid"
+      keyOf={(badge) => badge.id}
+      renderItem={(badge, ghost) => <BadgeTile badge={badge} ghost={ghost} />}
+    />
   );
 }
 
@@ -5659,6 +5679,56 @@ function tournamentVictoryDate(tournament: Tournament, matches: PadelMatch[]) {
   return new Date(matchDates.length ? Math.max(...matchDates) : tournament.created_at);
 }
 
+function TournamentTrophyTile({
+  tournament,
+  matches,
+  ghost,
+}: {
+  tournament: Tournament;
+  matches: PadelMatch[];
+  ghost: boolean;
+}) {
+  const victoryDate = new Intl.DateTimeFormat("it-IT", { dateStyle: "long" })
+    .format(tournamentVictoryDate(tournament, matches));
+  return (
+    <article
+      className="trophy-room-card"
+      tabIndex={ghost ? -1 : 0}
+      aria-hidden={ghost ? true : undefined}
+      aria-label={ghost ? undefined : `${tournament.name}, vittoria del ${victoryDate}`}
+    >
+      {tournament.trophy_image_path ? (
+        <Image
+          className="trophy-room-image"
+          src={`${basePath}/${tournament.trophy_image_path}`}
+          alt={ghost ? "" : `Coppa del ${tournament.name}`}
+          width={128}
+          height={168}
+        />
+      ) : (
+        <TournamentTrophyBadge kind={tournament.trophy_badge} />
+      )}
+      <span className="trophy-room-tooltip" role="tooltip">
+        <b>{tournament.name}</b>
+        <small>Vittoria del {victoryDate}</small>
+      </span>
+    </article>
+  );
+}
+
+function TrophyList({ tournaments, matches }: { tournaments: Tournament[]; matches: PadelMatch[] }) {
+  return (
+    <CabinetMarquee
+      items={tournaments}
+      rowClassName="trophy-room-list"
+      keyOf={(tournament) => tournament.id}
+      renderItem={(tournament, ghost) => (
+        <TournamentTrophyTile tournament={tournament} matches={matches} ghost={ghost} />
+      )}
+    />
+  );
+}
+
 // I tornei creati prima di migration-tornei-formato.sql non hanno le due
 // colonne: valgono per loro le regole di allora, due set su tre e sola andata.
 // Il premio di fine torneo, in punti Elo: primi e secondi. I numeri veri
@@ -6157,6 +6227,7 @@ function AppShell({ session }: { session: Session | null }) {
   const [pizzaRankingMode, setPizzaRankingMode] = useState<PizzaRankingMode>("contemporary");
   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [showAllPlayerMatches, setShowAllPlayerMatches] = useState(false);
   const [loading, setLoading] = useState(Boolean(supabase));
   const [notice, setNotice] = useState("");
   const [profileName, setProfileName] = useState("");
@@ -6643,6 +6714,9 @@ function AppShell({ session }: { session: Session | null }) {
   const selectedPlayerMatches = selectedPlayer
     ? matches.filter((match) => match.players.some((player) => player.profile_id === selectedPlayer.id))
     : [];
+  const visiblePlayerMatches = showAllPlayerMatches
+    ? selectedPlayerMatches
+    : selectedPlayerMatches.slice(0, PROFILE_MATCH_PREVIEW);
   const selectedPlayerPlays = selectedPlayer
     ? plays.filter((play) => play.profile_id === selectedPlayer.id)
     : [];
@@ -6811,6 +6885,7 @@ function AppShell({ session }: { session: Session | null }) {
   const openOwnCard = useCallback(() => {
     if (!currentUserId) return;
     setSelectedPlayerId(currentUserId);
+    setShowAllPlayerMatches(false);
     setPadelView("player");
     setView("padel");
   }, [currentUserId]);
@@ -7323,6 +7398,7 @@ function AppShell({ session }: { session: Session | null }) {
 
   function openPlayer(profile: Profile) {
     setSelectedPlayerId(profile.id);
+    setShowAllPlayerMatches(false);
     setPadelView("player");
   }
 
@@ -7620,7 +7696,6 @@ function AppShell({ session }: { session: Session | null }) {
               <img className="hub-mark" src={`${basePath}/theboyz-mark.png`} alt="" width={600} height={600} aria-hidden="true" />
               <div className="hub-hero-copy">
                 <p className="eyebrow">THEBOYZ</p>
-                <h1>Scegli<br /><span>il campo.</span></h1>
                 <div className="hub-members">
                   <div className="mini-avatars">
                     {profiles.slice(0, 5).map((profile) => (
@@ -7631,15 +7706,6 @@ function AppShell({ session }: { session: Session | null }) {
                 </div>
               </div>
             </div>
-
-            <button className="hub-profile" onClick={openOwnCard}>
-              <div className="hub-profile-info">
-                <small>IL TUO PROFILO</small>
-                <b>{currentUser.display_name}</b>
-                <span>Padel {currentRank ? `#${currentRank}` : "N/C"}</span>
-              </div>
-              <Avatar profile={currentUser} size="xl" rank={currentRank || undefined} />
-            </button>
 
             <div className="hub-cards">
               {sections.map((item) => (
@@ -8144,36 +8210,7 @@ function AppShell({ session }: { session: Session | null }) {
                 <small>{selectedPlayerTrophies.length ? `${selectedPlayerTrophies.length} conquistati` : "Nessun trofeo"}</small>
               </div>
               {selectedPlayerTrophies.length ? (
-                <div className="trophy-room-list">
-                  {selectedPlayerTrophies.map((tournament) => {
-                    const victoryDate = new Intl.DateTimeFormat("it-IT", { dateStyle: "long" })
-                      .format(tournamentVictoryDate(tournament, matches));
-                    return (
-                      <article
-                        className="trophy-room-card"
-                        key={tournament.id}
-                        tabIndex={0}
-                        aria-label={`${tournament.name}, vittoria del ${victoryDate}`}
-                      >
-                        {tournament.trophy_image_path ? (
-                          <Image
-                            className="trophy-room-image"
-                            src={`${basePath}/${tournament.trophy_image_path}`}
-                            alt={`Coppa del ${tournament.name}`}
-                            width={320}
-                            height={480}
-                          />
-                        ) : (
-                          <TournamentTrophyBadge kind={tournament.trophy_badge} />
-                        )}
-                        <span className="trophy-room-tooltip" role="tooltip">
-                          <b>{tournament.name}</b>
-                          <small>Vittoria del {victoryDate}</small>
-                        </span>
-                      </article>
-                    );
-                  })}
-                </div>
+                <TrophyList tournaments={selectedPlayerTrophies} matches={matches} />
               ) : (
                 <div className="trophy-room-empty">
                   <div aria-hidden="true">
@@ -8235,7 +8272,7 @@ function AppShell({ session }: { session: Session | null }) {
             </div>
             {selectedPlayerMatches.length ? (
               <div className="match-list match-list-full player-match-list">
-                {selectedPlayerMatches.map((match) => (
+                {visiblePlayerMatches.map((match) => (
                   <MatchCard
                     key={match.id}
                     match={match}
@@ -8245,6 +8282,17 @@ function AppShell({ session }: { session: Session | null }) {
                     viewerId={session?.user.id}
                   />
                 ))}
+                {selectedPlayerMatches.length > PROFILE_MATCH_PREVIEW ? (
+                  <button
+                    className="button button-ghost player-match-toggle"
+                    type="button"
+                    onClick={() => setShowAllPlayerMatches((current) => !current)}
+                  >
+                    {showAllPlayerMatches
+                      ? `Mostra solo le ultime ${PROFILE_MATCH_PREVIEW}`
+                      : `Vedi tutte le ${selectedPlayerMatches.length} partite`}
+                  </button>
+                ) : null}
               </div>
             ) : (
               <div className="empty-board"><span>00</span><h2>Nessuna partita giocata</h2><p>La scheda si completerà dopo il primo risultato.</p></div>

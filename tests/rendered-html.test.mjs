@@ -59,6 +59,9 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(page, /function EloChart/);
   assert.match(page, /ANDAMENTO ELO/);
   assert.match(page, /STORICO PERSONALE/);
+  assert.match(page, /PROFILE_MATCH_PREVIEW = 5/);
+  assert.match(page, /Vedi tutte le.*partite/);
+  assert.doesNotMatch(page, /Scegli<br \/><span>il campo/);
   assert.doesNotMatch(page, /FORCED_BADGES/);
   assert.match(page, /const decidedMatches = wins \+ losses/);
   assert.doesNotMatch(page, /draws \* 0\.5/);
@@ -106,6 +109,9 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(trophyImageMigration, /trophies\/coppa-theboyz\.png/);
   assert.match(page, /tournamentVictoryDate/);
   assert.match(page, /trophy_image_path/);
+  assert.match(page, /function CabinetMarquee/);
+  assert.match(page, /rowClassName="trophy-room-list"/);
+  assert.match(css, /\.trophy-room-card[\s\S]*background: transparent/);
   assert.match(pizzaMigration, /name ilike '%spizza%'/);
   assert.doesNotMatch(page, /remainingLabel|closes_at|due ore per votare/i);
   assert.doesNotMatch(page, /Pizzium/i);
