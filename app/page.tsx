@@ -1920,11 +1920,10 @@ function scrollPageBy(top: number) {
   (pageScroller() ?? window).scrollBy({ top, behavior: "instant" as ScrollBehavior });
 }
 
-// Le facce dei due caroselli della home, nell'ordine in cui si incontrano
+// Le facce dei caroselli della home, nell'ordine in cui si incontrano
 // scorrendo verso sinistra — lo stesso ordine dei pallini sotto la card.
 // Stanno fuori dal componente perche sono liste fisse: dentro verrebbero
 // ricostruite a ogni render e farebbero ripartire gli effetti del carosello.
-const RANKING_FACES = ["single", "team"] as const;
 const MATCHES_FACES = ["mine", "all"] as const;
 // Il tasto in cima alla home e anche lui un carosello: a sinistra la partita,
 // a destra il torneo.
@@ -1932,10 +1931,8 @@ const CTA_FACES = ["match", "tournament"] as const;
 
 // Una card che ha piu facce e le mostra a turno: si cambia con lo swipe o da
 // sola ogni cinque secondi, e la faccia che esce da un lato lascia entrare
-// dall'altro quella nuova. La usano la classifica (singolo, squadra) e le
-// partite (le proprie, tutte): erano lo stesso meccanismo scritto due
-// volte, e la seconda volta sarebbe stata una copia da tenere allineata a
-// mano.
+// dall'altro quella nuova. La usano le partite per alternare le proprie e
+// tutte quelle del gruppo.
 //
 // Perche i gestori del tocco stanno su listener nativi e non sugli attributi
 // onTouch di React: React registra touchmove come passivo, e li dentro
@@ -6089,14 +6086,10 @@ function AppShell({ session }: { session: Session | null }) {
   const [showPizzaInfo, setShowPizzaInfo] = useState(false);
   // La home mostra soltanto un'anteprima; i "Vedi tutto" aprono le pagine
   // complete, così la schermata principale non cambia altezza.
-  const HOME_ROWS = 3;
-  // Tre come le righe della classifica qui sopra: due partite lasciavano la
-  // card piu bassa di quella accanto e l'anteprima sembrava mezza vuota.
   const HOME_MATCHES = 3;
   const HOME_TOURNAMENTS = 2;
 
-  // Sta qui e non in mezzo agli altri stati perche il carosello qui sotto ha
-  // bisogno di sapere quale delle due classifiche e in scena.
+  // La pagina della classifica conserva la scelta fra singoli e squadre.
   const [rankingMode, setRankingMode] = useState<"single" | "team">("single");
   const isPhone = useIsPhone();
   // Quali partite mostrano la card e il foglio: le proprie o tutte, in
@@ -6108,31 +6101,16 @@ function AppShell({ session }: { session: Session | null }) {
   // questa distinzione non si potrebbe distinguere "non ho ancora deciso" da
   // "li voglio tutti chiusi".
   const [chosenMonth, setChosenMonth] = useState<string | null | undefined>(undefined);
-  // Partite e classifica complete si aprono in un foglio dal basso invece di
-  // portare su un'altra schermata.
-  const [sheet, setSheet] = useState<null | "matches" | "ranking" | "campi" | "titoli">(null);
+  // Le partite complete e i pannelli accessori si aprono in un foglio dal
+  // basso; la classifica ha invece una pagina propria.
+  const [sheet, setSheet] = useState<null | "matches" | "campi" | "titoli">(null);
 
-  // I due caroselli della home. Le facce sono in fila nell'ordine dei
+  // Il carosello delle partite in home. Le facce sono in fila nell'ordine dei
   // pallini, e il cambio automatico va avanti e indietro lungo quella fila.
   // Girano solo in home e a fogli chiusi: dentro a un foglio si guarda una
   // cosa sola, e vedere la card cambiare dietro al velo sarebbe una
   // distrazione.
   const carouselEnabled = !sheet && view === "padel" && padelView === "overview";
-
-  const {
-    setCard: setRankingCard,
-    trackRef: rankingTrackRef,
-    swipeHandled: rankingSwipeHandled,
-    touch: touchRanking,
-  } = useCardCarousel({
-    faces: RANKING_FACES,
-    face: rankingMode,
-    onChange: setRankingMode,
-    enabled: carouselEnabled,
-    // Il riflesso sugli anelli del podio deve accendersi quando la classifica
-    // e arrivata, non mentre sta ancora scivolando dentro.
-    enteringClass: "is-ranking-entering",
-  });
 
   const {
     setCard: setMatchesCard,
@@ -6572,7 +6550,6 @@ function AppShell({ session }: { session: Session | null }) {
   // le squadre senza nome sono proprio quelle da sistemare.
   const rankedTeams = useMemo(() => rankedPadelTeams(teams), [teams]);
   const rankedSeasonTeams = useMemo(() => rankedPadelTeams(seasonTeams), [seasonTeams]);
-  const rankingRows = rankingMode === "single" ? seasonProfiles.length : rankedSeasonTeams.length;
   // Le coppie formate, buone per tutti: la scheda del giocatore, il modulo del
   // torneo. Due giocatori qualsiasi restano una coppia possibile, non una
   // squadra.
@@ -6796,29 +6773,6 @@ function AppShell({ session }: { session: Session | null }) {
   const [saluteSeed] = useState(() => Math.random());
   const currentUserId = currentUser?.id ?? null;
   const currentUserName = currentUser?.display_name ?? "";
-
-  // L'ultima coppia con cui si è scesi in campo. Di squadre se ne può avere
-  // più d'una in corso contemporaneamente, e nessuna è "la propria" in senso
-  // stretto: quella che vale come punto di riferimento è l'ultima giocata.
-  // Le partite arrivano già dalla più recente, quindi la prima che ci
-  // riguarda è anche l'ultima disputata.
-  const lastTeamId = useMemo(() => {
-    if (!currentUserId) return null;
-    for (const match of matches) {
-      const mine = match.players.find((player) => player.profile_id === currentUserId);
-      if (!mine) continue;
-      const mates = match.players
-        .filter((player) => player.team === mine.team)
-        .map((player) => player.profile_id);
-      // Un singolo non forma una coppia: quella partita non dice niente sulle
-      // squadre e si passa a quella prima.
-      if (mates.length < 2) continue;
-      const played = teams.find((team) => team.players.length === 2
-        && team.players.every((profile) => mates.includes(profile.id)));
-      if (played) return played.id;
-    }
-    return null;
-  }, [matches, teams, currentUserId]);
 
   // Le partite scelte dai pallini. Il filtro sta qui e non dentro al foglio
   // perché lo stesso elenco serve in due posti: l'anteprima nella card e il
@@ -7735,7 +7689,7 @@ function AppShell({ session }: { session: Session | null }) {
 
         {!loading && view === "padel" && padelView === "overview" ? (
           <>
-            <section className="dashboard-grid">
+            <section className="dashboard-grid dashboard-grid-single">
               <div className="dashboard-main">
                 <article
                   className="hero-stat hero-stat-link"
@@ -7978,112 +7932,44 @@ function AppShell({ session }: { session: Session | null }) {
                 </div>
               </div>
 
-              <aside className="dashboard-side">
-                {/* Tutta la card è il tasto: lo switch e il "Vedi tutti"
-                    facevano tre bersagli dove ne bastava uno. Lo switch resta
-                    nella classifica completa, qui si cambia con lo swipe. */}
-                <button
-                  type="button"
-                  className="ranking-preview"
-                  ref={setRankingCard}
-                  onClick={() => {
-                    // Anche il solo tocco rimanda il cambio automatico:
-                    // riparte cinque secondi dopo che l'hai lasciata stare.
-                    touchRanking();
-                    // Uno swipe finisce comunque con un click: senza questa
-                    // guardia cambiare classifica aprirebbe anche il foglio.
-                    if (rankingSwipeHandled.current) return;
-                    setSheet("ranking");
-                  }}
-                  aria-label={`Apri la classifica Elo ${rankingMode === "single" ? "singolo" : "squadra"} completa (${rankingRows})`}
-                >
-                  <div className="side-head">
-                    <div><h2>{rankingMode === "single" ? "Classifica Elo - Singolo" : "Classifica Elo - Squadra"}</h2></div>
-                    {/* I pallini del carosello: dicono che la card ha due
-                        facce e quale delle due stai guardando. Sono muti per
-                        i lettori di schermo — l'etichetta del tasto dice gia
-                        quale classifica e a video — e non si toccano: dentro
-                        un tasto non ci possono stare altri tasti. */}
-                    <span className="ranking-dots" aria-hidden="true">
-                      <i className={rankingMode === "single" ? "is-current" : ""} />
-                      <i className={rankingMode === "team" ? "is-current" : ""} />
-                    </span>
-                  </div>
-                  {/* La finestra ritaglia, il nastro dentro è quello che si
-                      muove: col dito o da solo, ogni cinque secondi. */}
-                  <div className="ranking-preview-list">
-                    <div className="ranking-preview-track" ref={rankingTrackRef}>
-                      {rankingMode === "single" ? (
-                        <RankingList
-                          profiles={seasonProfiles}
-                          limit={HOME_ROWS}
-                          focusId={currentUserId}
-                        />
-                      ) : rankedTeams.length ? (
-                        <TeamRankingList teams={rankedTeams} limit={HOME_ROWS} focusId={lastTeamId} />
-                      ) : (
-                        <p className="demo-profile-note">
-                          Una coppia entra qui quando le date un nome: apri la tua scheda, sezione
-                          &ldquo;le mie squadre&rdquo;.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  {/* Su mobile i pallini scendono qui, centrati sotto la
-                      terza riga: senza piu l'insegna in alto non avevano piu
-                      niente accanto a cui stare, e sotto all'elenco sono
-                      dove li si cerca — come sotto le foto di un profilo. */}
-                  <span className="card-dots" aria-hidden="true">
-                    <i className={rankingMode === "single" ? "is-current" : ""} />
-                    <i className={rankingMode === "team" ? "is-current" : ""} />
-                  </span>
-                </button>
-              </aside>
             </section>
           </>
         ) : null}
 
         {!loading && view === "padel" && padelView === "ranking" ? (
           <section className="page-section ranking-page">
-            <article className="section-hero">
-              <BlockMark size="lg" />
-              <div className="section-hero-head">
-                <div>
-                  <p className="eyebrow">THEBOYZ PADEL</p>
-                  <h1>Il ranking del gruppo</h1>
-                  <p>Il ranking si aggiorna automaticamente dopo ogni risultato.</p>
-                  {/* La stagione si sceglie qui, non piu in home. */}
-                  <SeasonPicker
-                    value={season}
-                    current={currentYear}
-                    options={[currentYear, ...archivedSeasons.filter((year) => year !== currentYear)]}
-                    onChange={setSeason}
-                  />
-                </div>
-                <div className="mode-switch" role="group" aria-label="Tipo di ranking">
-                  <button
-                    className={rankingMode === "single" ? "active" : ""}
-                    onClick={() => setRankingMode("single")}
-                    aria-label="Classifica singolo"
-                    title="Singolo"
-                  >
-                    <NavGlyph name="person" />
-                  </button>
-                  <button
-                    className={rankingMode === "team" ? "active" : ""}
-                    onClick={() => setRankingMode("team")}
-                    aria-label="Classifica squadre"
-                    title="Squadra"
-                  >
-                    <NavGlyph name="people" />
-                  </button>
-                </div>
+            <header className="ranking-page-controls">
+              <div className="ranking-switch ranking-mode-tabs" role="group" aria-label="Tipo di ranking">
+                <button
+                  type="button"
+                  className={rankingMode === "single" ? "active" : ""}
+                  onClick={() => setRankingMode("single")}
+                  aria-pressed={rankingMode === "single"}
+                >
+                  <NavGlyph name="person" />
+                  <span>Singoli</span>
+                </button>
+                <button
+                  type="button"
+                  className={rankingMode === "team" ? "active" : ""}
+                  onClick={() => setRankingMode("team")}
+                  aria-pressed={rankingMode === "team"}
+                >
+                  <NavGlyph name="people" />
+                  <span>Squadre</span>
+                </button>
               </div>
-            </article>
+              <SeasonPicker
+                value={season}
+                current={currentYear}
+                options={[currentYear, ...archivedSeasons.filter((year) => year !== currentYear)]}
+                onChange={setSeason}
+              />
+            </header>
             {rankingMode === "single" ? (
               <RankingList profiles={seasonProfiles} onSelect={openPlayer} />
-            ) : rankedTeams.length ? (
-              <TeamRankingList teams={rankedTeams} expanded />
+            ) : rankedSeasonTeams.length ? (
+              <TeamRankingList teams={rankedSeasonTeams} expanded />
             ) : (
               <div className="empty-board">
                 <span>00</span>
@@ -8094,6 +7980,20 @@ function AppShell({ session }: { session: Session | null }) {
                 </p>
               </div>
             )}
+            {rankingMode === "single" ? (
+              <button
+                className="button button-full cta-titoli ranking-page-vote"
+                onClick={() => {
+                  if (!titlesSchemaReady) {
+                    setNotice("Per votare i titoli esegui la migrazione migration-titoli.sql in Supabase.");
+                    return;
+                  }
+                  setSheet("titoli");
+                }}
+              >
+                Votazione
+              </button>
+            ) : null}
           </section>
         ) : null}
 
@@ -8835,69 +8735,6 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
             )}
           </div>
-        </BottomSheet>
-      ) : null}
-      {sheet === "ranking" ? (
-        <BottomSheet
-          // Niente selettore di stagione qui dentro: il foglio mostra la
-          // stagione in corso e basta. Lo storico troverà casa nel profilo.
-          title={rankingMode === "single" ? "Classifica Elo - Singolo" : "Classifica Elo - Squadra"}
-          onClose={() => setSheet(null)}
-          action={(
-            <div className="mode-switch" role="group" aria-label="Tipo di classifica">
-              <button
-                className={rankingMode === "single" ? "active" : ""}
-                // Cambiando tipo di classifica si torna sempre alla stagione
-                // in corso: un anno archiviato è un contesto suo.
-                onClick={() => { setRankingMode("single"); setSeason(currentYear); }}
-                aria-label="Classifica singolo"
-                title="Singolo"
-              >
-                <NavGlyph name="person" />
-              </button>
-              <button
-                className={rankingMode === "team" ? "active" : ""}
-                onClick={() => { setRankingMode("team"); setSeason(currentYear); }}
-                aria-label="Classifica squadre"
-                title="Squadra"
-              >
-                <NavGlyph name="people" />
-              </button>
-            </div>
-          )}
-          /* I titoli stanno in fondo alla classifica perché è l'unico punto
-             dell'app dove il gruppo è tutto in fila: si finisce di leggere chi
-             va forte e si passa a dire chi è cosa. Il foglio dei titoli
-             sostituisce questo invece di sovrapporsi — `sheet` tiene un foglio
-             solo, e due pannelli aperti insieme si contenderebbero il
-             trascinamento e la fascia in cima allo schermo.
-             Solo sotto la classifica dei singoli: i titoli si votano fra
-             persone, e sotto un elenco di coppie il tasto prometteva una cosa
-             che il foglio non fa. */
-          footer={rankingMode === "single" ? (
-            <button
-              className="button button-full cta-titoli"
-              onClick={() => {
-                if (!titlesSchemaReady) {
-                  setNotice("Per votare i titoli esegui la migrazione migration-titoli.sql in Supabase.");
-                  return;
-                }
-                setSheet("titoli");
-              }}
-            >
-              Votazione
-            </button>
-          ) : null}
-        >
-          {rankingMode === "single" ? (
-            <RankingList
-              profiles={seasonProfiles}
-              showTrend={isCurrentSeason}
-              onSelect={(profile) => { setSheet(null); openPlayer(profile); }}
-            />
-          ) : (
-            <TeamRankingList teams={rankedSeasonTeams} showTrend={isCurrentSeason} />
-          )}
         </BottomSheet>
       ) : null}
       {sheet === "titoli" ? (

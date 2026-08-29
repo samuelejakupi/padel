@@ -1412,6 +1412,12 @@ form select:focus {
   grid-template-columns: minmax(0, 1.55fr) minmax(330px, 0.7fr);
 }
 
+/* Senza l'anteprima duplicata della classifica la home Padel torna a una
+   colonna sola e usa tutta la larghezza disponibile. */
+.dashboard-grid-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .dashboard-main {
   display: flex;
   flex-direction: column;
@@ -3636,6 +3642,37 @@ button.podium-person {
 
 .ranking-page .ranking-table {
   padding-top: 10px;
+}
+
+/* La pagina Classifica non ha più un hero descrittivo: i soli comandi che
+   servono stanno direttamente sopra l'elenco, senza un'altra card. */
+.ranking-page-controls {
+  align-items: center;
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-bottom: var(--space-5);
+}
+
+.ranking-mode-tabs {
+  justify-self: start;
+}
+
+.ranking-mode-tabs button {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  justify-content: center;
+  min-width: 130px;
+}
+
+.ranking-mode-tabs .nav-glyph {
+  height: 18px;
+  width: 18px;
+}
+
+.ranking-page-vote {
+  margin-top: var(--space-5);
 }
 
 /* Tornei: stessa grammatica carta/inchiostro della scheda giocatore, con il
@@ -8282,6 +8319,15 @@ button.pizza-ranking-row {
   .ranking-switch button {
     flex: 1;
     padding: 0;
+  }
+
+  .ranking-page-controls .ranking-switch {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .ranking-mode-tabs button {
+    min-width: 0;
   }
 
   .tournament-board-head,
