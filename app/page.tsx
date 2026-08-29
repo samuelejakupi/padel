@@ -5918,7 +5918,7 @@ function TournamentsPage({
           ) : null}
 
           <section className="tournament-recent-section">
-            <div className="section-head tournament-section-head"><div className="section-head-label"><p className="eyebrow dark">ARCHIVIO</p><h2>Ultimi tornei</h2></div></div>
+            <div className="section-head tournament-section-head"><div className="section-head-label"><p className="eyebrow dark">ARCHIVIO</p><h2>Tornei</h2></div></div>
             {completedTournaments.length ? (
               <div className="tournament-recent-list">
                 {(showAllCompleted ? completedTournaments : completedTournaments.slice(0, 3)).map((tournament) => {
@@ -7766,7 +7766,7 @@ function AppShell({ session }: { session: Session | null }) {
                     resta, e su desktop il tasto è ancora nell'intestazione
                     di sezione qui sopra. */}
                 <div className="match-panel tournament-panel">
-                  <div className="match-panel-head"><h2>Ultimi tornei</h2></div>
+                  <div className="match-panel-head"><h2>Tornei</h2></div>
                   {tournaments.length ? (
                     <div className="match-list">
                       {tournaments.slice(0, HOME_TOURNAMENTS).map((tournament) => (
