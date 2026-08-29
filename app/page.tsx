@@ -8215,7 +8215,7 @@ function AppShell({ session }: { session: Session | null }) {
         ) : null}
 
         {!loading && view === "pizza" && pizzaView === "ranking" ? (
-          <><section className="pizza-page">
+          <><section className="pizza-page pizza-ranking-page">
             <BlockMark size="lg" />
             <div className="pizza-hero">
               <button

@@ -5678,6 +5678,24 @@ button.podium-person {
   color: var(--lime);
 }
 
+/* Nel ranking il titolo introduce subito la tabella: non deve occupare lo
+   spazio scenografico necessario alla home delle votazioni. */
+.pizza-ranking-page .pizza-hero {
+  gap: 22px;
+  min-height: 240px;
+  padding: 30px 0 24px;
+}
+
+.pizza-ranking-page .pizza-hero h1 {
+  font-size: clamp(52px, 6.4vw, 86px);
+  letter-spacing: -5px;
+  line-height: 0.78;
+}
+
+.pizza-ranking-page .pizza-ranking-toolbar {
+  margin-top: var(--space-4);
+}
+
 .pizza-hero-actions {
   align-items: center;
   display: flex;
@@ -8761,6 +8779,16 @@ button.pizza-ranking-row {
   .pizza-hero h1 {
     font-size: clamp(48px, 16vw, 62px);
     letter-spacing: -4px;
+  }
+
+  .pizza-ranking-page .pizza-hero {
+    gap: 18px;
+    padding: 42px 0 22px;
+  }
+
+  .pizza-ranking-page .pizza-hero h1 {
+    font-size: clamp(42px, 14vw, 54px);
+    letter-spacing: -3.5px;
   }
 
   .pizza-hero-actions {
