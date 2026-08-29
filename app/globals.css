@@ -8782,13 +8782,25 @@ button.pizza-ranking-row {
   }
 
   .pizza-ranking-page .pizza-hero {
-    gap: 18px;
-    padding: 42px 0 22px;
+    gap: 8px;
+    padding: 22px 0 10px;
   }
 
   .pizza-ranking-page .pizza-hero h1 {
-    font-size: clamp(42px, 14vw, 54px);
-    letter-spacing: -3.5px;
+    font-size: clamp(36px, 11.5vw, 44px);
+    letter-spacing: -3px;
+    line-height: 0.8;
+  }
+
+  .pizza-ranking-page .pizza-info-trigger {
+    min-height: 34px;
+    padding-inline: 11px;
+  }
+
+  .pizza-ranking-page .pizza-ranking-toolbar {
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+    margin-top: var(--space-2);
   }
 
   .pizza-hero-actions {
