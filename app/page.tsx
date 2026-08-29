@@ -18,14 +18,15 @@ import {
 import MonthGroup from "./MonthGroup";
 import WansportBoard from "./WansportBoard";
 import WansportAccesso from "./WansportAccesso";
+import CashoutPage from "./Cashout";
 
 // Le quattro sezioni del gruppo. La home non e una di loro: e lo smistamento
 // che le apre, e da li la barra in basso cambia voci.
 type Section = "padel" | "pizza" | "gaming" | "cashout";
 type View = "home" | Section;
 type PadelView = "overview" | "ranking" | "matches" | "tournaments" | "player";
-// Pizza, Gaming e Cashout hanno la stessa forma: la pagina della sezione e la
-// sua classifica, le due voci centrali della barra.
+// Pizza e Gaming hanno una pagina principale e una classifica. Cash Out usa
+// invece una sola area operativa con gruppi, spese e resoconti.
 type SectionView = "overview" | "ranking";
 type PizzaRankingMode = "contemporary" | "classic" | "personal";
 type PizzaRankingEntry = {
@@ -5869,7 +5870,7 @@ function TournamentsPage({
         <BlockMark size="lg" />
         <div className="section-hero-head">
           <div><p className="eyebrow">THEBOYZ CUP</p><h1>Tornei</h1><p>Girone all’italiana: vittorie, scontri diretti, differenza game.</p></div>
-          <button className="button button-primary tournament-new-button" onClick={onCreate} disabled={!schemaReady}>+ TOURNAMENT</button>
+          <button className="button button-primary tournament-new-button" onClick={onCreate} disabled={!schemaReady}>+ NUOVO TORNEO</button>
         </div>
       </article>
 
@@ -6010,7 +6011,6 @@ function AppShell({ session }: { session: Session | null }) {
   const [padelView, setPadelView] = useState<PadelView>("overview");
   const [pizzaView, setPizzaView] = useState<SectionView>("overview");
   const [gamingView, setGamingView] = useState<SectionView>("overview");
-  const [cashoutView, setCashoutView] = useState<SectionView>("overview");
   // La scheda giocatore vive dentro il Padel, ma ci si arriva da qualunque
   // sezione: senza ricordarsi da dove si veniva, aprire il profilo dal
   // Cashout riportava la barra su quella del Padel. Questo e l'ultimo
@@ -6583,7 +6583,7 @@ function AppShell({ session }: { session: Session | null }) {
       ? pizzaView
       : navSection === "gaming"
         ? gamingView
-        : cashoutView;
+        : "overview";
   const selectedPlayerRank = selectedPlayer?.matches_played ? rankOf(sorted, selectedPlayer.id) : 0;
   const selectedPlayerMatches = selectedPlayer
     ? matches.filter((match) => match.players.some((player) => player.profile_id === selectedPlayer.id))
@@ -6757,7 +6757,6 @@ function AppShell({ session }: { session: Session | null }) {
     if (section === "padel") setPadelView("overview");
     if (section === "pizza") setPizzaView("overview");
     if (section === "gaming") setGamingView("overview");
-    if (section === "cashout") setCashoutView("overview");
     scrollPageTo(0, "instant" as ScrollBehavior);
   }, []);
 
@@ -6769,7 +6768,6 @@ function AppShell({ session }: { session: Session | null }) {
     if (section === "padel") setPadelView("ranking");
     if (section === "pizza") setPizzaView("ranking");
     if (section === "gaming") setGamingView("ranking");
-    if (section === "cashout") setCashoutView("ranking");
     scrollPageTo(0, "instant" as ScrollBehavior);
   }, []);
 
@@ -6822,7 +6820,7 @@ function AppShell({ session }: { session: Session | null }) {
         }}
         disabled={!tournamentSchemaReady}
       >
-        + TOURNAMENT
+        + NUOVO TORNEO
       </button>
     );
 
@@ -6846,16 +6844,25 @@ function AppShell({ session }: { session: Session | null }) {
     axis: "pending" | "horizontal" | "vertical";
   } | null>(null);
 
-  // La barra cambia con la sezione. In home ha due voci, Home e Profilo;
-  // dentro una sezione ne ha quattro, con al centro la sezione stessa e la
-  // sua classifica. Le voci non sono quattro fisse con due nascoste: sono
-  // proprio due elenchi diversi, ed e per questo che le colonne della griglia
-  // le conta la barra a ogni render.
+  // La barra cambia con la sezione. In home ha due voci; Padel, Pizza e Gaming
+  // ne hanno quattro con la classifica, mentre Cash Out ne ha tre perché i
+  // saldi vivono dentro ogni gruppo e non formano un ranking.
   const navItems = useMemo(() => {
     const home = { key: "home", glyph: "home" as GlyphName, label: "Home", active: view === "home", select: goHome };
     const profile = { key: "profile", glyph: "" as GlyphName, label: "Profilo", active: isOwnCard, select: openOwnCard };
     if (!navSection) return [home, profile];
     const meta = sectionMeta(navSection);
+    if (navSection === "cashout") return [
+      home,
+      {
+        key: meta.key,
+        glyph: meta.glyph as GlyphName,
+        label: meta.label,
+        active: !isPlayerCard,
+        select: () => openSection(navSection),
+      },
+      profile,
+    ];
     return [
       home,
       {
@@ -7756,7 +7763,7 @@ function AppShell({ session }: { session: Session | null }) {
                       onClick={() => setShowTournamentCreate(true)}
                       disabled={!tournamentSchemaReady}
                     >
-                      + TOURNAMENT
+                      + NUOVO TORNEO
                     </button>
                   </div>
                 </div>
@@ -8355,34 +8362,8 @@ function AppShell({ session }: { session: Session | null }) {
           />
         ) : null}
 
-        {!loading && view === "cashout" && cashoutView === "overview" ? (
-          <SectionPreview
-            eyebrow="THEBOYZ CASHOUT"
-            title="I conti, senza il foglio di carta"
-            lead="Chi ha pagato cosa durante una vacanza o una serata, e quanto manca perché siamo tutti pari. Aggiornato mentre si spende, non a fine viaggio."
-            points={[
-              { title: "Si segna la spesa, non il debito", copy: "Chi ha pagato, quanto, e per chi: il resto lo calcola l'app. Nessuno deve ricordarsi di dividere per cinque." },
-              { title: "Il saldo si vede subito", copy: "In qualunque momento sai chi sta spendendo più degli altri e chi meno: si aggiusta in corsa, non alla fine quando nessuno ricorda più niente." },
-              { title: "Alla fine, chi paga chi", copy: "Il pareggio dei conti viene proposto col numero minimo di passaggi, invece di nove bonifici incrociati." },
-            ]}
-            emptyTitle="Nessuna spesa registrata"
-            emptyCopy="La sezione è pronta, i dati no: spese, saldi e pareggio dei conti arrivano col prossimo aggiornamento."
-          />
-        ) : null}
-
-        {!loading && view === "cashout" && cashoutView === "ranking" ? (
-          <SectionPreview
-            eyebrow="THEBOYZ CASHOUT"
-            title="Chi è avanti e chi è indietro"
-            lead="La classifica qui non premia: dice soltanto quanto ha anticipato ognuno rispetto a quello che gli tocca."
-            points={[
-              { title: "In alto chi ha anticipato", copy: "Chi ha messo più soldi di quelli che gli spettavano sta in cima, e deve rientrare." },
-              { title: "In fondo chi e in debito", copy: "Nessun giudizio: è solo il rovescio della stessa somma." },
-              { title: "Il totale resta zero", copy: "Se i conti non tornano a zero c'è un errore nelle spese, e si vede subito da qui." },
-            ]}
-            emptyTitle="Nessun conto aperto"
-            emptyCopy="Serve almeno una spesa registrata. Appena la sezione sarà attiva, il saldo compare qui."
-          />
+        {!loading && view === "cashout" ? (
+          <CashoutPage profiles={profiles} viewerId={session?.user.id ?? ""} />
         ) : null}
 
       </main>
