@@ -5131,6 +5131,27 @@ function TournamentTrophyBadge({ kind, compact = false }: { kind: TournamentTrop
   );
 }
 
+function TournamentTrophyVisual({
+  tournament,
+  compact = false,
+}: {
+  tournament: Tournament;
+  compact?: boolean;
+}) {
+  return tournament.trophy_image_path ? (
+    <Image
+      className={`tournament-trophy-image${compact ? " is-compact" : ""}`}
+      src={`${basePath}/${tournament.trophy_image_path}`}
+      alt=""
+      width={compact ? 34 : 86}
+      height={compact ? 44 : 112}
+      sizes={compact ? "44px" : "(max-width: 780px) 72px, 86px"}
+    />
+  ) : (
+    <TournamentTrophyBadge kind={tournament.trophy_badge} compact={compact} />
+  );
+}
+
 // Riga di un torneo nel riquadro della home: stesso impianto della riga
 // partita, con le sole informazioni che servono a colpo d'occhio.
 function TournamentRow({
@@ -5173,18 +5194,7 @@ function TournamentRow({
       </div>
       <div className="match-main tournament-row-main">
         <div className="tournament-row-badge">
-          {tournament.trophy_image_path ? (
-            <Image
-              className="tournament-row-trophy-image"
-              src={`${basePath}/${tournament.trophy_image_path}`}
-              alt=""
-              width={34}
-              height={44}
-              sizes="44px"
-            />
-          ) : (
-            <TournamentTrophyBadge kind={tournament.trophy_badge} compact />
-          )}
+          <TournamentTrophyVisual tournament={tournament} compact />
         </div>
         <div className="tournament-row-text">
           <b>{tournament.name}</b>
@@ -5840,7 +5850,7 @@ function TournamentsPage({
           </div>
         </article>
         <article className="tournament-board-head">
-          <div className="tournament-prize-card"><TournamentTrophyBadge kind={detailTournament.trophy_badge} /><span><small>{completed ? "TROFEO ASSEGNATO" : "TROFEO IN PALIO"}</small><b>{detailTournament.trophy_name}</b></span></div>
+          <div className="tournament-prize-card"><TournamentTrophyVisual tournament={detailTournament} /><span><small>{completed ? "TROFEO ASSEGNATO" : "TROFEO IN PALIO"}</small><b>{detailTournament.trophy_name}</b></span></div>
           <div className="tournament-title-card"><p className="eyebrow dark">FORMULA</p><h2>Girone all’italiana</h2><span>{tournamentFormatLabel(detailTournament)}</span></div>
         </article>
         <div className="tournament-layout">
@@ -5876,7 +5886,7 @@ function TournamentsPage({
                 return (
                   <article className="tournament-live-card" key={tournament.id}>
                     <div className="tournament-board-head">
-                      <div className="tournament-prize-card"><TournamentTrophyBadge kind={tournament.trophy_badge} /><span><small>TROFEO IN PALIO</small><b>{tournament.trophy_name}</b></span></div>
+                      <div className="tournament-prize-card"><TournamentTrophyVisual tournament={tournament} /><span><small>TROFEO IN PALIO</small><b>{tournament.trophy_name}</b></span></div>
                       <div className="tournament-title-card">
                         <p className="eyebrow dark">TORNEO IN CORSO</p><h2>{tournament.name}</h2><span>{playedMatches}/{tournament.fixtures.length} partite · Elo ×{tournament.elo_multiplier} · {tournamentFormatLabel(tournament).toLowerCase()}</span>
                         <span className="tournament-progress" aria-label={`${progress}% completato`}><i style={{ width: `${progress}%` }} /></span>
@@ -5917,7 +5927,7 @@ function TournamentsPage({
                   return (
                     <article className="tournament-recent-card" key={tournament.id}>
                       <div className="tournament-recent-head">
-                        <TournamentTrophyBadge kind={tournament.trophy_badge} compact />
+                        <TournamentTrophyVisual tournament={tournament} compact />
                         <div><p className="eyebrow dark">COMPLETATO</p><h3>{tournament.name}</h3><span>{tournament.fixtures.length} partite · Elo ×{tournament.elo_multiplier}</span></div>
                         <div className="tournament-winner"><small>VINCITORI</small><b>{winner?.team.name ?? "—"}</b></div>
                       </div>
@@ -6799,7 +6809,7 @@ function AppShell({ session }: { session: Session | null }) {
           setShowMatch(true);
         }}
       >
-        + PLAY
+        Nuovo match
       </button>
     ) : (
       <button
@@ -7589,7 +7599,7 @@ function AppShell({ session }: { session: Session | null }) {
                 <div className="section-head">
                   <div className="section-head-label"><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
                   <div className="court-actions">
-                    <button className="button button-primary cta-new-match cta-aurora" onClick={() => setShowMatch(true)}>+ PLAY</button>
+                    <button className="button button-primary cta-new-match cta-aurora" onClick={() => setShowMatch(true)}>Nuovo match</button>
                     {/* Il tabellone dei campi liberi. Sta accanto a "nuova
                         partita" perche e la domanda che viene prima: dove si
                         gioca stasera si guarda, poi si registra. */}
