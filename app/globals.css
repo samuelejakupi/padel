@@ -205,6 +205,13 @@ button {
   width: 44px;
 }
 
+.tournament-row-trophy-image {
+  filter: drop-shadow(0 4px 4px rgba(11, 27, 44, 0.16));
+  height: 44px;
+  object-fit: contain;
+  width: 34px;
+}
+
 .tournament-row-text {
   display: flex;
   flex-direction: column;
@@ -1240,23 +1247,6 @@ form select:focus {
   font-size: 14px;
   line-height: 1.5;
   margin: 0;
-}
-
-/* Scorciatoia in fondo alle votazioni: larga quanto la colonna, cosi non
-   sembra un tasto perso a meta pagina. Sta dentro il blocco scuro, quindi si
-   veste come il tasto Info li sopra e non come i tasti su fondo chiaro. */
-.pizza-see-ranking {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: var(--white);
-  justify-content: center;
-  width: 100%;
-}
-
-@media (hover: hover) {
-  .pizza-see-ranking:hover {
-    background: rgba(255, 255, 255, 0.16);
-  }
 }
 
 /* Quando non c'e nessuna votazione aperta la pagina resterebbe un titolo e
@@ -3669,10 +3659,6 @@ button.podium-person {
 .ranking-mode-tabs .nav-glyph {
   height: 18px;
   width: 18px;
-}
-
-.ranking-page-vote {
-  margin-top: var(--space-5);
 }
 
 /* Tornei: stessa grammatica carta/inchiostro della scheda giocatore, con il
@@ -8539,6 +8525,11 @@ button.pizza-ranking-row {
     width: 40px;
   }
 
+  .tournament-row-trophy-image {
+    height: 40px;
+    width: 31px;
+  }
+
   .tournament-row-text b {
     font-size: 13px;
   }
@@ -9866,243 +9857,6 @@ button.pizza-ranking-row {
        dove tutti gli altri stacchi ne fanno dieci. Vale per qualsiasi cosa si
        aggiunga a questa colonna: e `.dashboard-grid` a spaziare i figli. */
     margin: 0;
-  }
-}
-
-/* ---------------------------------------------------------------------------
-   I titoli votati dal gruppo
-   ---------------------------------------------------------------------------
-   Si arriva qui dal fondo del foglio della classifica: si finisce di leggere
-   chi va forte e si passa a dire chi e cosa. Il foglio e lungo per forza —
-   otto titoli con dentro tutto il roster — quindi ogni titolo e una card sua,
-   con un confine visibile: scorrendo si deve sempre capire dove finisce una
-   domanda e dove comincia la successiva. */
-
-/* Il tasto in fondo alla classifica. Non e la copia mobile di niente — dentro
-   il foglio non c'e nessuna intestazione di sezione che sparisce sotto i
-   780px — quindi vive in una copia sola e si vede ovunque.
-
-   Resta appoggiato in fondo al foglio e la classifica gli scorre sotto: e la
-   conclusione della lettura, non l'ultima riga dell'elenco, e in fondo a otto
-   nomi diventava una scoperta invece che un invito. Lo stacco dal bordo di
-   sotto e lo stesso che il foglio tiene ai lati (--space-6), piu la tacca di
-   sistema dove c'e: `sticky` misura dal fondo dell'area che scorre, che qui
-   arriva al bordo dello schermo perche `.sheet` non ha padding in basso.
-
-   Il punto in cui smette di stare attaccato coincide con la sua posizione di
-   riposo — `.sheet-body` ha lo stesso `padding-bottom` — quindi alla fine
-   della corsa si appoggia senza saltare. */
-.cta-titoli {
-  /* Tinta piena e scura, non il velo del tasto fantasma. Tre motivi in uno:
-     il velo e trasparente e la classifica ci si leggeva attraverso mentre
-     scorre sotto; su fondo carta si distingueva appena; e serviva un'ombra
-     per staccarlo, che qui non si puo avere perche `.sheet-body` taglia a
-     dieci pixel dai lati e l'ombra usciva mozzata. Il contrasto fa da solo
-     il lavoro che l'ombra faceva male. */
-  background: var(--ink);
-  border-radius: var(--radius-pill);
-  color: var(--white);
-}
-
-@media (hover: hover) {
-  .cta-titoli:hover {
-    background: var(--ink-soft);
-  }
-}
-
-
-.titoli-sheet {
-  display: flex;
-  flex-direction: column;
-}
-
-
-/* Un titolo non e una scheda: e una voce di elenco, come le righe della
-   classifica sopra cui sta. Otto riquadri bianchi impilati facevano sembrare
-   il foglio un modulo da compilare; una riga di separazione basta a dire dove
-   finisce una domanda e comincia la successiva. */
-.titolo-card {
-  border-bottom: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-6) 0;
-}
-
-/* L'ultima riga non serve: sotto c'e gia il tasto, e la linea gli finiva
-   attaccata. */
-.titolo-card:last-child {
-  border-bottom: 0;
-}
-
-/* Nome a sinistra, stato a destra, sulla stessa mezzeria. */
-.titolo-head {
-  align-items: center;
-  display: flex;
-  gap: var(--space-3);
-  justify-content: space-between;
-}
-
-/* Quanti hanno votato, oppure che manchi tu. Stessa taglia delle etichette
-   piccole del resto dell'app. */
-.titolo-stato {
-  color: var(--muted);
-  flex: 0 0 auto;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-}
-
-/* Chiamata all'azione, non un dato: prende il colore che nell'app vuol dire
-   "tocca a te". */
-.titolo-stato-manca {
-  color: var(--blue-dark);
-  font-weight: 900;
-}
-
-/* Piu grande del nome, ma non tanto da alzare la riga che la contiene: e
-   la firma del titolo, non la sua insegna. */
-.titolo-emoji {
-  font-size: 16px;
-  line-height: 1;
-  margin-left: var(--space-2);
-  vertical-align: -2px;
-}
-
-/* La spiegazione del titolo. Non e un sottotitolo di servizio: senza, EGO e
-   CLUTCHER sono due parole inglesi e ognuno vota quello che ha capito. */
-.titolo-meaning {
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.5;
-  margin: calc(var(--space-4) * -1 + var(--space-1)) 0 0;
-}
-
-.titolo-head h3 {
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.6px;
-  margin: 0;
-  text-transform: uppercase;
-}
-
-
-/* Chi lo detiene. Sta sopra la scelta e non sotto: si vota sapendo come sta
-   andando, che e come funziona una votazione fra amici. Niente riquadro
-   attorno: dentro un elenco senza cornici sarebbe stata l'unica cosa incorniciata. */
-.titolo-holder {
-  align-items: center;
-  display: flex;
-  gap: var(--space-3);
-  min-height: 36px;
-}
-
-/* A pari voti le facce si accavallano invece di allargare la riga: due o tre
-   nomi contesi capitano spesso con otto votanti. */
-.titolo-holder-faces {
-  display: flex;
-}
-
-.titolo-holder-faces .avatar + .avatar {
-  margin-left: -10px;
-}
-
-.titolo-holder b {
-  font-size: 12px;
-  font-weight: 900;
-}
-
-/* Attaccato al nome, non spinto a destra: sopra c'e gia il totale allineato
-   a destra, e due numeri incolonnati li' facevano leggere il secondo come una
-   correzione del primo. Sono due cose diverse — quanti hanno votato e quanti
-   voti ha preso chi guida — e vicine al nome si capisce quale e quale. */
-.titolo-holder small {
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-}
-
-.titolo-holder-empty {
-  margin-left: 0;
-  text-transform: none;
-}
-
-.titolo-choices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.titolo-choice {
-  align-items: center;
-  background: var(--veil-2);
-  border: 0;
-  border-radius: var(--radius-pill);
-  color: var(--ink);
-  cursor: pointer;
-  display: inline-flex;
-  font-size: 12px;
-  font-weight: 900;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-4) var(--space-1) var(--space-1);
-  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
-}
-
-/* Nella pastiglia l'avatar sta stretto: 36px farebbero una riga alta come una
-   card. Il ritaglio e lo stesso, cambia solo la misura. */
-.titolo-choice .avatar-sm {
-  height: 24px;
-  width: 24px;
-}
-
-.titolo-choice:disabled {
-  cursor: progress;
-  opacity: 0.5;
-}
-
-.titolo-choice.is-chosen {
-  background: var(--ink);
-  color: var(--white);
-}
-
-
-
-@media (hover: hover) {
-  .titolo-choice:hover:not(:disabled):not(.is-chosen) {
-    background: var(--veil-3);
-    /* Ingrandisce, non si sposta: e la regola di STYLE.md, e qui conta il
-       doppio perche le pastiglie stanno in fila e un movimento farebbe
-       ballare le vicine. */
-    transform: scale(1.02);
-  }
-}
-
-@media (max-width: 780px) {
-  .titolo-card {
-    padding: var(--space-5) 0;
-  }
-
-  /* Su schermo stretto le pastiglie diventano due colonne piene invece di una
-     fila che va a capo dove capita: i nomi sono lunghi diversi e l'ultima riga
-     restava sempre monca. */
-  .titolo-choices {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .titolo-choice {
-    /* In griglia la pastiglia riempie la colonna, quindi il nome puo essere
-       piu lungo dello spazio: si taglia invece di allargare la cella. */
-    overflow: hidden;
-  }
-
-  .titolo-choice span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 }
 
