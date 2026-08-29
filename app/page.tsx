@@ -8360,8 +8360,7 @@ function AppShell({ session }: { session: Session | null }) {
 
             {openPizzaSessions.length ? null : (
               <p className="pizza-no-sessions">
-                Nessuna votazione aperta. Se ne apre una a fine serata, quando si sa
-                dove si è mangiato.
+                Nessuna votazione aperta.
               </p>
             )}
 
