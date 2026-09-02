@@ -10001,6 +10001,7 @@ button.pizza-ranking-row {
 
 .cashout-groups-section,
 .cashout-report,
+.cashout-settlement-report,
 .cashout-expenses {
   display: grid;
   gap: var(--space-5);
@@ -10054,7 +10055,8 @@ button.pizza-ranking-row {
 .cashout-group-card small,
 .cashout-summary-grid small,
 .cashout-paid-by > small,
-.cashout-debtors > small {
+.cashout-debtors > small,
+.cashout-settlement-history > small {
   color: var(--muted);
   font-size: 9px;
   font-weight: 900;
@@ -10204,6 +10206,86 @@ button.pizza-ranking-row {
   color: var(--danger);
 }
 
+.cashout-transfer-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.cashout-transfer-list article {
+  align-items: center;
+  background: var(--ink);
+  border-radius: var(--radius);
+  color: var(--white);
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  padding: var(--space-5);
+}
+
+.cashout-transfer-people {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.cashout-transfer-people .cashout-avatar {
+  border-color: rgba(255, 255, 255, 0.35);
+  height: 32px;
+  margin: 0;
+  width: 32px;
+}
+
+.cashout-transfer-people span {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.cashout-transfer-list article > strong {
+  color: var(--lime);
+  font-size: 22px;
+  white-space: nowrap;
+}
+
+.cashout-transfer-list .button {
+  min-height: 42px;
+}
+
+.cashout-all-settled {
+  background: rgba(22, 134, 100, 0.08);
+  border: 1px solid rgba(22, 134, 100, 0.25);
+  border-radius: var(--radius);
+  color: #168664;
+  font-size: 13px;
+  font-weight: 900;
+  margin: 0;
+  padding: var(--space-5);
+}
+
+.cashout-settlement-history {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-top: var(--space-4);
+}
+
+.cashout-settlement-history p {
+  align-items: center;
+  display: flex;
+  font-size: 12px;
+  gap: 4px;
+  margin: 0;
+}
+
+.cashout-settlement-history p > span {
+  color: #168664;
+  font-weight: 900;
+  margin-left: auto;
+}
+
 .cashout-expense-card {
   background: var(--white);
   border: 1px solid var(--line);
@@ -10347,6 +10429,25 @@ button.pizza-ranking-row {
   max-width: 820px;
 }
 
+.cashout-settlement-modal {
+  max-width: 720px;
+}
+
+.cashout-settlement-fields {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cashout-settlement-note {
+  background: var(--veil-1);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 12px;
+  margin: var(--space-4) 0 0;
+  padding: var(--space-4);
+}
+
 .cashout-main-fields {
   display: grid;
   gap: var(--space-3);
@@ -10487,6 +10588,7 @@ button.pizza-ranking-row {
   .cashout-group-grid,
   .cashout-summary-grid,
   .cashout-main-fields,
+  .cashout-settlement-fields,
   .cashout-member-picker > div,
   .cashout-payer-picker > div {
     grid-template-columns: 1fr;
@@ -10546,6 +10648,16 @@ button.pizza-ranking-row {
   .cashout-balance-list strong {
     grid-column: 2;
     justify-self: start;
+  }
+
+  .cashout-transfer-list article {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: var(--space-4);
+  }
+
+  .cashout-transfer-list .button {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 
   .cashout-expense-card {

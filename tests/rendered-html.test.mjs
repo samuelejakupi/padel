@@ -19,7 +19,7 @@ test("genera un sito statico pronto per GitHub Pages", async () => {
 });
 
 test("include configurazione Supabase e funzioni della webapp", async () => {
-  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, singleSetMigration, tournamentFormatMigration, tournamentPrizeMigration, tournamentDifferenceMigration, tournamentDrawMigration, trophyImageMigration, page, css] = await Promise.all([
+  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, singleSetMigration, tournamentFormatMigration, tournamentPrizeMigration, tournamentDifferenceMigration, tournamentDrawMigration, trophyImageMigration, cashoutMigration, page, cashoutPage, css] = await Promise.all([
     readFile(new URL("supabase/schema.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pizza-sessioni.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pareggi.sql", root), "utf8"),
@@ -30,7 +30,9 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
     readFile(new URL("supabase/migration-tornei-differenza-game.sql", root), "utf8"),
     readFile(new URL("supabase/migration-tornei-sorteggio.sql", root), "utf8"),
     readFile(new URL("supabase/migration-trofei-immagine.sql", root), "utf8"),
+    readFile(new URL("supabase/migration-cashout.sql", root), "utf8"),
     readFile(new URL("app/page.tsx", root), "utf8"),
+    readFile(new URL("app/Cashout.tsx", root), "utf8"),
     readFile(new URL("app/globals.css", root), "utf8"),
   ]);
   assert.match(schema, /record_match/);
@@ -115,6 +117,18 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(pizzaMigration, /name ilike '%spizza%'/);
   assert.doesNotMatch(page, /remainingLabel|closes_at|due ore per votare/i);
   assert.doesNotMatch(page, /Pizzium/i);
+
+  // Cashout compensa tutte le spese prima di proporre i pagamenti. Il saldo
+  // registrato deve conservare entrambi i lati del trasferimento e non deve
+  // più chiudere una quota della singola spesa.
+  assert.match(cashoutMigration, /create table if not exists public\.cashout_settlements/);
+  assert.match(cashoutMigration, /record_cashout_settlement/);
+  assert.match(cashoutMigration, /from_profile_id/);
+  assert.match(cashoutMigration, /to_profile_id/);
+  assert.match(cashoutPage, /function buildCashoutTransfers/);
+  assert.match(cashoutPage, /Chi deve pagare chi/);
+  assert.match(cashoutPage, /PER CONTO DI/);
+  assert.doesNotMatch(cashoutPage, /set_cashout_share_settled/);
 
   // Pareggio: un set a testa con il terzo lasciato a meta. Il set interrotto
   // non assegna il set ma i suoi giochi entrano nell'Elo, quindi le due cose

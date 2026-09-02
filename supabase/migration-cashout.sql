@@ -41,6 +41,19 @@ create table if not exists public.cashout_expense_shares (
   primary key (expense_id, profile_id)
 );
 
+-- I saldi sono movimenti del gruppo, non chiusure delle singole spese: in
+-- questo modo anticipi diversi si compensano prima di stabilire chi paga chi.
+create table if not exists public.cashout_settlements (
+  id uuid primary key default gen_random_uuid(),
+  group_id uuid not null references public.cashout_groups(id) on delete cascade,
+  from_profile_id uuid not null references public.profiles(id) on delete restrict,
+  to_profile_id uuid not null references public.profiles(id) on delete restrict,
+  amount numeric(12, 2) not null check (amount > 0),
+  created_by uuid not null references public.profiles(id) on delete restrict,
+  created_at timestamptz not null default now(),
+  check (from_profile_id <> to_profile_id)
+);
+
 create index if not exists cashout_groups_created_at_idx
   on public.cashout_groups (created_at desc);
 create index if not exists cashout_group_members_profile_idx
@@ -51,12 +64,15 @@ create index if not exists cashout_expense_payers_profile_idx
   on public.cashout_expense_payers (profile_id, expense_id);
 create index if not exists cashout_expense_shares_profile_idx
   on public.cashout_expense_shares (profile_id, expense_id);
+create index if not exists cashout_settlements_group_idx
+  on public.cashout_settlements (group_id, created_at desc);
 
 alter table public.cashout_groups enable row level security;
 alter table public.cashout_group_members enable row level security;
 alter table public.cashout_expenses enable row level security;
 alter table public.cashout_expense_payers enable row level security;
 alter table public.cashout_expense_shares enable row level security;
+alter table public.cashout_settlements enable row level security;
 
 -- L'helper vive in uno schema non esposto alla Data API e controlla soltanto
 -- l'identità della sessione. Evita la ricorsione RLS della tabella membri.
@@ -116,16 +132,23 @@ using (exists (
     and (select private.is_cashout_group_member(expense.group_id))
 ));
 
+drop policy if exists "Membri leggono i saldi cashout" on public.cashout_settlements;
+create policy "Membri leggono i saldi cashout"
+on public.cashout_settlements for select to authenticated
+using ((select private.is_cashout_group_member(group_id)));
+
 revoke all on public.cashout_groups from anon, authenticated;
 revoke all on public.cashout_group_members from anon, authenticated;
 revoke all on public.cashout_expenses from anon, authenticated;
 revoke all on public.cashout_expense_payers from anon, authenticated;
 revoke all on public.cashout_expense_shares from anon, authenticated;
+revoke all on public.cashout_settlements from anon, authenticated;
 grant select on public.cashout_groups to authenticated;
 grant select on public.cashout_group_members to authenticated;
 grant select on public.cashout_expenses to authenticated;
 grant select on public.cashout_expense_payers to authenticated;
 grant select on public.cashout_expense_shares to authenticated;
+grant select on public.cashout_settlements to authenticated;
 
 create or replace function public.create_cashout_group(
   p_name text,
@@ -269,75 +292,86 @@ begin
     (base_share + case when ordinality <= remainder then 1 else 0 end)::numeric / 100
   from unnest(clean_participants) with ordinality participant(participant_id, ordinality);
 
-  -- Chi ha anticipato almeno la propria quota non ha alcun debito da saldare.
-  update public.cashout_expense_shares share
-  set settled_at = now(), settled_by = current_user_id
-  where share.expense_id = new_expense_id
-    and share.amount <= coalesce((
-      select payer.amount from public.cashout_expense_payers payer
-      where payer.expense_id = new_expense_id and payer.profile_id = share.profile_id
-    ), 0);
-
-  update public.cashout_expenses expense
-  set closed_at = now()
-  where expense.id = new_expense_id
-    and not exists (
-      select 1 from public.cashout_expense_shares share
-      where share.expense_id = new_expense_id and share.settled_at is null
-    );
-
   return new_expense_id;
 end;
 $$;
 
-create or replace function public.set_cashout_share_settled(
-  p_expense_id uuid,
-  p_profile_id uuid,
-  p_settled boolean
+-- La vecchia chiusura per quota non può esprimere il destinatario del denaro
+-- e impedisce la compensazione tra spese: la rimuoviamo quando si rilancia la
+-- migrazione su un progetto esistente.
+drop function if exists public.set_cashout_share_settled(uuid, uuid, boolean);
+
+create or replace function public.record_cashout_settlement(
+  p_group_id uuid,
+  p_from_profile_id uuid,
+  p_to_profile_id uuid,
+  p_amount numeric
 )
-returns void
+returns uuid
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
 declare
   current_user_id uuid := auth.uid();
-  expense_owner uuid;
-  share_amount numeric;
-  paid_amount numeric;
+  amount_cents bigint;
+  from_balance numeric;
+  to_balance numeric;
+  new_settlement_id uuid;
 begin
-  select created_by into expense_owner from public.cashout_expenses where id = p_expense_id;
-  if current_user_id is null or expense_owner is distinct from current_user_id then
-    raise exception 'Solo chi ha creato la spesa può aggiornare i saldi';
+  if current_user_id is null then raise exception 'Devi accedere per registrare un saldo'; end if;
+
+  -- Serializza i pagamenti del gruppo: due conferme contemporanee non possono
+  -- entrambe usare lo stesso debito residuo.
+  perform 1 from public.cashout_groups where id = p_group_id for update;
+  if not found then raise exception 'Gruppo non trovato'; end if;
+  if not exists (
+    select 1 from public.cashout_group_members
+    where group_id = p_group_id and profile_id = current_user_id
+  ) then raise exception 'Non partecipi a questo gruppo'; end if;
+  if p_from_profile_id = p_to_profile_id then raise exception 'Pagatore e destinatario devono essere diversi'; end if;
+  if not exists (
+    select 1 from public.cashout_group_members
+    where group_id = p_group_id and profile_id = p_from_profile_id
+  ) or not exists (
+    select 1 from public.cashout_group_members
+    where group_id = p_group_id and profile_id = p_to_profile_id
+  ) then raise exception 'Pagatore e destinatario devono appartenere al gruppo'; end if;
+
+  if p_amount is null then raise exception 'Inserisci un importo valido'; end if;
+  amount_cents := round(p_amount * 100)::bigint;
+  if amount_cents <= 0 then raise exception 'Inserisci un importo valido'; end if;
+
+  select
+    coalesce((select sum(payer.amount) from public.cashout_expense_payers payer join public.cashout_expenses expense on expense.id = payer.expense_id where expense.group_id = p_group_id and payer.profile_id = p_from_profile_id), 0)
+    - coalesce((select sum(share.amount) from public.cashout_expense_shares share join public.cashout_expenses expense on expense.id = share.expense_id where expense.group_id = p_group_id and share.profile_id = p_from_profile_id), 0)
+    + coalesce((select sum(amount) from public.cashout_settlements where group_id = p_group_id and from_profile_id = p_from_profile_id), 0)
+    - coalesce((select sum(amount) from public.cashout_settlements where group_id = p_group_id and to_profile_id = p_from_profile_id), 0)
+  into from_balance;
+
+  select
+    coalesce((select sum(payer.amount) from public.cashout_expense_payers payer join public.cashout_expenses expense on expense.id = payer.expense_id where expense.group_id = p_group_id and payer.profile_id = p_to_profile_id), 0)
+    - coalesce((select sum(share.amount) from public.cashout_expense_shares share join public.cashout_expenses expense on expense.id = share.expense_id where expense.group_id = p_group_id and share.profile_id = p_to_profile_id), 0)
+    + coalesce((select sum(amount) from public.cashout_settlements where group_id = p_group_id and from_profile_id = p_to_profile_id), 0)
+    - coalesce((select sum(amount) from public.cashout_settlements where group_id = p_group_id and to_profile_id = p_to_profile_id), 0)
+  into to_balance;
+
+  if from_balance >= 0 then raise exception 'Chi paga non ha un debito nel saldo attuale'; end if;
+  if to_balance <= 0 then raise exception 'Il destinatario non ha un credito nel saldo attuale'; end if;
+  if amount_cents > round(least(-from_balance, to_balance) * 100)::bigint then
+    raise exception 'L’importo supera il debito o il credito disponibile';
   end if;
 
-  select amount into share_amount from public.cashout_expense_shares
-  where expense_id = p_expense_id and profile_id = p_profile_id;
-  if share_amount is null then raise exception 'Quota non trovata'; end if;
-  select coalesce(sum(amount), 0) into paid_amount from public.cashout_expense_payers
-  where expense_id = p_expense_id and profile_id = p_profile_id;
-  if share_amount <= paid_amount and not p_settled then
-    raise exception 'Questa persona non ha un debito sulla spesa';
-  end if;
-
-  update public.cashout_expense_shares
-  set settled_at = case when p_settled then now() else null end,
-      settled_by = case when p_settled then current_user_id else null end
-  where expense_id = p_expense_id and profile_id = p_profile_id;
-
-  update public.cashout_expenses expense
-  set closed_at = case
-    when exists (
-      select 1 from public.cashout_expense_shares share
-      where share.expense_id = p_expense_id and share.settled_at is null
-    ) then null else coalesce(expense.closed_at, now()) end
-  where expense.id = p_expense_id;
+  insert into public.cashout_settlements (group_id, from_profile_id, to_profile_id, amount, created_by)
+  values (p_group_id, p_from_profile_id, p_to_profile_id, amount_cents::numeric / 100, current_user_id)
+  returning id into new_settlement_id;
+  return new_settlement_id;
 end;
 $$;
 
 revoke all on function public.create_cashout_group(text, uuid[]) from public, anon;
 revoke all on function public.create_cashout_expense(uuid, text, numeric, jsonb, uuid[]) from public, anon;
-revoke all on function public.set_cashout_share_settled(uuid, uuid, boolean) from public, anon;
+revoke all on function public.record_cashout_settlement(uuid, uuid, uuid, numeric) from public, anon;
 grant execute on function public.create_cashout_group(text, uuid[]) to authenticated;
 grant execute on function public.create_cashout_expense(uuid, text, numeric, jsonb, uuid[]) to authenticated;
-grant execute on function public.set_cashout_share_settled(uuid, uuid, boolean) to authenticated;
+grant execute on function public.record_cashout_settlement(uuid, uuid, uuid, numeric) to authenticated;

@@ -9,8 +9,15 @@ type CashoutShare = {
   expense_id: string;
   profile_id: string;
   amount: number;
-  settled_at: string | null;
-  settled_by: string | null;
+};
+type CashoutSettlement = {
+  id: string;
+  group_id: string;
+  from_profile_id: string;
+  to_profile_id: string;
+  amount: number;
+  created_by: string;
+  created_at: string;
 };
 type CashoutExpense = {
   id: string;
@@ -19,7 +26,6 @@ type CashoutExpense = {
   amount: number;
   created_by: string;
   created_at: string;
-  closed_at: string | null;
   payers: CashoutPayer[];
   shares: CashoutShare[];
 };
@@ -30,13 +36,14 @@ type CashoutGroup = {
   created_at: string;
   members: CashoutMember[];
   expenses: CashoutExpense[];
+  settlements: CashoutSettlement[];
 };
 
 async function fetchCashoutGroups() {
   if (!supabase) return { groups: [] as CashoutGroup[], schemaReady: false };
   const { data, error } = await supabase
     .from("cashout_groups")
-    .select("id, name, created_by, created_at, members:cashout_group_members(group_id, profile_id, joined_at), expenses:cashout_expenses(id, group_id, description, amount, created_by, created_at, closed_at, payers:cashout_expense_payers(expense_id, profile_id, amount), shares:cashout_expense_shares(expense_id, profile_id, amount, settled_at, settled_by))")
+    .select("id, name, created_by, created_at, members:cashout_group_members(group_id, profile_id, joined_at), expenses:cashout_expenses(id, group_id, description, amount, created_by, created_at, payers:cashout_expense_payers(expense_id, profile_id, amount), shares:cashout_expense_shares(expense_id, profile_id, amount)), settlements:cashout_settlements(id, group_id, from_profile_id, to_profile_id, amount, created_by, created_at)")
     .order("created_at", { ascending: false });
   if (error) return { groups: [] as CashoutGroup[], schemaReady: false };
   const groups = ((data ?? []) as unknown as CashoutGroup[]).map((group) => ({
@@ -48,6 +55,9 @@ async function fetchCashoutGroups() {
         payers: (expense.payers ?? []).map((payer) => ({ ...payer, amount: Number(payer.amount) })),
         shares: (expense.shares ?? []).map((share) => ({ ...share, amount: Number(share.amount) })),
       }))
+      .sort((a, b) => b.created_at.localeCompare(a.created_at)),
+    settlements: [...(group.settlements ?? [])]
+      .map((settlement) => ({ ...settlement, amount: Number(settlement.amount) }))
       .sort((a, b) => b.created_at.localeCompare(a.created_at)),
   }));
   return { groups, schemaReady: true };
@@ -62,9 +72,32 @@ const paidBy = (expense: CashoutExpense, profileId: string) => (
 const shareOf = (expense: CashoutExpense, profileId: string) => (
   expense.shares.find((share) => share.profile_id === profileId)?.amount ?? 0
 );
-const debtOf = (expense: CashoutExpense, profileId: string) => (
-  Math.max(0, shareOf(expense, profileId) - paidBy(expense, profileId))
-);
+type CashoutBalance = { profile: Profile; balance: number };
+type CashoutTransfer = { fromId: string; toId: string; amount: number };
+
+function buildCashoutTransfers(balances: CashoutBalance[]): CashoutTransfer[] {
+  const debtors = balances
+    .map(({ profile, balance }) => ({ id: profile.id, cents: Math.max(0, -Math.round(balance * 100)) }))
+    .filter((item) => item.cents > 0);
+  const creditors = balances
+    .map(({ profile, balance }) => ({ id: profile.id, cents: Math.max(0, Math.round(balance * 100)) }))
+    .filter((item) => item.cents > 0);
+  const transfers: CashoutTransfer[] = [];
+  let debtorIndex = 0;
+  let creditorIndex = 0;
+
+  while (debtorIndex < debtors.length && creditorIndex < creditors.length) {
+    const debtor = debtors[debtorIndex];
+    const creditor = creditors[creditorIndex];
+    const cents = Math.min(debtor.cents, creditor.cents);
+    if (cents > 0) transfers.push({ fromId: debtor.id, toId: creditor.id, amount: cents / 100 });
+    debtor.cents -= cents;
+    creditor.cents -= cents;
+    if (debtor.cents === 0) debtorIndex += 1;
+    if (creditor.cents === 0) creditorIndex += 1;
+  }
+  return transfers;
+}
 
 function CashoutAvatar({ profile }: { profile?: Profile }) {
   const initials = (profile?.display_name ?? "?")
@@ -294,35 +327,95 @@ function CashoutExpenseModal({
   );
 }
 
-function CashoutGroupDetail({
+function CashoutSettlementModal({
   group,
   profiles,
-  viewerId,
-  busyShare,
-  onBack,
-  onNewExpense,
-  onToggleSettled,
+  transfer,
+  onClose,
+  onCreated,
 }: {
   group: CashoutGroup;
   profiles: Profile[];
-  viewerId: string;
-  busyShare: string | null;
+  transfer: CashoutTransfer;
+  onClose: () => void;
+  onCreated: () => Promise<void>;
+}) {
+  const memberProfiles = profiles.filter((profile) => group.members.some((member) => member.profile_id === profile.id));
+  const [fromId, setFromId] = useState(transfer.fromId);
+  const [toId, setToId] = useState(transfer.toId);
+  const [amount, setAmount] = useState(transfer.amount.toFixed(2));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!supabase) return;
+    const numeric = numericAmount(amount);
+    if (fromId === toId) return setError("Pagatore e destinatario devono essere persone diverse.");
+    if (!Number.isFinite(numeric) || numeric <= 0) return setError("Inserisci un importo valido.");
+    setBusy(true);
+    setError("");
+    const { error: saveError } = await supabase.rpc("record_cashout_settlement", {
+      p_group_id: group.id,
+      p_from_profile_id: fromId,
+      p_to_profile_id: toId,
+      p_amount: numeric,
+    });
+    setBusy(false);
+    if (saveError) return setError(saveError.message);
+    await onCreated();
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section className="modal cashout-modal cashout-settlement-modal" role="dialog" aria-modal="true" aria-labelledby="cashout-settlement-title">
+        <div className="modal-head">
+          <div><p className="eyebrow dark">REGISTRA SALDO</p><h2 id="cashout-settlement-title">Chi ha pagato chi?</h2></div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="Chiudi">×</button>
+        </div>
+        <form onSubmit={submit}>
+          <div className="cashout-settlement-fields">
+            <label>Chi ha saldato<select value={fromId} onChange={(event) => setFromId(event.target.value)}>{memberProfiles.map((profile) => <option value={profile.id} key={profile.id}>{profile.display_name}</option>)}</select></label>
+            <label>Verso chi<select value={toId} onChange={(event) => setToId(event.target.value)}>{memberProfiles.map((profile) => <option value={profile.id} key={profile.id}>{profile.display_name}</option>)}</select></label>
+            <label>Importo (€)<input type="number" min="0.01" step="0.01" inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
+          </div>
+          <p className="cashout-settlement-note">Il pagamento aggiorna il saldo complessivo del gruppo, non una singola spesa.</p>
+          {error ? <p className="form-message error">{error}</p> : null}
+          <div className="modal-actions">
+            <button className="button button-ghost" type="button" onClick={onClose}>Annulla</button>
+            <button className="button button-primary" disabled={busy}>{busy ? "Registrazione…" : "Conferma saldo"}</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+function CashoutGroupDetail({
+  group,
+  profiles,
+  onBack,
+  onNewExpense,
+  onSettle,
+}: {
+  group: CashoutGroup;
+  profiles: Profile[];
   onBack: () => void;
   onNewExpense: () => void;
-  onToggleSettled: (expenseId: string, profileId: string, settled: boolean) => Promise<void>;
+  onSettle: (transfer: CashoutTransfer) => void;
 }) {
   const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
   const memberProfiles = group.members.map((member) => profileMap.get(member.profile_id)).filter(Boolean) as Profile[];
   const total = group.expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
-  const openAmount = group.expenses.reduce((sum, expense) => sum + expense.shares.reduce((expenseSum, share) => (
-    expenseSum + (!share.settled_at ? debtOf(expense, share.profile_id) : 0)
-  ), 0), 0);
-  const closedCount = group.expenses.filter((expense) => expense.closed_at).length;
   const balances = memberProfiles.map((profile) => {
     const paid = group.expenses.reduce((sum, expense) => sum + paidBy(expense, profile.id), 0);
     const share = group.expenses.reduce((sum, expense) => sum + shareOf(expense, profile.id), 0);
-    return { profile, paid, share, balance: paid - share };
+    const sent = group.settlements.reduce((sum, settlement) => sum + (settlement.from_profile_id === profile.id ? settlement.amount : 0), 0);
+    const received = group.settlements.reduce((sum, settlement) => sum + (settlement.to_profile_id === profile.id ? settlement.amount : 0), 0);
+    return { profile, balance: paid - share + sent - received };
   });
+  const transfers = buildCashoutTransfers(balances);
+  const openAmount = transfers.reduce((sum, transfer) => sum + transfer.amount, 0);
 
   return (
     <section className="page-section cashout-page cashout-detail-page">
@@ -339,20 +432,32 @@ function CashoutGroupDetail({
       <div className="cashout-summary-grid">
         <article><small>TOTALE SPESO</small><b>{formatMoney(total)}</b></article>
         <article><small>DA SALDARE</small><b>{formatMoney(openAmount)}</b></article>
-        <article><small>SPESE CHIUSE</small><b>{closedCount}/{group.expenses.length}</b></article>
+        <article><small>SALDI REGISTRATI</small><b>{group.settlements.length}</b></article>
       </div>
 
       <section className="cashout-report">
         <div className="section-head"><div className="section-head-label"><p className="eyebrow dark">RESOCONTO</p><h2>Situazione del gruppo</h2></div></div>
         <div className="cashout-balance-list">
-          {balances.map(({ profile, paid, share, balance }) => (
+          {balances.map(({ profile, balance }) => (
             <article key={profile.id}>
               <CashoutAvatar profile={profile} />
-              <div><b>{profile.display_name}</b><span>Pagato {formatMoney(paid)} · Quota {formatMoney(share)}</span></div>
+              <div><b>{profile.display_name}</b><span>{balance > 0.005 ? `Deve ricevere ${formatMoney(balance)}` : balance < -0.005 ? `Deve pagare ${formatMoney(balance)}` : "In pari"}</span></div>
               <strong className={balance > 0.005 ? "is-credit" : balance < -0.005 ? "is-debt" : ""}>{balance > 0.005 ? "+" : balance < -0.005 ? "−" : ""}{formatMoney(balance)}</strong>
             </article>
           ))}
         </div>
+      </section>
+
+      <section className="cashout-settlement-report">
+        <div className="section-head"><div className="section-head-label"><p className="eyebrow dark">SALDI</p><h2>Chi deve pagare chi</h2></div><span>{transfers.length}</span></div>
+        {transfers.length ? <div className="cashout-transfer-list">{transfers.map((transfer) => (
+          <article key={`${transfer.fromId}:${transfer.toId}`}>
+            <div className="cashout-transfer-people"><CashoutAvatar profile={profileMap.get(transfer.fromId)} /><b>{profileMap.get(transfer.fromId)?.display_name}</b><span>deve</span><CashoutAvatar profile={profileMap.get(transfer.toId)} /><b>{profileMap.get(transfer.toId)?.display_name}</b></div>
+            <strong>{formatMoney(transfer.amount)}</strong>
+            <button className="button button-primary" type="button" onClick={() => onSettle(transfer)}>Segna saldato</button>
+          </article>
+        ))}</div> : <p className="cashout-all-settled">Tutti i conti del gruppo sono in pari.</p>}
+        {group.settlements.length ? <div className="cashout-settlement-history"><small>PAGAMENTI REGISTRATI</small>{group.settlements.map((settlement) => <p key={settlement.id}><b>{profileMap.get(settlement.from_profile_id)?.display_name}</b> ha pagato <b>{profileMap.get(settlement.to_profile_id)?.display_name}</b><span>{formatMoney(settlement.amount)}</span></p>)}</div> : null}
       </section>
 
       <section className="cashout-expenses">
@@ -360,40 +465,20 @@ function CashoutGroupDetail({
         {group.expenses.length ? (
           <div className="cashout-expense-list">
             {group.expenses.map((expense) => {
-              const debtors = expense.shares.filter((share) => debtOf(expense, share.profile_id) > 0.005);
-              const canSettle = expense.created_by === viewerId;
               return (
-                <article className={`cashout-expense-card${expense.closed_at ? " is-closed" : ""}`} key={expense.id}>
+                <article className="cashout-expense-card" key={expense.id}>
                   <header>
-                    <div><span className="cashout-expense-state">{expense.closed_at ? "SALDATA" : "APERTA"}</span><h3>{expense.description}</h3><small>{new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(expense.created_at))} · inserita da {profileMap.get(expense.created_by)?.display_name ?? "—"}</small></div>
+                    <div><span className="cashout-expense-state">SPESA</span><h3>{expense.description}</h3><small>{new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(expense.created_at))} · inserita da {profileMap.get(expense.created_by)?.display_name ?? "—"}</small></div>
                     <b>{formatMoney(expense.amount)}</b>
                   </header>
                   <div className="cashout-paid-by">
-                    <small>PAGATO DA</small>
+                    <small>ANTICIPATO DA</small>
                     {expense.payers.map((payer) => <span key={payer.profile_id}><CashoutAvatar profile={profileMap.get(payer.profile_id)} />{profileMap.get(payer.profile_id)?.display_name} <b>{formatMoney(payer.amount)}</b></span>)}
                   </div>
-                  {debtors.length ? (
-                    <div className="cashout-debtors">
-                      <small>CHI DEVE SALDARE</small>
-                      {debtors.map((share) => {
-                        const settled = Boolean(share.settled_at);
-                        const key = `${expense.id}:${share.profile_id}`;
-                        return (
-                          <button
-                            className={settled ? "is-settled" : ""}
-                            type="button"
-                            disabled={!canSettle || busyShare === key}
-                            onClick={() => onToggleSettled(expense.id, share.profile_id, !settled)}
-                            title={canSettle ? "Aggiorna il saldo" : "Può aggiornarlo chi ha creato la spesa"}
-                            key={share.profile_id}
-                          >
-                            <i aria-hidden="true">{settled ? "✓" : ""}</i>
-                            <span>{profileMap.get(share.profile_id)?.display_name}<small>{formatMoney(debtOf(expense, share.profile_id))}</small></span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : <p className="cashout-no-debt">Nessun debito su questa spesa.</p>}
+                  <div className="cashout-paid-by cashout-charged-to">
+                    <small>PER CONTO DI</small>
+                    {expense.shares.map((share) => <span key={share.profile_id}><CashoutAvatar profile={profileMap.get(share.profile_id)} />{profileMap.get(share.profile_id)?.display_name} <b>{formatMoney(share.amount)}</b></span>)}
+                  </div>
                 </article>
               );
             })}
@@ -411,7 +496,7 @@ export default function CashoutPage({ profiles, viewerId }: { profiles: Profile[
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showGroupCreate, setShowGroupCreate] = useState(false);
   const [showExpenseCreate, setShowExpenseCreate] = useState(false);
-  const [busyShare, setBusyShare] = useState<string | null>(null);
+  const [settlementTransfer, setSettlementTransfer] = useState<CashoutTransfer | null>(null);
   const [notice, setNotice] = useState("");
 
   const loadGroups = useCallback(async () => {
@@ -433,25 +518,12 @@ export default function CashoutPage({ profiles, viewerId }: { profiles: Profile[
   }, []);
   const selectedGroup = useMemo(() => groups.find((group) => group.id === selectedId) ?? null, [groups, selectedId]);
 
-  async function toggleSettled(expenseId: string, profileId: string, settled: boolean) {
-    if (!supabase) return;
-    const key = `${expenseId}:${profileId}`;
-    setBusyShare(key);
-    const { error } = await supabase.rpc("set_cashout_share_settled", {
-      p_expense_id: expenseId,
-      p_profile_id: profileId,
-      p_settled: settled,
-    });
-    setBusyShare(null);
-    if (error) return setNotice(error.message);
-    await loadGroups();
-  }
-
   if (selectedGroup) return (
     <>
       {notice ? <button className="notice" onClick={() => setNotice("")}>{notice}<span>×</span></button> : null}
-      <CashoutGroupDetail group={selectedGroup} profiles={profiles} viewerId={viewerId} busyShare={busyShare} onBack={() => setSelectedId(null)} onNewExpense={() => setShowExpenseCreate(true)} onToggleSettled={toggleSettled} />
+      <CashoutGroupDetail group={selectedGroup} profiles={profiles} onBack={() => setSelectedId(null)} onNewExpense={() => setShowExpenseCreate(true)} onSettle={setSettlementTransfer} />
       {showExpenseCreate ? <CashoutExpenseModal group={selectedGroup} profiles={profiles} viewerId={viewerId} onClose={() => setShowExpenseCreate(false)} onCreated={async () => { setShowExpenseCreate(false); await loadGroups(); }} /> : null}
+      {settlementTransfer ? <CashoutSettlementModal group={selectedGroup} profiles={profiles} transfer={settlementTransfer} onClose={() => setSettlementTransfer(null)} onCreated={async () => { setSettlementTransfer(null); await loadGroups(); }} /> : null}
     </>
   );
 
@@ -471,11 +543,16 @@ export default function CashoutPage({ profiles, viewerId }: { profiles: Profile[
             <div className="cashout-group-grid">
               {groups.map((group) => {
                 const total = group.expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
-                const open = group.expenses.filter((expense) => !expense.closed_at).length;
+                const rawBalances = group.members.map((member) => ({
+                  profile: profiles.find((profile) => profile.id === member.profile_id),
+                  balance: group.expenses.reduce((sum, expense) => sum + paidBy(expense, member.profile_id) - shareOf(expense, member.profile_id), 0)
+                    + group.settlements.reduce((sum, settlement) => sum + (settlement.from_profile_id === member.profile_id ? settlement.amount : 0) - (settlement.to_profile_id === member.profile_id ? settlement.amount : 0), 0),
+                })).filter((item): item is CashoutBalance => Boolean(item.profile));
+                const open = buildCashoutTransfers(rawBalances).length;
                 return (
                   <button className="cashout-group-card" type="button" onClick={() => setSelectedId(group.id)} key={group.id}>
                     <span className="cashout-group-icon">€</span>
-                    <div><small>{open ? `${open} ${open === 1 ? "SPESA APERTA" : "SPESE APERTE"}` : "TUTTO SALDATO"}</small><h2>{group.name}</h2><span>{group.members.length} partecipanti · {group.expenses.length} spese</span></div>
+                    <div><small>{open ? `${open} ${open === 1 ? "SALDO APERTO" : "SALDI APERTI"}` : "TUTTO SALDATO"}</small><h2>{group.name}</h2><span>{group.members.length} partecipanti · {group.expenses.length} spese</span></div>
                     <b>{formatMoney(total)}</b>
                     <i aria-hidden="true">→</i>
                   </button>
