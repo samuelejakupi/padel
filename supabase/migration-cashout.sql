@@ -96,6 +96,15 @@ begin
 end;
 $$;
 
+-- La versione per-spesa rigenerava automaticamente obbligazioni dopo ogni
+-- inserimento nelle quote. Dopo il passaggio ai saldi globali quel trigger
+-- punterebbe alla nuova tabella e cercherebbe la vecchia colonna expense_id.
+drop trigger if exists create_cashout_settlements_after_shares
+  on public.cashout_expense_shares;
+drop function if exists private.create_cashout_settlements_after_shares();
+drop function if exists public.set_cashout_settlement_settled(uuid, boolean);
+drop function if exists private.rebuild_cashout_settlements(uuid);
+
 create index if not exists cashout_groups_created_at_idx
   on public.cashout_groups (created_at desc);
 create index if not exists cashout_group_members_profile_idx
