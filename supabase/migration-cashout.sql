@@ -41,6 +41,25 @@ create table if not exists public.cashout_expense_shares (
   primary key (expense_id, profile_id)
 );
 
+-- La prima versione di Cashout usava lo stesso nome per una tabella di
+-- obbligazioni legate alla singola spesa. La conserviamo integralmente e la
+-- separiamo dal nuovo registro dei pagamenti di gruppo.
+do $$
+begin
+  if to_regclass('public.cashout_settlements') is not null
+    and not exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'cashout_settlements'
+        and column_name = 'group_id'
+    )
+    and to_regclass('public.cashout_expense_settlements_legacy') is null
+  then
+    alter table public.cashout_settlements rename to cashout_expense_settlements_legacy;
+  end if;
+end;
+$$;
+
 -- I saldi sono movimenti del gruppo, non chiusure delle singole spese: in
 -- questo modo anticipi diversi si compensano prima di stabilire chi paga chi.
 create table if not exists public.cashout_settlements (
@@ -53,6 +72,29 @@ create table if not exists public.cashout_settlements (
   created_at timestamptz not null default now(),
   check (from_profile_id <> to_profile_id)
 );
+
+-- Dalla tabella legacy diventano movimenti soltanto le righe effettivamente
+-- saldate. Quelle ancora aperte restano archiviate e saranno sostituite dal
+-- ricalcolo netto di tutte le spese.
+do $$
+begin
+  if to_regclass('public.cashout_expense_settlements_legacy') is not null then
+    insert into public.cashout_settlements (
+      id, group_id, from_profile_id, to_profile_id, amount, created_by, created_at
+    )
+    select legacy.id, expense.group_id, legacy.from_profile_id,
+      legacy.to_profile_id, legacy.amount,
+      coalesce(legacy.settled_by, expense.created_by),
+      coalesce(legacy.settled_at, legacy.created_at)
+    from public.cashout_expense_settlements_legacy legacy
+    join public.cashout_expenses expense on expense.id = legacy.expense_id
+    where legacy.settled_at is not null
+    on conflict (id) do nothing;
+
+    revoke all on public.cashout_expense_settlements_legacy from anon, authenticated;
+  end if;
+end;
+$$;
 
 create index if not exists cashout_groups_created_at_idx
   on public.cashout_groups (created_at desc);
