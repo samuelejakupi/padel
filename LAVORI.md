@@ -343,11 +343,13 @@ stesso torneo deve valere la stessa cosa oggi e fra sei mesi.
 ### Il saldo PayPal parte da Cashout, ma si conferma nell'app
 Ogni membro può salvare nel proprio profilo il nome del link PayPal.Me. Quando
 chi guarda Cashout è il debitore di un saldo e il creditore ha configurato il
-link, sulla riga compare “Paga con PayPal”: apre la pagina del creditore con
-l'importo già compilato. Il link viene costruito dall'app partendo dal solo
-nome utente, così nel database non entrano indirizzi arbitrari. La valuta non
-va aggiunta al percorso: sul web `12.50EUR` funziona, ma l'app PayPal mobile
-perde l'importo; con `12.50` lo conserva e usa la valuta predefinita del conto.
+link, sulla riga compare “Paga con PayPal”: apre la pagina del creditore
+provando a compilare l'importo. Il link viene costruito dall'app partendo dal
+solo nome utente, così nel database non entrano indirizzi arbitrari. PayPal.Me
+documenta `/utente/12.50`, ma alcune versioni dell'app mobile intercettano il
+link e aprono soltanto il profilo. Non esiste un altro deep-link pubblico
+costruibile dal solo username: al tap Cashout copia anche `12,50` negli appunti
+e lo mostra sotto al pulsante, pronto da incollare se l'app scarta il valore.
 
 Il ritorno da PayPal non chiude automaticamente il saldo. PayPal.Me non manda
 all'app l'esito del pagamento, quindi “Segna saldato” resta un'azione distinta:

@@ -135,9 +135,14 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(cashoutPage, /paypalMeUrl/);
   assert.match(cashoutPage, /Paga con PayPal/);
   assert.match(cashoutPage, /transfer\.fromId === viewerId \? recipient\?\.paypal_me_username : null/);
-  // L'app mobile perde l'importo se il link PayPal.Me contiene il suffisso
-  // della valuta. Deve restare /utente/12.50, senza EUR nel percorso.
+  // PayPal.Me deve continuare a ricevere l'importo nel percorso. Siccome
+  // alcune versioni dell'app aprono comunque solo il profilo, il tap copia
+  // anche il valore negli appunti come fallback pronto da incollare.
   assert.doesNotMatch(cashoutPage, /amount\.toFixed\(2\)\}EUR/);
+  assert.match(cashoutPage, /function copyPayPalAmount/);
+  assert.match(cashoutPage, /navigator\.clipboard\?\.writeText/);
+  assert.match(cashoutPage, /onClick=\{\(\) => copyPayPalAmount\(transfer\.amount\)\}/);
+  assert.match(cashoutPage, /viene copiato quando tocchi il pulsante/);
   assert.doesNotMatch(cashoutPage, /set_cashout_share_settled/);
 
   // Pareggio: un set a testa con il terzo lasciato a meta. Il set interrotto

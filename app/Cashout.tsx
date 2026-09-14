@@ -66,12 +66,34 @@ async function fetchCashoutGroups() {
 const euro = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
 const formatMoney = (value: number) => euro.format(Math.abs(value));
 const numericAmount = (value: string) => Math.round(Number(value.replace(",", ".")) * 100) / 100;
-// L'app PayPal mobile perde l'importo quando il percorso contiene anche il
-// codice valuta (es. 12.50EUR). Senza suffisso conserva l'importo e usa la
-// valuta predefinita del conto del destinatario.
+// PayPal.Me documenta l'importo nel percorso, ma alcune versioni dell'app
+// mobile aprono soltanto il profilo. Il tap copia quindi anche l'importo: il
+// percorso resta utile sul web e il valore è pronto da incollare nell'app.
 const paypalMeUrl = (username: string, amount: number) => (
   `https://www.paypal.me/${username}/${amount.toFixed(2)}`
 );
+const paypalClipboardAmount = (amount: number) => amount.toFixed(2).replace(".", ",");
+
+function copyPayPalAmount(amount: number) {
+  const value = paypalClipboardAmount(amount);
+
+  // Il fallback sincrono parte nello stesso gesto del tap ed è ancora utile
+  // nelle web app iOS dove Clipboard API può non essere disponibile.
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  textarea.setSelectionRange(0, value.length);
+  document.execCommand("copy");
+  textarea.remove();
+
+  if (navigator.clipboard?.writeText) {
+    void navigator.clipboard.writeText(value).catch(() => undefined);
+  }
+}
 const paidBy = (expense: CashoutExpense, profileId: string) => (
   expense.payers.find((payer) => payer.profile_id === profileId)?.amount ?? 0
 );
@@ -473,6 +495,7 @@ function CashoutGroupDetail({
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Paga ${formatMoney(transfer.amount)} a ${recipient?.display_name} con PayPal`}
+                    onClick={() => copyPayPalAmount(transfer.amount)}
                   >
                     <span className="cashout-paypal-mark" aria-hidden="true"><i>P</i><i>P</i></span>
                     Paga con PayPal
@@ -480,6 +503,7 @@ function CashoutGroupDetail({
                 ) : null}
                 <button className="button button-primary" type="button" onClick={() => onSettle(transfer)}>Segna saldato</button>
               </div>
+              {paypalUsername ? <small className="cashout-paypal-hint">Su mobile, se PayPal non inserisce l’importo, incolla <b>{paypalClipboardAmount(transfer.amount)} €</b>: viene copiato quando tocchi il pulsante.</small> : null}
             </article>
           );
         })}</div> : <p className="cashout-all-settled">Tutti i conti del gruppo sono in pari.</p>}

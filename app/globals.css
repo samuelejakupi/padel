@@ -10333,6 +10333,17 @@ button.pizza-ranking-row {
   top: 2px;
 }
 
+.cashout-paypal-hint {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  grid-column: 1 / -1;
+  line-height: 1.45;
+}
+
+.cashout-paypal-hint b {
+  color: var(--white);
+}
+
 .cashout-all-settled {
   background: rgba(22, 134, 100, 0.08);
   border: 1px solid rgba(22, 134, 100, 0.25);
