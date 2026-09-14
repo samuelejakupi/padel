@@ -66,8 +66,11 @@ async function fetchCashoutGroups() {
 const euro = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
 const formatMoney = (value: number) => euro.format(Math.abs(value));
 const numericAmount = (value: string) => Math.round(Number(value.replace(",", ".")) * 100) / 100;
+// L'app PayPal mobile perde l'importo quando il percorso contiene anche il
+// codice valuta (es. 12.50EUR). Senza suffisso conserva l'importo e usa la
+// valuta predefinita del conto del destinatario.
 const paypalMeUrl = (username: string, amount: number) => (
-  `https://www.paypal.me/${username}/${amount.toFixed(2)}EUR`
+  `https://www.paypal.me/${username}/${amount.toFixed(2)}`
 );
 const paidBy = (expense: CashoutExpense, profileId: string) => (
   expense.payers.find((payer) => payer.profile_id === profileId)?.amount ?? 0
