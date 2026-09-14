@@ -9,7 +9,7 @@ perdono passando da una sessione all'altra.
 "in sospeso" a "deciso". Quando scarti una strada, scrivi perché: serve a non
 ripercorrerla fra un mese.
 
-Ultimo aggiornamento: 24 agosto 2026
+Ultimo aggiornamento: 14 settembre 2026
 
 ---
 
@@ -339,6 +339,17 @@ stesso torneo deve valere la stessa cosa oggi e fra sei mesi.
 ---
 
 ## Deciso, e perché
+
+### Il saldo PayPal parte da Cashout, ma si conferma nell'app
+Ogni membro può salvare nel proprio profilo il nome del link PayPal.Me. Quando
+chi guarda Cashout è il debitore di un saldo e il creditore ha configurato il
+link, sulla riga compare “Paga con PayPal”: apre la pagina del creditore con
+l'importo in euro già compilato. Il link viene costruito dall'app partendo dal
+solo nome utente, così nel database non entrano indirizzi arbitrari.
+
+Il ritorno da PayPal non chiude automaticamente il saldo. PayPal.Me non manda
+all'app l'esito del pagamento, quindi “Segna saldato” resta un'azione distinta:
+evita che una pagina aperta e poi abbandonata venga registrata come pagamento.
 
 ### Una squadra si forma, non si scopre
 Prima una coppia esisteva solo se aveva già giocato: le squadre si ricavavano

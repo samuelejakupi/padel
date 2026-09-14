@@ -19,7 +19,7 @@ test("genera un sito statico pronto per GitHub Pages", async () => {
 });
 
 test("include configurazione Supabase e funzioni della webapp", async () => {
-  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, singleSetMigration, tournamentFormatMigration, tournamentPrizeMigration, tournamentDifferenceMigration, tournamentDrawMigration, trophyImageMigration, cashoutMigration, page, cashoutPage, css] = await Promise.all([
+  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, singleSetMigration, tournamentFormatMigration, tournamentPrizeMigration, tournamentDifferenceMigration, tournamentDrawMigration, trophyImageMigration, cashoutMigration, paypalMigration, page, cashoutPage, css] = await Promise.all([
     readFile(new URL("supabase/schema.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pizza-sessioni.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pareggi.sql", root), "utf8"),
@@ -31,6 +31,7 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
     readFile(new URL("supabase/migration-tornei-sorteggio.sql", root), "utf8"),
     readFile(new URL("supabase/migration-trofei-immagine.sql", root), "utf8"),
     readFile(new URL("supabase/migration-cashout.sql", root), "utf8"),
+    readFile(new URL("supabase/migration-paypal.sql", root), "utf8"),
     readFile(new URL("app/page.tsx", root), "utf8"),
     readFile(new URL("app/Cashout.tsx", root), "utf8"),
     readFile(new URL("app/globals.css", root), "utf8"),
@@ -128,6 +129,12 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(cashoutPage, /function buildCashoutTransfers/);
   assert.match(cashoutPage, /Chi deve pagare chi/);
   assert.match(cashoutPage, /PER CONTO DI/);
+  assert.match(paypalMigration, /paypal_me_username/);
+  assert.match(paypalMigration, /grant update \(paypal_me_username\)/);
+  assert.match(page, /Utente PayPal\.Me/);
+  assert.match(cashoutPage, /paypalMeUrl/);
+  assert.match(cashoutPage, /Paga con PayPal/);
+  assert.match(cashoutPage, /transfer\.fromId === viewerId \? recipient\?\.paypal_me_username : null/);
   assert.doesNotMatch(cashoutPage, /set_cashout_share_settled/);
 
   // Pareggio: un set a testa con il terzo lasciato a meta. Il set interrotto

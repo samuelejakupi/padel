@@ -6156,6 +6156,7 @@ function AppShell({ session }: { session: Session | null }) {
   const [profileName, setProfileName] = useState("");
   const [handedness, setHandedness] = useState("");
   const [courtSide, setCourtSide] = useState("");
+  const [paypalMeUsername, setPaypalMeUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [avatarUrlInitial, setAvatarUrlInitial] = useState("");
   const [teamRecords, setTeamRecords] = useState<PadelTeamRecord[]>([]);
@@ -6410,6 +6411,7 @@ function AppShell({ session }: { session: Session | null }) {
       setProfileName(own?.display_name ?? "");
       setHandedness(own?.handedness ?? "");
       setCourtSide(own?.court_side ?? "");
+      setPaypalMeUsername(own?.paypal_me_username ?? "");
       const ownExternal = /^https?:\/\//i.test(own?.avatar_path ?? "") ? own?.avatar_path ?? "" : "";
       setAvatarUrl(ownExternal);
       setAvatarUrlInitial(ownExternal);
@@ -7106,6 +7108,7 @@ function AppShell({ session }: { session: Session | null }) {
         display_name: profileName.trim(),
         handedness: handedness || null,
         court_side: courtSide || null,
+        paypal_me_username: paypalMeUsername.trim() || null,
       })
       .eq("id", session.user.id);
     setNotice(error ? error.message : "Profilo aggiornato.");
@@ -8703,6 +8706,24 @@ function AppShell({ session }: { session: Session | null }) {
                   <option value="destra">Destra</option>
                   <option value="sinistra">Sinistra</option>
                 </select>
+              </label>
+              <label>
+                Utente PayPal.Me
+                <div className="profile-paypal-field">
+                  <span>paypal.me/</span>
+                  <input
+                    value={paypalMeUsername}
+                    onChange={(event) => setPaypalMeUsername(event.target.value.replace(/[^A-Za-z0-9]/g, "").slice(0, 20))}
+                    placeholder="IlTuoNome"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    pattern="[A-Za-z0-9]{1,20}"
+                    maxLength={20}
+                    disabled={!supabase}
+                  />
+                </div>
+                <small className="profile-paypal-hint">Facoltativo · serve per ricevere i saldi di Cashout.</small>
               </label>
               <label>Email<input value={session?.user.email ?? ""} disabled /></label>
               {supabase ? null : <p className="demo-profile-note">Il profilo diventa modificabile dopo il collegamento a Supabase.</p>}

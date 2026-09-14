@@ -66,6 +66,9 @@ async function fetchCashoutGroups() {
 const euro = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
 const formatMoney = (value: number) => euro.format(Math.abs(value));
 const numericAmount = (value: string) => Math.round(Number(value.replace(",", ".")) * 100) / 100;
+const paypalMeUrl = (username: string, amount: number) => (
+  `https://www.paypal.me/${username}/${amount.toFixed(2)}EUR`
+);
 const paidBy = (expense: CashoutExpense, profileId: string) => (
   expense.payers.find((payer) => payer.profile_id === profileId)?.amount ?? 0
 );
@@ -394,12 +397,14 @@ function CashoutSettlementModal({
 function CashoutGroupDetail({
   group,
   profiles,
+  viewerId,
   onBack,
   onNewExpense,
   onSettle,
 }: {
   group: CashoutGroup;
   profiles: Profile[];
+  viewerId: string;
   onBack: () => void;
   onNewExpense: () => void;
   onSettle: (transfer: CashoutTransfer) => void;
@@ -450,13 +455,31 @@ function CashoutGroupDetail({
 
       <section className="cashout-settlement-report">
         <div className="section-head"><div className="section-head-label"><p className="eyebrow dark">SALDI</p><h2>Chi deve pagare chi</h2></div><span>{transfers.length}</span></div>
-        {transfers.length ? <div className="cashout-transfer-list">{transfers.map((transfer) => (
-          <article key={`${transfer.fromId}:${transfer.toId}`}>
-            <div className="cashout-transfer-people"><CashoutAvatar profile={profileMap.get(transfer.fromId)} /><b>{profileMap.get(transfer.fromId)?.display_name}</b><span>deve</span><CashoutAvatar profile={profileMap.get(transfer.toId)} /><b>{profileMap.get(transfer.toId)?.display_name}</b></div>
-            <strong>{formatMoney(transfer.amount)}</strong>
-            <button className="button button-primary" type="button" onClick={() => onSettle(transfer)}>Segna saldato</button>
-          </article>
-        ))}</div> : <p className="cashout-all-settled">Tutti i conti del gruppo sono in pari.</p>}
+        {transfers.length ? <div className="cashout-transfer-list">{transfers.map((transfer) => {
+          const recipient = profileMap.get(transfer.toId);
+          const paypalUsername = transfer.fromId === viewerId ? recipient?.paypal_me_username : null;
+          return (
+            <article key={`${transfer.fromId}:${transfer.toId}`}>
+              <div className="cashout-transfer-people"><CashoutAvatar profile={profileMap.get(transfer.fromId)} /><b>{profileMap.get(transfer.fromId)?.display_name}</b><span>deve</span><CashoutAvatar profile={recipient} /><b>{recipient?.display_name}</b></div>
+              <strong>{formatMoney(transfer.amount)}</strong>
+              <div className="cashout-transfer-actions">
+                {paypalUsername ? (
+                  <a
+                    className="button cashout-paypal-button"
+                    href={paypalMeUrl(paypalUsername, transfer.amount)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Paga ${formatMoney(transfer.amount)} a ${recipient?.display_name} con PayPal`}
+                  >
+                    <span className="cashout-paypal-mark" aria-hidden="true"><i>P</i><i>P</i></span>
+                    Paga con PayPal
+                  </a>
+                ) : null}
+                <button className="button button-primary" type="button" onClick={() => onSettle(transfer)}>Segna saldato</button>
+              </div>
+            </article>
+          );
+        })}</div> : <p className="cashout-all-settled">Tutti i conti del gruppo sono in pari.</p>}
         {group.settlements.length ? <div className="cashout-settlement-history"><small>PAGAMENTI REGISTRATI</small>{group.settlements.map((settlement) => <p key={settlement.id}><b>{profileMap.get(settlement.from_profile_id)?.display_name}</b> ha pagato <b>{profileMap.get(settlement.to_profile_id)?.display_name}</b><span>{formatMoney(settlement.amount)}</span></p>)}</div> : null}
       </section>
 
@@ -521,7 +544,7 @@ export default function CashoutPage({ profiles, viewerId }: { profiles: Profile[
   if (selectedGroup) return (
     <>
       {notice ? <button className="notice" onClick={() => setNotice("")}>{notice}<span>×</span></button> : null}
-      <CashoutGroupDetail group={selectedGroup} profiles={profiles} onBack={() => setSelectedId(null)} onNewExpense={() => setShowExpenseCreate(true)} onSettle={setSettlementTransfer} />
+      <CashoutGroupDetail group={selectedGroup} profiles={profiles} viewerId={viewerId} onBack={() => setSelectedId(null)} onNewExpense={() => setShowExpenseCreate(true)} onSettle={setSettlementTransfer} />
       {showExpenseCreate ? <CashoutExpenseModal group={selectedGroup} profiles={profiles} viewerId={viewerId} onClose={() => setShowExpenseCreate(false)} onCreated={async () => { setShowExpenseCreate(false); await loadGroups(); }} /> : null}
       {settlementTransfer ? <CashoutSettlementModal group={selectedGroup} profiles={profiles} transfer={settlementTransfer} onClose={() => setSettlementTransfer(null)} onCreated={async () => { setSettlementTransfer(null); await loadGroups(); }} /> : null}
     </>

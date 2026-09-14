@@ -7,6 +7,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text not null check (char_length(display_name) between 2 and 40),
   avatar_path text,
+  paypal_me_username text check (paypal_me_username is null or paypal_me_username ~ '^[A-Za-z0-9]{1,20}$'),
   rating integer not null default 1000 check (rating >= 100),
   matches_played integer not null default 0 check (matches_played >= 0),
   wins integer not null default 0 check (wins >= 0),
@@ -15,6 +16,15 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.profiles
+  add column if not exists paypal_me_username text;
+
+alter table public.profiles
+  drop constraint if exists profiles_paypal_me_username_check;
+alter table public.profiles
+  add constraint profiles_paypal_me_username_check
+  check (paypal_me_username is null or paypal_me_username ~ '^[A-Za-z0-9]{1,20}$');
 
 create table if not exists public.matches (
   id uuid primary key default gen_random_uuid(),
@@ -868,7 +878,7 @@ grant select on public.profiles, public.matches, public.match_players, public.ma
 grant select on public.pizza_restaurants, public.pizza_votes to authenticated;
 revoke insert, delete on public.profiles from anon, authenticated;
 revoke update on public.profiles from anon, authenticated;
-grant update (display_name, avatar_path) on public.profiles to authenticated;
+grant update (display_name, avatar_path, paypal_me_username) on public.profiles to authenticated;
 revoke insert, update, delete on public.matches, public.match_players, public.match_sets from anon, authenticated;
 revoke insert, update, delete on public.pizza_restaurants, public.pizza_votes from anon, authenticated;
 

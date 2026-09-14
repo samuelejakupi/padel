@@ -30,6 +30,7 @@ export type Profile = {
   created_at?: string;
   handedness?: string | null;
   court_side?: string | null;
+  paypal_me_username?: string | null;
 };
 
 export type PadelSet = {

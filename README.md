@@ -42,9 +42,10 @@ ai file `.env` pubblicati, alle GitHub Actions o al codice frontend.
 8. Esegui `supabase/migration-partite-casuali.sql` dopo `supabase/migration-pareggi.sql` per creare partite con squadre casuali e registrarne il risultato in seguito.
 9. Esegui `supabase/migration-partite-un-set.sql` per consentire partite secche da un set, con Elo e progressi degli emblemi dimezzati.
 10. Esegui `supabase/migration-trofei-immagine.sql` per associare ai tornei le immagini della sala trofei.
-11. In **Authentication → URL Configuration**, imposta **Site URL** con l’indirizzo Vercel finale, per esempio:
+11. Esegui `supabase/migration-paypal.sql` per consentire a ciascun profilo di aggiungere il proprio utente PayPal.Me e ricevere i saldi Cashout tramite un link con importo precompilato.
+12. In **Authentication → URL Configuration**, imposta **Site URL** con l’indirizzo Vercel finale, per esempio:
    `https://nome-progetto.vercel.app/`
-12. In **Project Settings → API**, copia:
+13. In **Project Settings → API**, copia:
    - Project URL
    - anon / publishable key
 

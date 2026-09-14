@@ -6643,6 +6643,44 @@ button.pizza-ranking-row {
   margin-top: 0;
 }
 
+.profile-paypal-field {
+  align-items: center;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  display: flex;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.profile-paypal-field:focus-within {
+  border-color: var(--blue);
+}
+
+.profile-paypal-field > span {
+  color: #003087;
+  flex: 0 0 auto;
+  font-size: 13px;
+  padding-left: 14px;
+  text-transform: none;
+}
+
+.profile-paypal-field input {
+  border: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.profile-paypal-hint {
+  color: var(--muted);
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+  margin-top: 6px;
+  text-transform: none;
+}
+
 .signout-button {
   background: transparent;
   border: 0;
@@ -10249,8 +10287,50 @@ button.pizza-ranking-row {
   white-space: nowrap;
 }
 
+.cashout-transfer-actions {
+  align-items: stretch;
+  display: flex;
+  gap: var(--space-2);
+}
+
 .cashout-transfer-list .button {
   min-height: 42px;
+}
+
+.cashout-paypal-button {
+  background: #ffc439;
+  color: #172c70;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.cashout-paypal-button:hover {
+  background: #ffb91f;
+}
+
+.cashout-paypal-mark {
+  display: inline-block;
+  height: 20px;
+  position: relative;
+  width: 21px;
+}
+
+.cashout-paypal-mark i {
+  color: #003087;
+  font-family: Arial, sans-serif;
+  font-size: 20px;
+  font-style: italic;
+  font-weight: 900;
+  left: 0;
+  line-height: 20px;
+  position: absolute;
+  top: 0;
+}
+
+.cashout-paypal-mark i + i {
+  color: #009cde;
+  left: 5px;
+  top: 2px;
 }
 
 .cashout-all-settled {
@@ -10655,8 +10735,12 @@ button.pizza-ranking-row {
     padding: var(--space-4);
   }
 
-  .cashout-transfer-list .button {
+  .cashout-transfer-actions {
     grid-column: 1 / -1;
+    flex-direction: column;
+  }
+
+  .cashout-transfer-list .button {
     width: 100%;
   }
 
