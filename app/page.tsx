@@ -5119,6 +5119,34 @@ type TournamentStanding = {
   directWins: number;
 };
 
+const INDIVIDUAL_TOURNAMENT_AWARDS = [45, 30, 15];
+
+function buildIndividualStandings(tournament: Tournament, matches: PadelMatch[]) {
+  const matchMap = new Map(matches.map((match) => [match.id, match]));
+  const rows = (tournament.participants ?? []).map((participant) => ({
+    profileId: participant.profile_id,
+    sortOrder: participant.sort_order,
+    played: 0, wins: 0, gamesWon: 0, gamesLost: 0,
+  }));
+  for (const fixture of tournament.fixtures) {
+    const match = fixture.match_id ? matchMap.get(fixture.match_id) : null;
+    const set = match?.sets[0];
+    if (!match || !set) continue;
+    for (const row of rows) {
+      const side = [fixture.player1_id, fixture.player2_id].includes(row.profileId) ? 1
+        : [fixture.player3_id, fixture.player4_id].includes(row.profileId) ? 2 : 0;
+      if (!side) continue;
+      row.played += 1;
+      if (match.winner_team === side) row.wins += 1;
+      row.gamesWon += side === 1 ? set.team1_games : set.team2_games;
+      row.gamesLost += side === 1 ? set.team2_games : set.team1_games;
+    }
+  }
+  return rows.sort((a, b) => b.wins - a.wins
+    || (b.gamesWon - b.gamesLost) - (a.gamesWon - a.gamesLost)
+    || b.gamesWon - a.gamesWon || a.sortOrder - b.sortOrder);
+}
+
 // Il simbolo del trofeo e ora l'emblema esagonale, lo stesso della bacheca:
 // i quattro glifi a tratto — coppa, corona, scudo, stella — erano disegnati
 // qui a mano e non c'entravano piu niente con il resto.
@@ -5159,19 +5187,24 @@ function TournamentTrophyVisual({
 function TournamentRow({
   tournament,
   matches,
+  profiles,
   onOpen,
 }: {
   tournament: Tournament;
   matches: PadelMatch[];
+  profiles: Profile[];
   onOpen: () => void;
 }) {
   const played = tournament.fixtures.filter((fixture) => fixture.match_id).length;
-  const total = tournament.fixtures.length;
+  const total = tournament.mode === "individual" ? tournament.target_matches ?? 0 : tournament.fixtures.length;
   // Stessa definizione usata dalla pagina tornei, invece di ricalcolarla qui.
   const done = tournamentIsCompleted(tournament, matches);
-  const standings = buildTournamentStandings(tournament, matches);
+  const standings = tournament.mode === "individual" ? null : buildTournamentStandings(tournament, matches);
   // A torneo finito conta chi ha vinto; mentre e in corso, chi guida.
-  const leader = standings[0]?.played ? standings[0].team.name : null;
+  const individualLeader = tournament.mode === "individual" ? buildIndividualStandings(tournament, matches)[0] : null;
+  const leader = individualLeader?.played
+    ? profiles.find((profile) => profile.id === individualLeader.profileId)?.display_name ?? null
+    : standings?.[0]?.played ? standings[0].team.name : null;
 
   return (
     <article
@@ -5227,8 +5260,8 @@ function buildTournamentStandings(tournament: Tournament, matches: PadelMatch[])
 
   tournament.fixtures.forEach((fixture) => {
     const match = fixture.match_id ? matchMap.get(fixture.match_id) : null;
-    const team1 = rows.get(fixture.team1_id);
-    const team2 = rows.get(fixture.team2_id);
+    const team1 = fixture.team1_id ? rows.get(fixture.team1_id) : null;
+    const team2 = fixture.team2_id ? rows.get(fixture.team2_id) : null;
     if (!match || !team1 || !team2) return;
     team1.played += 1;
     team2.played += 1;
@@ -5251,7 +5284,7 @@ function buildTournamentStandings(tournament: Tournament, matches: PadelMatch[])
     if (tiedRows.length < 2) return;
     const tiedIds = new Set(tiedRows.map((row) => row.team.id));
     tournament.fixtures.forEach((fixture) => {
-      if (!tiedIds.has(fixture.team1_id) || !tiedIds.has(fixture.team2_id) || !fixture.match_id) return;
+      if (!fixture.team1_id || !fixture.team2_id || !tiedIds.has(fixture.team1_id) || !tiedIds.has(fixture.team2_id) || !fixture.match_id) return;
       const match = matchMap.get(fixture.match_id);
       if (!match) return;
       const winnerId = match.winner_team === 1 ? fixture.team1_id : fixture.team2_id;
@@ -5676,6 +5709,7 @@ function tournamentIsCompleted(tournament: Tournament, matches: PadelMatch[]) {
   const matchIds = new Set(matches.map((match) => match.id));
   return Boolean(
     tournament.fixtures.length
+    && (tournament.mode !== "individual" || tournament.fixtures.length === tournament.target_matches)
     && tournament.fixtures.every((fixture) => fixture.match_id && matchIds.has(fixture.match_id)),
   );
 }
@@ -5754,6 +5788,7 @@ function tournamentLegs(tournament: Tournament) {
 }
 
 function tournamentFormatLabel(tournament: Tournament) {
+  if (tournament.mode === "individual") return "Individuale · coppie variabili · set secco";
   const sets = tournamentSetsFormat(tournament) === 1 ? "Set secco" : "Due set su tre";
   return `${sets} · ${tournamentLegs(tournament) === 2 ? "andata e ritorno" : "solo andata"}`;
 }
@@ -5767,6 +5802,7 @@ function tournamentOpenUntil(tournament: Tournament) {
 }
 
 function canEditTournament(tournament: Tournament, viewerId?: string | null) {
+  if (tournament.mode === "individual") return false;
   if (!viewerId) return false;
   if (Date.now() > tournamentOpenUntil(tournament)) return false;
   return tournament.created_by === viewerId
@@ -5795,6 +5831,20 @@ function TournamentStandingsContent({
   // Il premio si mostra solo a conti chiusi: finche manca una partita la
   // classifica e provvisoria e i 30 punti non sono di nessuno.
   const completed = tournamentIsCompleted(tournament, matches);
+  if (tournament.mode === "individual") {
+    const individual = buildIndividualStandings(tournament, matches);
+    return <>
+      <div className="player-history-head"><div><p className="eyebrow dark">CLASSIFICA INDIVIDUALE</p><h2>{title}</h2></div></div>
+      <div className="tournament-table">
+        <div className="tournament-table-head"><span>#</span><span>Giocatore</span><span>G</span><span>V</span><span>GF</span><span>Diff.</span></div>
+        {individual.map((row, index) => <div className={`tournament-table-row${index === 0 && row.played ? " is-leader" : ""}`} key={row.profileId}>
+          <b>{index + 1}</b><span className="tournament-team-cell"><strong>{profileMap.get(row.profileId)?.display_name ?? "Giocatore"}{completed && INDIVIDUAL_TOURNAMENT_AWARDS[index] ? <em className="tournament-award">+{INDIVIDUAL_TOURNAMENT_AWARDS[index]}</em> : null}</strong></span>
+          <span>{row.played}</span><span>{row.wins}</span><span>{row.gamesWon}</span><span>{row.gamesWon - row.gamesLost > 0 ? "+" : ""}{row.gamesWon - row.gamesLost}</span>
+        </div>)}
+      </div>
+      <p className="tournament-rule-note">Parità: differenza game, poi game fatti. A torneo finito i primi tre ricevono +45, +30 e +15 Elo.</p>
+    </>;
+  }
   return (
     <>
       <div className="player-history-head">
@@ -5819,12 +5869,39 @@ function TournamentStandingsContent({
 function TournamentFixtures({
   tournament,
   matches,
+  profiles,
   onRecord,
+  onDraw,
 }: {
   tournament: Tournament;
   matches: PadelMatch[];
+  profiles: Profile[];
   onRecord?: (context: TournamentMatchContext) => void;
+  onDraw?: (tournament: Tournament) => void;
 }) {
+  if (tournament.mode === "individual") {
+    const matchMap = new Map(matches.map((match) => [match.id, match]));
+    const name = (id?: string | null) => profiles.find((profile) => profile.id === id)?.display_name ?? "Giocatore";
+    const pending = tournament.fixtures.some((fixture) => !fixture.match_id);
+    return <section className="tournament-fixtures">
+      <div className="player-history-head"><div><p className="eyebrow dark">ABBINAMENTI</p><h2>Una partita alla volta</h2></div><span>{tournament.fixtures.filter((fixture) => fixture.match_id).length}/{tournament.target_matches} partite</span></div>
+      <div className="tournament-fixture-list">
+        {tournament.fixtures.map((fixture) => {
+          const match = fixture.match_id ? matchMap.get(fixture.match_id) : null;
+          return <article className={`tournament-fixture${match ? " is-played" : ""}`} key={fixture.id}>
+            <span className="tournament-match-number">{String(fixture.match_number).padStart(2, "0")}</span>
+            <div><b className={match?.winner_team === 1 ? "winner" : ""}>{name(fixture.player1_id)} · {name(fixture.player2_id)}</b><small>vs</small><b className={match?.winner_team === 2 ? "winner" : ""}>{name(fixture.player3_id)} · {name(fixture.player4_id)}</b></div>
+            {match ? <strong className="tournament-score">{match.sets[0]?.team1_games}-{match.sets[0]?.team2_games}</strong>
+              : onRecord && fixture.player1_id && fixture.player2_id && fixture.player3_id && fixture.player4_id
+                ? <button className="button button-dark" onClick={() => onRecord({ fixtureId: fixture.id, tournamentName: tournament.name, eloMultiplier: tournament.elo_multiplier, setsFormat: 1, playerIds: [fixture.player1_id!, fixture.player2_id!, fixture.player3_id!, fixture.player4_id!] })}>Inserisci risultato</button>
+                : <span className="tournament-awaiting">Da giocare</span>}
+          </article>;
+        })}
+      </div>
+      {!pending && !tournamentIsCompleted(tournament, matches) && onDraw ? <button className="button button-lime" type="button" onClick={() => onDraw(tournament)}>Sorteggia prossima partita</button> : null}
+      <p className="tournament-rule-note">Gli abbinamenti cambiano dopo ogni risultato. Nessuno gioca più di una partita in più degli altri.</p>
+    </section>;
+  }
   const matchMap = new Map(matches.map((match) => [match.id, match]));
   const teamMap = new Map(tournament.teams.map((team) => [team.id, team]));
   const playedMatches = tournament.fixtures.filter((fixture) => fixture.match_id && matchMap.has(fixture.match_id)).length;
@@ -5846,8 +5923,8 @@ function TournamentFixtures({
           <Fragment key={group.label ?? "girone"}>
             {group.label ? <p className="tournament-leg-label">{group.label}</p> : null}
             {group.fixtures.map((fixture) => {
-              const team1 = teamMap.get(fixture.team1_id);
-              const team2 = teamMap.get(fixture.team2_id);
+              const team1 = fixture.team1_id ? teamMap.get(fixture.team1_id) : null;
+              const team2 = fixture.team2_id ? teamMap.get(fixture.team2_id) : null;
               const match = fixture.match_id ? matchMap.get(fixture.match_id) : null;
               if (!team1 || !team2) return null;
               const score = match ? [...match.sets].sort((a, b) => a.set_number - b.set_number).map((set) => `${set.team1_games}-${set.team2_games}`).join("  ") : null;
@@ -5874,6 +5951,52 @@ function TournamentFixtures({
   );
 }
 
+function IndividualTournamentFormModal({ profiles, onClose, onSaved }: {
+  profiles: Profile[];
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const [name, setName] = useState("Torneo individuale TheBoyz");
+  const [trophyName, setTrophyName] = useState("Coppa individuale");
+  const [playerIds, setPlayerIds] = useState<string[]>([]);
+  const [cycles, setCycles] = useState(2);
+  const [eloMultiplier, setEloMultiplier] = useState(2);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const n = playerIds.length;
+  const gamesPerCycle = n % 4 === 0 ? n / 4 : n % 2 === 0 ? n / 2 : n;
+  return <BottomSheet title="Torneo individuale" onClose={onClose}>
+    <form className="sheet-form tournament-create-form" onSubmit={async (event) => {
+      event.preventDefault();
+      if (!supabase || n < 4 || n > 8) { setError("Seleziona da 4 a 8 partecipanti."); return; }
+      setBusy(true); setError("");
+      const { error: saveError } = await supabase.rpc("create_individual_tournament", {
+        p_name: name.trim(), p_trophy_name: trophyName.trim(), p_trophy_badge: "cup",
+        p_elo_multiplier: eloMultiplier, p_players: playerIds, p_cycles: cycles,
+      });
+      if (saveError) { setError(saveError.message); setBusy(false); return; }
+      await onSaved();
+    }}>
+      <p className="tournament-rule-note">Coppie variabili, un set per partita. Il prossimo abbinamento viene sorteggiato dopo il risultato. A fine ciclo tutti hanno giocato lo stesso numero di partite.</p>
+      <label>Nome torneo<input value={name} onChange={(event) => setName(event.target.value)} maxLength={70} required /></label>
+      <label>Nome trofeo<input value={trophyName} onChange={(event) => setTrophyName(event.target.value)} maxLength={60} required /></label>
+      <div className="tournament-form-head"><div><p className="eyebrow dark">PARTECIPANTI</p><h3>{n} selezionati</h3></div></div>
+      <div className="tournament-participant-list">{profiles.map((profile) => {
+        const selected = playerIds.includes(profile.id);
+        return <label className={`tournament-participant${selected ? " is-selected" : ""}`} key={profile.id}>
+          <input type="checkbox" checked={selected} disabled={!selected && n >= 8} onChange={() => setPlayerIds((current) => selected ? current.filter((id) => id !== profile.id) : [...current, profile.id])} />
+          <span>{profile.display_name}</span>
+        </label>;
+      })}</div>
+      <label>Cicli completi<select value={cycles} onChange={(event) => setCycles(Number(event.target.value))}><option value={1}>1 ciclo</option><option value={2}>2 cicli</option><option value={3}>3 cicli</option></select></label>
+      <label>Moltiplicatore Elo<select value={eloMultiplier} onChange={(event) => setEloMultiplier(Number(event.target.value))}><option value={1}>×1</option><option value={2}>×2</option></select></label>
+      {n >= 4 ? <p className="tournament-rule-note">{gamesPerCycle * cycles} partite totali · premio finale: +45 / +30 / +15 Elo ai primi tre.</p> : null}
+      {error ? <p className="form-error" role="alert">{error}</p> : null}
+      <button className="button button-lime" disabled={busy || n < 4}>{busy ? "Creazione…" : "Crea torneo individuale"}</button>
+    </form>
+  </BottomSheet>;
+}
+
 function TournamentsPage({
   tournaments,
   profiles,
@@ -5881,8 +6004,11 @@ function TournamentsPage({
   viewerId,
   schemaReady,
   onCreate,
+  onCreateIndividual,
   onEdit,
   onRecord,
+  onDraw,
+  onDelete,
 }: {
   tournaments: Tournament[];
   profiles: Profile[];
@@ -5890,8 +6016,11 @@ function TournamentsPage({
   viewerId?: string | null;
   schemaReady: boolean;
   onCreate: () => void;
+  onCreateIndividual: () => void;
   onEdit: (tournament: Tournament) => void;
   onRecord: (context: TournamentMatchContext) => void;
+  onDraw: (tournament: Tournament) => void;
+  onDelete: (tournament: Tournament) => void;
 }) {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [showAllCompleted, setShowAllCompleted] = useState(false);
@@ -5908,23 +6037,23 @@ function TournamentsPage({
         <article className="section-hero tournament-hero tournament-detail-hero">
           <BlockMark size="lg" />
           <div className="section-hero-head">
-            <div><p className="eyebrow">{completed ? "TORNEO COMPLETATO" : "TORNEO IN CORSO"}</p><h1>{detailTournament.name}</h1><p>{playedMatches}/{detailTournament.fixtures.length} partite · Elo ×{detailTournament.elo_multiplier}</p></div>
+            <div><p className="eyebrow">{completed ? "TORNEO COMPLETATO" : "TORNEO IN CORSO"}</p><h1>{detailTournament.name}</h1><p>{playedMatches}/{detailTournament.mode === "individual" ? detailTournament.target_matches : detailTournament.fixtures.length} partite · Elo ×{detailTournament.elo_multiplier}</p></div>
             {/* Il tasto sta qui e non nella riga della home: si corregge un
                 torneo dopo averlo aperto e aver visto cosa c'e da correggere. */}
             {canEditTournament(detailTournament, viewerId) || canDeleteTournament(detailTournament, viewerId) ? (
-              <button className="button button-ghost" type="button" onClick={() => onEdit(detailTournament)}>Modifica</button>
+              <button className="button button-ghost" type="button" onClick={() => detailTournament.mode === "individual" ? onDelete(detailTournament) : onEdit(detailTournament)}>{detailTournament.mode === "individual" ? "Elimina" : "Modifica"}</button>
             ) : null}
           </div>
         </article>
         <article className="tournament-board-head">
           <div className="tournament-prize-card"><TournamentTrophyVisual tournament={detailTournament} /><span><small>{completed ? "TROFEO ASSEGNATO" : "TROFEO IN PALIO"}</small><b>{detailTournament.trophy_name}</b></span></div>
-          <div className="tournament-title-card"><p className="eyebrow dark">FORMULA</p><h2>Girone all’italiana</h2><span>{tournamentFormatLabel(detailTournament)}</span></div>
+          <div className="tournament-title-card"><p className="eyebrow dark">FORMULA</p><h2>{detailTournament.mode === "individual" ? "Coppie variabili" : "Girone all’italiana"}</h2><span>{tournamentFormatLabel(detailTournament)}</span></div>
         </article>
         <div className="tournament-layout">
           <section className="tournament-standings">
             <TournamentStandingsContent tournament={detailTournament} profiles={profiles} matches={matches} title={completed ? "Classifica finale" : "Situazione attuale"} />
           </section>
-          <TournamentFixtures tournament={detailTournament} matches={matches} onRecord={completed ? undefined : onRecord} />
+          <TournamentFixtures tournament={detailTournament} matches={matches} profiles={profiles} onRecord={completed ? undefined : onRecord} onDraw={onDraw} />
         </div>
       </section>
     );
@@ -5935,8 +6064,8 @@ function TournamentsPage({
       <article className="section-hero tournament-hero">
         <BlockMark size="lg" />
         <div className="section-hero-head">
-          <div><p className="eyebrow">THEBOYZ CUP</p><h1>Tornei</h1><p>Girone all’italiana: vittorie, scontri diretti, differenza game.</p></div>
-          <button className="button button-primary tournament-new-button" onClick={onCreate} disabled={!schemaReady}>+ NUOVO TORNEO</button>
+          <div><p className="eyebrow">THEBOYZ CUP</p><h1>Tornei</h1><p>A coppie fisse o individuali con coppie variabili.</p></div>
+          <div className="tournament-create-actions"><button className="button button-primary tournament-new-button" onClick={onCreate} disabled={!schemaReady}>+ A COPPIE FISSE</button><button className="button button-primary tournament-new-button" onClick={onCreateIndividual} disabled={!schemaReady}>+ INDIVIDUALE</button></div>
         </div>
       </article>
 
@@ -5949,13 +6078,14 @@ function TournamentsPage({
               <div className="section-head tournament-section-head"><div className="section-head-label"><p className="eyebrow dark">IN CORSO</p><h2>Situazione del torneo</h2></div></div>
               {activeTournaments.map((tournament) => {
                 const playedMatches = tournament.fixtures.filter((fixture) => fixture.match_id && matches.some((match) => match.id === fixture.match_id)).length;
-                const progress = tournament.fixtures.length ? Math.round((playedMatches / tournament.fixtures.length) * 100) : 0;
+                const target = tournament.mode === "individual" ? tournament.target_matches ?? 1 : tournament.fixtures.length;
+                const progress = Math.round((playedMatches / target) * 100);
                 return (
                   <article className="tournament-live-card" key={tournament.id}>
                     <div className="tournament-board-head">
                       <div className="tournament-prize-card"><TournamentTrophyVisual tournament={tournament} /><span><small>TROFEO IN PALIO</small><b>{tournament.trophy_name}</b></span></div>
                       <div className="tournament-title-card">
-                        <p className="eyebrow dark">TORNEO IN CORSO</p><h2>{tournament.name}</h2><span>{playedMatches}/{tournament.fixtures.length} partite · Elo ×{tournament.elo_multiplier} · {tournamentFormatLabel(tournament).toLowerCase()}</span>
+                        <p className="eyebrow dark">TORNEO IN CORSO</p><h2>{tournament.name}</h2><span>{playedMatches}/{target} partite · Elo ×{tournament.elo_multiplier} · {tournamentFormatLabel(tournament).toLowerCase()}</span>
                         <span className="tournament-progress" aria-label={`${progress}% completato`}><i style={{ width: `${progress}%` }} /></span>
                       </div>
                       {/* Anche qui, non solo nella scheda: un torneo in corso
@@ -5963,7 +6093,7 @@ function TournamentsPage({
                           compresi — e nessuno pensa di doverla aprire per
                           correggerlo o eliminarlo. */}
                       {canEditTournament(tournament, viewerId) || canDeleteTournament(tournament, viewerId) ? (
-                        <button className="button button-ghost tournament-card-edit" type="button" onClick={() => onEdit(tournament)}>Modifica</button>
+                        <button className="button button-ghost tournament-card-edit" type="button" onClick={() => tournament.mode === "individual" ? onDelete(tournament) : onEdit(tournament)}>{tournament.mode === "individual" ? "Elimina" : "Modifica"}</button>
                       ) : null}
                     </div>
                     <div className="tournament-layout">
@@ -5976,7 +6106,7 @@ function TournamentsPage({
                       >
                         <TournamentStandingsContent tournament={tournament} profiles={profiles} matches={matches} title="Situazione attuale" actionLabel="Dettagli" />
                       </div>
-                      <TournamentFixtures tournament={tournament} matches={matches} onRecord={onRecord} />
+                      <TournamentFixtures tournament={tournament} matches={matches} profiles={profiles} onRecord={onRecord} onDraw={onDraw} />
                     </div>
                   </article>
                 );
@@ -5989,19 +6119,20 @@ function TournamentsPage({
             {completedTournaments.length ? (
               <div className="tournament-recent-list">
                 {(showAllCompleted ? completedTournaments : completedTournaments.slice(0, 3)).map((tournament) => {
-                  const standings = buildTournamentStandings(tournament, matches);
-                  const winner = standings[0];
+                  const individual = tournament.mode === "individual" ? buildIndividualStandings(tournament, matches) : null;
+                  const standings = individual ? null : buildTournamentStandings(tournament, matches);
+                  const winner = standings?.[0];
                   return (
                     <article className="tournament-recent-card" key={tournament.id}>
                       <div className="tournament-recent-head">
                         <TournamentTrophyVisual tournament={tournament} compact />
                         <div><p className="eyebrow dark">COMPLETATO</p><h3>{tournament.name}</h3><span>{tournament.fixtures.length} partite · Elo ×{tournament.elo_multiplier}</span></div>
-                        <div className="tournament-winner"><small>VINCITORI</small><b>{winner?.team.name ?? "—"}</b></div>
+                        <div className="tournament-winner"><small>VINCITORI</small><b>{individual ? profiles.find((profile) => profile.id === individual[0]?.profileId)?.display_name ?? "—" : winner?.team.name ?? "—"}</b></div>
                       </div>
                       <button className="tournament-recent-ranking" type="button" onClick={() => setDetailId(tournament.id)}>
                         <span>CLASSIFICA FINALE</span>
                         <div>
-                          {standings.slice(0, 3).map((row, index) => <span key={row.team.id}><b>#{index + 1}</b>{row.team.name}<strong>{row.wins}V</strong></span>)}
+                          {individual ? individual.slice(0, 3).map((row, index) => <span key={row.profileId}><b>#{index + 1}</b>{profiles.find((profile) => profile.id === row.profileId)?.display_name}<strong>{row.wins}V</strong></span>) : standings?.slice(0, 3).map((row, index) => <span key={row.team.id}><b>#{index + 1}</b>{row.team.name}<strong>{row.wins}V</strong></span>)}
                         </div>
                         <strong>Apri dettagli →</strong>
                       </button>
@@ -6236,6 +6367,7 @@ function AppShell({ session }: { session: Session | null }) {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [tournamentSchemaReady, setTournamentSchemaReady] = useState(true);
   const [showTournamentCreate, setShowTournamentCreate] = useState(false);
+  const [showIndividualTournamentCreate, setShowIndividualTournamentCreate] = useState(false);
   const [showTeamCreate, setShowTeamCreate] = useState(false);
   // Il torneo che si sta correggendo: lo stesso foglio della creazione, con
   // dentro quello che c'e gia.
@@ -6301,7 +6433,7 @@ function AppShell({ session }: { session: Session | null }) {
         .select("session_id, voter_id, location, pizza, dessert, price, bonus_fabio"),
       client
         .from("padel_tournaments")
-        .select("id, name, status, trophy_name, trophy_badge, trophy_image_path, elo_multiplier, sets_format, legs, created_by, created_at, teams:tournament_teams(id, tournament_id, name, player_a, player_b, sort_order), fixtures:tournament_fixtures(id, tournament_id, match_number, team1_id, team2_id, match_id, leg)")
+        .select("id, name, status, trophy_name, trophy_badge, trophy_image_path, elo_multiplier, sets_format, legs, mode, target_matches, created_by, created_at, participants:tournament_participants(profile_id, sort_order), teams:tournament_teams(id, tournament_id, name, player_a, player_b, sort_order), fixtures:tournament_fixtures(id, tournament_id, match_number, team1_id, team2_id, player1_id, player2_id, player3_id, player4_id, match_id, leg)")
         .order("created_at", { ascending: false }),
       // Il campo da gioco sta in una query a parte: se la migrazione non e
       // stata eseguita questa fallisce da sola, senza portarsi dietro il
@@ -6676,22 +6808,24 @@ function AppShell({ session }: { session: Session | null }) {
       if (!fixture) continue;
       const team1 = tournament.teams.find((team) => team.id === fixture.team1_id);
       const team2 = tournament.teams.find((team) => team.id === fixture.team2_id);
-      if (!team1 || !team2) return null;
+      const playerIds = tournament.mode === "individual"
+        ? [fixture.player1_id, fixture.player2_id, fixture.player3_id, fixture.player4_id]
+        : [team1?.player_a, team1?.player_b, team2?.player_a, team2?.player_b];
+      if (playerIds.some((id) => !id)) return null;
       return {
         fixtureId,
         tournamentName: tournament.name,
         eloMultiplier: tournament.elo_multiplier,
         setsFormat: tournamentSetsFormat(tournament),
-        playerIds: [team1.player_a, team1.player_b, team2.player_a, team2.player_b],
+        playerIds: playerIds as [string, string, string, string],
       };
     }
     return null;
   })();
   const selectedPlayerTrophies = selectedPlayer ? tournaments.filter((tournament) => {
-    const completed = tournament.fixtures.length > 0 && tournament.fixtures.every(
-      (fixture) => fixture.match_id && matches.some((match) => match.id === fixture.match_id),
-    );
+    const completed = tournamentIsCompleted(tournament, matches);
     if (!completed) return false;
+    if (tournament.mode === "individual") return buildIndividualStandings(tournament, matches)[0]?.profileId === selectedPlayer.id;
     const standings = buildTournamentStandings(tournament, matches);
     const winner = standings[0];
     if (!winner) return false;
@@ -7850,6 +7984,7 @@ function AppShell({ session }: { session: Session | null }) {
                           key={tournament.id}
                           tournament={tournament}
                           matches={matches}
+                          profiles={profiles}
                           onOpen={() => openPadelPage("tournaments")}
                         />
                       ))}
@@ -7928,8 +8063,21 @@ function AppShell({ session }: { session: Session | null }) {
             viewerId={session?.user.id}
             schemaReady={tournamentSchemaReady}
             onCreate={() => setShowTournamentCreate(true)}
+            onCreateIndividual={() => setShowIndividualTournamentCreate(true)}
             onEdit={(tournament) => setEditingTournament(tournament)}
             onRecord={(context) => { setEditingMatch(null); setTournamentMatch(context); }}
+            onDraw={async (tournament) => {
+              if (!supabase) return;
+              const { error } = await supabase.rpc("draw_individual_fixture", { p_tournament_id: tournament.id });
+              if (error) setNotice(error.message); else await loadData();
+            }}
+            onDelete={async (tournament) => {
+              if (!supabase || tournament.created_by !== session?.user.id) return;
+              const played = tournament.fixtures.filter((fixture) => fixture.match_id).length;
+              if (!window.confirm(`Eliminare il torneo individuale${played ? ` e le ${played} partite già giocate` : ""}?`)) return;
+              const { error } = await supabase.rpc("delete_tournament", { p_tournament_id: tournament.id });
+              if (error) setNotice(error.message); else { await loadData(); setNotice("Torneo eliminato."); }
+            }}
           />
         ) : null}
 
@@ -8676,6 +8824,11 @@ function AppShell({ session }: { session: Session | null }) {
           }}
         />
       ) : null}
+      {showIndividualTournamentCreate ? <IndividualTournamentFormModal
+        profiles={profiles}
+        onClose={() => setShowIndividualTournamentCreate(false)}
+        onSaved={async () => { setShowIndividualTournamentCreate(false); await loadData(); setNotice("Torneo individuale creato."); }}
+      /> : null}
       {showAvatarPicker ? (
         <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setShowAvatarPicker(false)}>
           <section className="modal" role="dialog" aria-modal="true" aria-labelledby="avatar-picker-title">

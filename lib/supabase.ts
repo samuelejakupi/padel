@@ -140,8 +140,12 @@ export type TournamentFixture = {
   id: string;
   tournament_id: string;
   match_number: number;
-  team1_id: string;
-  team2_id: string;
+  team1_id: string | null;
+  team2_id: string | null;
+  player1_id?: string | null;
+  player2_id?: string | null;
+  player3_id?: string | null;
+  player4_id?: string | null;
   match_id: string | null;
   // 1 = andata, 2 = ritorno. Vale 1 anche per i tornei creati prima di
   // migration-tornei-formato.sql, che il ritorno non ce l'avevano.
@@ -152,6 +156,9 @@ export type Tournament = {
   id: string;
   name: string;
   status: "active" | "completed";
+  mode?: "teams" | "individual";
+  target_matches?: number | null;
+  participants?: { profile_id: string; sort_order: number }[];
   trophy_name: string;
   trophy_badge: "cup" | "crown" | "shield" | "star";
   trophy_image_path?: string | null;
