@@ -3707,12 +3707,6 @@ button.podium-person {
   width: 100%;
 }
 
-.ranking-history-chart figcaption {
-  color: var(--muted);
-  font-size: 11px;
-  margin-top: var(--space-2);
-}
-
 .ranking-history-empty {
   color: var(--muted);
   margin: var(--space-6) 0 0;

@@ -3861,7 +3861,6 @@ function RankingHistoryChart({ profiles, matches, season, compact }: { profiles:
           <text className="elo-date-label" x={padding.left} y={height - 9} textAnchor="start">{formatDate(seasonMatches[0].played_at)}</text>
           <text className="elo-date-label" x={plotRight} y={height - 9} textAnchor="end">{formatDate(seasonMatches[seasonMatches.length - 1].played_at)}</text>
         </svg>
-        <figcaption>Ogni linea segue i punti Elo dopo le partite; la foto alla fine indica il giocatore.</figcaption>
       </figure>
     </article>
   );
