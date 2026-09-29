@@ -19,6 +19,7 @@ import MonthGroup from "./MonthGroup";
 import WansportBoard from "./WansportBoard";
 import WansportAccesso from "./WansportAccesso";
 import CashoutPage from "./Cashout";
+import { drawTournamentTeams, type TournamentDraftTeam } from "@/lib/tournament-draw";
 
 // Le quattro sezioni del gruppo. La home non e una di loro: e lo smistamento
 // che le apre, e da li la barra in basso cambia voci.
@@ -5310,6 +5311,11 @@ function TournamentFormModal({
     : [0, 1, 2].map(() => ({ playerA: "", playerB: "", name: "" }));
   const [name, setName] = useState(tournament?.name ?? "Torneo TheBoyz");
   const [teams, setTeams] = useState(initialTeams);
+  const [teamSelectionMode, setTeamSelectionMode] = useState<"manual" | "random">("manual");
+  const [randomParticipantIds, setRandomParticipantIds] = useState<string[]>(
+    tournament ? initialTeams.flatMap((team) => [team.playerA, team.playerB]) : [],
+  );
+  const [drawnTeams, setDrawnTeams] = useState<TournamentDraftTeam[]>([]);
   const [trophyName, setTrophyName] = useState(tournament?.trophy_name ?? "Coppa TheBoyz");
   const [trophyBadge, setTrophyBadge] = useState<TournamentTrophyKind>(tournament?.trophy_badge ?? "cup");
   const [eloMultiplier, setEloMultiplier] = useState<1 | 2>(tournament?.elo_multiplier === 1 ? 1 : 2);
@@ -5320,7 +5326,10 @@ function TournamentFormModal({
 
   // Il conto delle partite lo fa il modulo mentre lo compili: e l'unico modo
   // per accorgersi che l'andata e ritorno con quattro coppie sono dodici sere.
-  const fixtureCount = (teams.length * (teams.length - 1) / 2) * legs;
+  const teamCount = teamSelectionMode === "random"
+    ? randomParticipantIds.length === 8 ? 4 : randomParticipantIds.length === 6 ? 3 : 0
+    : teams.length;
+  const fixtureCount = (teamCount * (teamCount - 1) / 2) * legs;
 
   // A, B, C, D. Il numero lo tiene il database (sort_order); qui dentro le
   // squadre si chiamano per lettera, cosi non si confondono con i due Player
@@ -5365,6 +5374,23 @@ function TournamentFormModal({
       : team));
   }
 
+  function toggleRandomParticipant(profileId: string) {
+    setRandomParticipantIds((current) => current.includes(profileId)
+      ? current.filter((id) => id !== profileId)
+      : current.length < 8 ? [...current, profileId] : current);
+    setDrawnTeams([]);
+    setError("");
+  }
+
+  function drawTeams() {
+    try {
+      setDrawnTeams(drawTournamentTeams(randomParticipantIds));
+      setError("");
+    } catch (drawError) {
+      setError(drawError instanceof Error ? drawError.message : "Impossibile sorteggiare le squadre.");
+    }
+  }
+
   // Quando una migrazione non e stata eseguita il database risponde con il
   // nome della funzione che non trova: si dice cosa manca invece di girare
   // quel messaggio cosi com'e.
@@ -5380,8 +5406,13 @@ function TournamentFormModal({
   async function saveTournament(event: FormEvent) {
     event.preventDefault();
     setError("");
-    const playerIds = teams.flatMap((team) => [team.playerA, team.playerB]);
-    if (teams.length < 3 || teams.some((team) => !team.playerA || !team.playerB)) {
+    if (teamSelectionMode === "random" && !drawnTeams.length) {
+      setError("Sorteggia le squadre prima di creare il torneo.");
+      return;
+    }
+    const selectedTeams = teamSelectionMode === "random" ? drawnTeams : teams;
+    const playerIds = selectedTeams.flatMap((team) => [team.playerA, team.playerB]);
+    if (selectedTeams.length < 3 || selectedTeams.some((team) => !team.playerA || !team.playerB)) {
       setError("Servono almeno tre squadre complete.");
       return;
     }
@@ -5395,7 +5426,7 @@ function TournamentFormModal({
     }
     if (!supabase) return;
     setBusy(true);
-    const teamPayload = teams.map((team, index) => {
+    const teamPayload = selectedTeams.map((team, index) => {
       return {
         player_a: team.playerA,
         player_b: team.playerB,
@@ -5476,15 +5507,49 @@ function TournamentFormModal({
           <>
           <label>Nome del torneo<input value={name} onChange={(event) => setName(event.target.value)} maxLength={70} required /></label>
 
+          {!playedFixtures ? (
+            <div className="ranking-switch tournament-team-mode" role="group" aria-label="Come formare le squadre">
+              <button type="button" className={teamSelectionMode === "manual" ? "active" : ""} onClick={() => { setTeamSelectionMode("manual"); setError(""); }} aria-pressed={teamSelectionMode === "manual"}>Scelgo le squadre</button>
+              <button type="button" className={teamSelectionMode === "random" ? "active" : ""} onClick={() => { setTeamSelectionMode("random"); setError(""); }} aria-pressed={teamSelectionMode === "random"}>Squadre casuali</button>
+            </div>
+          ) : null}
+
           <div className="tournament-form-head">
-            <div><p className="eyebrow dark">PARTECIPANTI E SQUADRE</p><h3>{teams.length} coppie · {fixtureCount} partite</h3></div>
-            {!playedFixtures && teams.length < 4 && profiles.length >= (teams.length + 1) * 2 ? (
+            <div><p className="eyebrow dark">PARTECIPANTI E SQUADRE</p><h3>{teamSelectionMode === "random" ? `${randomParticipantIds.length} partecipanti` : `${teams.length} coppie`} · {fixtureCount} partite</h3></div>
+            {teamSelectionMode === "manual" && !playedFixtures && teams.length < 4 && profiles.length >= (teams.length + 1) * 2 ? (
               <button className="button button-ghost" type="button" onClick={() => setTeams((current) => [...current, { playerA: "", playerB: "", name: "" }])}>+ Squadra</button>
             ) : null}
           </div>
           {playedFixtures ? (
             <p className="tournament-rule-note">Le squadre non si cambiano più: nel torneo c&apos;è già un risultato.</p>
           ) : null}
+          {teamSelectionMode === "random" && !playedFixtures ? (
+            <div className="tournament-random-builder">
+              <p className="tournament-rule-note">Seleziona 6 o 8 persone. Ogni partecipante finirà in una sola squadra.</p>
+              <div className="tournament-participant-list">
+                {profiles.map((profile) => {
+                  const selected = randomParticipantIds.includes(profile.id);
+                  return (
+                    <label className={`tournament-participant${selected ? " is-selected" : ""}`} key={profile.id}>
+                      <input type="checkbox" checked={selected} disabled={!selected && randomParticipantIds.length === 8} onChange={() => toggleRandomParticipant(profile.id)} />
+                      <span>{profile.display_name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <button className="button button-ghost" type="button" onClick={drawTeams} disabled={randomParticipantIds.length !== 6 && randomParticipantIds.length !== 8}>
+                {drawnTeams.length ? "↻ Risorteggia squadre" : "Sorteggia squadre"}
+              </button>
+              {drawnTeams.length ? (
+                <div className="tournament-draw-preview" aria-live="polite">
+                  <p className="eyebrow dark">SQUADRE ESTRATTE</p>
+                  {drawnTeams.map((team, index) => (
+                    <div key={index}><b>{savedTeamOf(team.playerA, team.playerB)?.name || `Team ${teamLetter(index)}`}</b><span>{profiles.find((profile) => profile.id === team.playerA)?.display_name} · {profiles.find((profile) => profile.id === team.playerB)?.display_name}</span></div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : (
           <div className="tournament-team-builder">
             {teams.map((team, index) => {
               // I giocatori gia impegnati in un'altra squadra di questo torneo:
@@ -5540,6 +5605,7 @@ function TournamentFormModal({
               );
             })}
           </div>
+          )}
 
           <div className="tournament-prize-form">
             <div className="tournament-prize-preview"><TournamentTrophyBadge kind={trophyBadge} /><span><b>{trophyName || "Trofeo"}</b><small>IN PALIO</small></span></div>
