@@ -3825,17 +3825,17 @@ function RankingHistoryChart({ profiles, matches, awards, season, compact }: { p
     for (const line of series) line.values.push({ day, rating: ratings.get(line.profile.id)! });
   }
 
-  const width = compact ? 360 : 760;
-  const height = Math.max(compact ? 340 : 310, players.length * 40 + 80);
-  const padding = { top: 30, right: compact ? 43 : 52, bottom: 22, left: compact ? 38 : 52 };
-  const plotRight = width - padding.right;
-  const plotBottom = height - padding.bottom;
   const allRatings = series.flatMap((line) => line.values.map((point) => point.rating));
   const rawMin = Math.min(...allRatings);
   const rawMax = Math.max(...allRatings);
-  const spread = Math.max(30, rawMax - rawMin);
-  const minRating = Math.floor((rawMin - spread * 0.12) / 10) * 10;
-  const maxRating = Math.ceil((rawMax + spread * 0.12) / 10) * 10;
+  const minRating = Math.min(950, Math.floor(rawMin / 50) * 50);
+  const maxRating = Math.max(1050, Math.ceil(rawMax / 50) * 50);
+  const gridValues = Array.from({ length: (maxRating - minRating) / 50 + 1 }, (_, index) => maxRating - index * 50);
+  const width = compact ? 360 : 760;
+  const height = Math.max(compact ? 340 : 310, players.length * 40 + 80, gridValues.length * 40 + 40);
+  const padding = { top: 30, right: compact ? 43 : 52, bottom: 22, left: compact ? 38 : 52 };
+  const plotRight = width - padding.right;
+  const plotBottom = height - padding.bottom;
   const xAt = (day: number) => padding.left + ((dayPositions.get(day) ?? 0) / matchDays.length) * (plotRight - padding.left);
   const yAt = (rating: number) => padding.top + ((maxRating - rating) / Math.max(1, maxRating - minRating)) * (plotBottom - padding.top);
   const badgeRadius = compact ? 14 : 16;
@@ -3858,10 +3858,10 @@ function RankingHistoryChart({ profiles, matches, awards, season, compact }: { p
       </div>
       <figure className="ranking-history-chart">
         <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Andamento Elo di ${players.length} giocatori nella stagione ${season}`}>
-          {[0, 1, 2, 3].map((index) => {
-            const rating = Math.round(maxRating - (index / 3) * (maxRating - minRating));
+          {gridValues.map((rating) => {
             const y = yAt(rating);
-            return <g key={index}><line className="elo-grid-line" x1={padding.left} x2={plotRight} y1={y} y2={y} /><text className="elo-axis-label" x={padding.left - 8} y={y + 4} textAnchor="end">{rating}</text></g>;
+            const baseline = rating === 1000 ? " is-baseline" : "";
+            return <g key={rating}><line className={`elo-grid-line${baseline}`} x1={padding.left} x2={plotRight} y1={y} y2={y} /><text className={`elo-axis-label${baseline}`} x={padding.left - 8} y={y + 4} textAnchor="end">{rating}</text></g>;
           })}
           {series.map((line, index) => {
             const color = `hsl(${Math.round((index * 137.5 + 195) % 360)} 62% 40%)`;

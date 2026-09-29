@@ -3707,6 +3707,15 @@ button.podium-person {
   width: 100%;
 }
 
+.ranking-history-chart .elo-grid-line.is-baseline {
+  stroke: var(--ink-45);
+  stroke-dasharray: none;
+}
+
+.ranking-history-chart .elo-axis-label.is-baseline {
+  fill: var(--ink);
+}
+
 .ranking-history-empty {
   color: var(--muted);
   margin: var(--space-6) 0 0;
