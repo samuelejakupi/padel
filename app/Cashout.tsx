@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { type Profile, supabase } from "@/lib/supabase";
 
 type CashoutMember = { group_id: string; profile_id: string; joined_at: string };
@@ -29,6 +30,13 @@ type CashoutExpense = {
   payers: CashoutPayer[];
   shares: CashoutShare[];
 };
+
+// Cashout vive nel contenitore mobile che scorre. I dialoghi devono invece
+// stare sopra la navigazione, non ereditare il suo ritaglio/stacking context.
+function CashoutDialogPortal({ children }: { children: ReactNode }) {
+  return typeof document === "undefined" ? null : createPortal(children, document.body);
+}
+
 type CashoutGroup = {
   id: string;
   name: string;
@@ -572,8 +580,8 @@ export default function CashoutPage({ profiles, viewerId }: { profiles: Profile[
     <>
       {notice ? <button className="notice" onClick={() => setNotice("")}>{notice}<span>×</span></button> : null}
       <CashoutGroupDetail group={selectedGroup} profiles={profiles} viewerId={viewerId} onBack={() => setSelectedId(null)} onNewExpense={() => setShowExpenseCreate(true)} onSettle={setSettlementTransfer} />
-      {showExpenseCreate ? <CashoutExpenseModal group={selectedGroup} profiles={profiles} viewerId={viewerId} onClose={() => setShowExpenseCreate(false)} onCreated={async () => { setShowExpenseCreate(false); await loadGroups(); }} /> : null}
-      {settlementTransfer ? <CashoutSettlementModal group={selectedGroup} profiles={profiles} transfer={settlementTransfer} onClose={() => setSettlementTransfer(null)} onCreated={async () => { setSettlementTransfer(null); await loadGroups(); }} /> : null}
+      {showExpenseCreate ? <CashoutDialogPortal><CashoutExpenseModal group={selectedGroup} profiles={profiles} viewerId={viewerId} onClose={() => setShowExpenseCreate(false)} onCreated={async () => { setShowExpenseCreate(false); await loadGroups(); }} /></CashoutDialogPortal> : null}
+      {settlementTransfer ? <CashoutDialogPortal><CashoutSettlementModal group={selectedGroup} profiles={profiles} transfer={settlementTransfer} onClose={() => setSettlementTransfer(null)} onCreated={async () => { setSettlementTransfer(null); await loadGroups(); }} /></CashoutDialogPortal> : null}
     </>
   );
 
@@ -612,7 +620,7 @@ export default function CashoutPage({ profiles, viewerId }: { profiles: Profile[
           </section>
         ) : <div className="compact-empty cashout-first-empty"><span>00</span><div><h2>Nessun gruppo di spesa</h2><p>Crea “Grigliata” o “Vacanza Mykonos”, scegli chi partecipa e poi aggiungi le spese.</p></div></div>}
       </section>
-      {showGroupCreate ? <CashoutGroupModal profiles={profiles} viewerId={viewerId} onClose={() => setShowGroupCreate(false)} onCreated={async (groupId) => { setShowGroupCreate(false); await loadGroups(); setSelectedId(groupId); }} /> : null}
+      {showGroupCreate ? <CashoutDialogPortal><CashoutGroupModal profiles={profiles} viewerId={viewerId} onClose={() => setShowGroupCreate(false)} onCreated={async (groupId) => { setShowGroupCreate(false); await loadGroups(); setSelectedId(groupId); }} /></CashoutDialogPortal> : null}
     </>
   );
 }
