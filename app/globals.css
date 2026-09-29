@@ -7540,16 +7540,10 @@ button.pizza-ranking-row {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* La classifica non ha un hero: i suoi controlli sono il primo elemento
-     visibile. Su alcuni telefoni l'area sicura letta da CSS vale zero anche
-     se ora e batteria occupano la fascia in alto. Completiamo quindi il
-     padding gia dato a .content fino ad almeno 68px, senza raddoppiarlo
-     sugli iPhone che comunicano correttamente il proprio inset. */
+  /* La classifica non ha un hero: i controlli partono subito dopo l'area
+     sicura gia riservata da .content, con solo un piccolo respiro visivo. */
   .ranking-page {
-    padding-top: max(
-      var(--space-4),
-      calc(var(--space-8) + var(--space-7) - max(14px, env(safe-area-inset-top)))
-    );
+    padding-top: var(--space-4);
   }
 
   /* La pagina e una superficie unica durante lo swipe: segue il dito e
