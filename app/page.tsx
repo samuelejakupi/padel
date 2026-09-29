@@ -3827,7 +3827,7 @@ function RankingHistoryChart({ profiles, matches, awards, season, compact }: { p
 
   const width = compact ? 360 : 760;
   const height = Math.max(compact ? 340 : 310, players.length * 40 + 80);
-  const padding = { top: 30, right: compact ? 43 : 52, bottom: 42, left: compact ? 38 : 52 };
+  const padding = { top: 30, right: compact ? 43 : 52, bottom: 22, left: compact ? 38 : 52 };
   const plotRight = width - padding.right;
   const plotBottom = height - padding.bottom;
   const allRatings = series.flatMap((line) => line.values.map((point) => point.rating));
@@ -3850,8 +3850,6 @@ function RankingHistoryChart({ profiles, matches, awards, season, compact }: { p
   }
   const overflow = Math.max(0, lastY - (plotBottom - badgeRadius));
   if (overflow) for (const ending of endings) badgeY.set(ending.index, badgeY.get(ending.index)! - overflow);
-  const formatDate = (date: string) => new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short" }).format(new Date(date));
-
   return (
     <article className="ranking-history-panel">
       <div className="ranking-history-head">
@@ -3888,8 +3886,6 @@ function RankingHistoryChart({ profiles, matches, awards, season, compact }: { p
               </g>
             );
           })}
-          <text className="elo-date-label" x={xAt(firstDay)} y={height - 9} textAnchor={matchDays.length === 1 ? "end" : "start"}>{formatDate(seasonMatches[0].played_at)}</text>
-          {matchDays.length > 1 ? <text className="elo-date-label" x={plotRight} y={height - 9} textAnchor="end">{formatDate(seasonMatches[seasonMatches.length - 1].played_at)}</text> : null}
         </svg>
       </figure>
     </article>
