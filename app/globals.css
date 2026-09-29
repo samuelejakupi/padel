@@ -3667,6 +3667,63 @@ button.podium-person {
   width: 18px;
 }
 
+/* Lo storico resta una card separata sotto la tabella; l'avatar chiude ogni
+   linea dentro al grafico, senza una legenda da inseguire su mobile. */
+.ranking-history-panel {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-top: var(--space-3);
+  padding: var(--space-6);
+}
+
+.ranking-history-head {
+  align-items: end;
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+}
+
+.ranking-history-head h2 {
+  font-size: 27px;
+  letter-spacing: -1.1px;
+  margin: 0;
+}
+
+.ranking-history-head > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.ranking-history-chart {
+  margin: var(--space-5) 0 0;
+}
+
+.ranking-history-chart svg {
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.ranking-history-chart figcaption {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: var(--space-2);
+}
+
+.ranking-history-empty {
+  color: var(--muted);
+  margin: var(--space-6) 0 0;
+}
+
+.ranking-history-initials {
+  fill: var(--ink);
+  font-size: 10px;
+  font-weight: 900;
+}
+
 /* Tornei: stessa grammatica carta/inchiostro della scheda giocatore, con il
    lime riservato al trofeo e alla squadra momentaneamente in testa. */
 
@@ -8465,6 +8522,21 @@ button.pizza-ranking-row {
 
   .ranking-mode-tabs button {
     min-width: 0;
+  }
+
+  .ranking-history-panel {
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+  }
+
+  .ranking-history-head {
+    align-items: start;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .ranking-history-head h2 {
+    font-size: 22px;
   }
 
   .tournament-board-head,

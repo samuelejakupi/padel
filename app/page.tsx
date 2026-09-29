@@ -3758,6 +3758,115 @@ function RankingList({
   );
 }
 
+function RankingHistoryChart({ profiles, matches, season, compact }: { profiles: Profile[]; matches: PadelMatch[]; season: number; compact: boolean }) {
+  const chartId = useId().replace(/:/g, "");
+  const players = sortPadelProfiles(profiles).filter((profile) => profile.matches_played > 0);
+  const playerIds = new Set(players.map((profile) => profile.id));
+  const seasonMatches = matches
+    .filter((match) => new Date(match.played_at).getFullYear() === season && match.players.some((player) => playerIds.has(player.profile_id)))
+    .sort((a, b) =>
+      new Date(a.played_at).getTime() - new Date(b.played_at).getTime()
+      || new Date(a.created_at ?? a.played_at).getTime() - new Date(b.created_at ?? b.played_at).getTime()
+      || a.id.localeCompare(b.id),
+    );
+
+  if (!players.length || !seasonMatches.length) {
+    return (
+      <article className="ranking-history-panel">
+        <div className="ranking-history-head"><div><p className="eyebrow dark">STAGIONE {season}</p><h2>Andamento classifica</h2></div></div>
+        <p className="ranking-history-empty">Il grafico apparirà dopo la prima partita della stagione.</p>
+      </article>
+    );
+  }
+
+  // Si parte dal punteggio finale meno i delta della stagione: cosi valgono
+  // anche le classifiche archiviate, senza inventare un rating iniziale.
+  const totals = new Map(players.map((profile) => [profile.id, 0]));
+  for (const match of seasonMatches) {
+    for (const player of match.players) {
+      if (totals.has(player.profile_id)) totals.set(player.profile_id, totals.get(player.profile_id)! + (player.rating_delta ?? 0));
+    }
+  }
+  const ratings = new Map(players.map((profile) => [profile.id, profile.rating - (totals.get(profile.id) ?? 0)]));
+  const series = players.map((profile) => ({ profile, values: [ratings.get(profile.id)!] }));
+  for (const match of seasonMatches) {
+    for (const player of match.players) {
+      if (ratings.has(player.profile_id)) ratings.set(player.profile_id, ratings.get(player.profile_id)! + (player.rating_delta ?? 0));
+    }
+    for (const line of series) line.values.push(ratings.get(line.profile.id)!);
+  }
+
+  const width = compact ? 360 : 760;
+  const height = Math.max(compact ? 340 : 310, players.length * 40 + 80);
+  const padding = { top: 30, right: compact ? 43 : 52, bottom: 42, left: compact ? 38 : 52 };
+  const plotRight = width - padding.right;
+  const plotBottom = height - padding.bottom;
+  const allRatings = series.flatMap((line) => line.values);
+  const rawMin = Math.min(...allRatings);
+  const rawMax = Math.max(...allRatings);
+  const spread = Math.max(30, rawMax - rawMin);
+  const minRating = Math.floor((rawMin - spread * 0.12) / 10) * 10;
+  const maxRating = Math.ceil((rawMax + spread * 0.12) / 10) * 10;
+  const xAt = (index: number) => padding.left + (index / seasonMatches.length) * (plotRight - padding.left);
+  const yAt = (rating: number) => padding.top + ((maxRating - rating) / Math.max(1, maxRating - minRating)) * (plotBottom - padding.top);
+  const badgeRadius = compact ? 14 : 16;
+  const badgeX = plotRight + (compact ? 23 : 27);
+  const endings = series.map((line, index) => ({ index, y: yAt(line.profile.rating) })).sort((a, b) => a.y - b.y);
+  const badgeY = new Map<number, number>();
+  const gap = badgeRadius * 2 + 6;
+  let lastY = padding.top + badgeRadius - gap;
+  for (const ending of endings) {
+    lastY = Math.max(ending.y, lastY + gap);
+    badgeY.set(ending.index, lastY);
+  }
+  const overflow = Math.max(0, lastY - (plotBottom - badgeRadius));
+  if (overflow) for (const ending of endings) badgeY.set(ending.index, badgeY.get(ending.index)! - overflow);
+  const formatDate = (date: string) => new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short" }).format(new Date(date));
+
+  return (
+    <article className="ranking-history-panel">
+      <div className="ranking-history-head">
+        <div><p className="eyebrow dark">STAGIONE {season}</p><h2>Andamento classifica</h2></div>
+        <span>{players.length} giocatori · {seasonMatches.length} partite</span>
+      </div>
+      <figure className="ranking-history-chart">
+        <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Andamento Elo di ${players.length} giocatori nella stagione ${season}`}>
+          {[0, 1, 2, 3].map((index) => {
+            const rating = Math.round(maxRating - (index / 3) * (maxRating - minRating));
+            const y = yAt(rating);
+            return <g key={index}><line className="elo-grid-line" x1={padding.left} x2={plotRight} y1={y} y2={y} /><text className="elo-axis-label" x={padding.left - 8} y={y + 4} textAnchor="end">{rating}</text></g>;
+          })}
+          {series.map((line, index) => {
+            const color = `hsl(${Math.round((index * 137.5 + 195) % 360)} 62% 40%)`;
+            const path = line.values.map((rating, point) => `${point ? "L" : "M"} ${xAt(point)} ${yAt(rating)}`).join(" ");
+            const endY = badgeY.get(index)!;
+            const clipId = `${chartId}-avatar-${index}`;
+            return (
+              <g key={line.profile.id}>
+                <title>{`${line.profile.display_name}: ${line.profile.rating} punti Elo`}</title>
+                <path d={path} fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={compact ? 2.5 : 3} />
+                <path d={`M ${plotRight} ${yAt(line.profile.rating)} L ${badgeX - badgeRadius} ${endY}`} fill="none" stroke={color} strokeDasharray={endY === yAt(line.profile.rating) ? undefined : "3 3"} strokeWidth="2" />
+                <circle cx={badgeX} cy={endY} r={badgeRadius + 2} fill="var(--white)" stroke={color} strokeWidth="3" />
+                {line.profile.avatar_url ? (
+                  <>
+                    <defs><clipPath id={clipId}><circle cx={badgeX} cy={endY} r={badgeRadius} /></clipPath></defs>
+                    <image href={line.profile.avatar_url} x={badgeX - badgeRadius} y={endY - badgeRadius} width={badgeRadius * 2} height={badgeRadius * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#${clipId})`} />
+                  </>
+                ) : (
+                  <text className="ranking-history-initials" x={badgeX} y={endY + 4} textAnchor="middle">{initials(line.profile.display_name)}</text>
+                )}
+              </g>
+            );
+          })}
+          <text className="elo-date-label" x={padding.left} y={height - 9} textAnchor="start">{formatDate(seasonMatches[0].played_at)}</text>
+          <text className="elo-date-label" x={plotRight} y={height - 9} textAnchor="end">{formatDate(seasonMatches[seasonMatches.length - 1].played_at)}</text>
+        </svg>
+        <figcaption>Ogni linea segue i punti Elo dopo le partite; la foto alla fine indica il giocatore.</figcaption>
+      </figure>
+    </article>
+  );
+}
+
 function EloChart({ profile, matches, isSelf }: { profile: Profile; matches: PadelMatch[]; isSelf?: boolean }) {
   const personalMatches = [...matches]
     .filter((match) => match.players.some((player) => player.profile_id === profile.id))
@@ -8053,7 +8162,10 @@ function AppShell({ session }: { session: Session | null }) {
               />
             </header>
             {rankingMode === "single" ? (
-              <RankingList profiles={seasonProfiles} onSelect={openPlayer} />
+              <>
+                <RankingList profiles={seasonProfiles} onSelect={openPlayer} />
+                <RankingHistoryChart profiles={seasonProfiles} matches={matches} season={season} compact={isPhone} />
+              </>
             ) : rankedSeasonTeams.length ? (
               <TeamRankingList teams={rankedSeasonTeams} expanded />
             ) : (
