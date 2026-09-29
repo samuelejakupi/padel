@@ -3805,16 +3805,16 @@ function RankingHistoryChart({ profiles, matches, awards, season, compact }: { p
     applyMatch(match);
   }
 
-  // Un solo punto per giorno: due partite nella stessa data producono il
-  // rating di fine giornata, e la distanza orizzontale segue i giorni veri.
+  // Un solo punto per giornata: due partite nella stessa data producono il
+  // rating di fine giornata, e ogni giornata occupa lo stesso passo nel grafico.
   const dayOf = (date: string) => {
     const local = new Date(date);
     return Date.UTC(local.getFullYear(), local.getMonth(), local.getDate());
   };
   const matchDays = [...new Set(seasonMatches.map((match) => dayOf(match.played_at)))];
   const firstDay = matchDays[0];
-  const lastDay = matchDays[matchDays.length - 1];
   const startDay = firstDay - 86_400_000;
+  const dayPositions = new Map(matchDays.map((day, index) => [day, index + 1]));
   const series = players.map((profile) => ({ profile, values: [{ day: startDay, rating: ratings.get(profile.id)! }] }));
   let nextMatch = 0;
   for (const day of matchDays) {
@@ -3836,7 +3836,7 @@ function RankingHistoryChart({ profiles, matches, awards, season, compact }: { p
   const spread = Math.max(30, rawMax - rawMin);
   const minRating = Math.floor((rawMin - spread * 0.12) / 10) * 10;
   const maxRating = Math.ceil((rawMax + spread * 0.12) / 10) * 10;
-  const xAt = (day: number) => padding.left + ((day - startDay) / (lastDay - startDay)) * (plotRight - padding.left);
+  const xAt = (day: number) => padding.left + ((dayPositions.get(day) ?? 0) / matchDays.length) * (plotRight - padding.left);
   const yAt = (rating: number) => padding.top + ((maxRating - rating) / Math.max(1, maxRating - minRating)) * (plotBottom - padding.top);
   const badgeRadius = compact ? 14 : 16;
   const badgeX = plotRight + (compact ? 23 : 27);
