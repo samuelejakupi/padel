@@ -9624,19 +9624,6 @@ button.pizza-ranking-row {
   transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.tournament-create-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-@media (max-width: 780px) {
-  .tournament-create-actions {
-    flex-direction: column;
-    width: 100%;
-  }
-}
-
 /* La pastiglia resta schiacciata finche il dito preme e torna su quando lo
    alzi, come il tasto della nuova partita. Prima faceva un rimbalzo di
    durata fissa: tenendo premuto risaliva da sola dopo due decimi e sembrava

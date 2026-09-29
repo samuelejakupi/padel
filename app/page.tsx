@@ -5344,6 +5344,7 @@ function TournamentFormModal({
     : [0, 1, 2].map(() => ({ playerA: "", playerB: "", name: "" }));
   const [name, setName] = useState(tournament?.name ?? "Torneo TheBoyz");
   const [teams, setTeams] = useState(initialTeams);
+  const [creationMode, setCreationMode] = useState<"teams" | "individual">("teams");
   const [teamSelectionMode, setTeamSelectionMode] = useState<"manual" | "random">("manual");
   const [randomParticipantIds, setRandomParticipantIds] = useState<string[]>(
     tournament ? initialTeams.flatMap((team) => [team.playerA, team.playerB]) : [],
@@ -5526,7 +5527,17 @@ function TournamentFormModal({
     // di lato, e sarebbe strano trovare due pannelli diversi a un dito di
     // distanza.
     <BottomSheet title={editing ? "Modifica il torneo" : "Crea un torneo"} onClose={onClose}>
+      {!editing && creationMode === "individual" ? (
+        <IndividualTournamentForm profiles={profiles} onChooseTeams={() => setCreationMode("teams")} onSaved={async () => onSaved("created")} />
+      ) : (
       <form className="sheet-form tournament-create-form" onSubmit={saveTournament}>
+          {!editing ? <div className="tournament-choice">
+            <div><p className="eyebrow dark">MODALITÀ</p><h3>Come si gioca?</h3></div>
+            <div className="ranking-switch tournament-team-mode" role="group" aria-label="Modalità del torneo">
+              <button type="button" className="active" aria-pressed="true">A coppie fisse</button>
+              <button type="button" aria-pressed="false" onClick={() => setCreationMode("individual")}>Individuale</button>
+            </div>
+          </div> : null}
           {/* Passate le 24 ore il foglio resta, ma non si tocca piu niente:
               un torneo in corso e fatto anche di quello che gli altri hanno
               gia giocato dentro. */}
@@ -5701,6 +5712,7 @@ function TournamentFormModal({
             ) : null}
           </div>
         </form>
+      )}
     </BottomSheet>
   );
 }
@@ -5951,9 +5963,9 @@ function TournamentFixtures({
   );
 }
 
-function IndividualTournamentFormModal({ profiles, onClose, onSaved }: {
+function IndividualTournamentForm({ profiles, onChooseTeams, onSaved }: {
   profiles: Profile[];
-  onClose: () => void;
+  onChooseTeams: () => void;
   onSaved: () => Promise<void>;
 }) {
   const [name, setName] = useState("Torneo individuale TheBoyz");
@@ -5965,8 +5977,7 @@ function IndividualTournamentFormModal({ profiles, onClose, onSaved }: {
   const [error, setError] = useState("");
   const n = playerIds.length;
   const gamesPerCycle = n % 4 === 0 ? n / 4 : n % 2 === 0 ? n / 2 : n;
-  return <BottomSheet title="Torneo individuale" onClose={onClose}>
-    <form className="sheet-form tournament-create-form" onSubmit={async (event) => {
+  return <form className="sheet-form tournament-create-form" onSubmit={async (event) => {
       event.preventDefault();
       if (!supabase || n < 4 || n > 8) { setError("Seleziona da 4 a 8 partecipanti."); return; }
       setBusy(true); setError("");
@@ -5977,6 +5988,13 @@ function IndividualTournamentFormModal({ profiles, onClose, onSaved }: {
       if (saveError) { setError(saveError.message); setBusy(false); return; }
       await onSaved();
     }}>
+      <div className="tournament-choice">
+        <div><p className="eyebrow dark">MODALITÀ</p><h3>Come si gioca?</h3></div>
+        <div className="ranking-switch tournament-team-mode" role="group" aria-label="Modalità del torneo">
+          <button type="button" aria-pressed="false" onClick={onChooseTeams}>A coppie fisse</button>
+          <button type="button" className="active" aria-pressed="true">Individuale</button>
+        </div>
+      </div>
       <p className="tournament-rule-note">Coppie variabili, un set per partita. Il prossimo abbinamento viene sorteggiato dopo il risultato. A fine ciclo tutti hanno giocato lo stesso numero di partite.</p>
       <label>Nome torneo<input value={name} onChange={(event) => setName(event.target.value)} maxLength={70} required /></label>
       <label>Nome trofeo<input value={trophyName} onChange={(event) => setTrophyName(event.target.value)} maxLength={60} required /></label>
@@ -5993,8 +6011,7 @@ function IndividualTournamentFormModal({ profiles, onClose, onSaved }: {
       {n >= 4 ? <p className="tournament-rule-note">{gamesPerCycle * cycles} partite totali · premio finale: +45 / +30 / +15 Elo ai primi tre.</p> : null}
       {error ? <p className="form-error" role="alert">{error}</p> : null}
       <button className="button button-lime" disabled={busy || n < 4}>{busy ? "Creazione…" : "Crea torneo individuale"}</button>
-    </form>
-  </BottomSheet>;
+    </form>;
 }
 
 function TournamentsPage({
@@ -6004,7 +6021,6 @@ function TournamentsPage({
   viewerId,
   schemaReady,
   onCreate,
-  onCreateIndividual,
   onEdit,
   onRecord,
   onDraw,
@@ -6016,7 +6032,6 @@ function TournamentsPage({
   viewerId?: string | null;
   schemaReady: boolean;
   onCreate: () => void;
-  onCreateIndividual: () => void;
   onEdit: (tournament: Tournament) => void;
   onRecord: (context: TournamentMatchContext) => void;
   onDraw: (tournament: Tournament) => void;
@@ -6065,7 +6080,7 @@ function TournamentsPage({
         <BlockMark size="lg" />
         <div className="section-hero-head">
           <div><p className="eyebrow">THEBOYZ CUP</p><h1>Tornei</h1><p>A coppie fisse o individuali con coppie variabili.</p></div>
-          <div className="tournament-create-actions"><button className="button button-primary tournament-new-button" onClick={onCreate} disabled={!schemaReady}>+ A COPPIE FISSE</button><button className="button button-primary tournament-new-button" onClick={onCreateIndividual} disabled={!schemaReady}>+ INDIVIDUALE</button></div>
+          <button className="button button-primary tournament-new-button" onClick={onCreate} disabled={!schemaReady}>+ NUOVO TORNEO</button>
         </div>
       </article>
 
@@ -6367,7 +6382,6 @@ function AppShell({ session }: { session: Session | null }) {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [tournamentSchemaReady, setTournamentSchemaReady] = useState(true);
   const [showTournamentCreate, setShowTournamentCreate] = useState(false);
-  const [showIndividualTournamentCreate, setShowIndividualTournamentCreate] = useState(false);
   const [showTeamCreate, setShowTeamCreate] = useState(false);
   // Il torneo che si sta correggendo: lo stesso foglio della creazione, con
   // dentro quello che c'e gia.
@@ -8063,7 +8077,6 @@ function AppShell({ session }: { session: Session | null }) {
             viewerId={session?.user.id}
             schemaReady={tournamentSchemaReady}
             onCreate={() => setShowTournamentCreate(true)}
-            onCreateIndividual={() => setShowIndividualTournamentCreate(true)}
             onEdit={(tournament) => setEditingTournament(tournament)}
             onRecord={(context) => { setEditingMatch(null); setTournamentMatch(context); }}
             onDraw={async (tournament) => {
@@ -8824,11 +8837,6 @@ function AppShell({ session }: { session: Session | null }) {
           }}
         />
       ) : null}
-      {showIndividualTournamentCreate ? <IndividualTournamentFormModal
-        profiles={profiles}
-        onClose={() => setShowIndividualTournamentCreate(false)}
-        onSaved={async () => { setShowIndividualTournamentCreate(false); await loadData(); setNotice("Torneo individuale creato."); }}
-      /> : null}
       {showAvatarPicker ? (
         <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setShowAvatarPicker(false)}>
           <section className="modal" role="dialog" aria-modal="true" aria-labelledby="avatar-picker-title">
