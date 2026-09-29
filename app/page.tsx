@@ -3758,17 +3758,15 @@ function RankingList({
   );
 }
 
-function RankingHistoryChart({ profiles, matches, season, compact }: { profiles: Profile[]; matches: PadelMatch[]; season: number; compact: boolean }) {
+function RankingHistoryChart({ profiles, matches, awards, season, compact }: { profiles: Profile[]; matches: PadelMatch[]; awards: RankingAward[] | null; season: number; compact: boolean }) {
   const chartId = useId().replace(/:/g, "");
   const players = sortPadelProfiles(profiles).filter((profile) => profile.matches_played > 0);
-  const playerIds = new Set(players.map((profile) => profile.id));
-  const seasonMatches = matches
-    .filter((match) => new Date(match.played_at).getFullYear() === season && match.players.some((player) => playerIds.has(player.profile_id)))
-    .sort((a, b) =>
+  const orderedMatches = [...matches].sort((a, b) =>
       new Date(a.played_at).getTime() - new Date(b.played_at).getTime()
       || new Date(a.created_at ?? a.played_at).getTime() - new Date(b.created_at ?? b.played_at).getTime()
       || a.id.localeCompare(b.id),
     );
+  const seasonMatches = orderedMatches.filter((match) => new Date(match.played_at).getFullYear() === season);
 
   if (!players.length || !seasonMatches.length) {
     return (
@@ -3779,21 +3777,52 @@ function RankingHistoryChart({ profiles, matches, season, compact }: { profiles:
     );
   }
 
-  // Si parte dal punteggio finale meno i delta della stagione: cosi valgono
-  // anche le classifiche archiviate, senza inventare un rating iniziale.
-  const totals = new Map(players.map((profile) => [profile.id, 0]));
-  for (const match of seasonMatches) {
-    for (const player of match.players) {
-      if (totals.has(player.profile_id)) totals.set(player.profile_id, totals.get(player.profile_id)! + (player.rating_delta ?? 0));
-    }
+  if (awards === null) {
+    return (
+      <article className="ranking-history-panel">
+        <div className="ranking-history-head"><div><p className="eyebrow dark">STAGIONE {season}</p><h2>Andamento classifica</h2></div></div>
+        <p className="ranking-history-empty">Non è stato possibile caricare i premi Elo del grafico. Riprova tra poco.</p>
+      </article>
+    );
   }
-  const ratings = new Map(players.map((profile) => [profile.id, profile.rating - (totals.get(profile.id) ?? 0)]));
-  const series = players.map((profile) => ({ profile, values: [ratings.get(profile.id)!] }));
-  for (const match of seasonMatches) {
+
+  // Il ricalcolo Elo riparte sempre da 1000 e ripassa TUTTO lo storico.
+  // Riproduciamo quel percorso, premi compresi, prima della stagione scelta:
+  // sottrarre i soli delta stagionali dal rating finale anticipava i premi.
+  const awardsByMatch = new Map<string, RankingAward[]>();
+  for (const award of awards) awardsByMatch.set(award.matchId, [...(awardsByMatch.get(award.matchId) ?? []), award]);
+  const ratings = new Map(players.map((profile) => [profile.id, 1000]));
+  const applyMatch = (match: PadelMatch) => {
     for (const player of match.players) {
       if (ratings.has(player.profile_id)) ratings.set(player.profile_id, ratings.get(player.profile_id)! + (player.rating_delta ?? 0));
     }
-    for (const line of series) line.values.push(ratings.get(line.profile.id)!);
+    for (const award of awardsByMatch.get(match.id) ?? []) {
+      if (ratings.has(award.profileId)) ratings.set(award.profileId, ratings.get(award.profileId)! + award.points);
+    }
+  };
+  for (const match of orderedMatches) {
+    if (new Date(match.played_at).getFullYear() >= season) break;
+    applyMatch(match);
+  }
+
+  // Un solo punto per giorno: due partite nella stessa data producono il
+  // rating di fine giornata, e la distanza orizzontale segue i giorni veri.
+  const dayOf = (date: string) => {
+    const local = new Date(date);
+    return Date.UTC(local.getFullYear(), local.getMonth(), local.getDate());
+  };
+  const matchDays = [...new Set(seasonMatches.map((match) => dayOf(match.played_at)))];
+  const firstDay = matchDays[0];
+  const lastDay = matchDays[matchDays.length - 1];
+  const startDay = firstDay - 86_400_000;
+  const series = players.map((profile) => ({ profile, values: [{ day: startDay, rating: ratings.get(profile.id)! }] }));
+  let nextMatch = 0;
+  for (const day of matchDays) {
+    while (nextMatch < seasonMatches.length && dayOf(seasonMatches[nextMatch].played_at) <= day) {
+      applyMatch(seasonMatches[nextMatch]);
+      nextMatch += 1;
+    }
+    for (const line of series) line.values.push({ day, rating: ratings.get(line.profile.id)! });
   }
 
   const width = compact ? 360 : 760;
@@ -3801,17 +3830,17 @@ function RankingHistoryChart({ profiles, matches, season, compact }: { profiles:
   const padding = { top: 30, right: compact ? 43 : 52, bottom: 42, left: compact ? 38 : 52 };
   const plotRight = width - padding.right;
   const plotBottom = height - padding.bottom;
-  const allRatings = series.flatMap((line) => line.values);
+  const allRatings = series.flatMap((line) => line.values.map((point) => point.rating));
   const rawMin = Math.min(...allRatings);
   const rawMax = Math.max(...allRatings);
   const spread = Math.max(30, rawMax - rawMin);
   const minRating = Math.floor((rawMin - spread * 0.12) / 10) * 10;
   const maxRating = Math.ceil((rawMax + spread * 0.12) / 10) * 10;
-  const xAt = (index: number) => padding.left + (index / seasonMatches.length) * (plotRight - padding.left);
+  const xAt = (day: number) => padding.left + ((day - startDay) / (lastDay - startDay)) * (plotRight - padding.left);
   const yAt = (rating: number) => padding.top + ((maxRating - rating) / Math.max(1, maxRating - minRating)) * (plotBottom - padding.top);
   const badgeRadius = compact ? 14 : 16;
   const badgeX = plotRight + (compact ? 23 : 27);
-  const endings = series.map((line, index) => ({ index, y: yAt(line.profile.rating) })).sort((a, b) => a.y - b.y);
+  const endings = series.map((line, index) => ({ index, y: yAt(line.values[line.values.length - 1].rating) })).sort((a, b) => a.y - b.y);
   const badgeY = new Map<number, number>();
   const gap = badgeRadius * 2 + 6;
   let lastY = padding.top + badgeRadius - gap;
@@ -3827,7 +3856,7 @@ function RankingHistoryChart({ profiles, matches, season, compact }: { profiles:
     <article className="ranking-history-panel">
       <div className="ranking-history-head">
         <div><p className="eyebrow dark">STAGIONE {season}</p><h2>Andamento classifica</h2></div>
-        <span>{players.length} giocatori · {seasonMatches.length} partite</span>
+        <span>{players.length} giocatori · {matchDays.length} giornate</span>
       </div>
       <figure className="ranking-history-chart">
         <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Andamento Elo di ${players.length} giocatori nella stagione ${season}`}>
@@ -3838,14 +3867,15 @@ function RankingHistoryChart({ profiles, matches, season, compact }: { profiles:
           })}
           {series.map((line, index) => {
             const color = `hsl(${Math.round((index * 137.5 + 195) % 360)} 62% 40%)`;
-            const path = line.values.map((rating, point) => `${point ? "L" : "M"} ${xAt(point)} ${yAt(rating)}`).join(" ");
+            const path = line.values.map((point, index) => `${index ? "L" : "M"} ${xAt(point.day)} ${yAt(point.rating)}`).join(" ");
             const endY = badgeY.get(index)!;
             const clipId = `${chartId}-avatar-${index}`;
+            const finalRating = line.values[line.values.length - 1].rating;
             return (
               <g key={line.profile.id}>
-                <title>{`${line.profile.display_name}: ${line.profile.rating} punti Elo`}</title>
+                <title>{`${line.profile.display_name}: ${finalRating} punti Elo`}</title>
                 <path d={path} fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={compact ? 2.5 : 3} />
-                <path d={`M ${plotRight} ${yAt(line.profile.rating)} L ${badgeX - badgeRadius} ${endY}`} fill="none" stroke={color} strokeDasharray={endY === yAt(line.profile.rating) ? undefined : "3 3"} strokeWidth="2" />
+                <path d={`M ${plotRight} ${yAt(finalRating)} L ${badgeX - badgeRadius} ${endY}`} fill="none" stroke={color} strokeDasharray={endY === yAt(finalRating) ? undefined : "3 3"} strokeWidth="2" />
                 <circle cx={badgeX} cy={endY} r={badgeRadius + 2} fill="var(--white)" stroke={color} strokeWidth="3" />
                 {line.profile.avatar_url ? (
                   <>
@@ -3858,8 +3888,8 @@ function RankingHistoryChart({ profiles, matches, season, compact }: { profiles:
               </g>
             );
           })}
-          <text className="elo-date-label" x={padding.left} y={height - 9} textAnchor="start">{formatDate(seasonMatches[0].played_at)}</text>
-          <text className="elo-date-label" x={plotRight} y={height - 9} textAnchor="end">{formatDate(seasonMatches[seasonMatches.length - 1].played_at)}</text>
+          <text className="elo-date-label" x={xAt(firstDay)} y={height - 9} textAnchor={matchDays.length === 1 ? "end" : "start"}>{formatDate(seasonMatches[0].played_at)}</text>
+          {matchDays.length > 1 ? <text className="elo-date-label" x={plotRight} y={height - 9} textAnchor="end">{formatDate(seasonMatches[seasonMatches.length - 1].played_at)}</text> : null}
         </svg>
       </figure>
     </article>
@@ -5227,6 +5257,8 @@ type TournamentStanding = {
   directWins: number;
 };
 
+type RankingAward = { matchId: string; profileId: string; points: number };
+
 const INDIVIDUAL_TOURNAMENT_AWARDS = [45, 30, 15];
 
 function buildIndividualStandings(tournament: Tournament, matches: PadelMatch[]) {
@@ -6488,6 +6520,7 @@ function AppShell({ session }: { session: Session | null }) {
   const [seasonRows, setSeasonRows] = useState<SeasonStanding[]>([]);
   const [season, setSeason] = useState(new Date().getFullYear());
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [rankingAwards, setRankingAwards] = useState<RankingAward[] | null>(null);
   const [tournamentSchemaReady, setTournamentSchemaReady] = useState(true);
   const [showTournamentCreate, setShowTournamentCreate] = useState(false);
   const [showTeamCreate, setShowTeamCreate] = useState(false);
@@ -6681,6 +6714,30 @@ function AppShell({ session }: { session: Session | null }) {
         })),
         };
       }) as unknown as PadelMatch[];
+      // Il premio Elo arriva alla partita conclusiva del torneo, ma non e
+      // incluso nei rating_delta dei giocatori: lo chiediamo alla stessa RPC
+      // usata dal ricalcolo, cosi il grafico lo colloca nel giorno giusto.
+      const matchById = new Map(normalized.map((match) => [match.id, match]));
+      const completedTournaments = loadedTournaments.filter((tournament) => tournamentIsCompleted(tournament, normalized));
+      const awardResults = await Promise.all(completedTournaments.map(async (tournament) => {
+        const closingMatch = tournament.fixtures
+          .map((fixture) => fixture.match_id ? matchById.get(fixture.match_id) : null)
+          .filter((match): match is PadelMatch => Boolean(match))
+          .sort((a, b) =>
+            new Date(b.played_at).getTime() - new Date(a.played_at).getTime()
+            || new Date(b.created_at ?? b.played_at).getTime() - new Date(a.created_at ?? a.played_at).getTime()
+            || b.id.localeCompare(a.id),
+          )[0];
+        if (!closingMatch) return { data: [], error: null };
+        const result = await client.rpc("tournament_elo_awards", { p_tournament_id: tournament.id });
+        return {
+          data: ((result.data ?? []) as { profile_id: string; points: number }[]).map((award) => ({
+            matchId: closingMatch.id, profileId: award.profile_id, points: award.points,
+          })),
+          error: result.error,
+        };
+      }));
+      setRankingAwards(awardResults.some((result) => result.error) ? null : awardResults.flatMap((result) => result.data));
       setProfiles(withAvatars);
       setMatches(normalized);
       setPlannedMatchesReady(!plannedMatchesResult.error);
@@ -8163,7 +8220,7 @@ function AppShell({ session }: { session: Session | null }) {
             {rankingMode === "single" ? (
               <>
                 <RankingList profiles={seasonProfiles} onSelect={openPlayer} />
-                <RankingHistoryChart profiles={seasonProfiles} matches={matches} season={season} compact={isPhone} />
+                <RankingHistoryChart profiles={seasonProfiles} matches={matches} awards={rankingAwards} season={season} compact={isPhone} />
               </>
             ) : rankedSeasonTeams.length ? (
               <TeamRankingList teams={rankedSeasonTeams} expanded />
