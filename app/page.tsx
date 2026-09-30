@@ -430,8 +430,8 @@ const PADEL_COURTS = [
 
 // Un set finito ha un vincitore: sei giochi con due di scarto, oppure il 7-6
 // del tie-break. Tutto il resto — 2-1, 4-4, 5-3 — e un set lasciato a meta
-// perche il campo e scaduto. Serve a distinguere il terzo set interrotto,
-// che non assegna un set vinto ma i cui giochi contano lo stesso.
+// perche il campo e scaduto. Il set interrotto resta nello storico,
+// ma non assegna ne una vittoria ne punti Elo.
 function setIsComplete(team1Games: number, team2Games: number) {
   const high = Math.max(team1Games, team2Games);
   const low = Math.min(team1Games, team2Games);
@@ -464,10 +464,26 @@ function padelWinRate(wins: number, losses: number) {
   return Math.round(padelWinRateRatio(wins, losses) * 100);
 }
 
-// I set che assegnano un punto: quello interrotto non conta, ne per chi lo
-// stava conducendo ne per l'altro.
+// Nel meglio dei tre un eventuale terzo set storico giocato dopo il 2-0
+// resta visibile, ma non appartiene piu alla partita.
+function countedSets(sets: PadelSet[]) {
+  const counted: PadelSet[] = [];
+  let team1Wins = 0;
+  let team2Wins = 0;
+  for (const set of [...sets].sort((a, b) => a.set_number - b.set_number)) {
+    if (team1Wins === 2 || team2Wins === 2) break;
+    counted.push(set);
+    if (setIsIncomplete(set)) continue;
+    if (set.team1_games > set.team2_games) team1Wins += 1;
+    if (set.team2_games > set.team1_games) team2Wins += 1;
+  }
+  return counted;
+}
+
+// Solo i set conclusi prima che una squadra arrivi a due contano nell'Elo
+// e nelle statistiche sui set. Il set interrotto resta nel referto.
 function decidedSets(sets: PadelSet[]) {
-  return sets.filter((set) => !setIsIncomplete(set));
+  return countedSets(sets).filter((set) => !setIsIncomplete(set));
 }
 
 function sortPadelProfiles(profiles: Profile[]) {
@@ -2569,13 +2585,17 @@ function MatchCard({
   // delle altre e la fila non tornava. Quelle non giocate sono 0-0 sbiadite,
   // come i set interrotti: stessa forma, ma si vede che non sono state
   // giocate.
-  const scoreCells: { key: string; left: number; right: number; tone: string }[] = [...match.sets]
+  const countedSetNumbers = new Set(countedSets(match.sets).map((set) => set.set_number));
+  const scoreCells: { key: string; left: number; right: number; tone: string; title?: string }[] = [...match.sets]
     .sort((a, b) => a.set_number - b.set_number)
     .map((set) => ({
       key: String(set.set_number),
       left: flipped ? set.team2_games : set.team1_games,
       right: flipped ? set.team1_games : set.team2_games,
-      tone: setIsIncomplete(set) ? "unfinished" : "played",
+      tone: !countedSetNumbers.has(set.set_number) ? "ignored"
+        : setIsIncomplete(set) ? "unfinished" : "played",
+      title: countedSetNumbers.has(set.set_number) ? undefined
+        : "Set fuori partita: il match era già finito 2-0",
     }));
   while (scoreCells.length < MATCH_SETS_SHOWN) {
     scoreCells.push({ key: `empty-${scoreCells.length}`, left: 0, right: 0, tone: "empty" });
@@ -2669,7 +2689,8 @@ function MatchCard({
         </div>
         <div className="match-score">
           {scoreCells.map((cell) => (
-            <span key={cell.key} className={cell.tone === "played" ? undefined : `match-score-${cell.tone}`}>
+            <span key={cell.key} className={cell.tone === "played" ? undefined : `match-score-${cell.tone}`}
+              title={cell.title} aria-label={cell.title ? `${cell.left}-${cell.right}, ${cell.title}` : undefined}>
               <b>{cell.left}</b>
               <i>—</i>
               <b>{cell.right}</b>
@@ -4017,15 +4038,16 @@ function matchSummary(profiles: Profile[], playerIds: string[], sets: PadelSet[]
   const name = (id: string) => profiles.find((profile) => profile.id === id)?.display_name ?? "?";
   const team1 = playerIds.slice(0, 2).map(name).join(" · ");
   const team2 = playerIds.slice(2, 4).map(name).join(" · ");
+  const countedSetNumbers = new Set(countedSets(sets).map((set) => set.set_number));
   const score = sets
-    .map((set) => `${set.team1_games}-${set.team2_games}${setIsIncomplete(set) ? " (interrotto)" : ""}`)
+    .map((set) => `${set.team1_games}-${set.team2_games}${!countedSetNumbers.has(set.set_number)
+      ? " (fuori partita)" : setIsIncomplete(set) ? " (interrotto)" : ""}`)
     .join(" ");
   return `${team1} vs ${team2} · ${score}`;
 }
 
-// Legge il tabellone scritto nel modulo. Si puo registrare anche una partita
-// secca da un set: il database le assegna un peso Elo dedicato. Il terzo
-// set vale come set vinto solo se e finito.
+// Legge il tabellone scritto nel modulo. Nel meglio dei tre il 2-0 chiude
+// la partita: un terzo set e valido solo se i primi due sono stati divisi.
 function readMatchScore(scores: string[][]) {
   const filled = scores
     .map(([team1, team2], index) => ({ index, team1, team2 }))
@@ -4046,8 +4068,16 @@ function readMatchScore(scores: string[][]) {
   const decided = decidedSets(sets);
   const team1Sets = decided.filter((set) => set.team1_games > set.team2_games).length;
   const team2Sets = decided.filter((set) => set.team2_games > set.team1_games).length;
+  const firstTwoSets = sets.slice(0, 2);
+  const finishedInTwo = firstTwoSets.length === 2
+    && firstTwoSets.every((set) => !setIsIncomplete(set))
+    && (firstTwoSets.every((set) => set.team1_games > set.team2_games)
+      || firstTwoSets.every((set) => set.team2_games > set.team1_games));
   const singleSetMatch = sets.length === 1 && team1Sets + team2Sets === 1;
-  const standardMatch = [2, 3].includes(Math.max(team1Sets, team2Sets)) || (team1Sets === 1 && team2Sets === 1);
+  const standardMatch = sets.length >= 2
+    && Math.max(team1Sets, team2Sets) <= 2
+    && (Math.max(team1Sets, team2Sets) === 2 || (team1Sets === 1 && team2Sets === 1))
+    && (sets.length === 2 || !finishedInTwo);
   const valid = sets.length >= 1
     && sets.every((set) => Number.isInteger(set.team1_games) && Number.isInteger(set.team2_games)
       && set.team1_games >= 0 && set.team2_games >= 0
@@ -4058,6 +4088,7 @@ function readMatchScore(scores: string[][]) {
     team1Sets,
     team2Sets,
     valid,
+    finishedInTwo,
     draw: valid && team1Sets === 1 && team2Sets === 1,
     unfinishedSet: sets.find(setIsIncomplete) ?? null,
   };
@@ -4228,11 +4259,15 @@ function NewMatchModal({
   }
 
   function updateScore(setIndex: number, teamIndex: number, value: string) {
-    setScores((current) =>
-      current.map((set, index) =>
+    setScores((current) => {
+      const next = current.map((set, index) =>
         index === setIndex ? set.map((score, team) => (team === teamIndex ? value : score)) : set,
-      ),
-    );
+      );
+      if (next.length === 3 && readMatchScore(next.slice(0, 2)).finishedInTwo) {
+        next[2] = ["", ""];
+      }
+      return next;
+    });
 
     // Ogni cifra battuta annulla il salto in attesa: se ne sta arrivando una
     // seconda, e la coppia a valere.
@@ -4293,7 +4328,7 @@ function NewMatchModal({
 
     const { sets, valid, draw } = readMatchScore(scores);
     if (!valid) {
-      setError("Inserisci un set completo, due o tre set vinti da una squadra, oppure un set a testa se avete smesso a metà.");
+      setError("Il meglio dei tre termina 2-0 o 2-1. Se avete interrotto il terzo set, registra un set a testa e il punteggio parziale.");
       return;
     }
     // Il girone all'italiana assegna i punti sulle vittorie: finche non
@@ -4623,7 +4658,7 @@ function NewMatchModal({
                 trattino compreso: con tre sole, le due etichette non stavano
                 sopra ai campi che nominavano. */}
             <span>SET</span><span>SQUADRA 1</span><span aria-hidden="true" /><span>SQUADRA 2</span>
-            {scores.map((score, index) => (
+            {scores.map((score, index) => index === 2 && preview.finishedInTwo ? null : (
               <div className="set-row" key={index}>
                 <b>{index + 1}</b>
                 {[0, 1].map((teamIndex) => (
@@ -4649,6 +4684,9 @@ function NewMatchModal({
               </div>
             ))}
           </div> : null}
+          {!randomTeams && preview.finishedInTwo ? (
+            <p className="match-verdict"><b>Partita conclusa 2-0</b> · non serve il terzo set.</p>
+          ) : null}
           {/* L'esito si legge da solo dal tabellone, ma un pareggio nasce da
               un set lasciato a metà: scritto qui sopra al tasto, un 2-1
               battuto per sbaglio si vede prima di salvarlo e non dopo. */}
@@ -4656,7 +4694,7 @@ function NewMatchModal({
             <p className="match-verdict">
               <b>Pareggio</b>
               {preview.unfinishedSet
-                ? ` · un set a testa, il terzo si è fermato sul ${preview.unfinishedSet.team1_games}-${preview.unfinishedSet.team2_games}. I suoi giochi contano nell'Elo, ma non assegnano il set.`
+                ? ` · un set a testa, il terzo si è fermato sul ${preview.unfinishedSet.team1_games}-${preview.unfinishedSet.team2_games}. Il punteggio resta nello storico, ma non assegna Elo.`
                 : " · un set a testa e partita finita lì."}
             </p>
           ) : null}
@@ -5425,7 +5463,7 @@ function buildTournamentStandings(tournament: Tournament, matches: PadelMatch[])
     team1.losses += match.winner_team === 2 ? 1 : 0;
     team2.wins += match.winner_team === 2 ? 1 : 0;
     team2.losses += match.winner_team === 1 ? 1 : 0;
-    match.sets.forEach((set) => {
+    decidedSets(match.sets).forEach((set) => {
       team1.gamesWon += set.team1_games;
       team1.gamesLost += set.team2_games;
       team2.gamesWon += set.team2_games;

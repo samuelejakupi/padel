@@ -2206,10 +2206,15 @@ button.ranking-row-link:focus-visible {
   color: var(--drawn);
 }
 
-/* I giochi del set interrotto restano scritti — servono all'Elo e alle
-   statistiche — ma sbiaditi, perche quel set non ha assegnato niente. */
+/* Il set interrotto resta nel referto, senza incidere sull'Elo. */
 .match-score-unfinished {
   color: var(--ink-45);
+}
+
+/* Un terzo set storico dopo il 2-0 e visibile ma fuori partita. */
+.match-score-ignored {
+  color: var(--ink-30);
+  text-decoration: line-through;
 }
 
 /* Le caselle che completano i tre set quando la partita ne ha giocato uno
