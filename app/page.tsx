@@ -42,6 +42,21 @@ type PizzaRankingEntry = {
   total: number;
 };
 
+// L'Elo resta decimale nei calcoli e nelle classifiche. Solo il testo visibile
+// e arrotondato, simmetricamente per valori positivi e negativi.
+function roundedElo(value: number) {
+  return Math.sign(value) * Math.round(Math.abs(value));
+}
+
+function eloLabel(value: number) {
+  return String(roundedElo(value));
+}
+
+function eloDeltaLabel(value: number) {
+  const displayed = roundedElo(value);
+  return `${displayed > 0 ? "+" : ""}${displayed}`;
+}
+
 type PizzaVote = {
   restaurant_id: string;
   voter_id: string;
@@ -602,11 +617,11 @@ type PadelTeam = {
 function teamRating(players: Profile[]) {
   const rated = players.filter((profile) => profile.matches_played > 0);
   if (!rated.length) return null;
-  return Math.round(rated.reduce((sum, profile) => sum + profile.rating, 0) / rated.length);
+  return rated.reduce((sum, profile) => sum + profile.rating, 0) / rated.length;
 }
 
 function teamRatingLabel(team: PadelTeam) {
-  return team.rating === null ? "N/C" : String(team.rating);
+  return team.rating === null ? "N/C" : eloLabel(team.rating);
 }
 
 // Le coppie da mettere in classifica: quelle battezzate. Le altre restano
@@ -1461,9 +1476,9 @@ function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch
       id: "goat", tone: "gold", glyph: "goat", label: "GOAT",
       meaning: "Il giocatore al comando della classifica individuale.",
       criterion: "Occupa il primo posto per Elo; i pari merito condividono il titolo.",
-      value: profile.matches_played ? `#${rank} · ${profile.rating} Elo` : "Non classificato",
+      value: profile.matches_played ? `#${rank} · ${eloLabel(profile.rating)} Elo` : "Non classificato",
       progress: isGoat ? 100 : leaderRating ? clampProgress((profile.rating / leaderRating) * 100) : 0,
-      progressLabel: isGoat ? "Sei in vetta" : profile.matches_played ? `${goatGap} Elo dalla vetta` : "Gioca la prima partita",
+      progressLabel: isGoat ? "Sei in vetta" : profile.matches_played ? `${eloLabel(goatGap)} Elo dalla vetta` : "Gioca la prima partita",
       unlocked: isGoat,
     },
     recordBadge("summit", "gold", "summit", "RE DELLA VETTA", "Chi ha trascorso più partite al primo posto.", "Conta ogni partita dopo la quale il giocatore è rimasto o salito al numero uno.", own.firstPlaceMatches, maxOf((item) => item.firstPlaceMatches), "turni in vetta"),
@@ -2599,7 +2614,7 @@ function MatchCard({
               <>
                 {" "}
                 <b className={`elo-delta ${delta >= 0 ? "up" : "down"}`}>
-                  {delta > 0 ? "+" : ""}{delta}
+                  {eloDeltaLabel(delta)}
                 </b>
               </>
             )}
@@ -3152,7 +3167,7 @@ function TeamCreateModal({
             e un dato acquisito: e quello che vale oggi, prima di aver giocato
             una partita insieme. */}
         <div className="tournament-choice team-create-preview">
-          <div><p className="eyebrow dark">PUNTO DI PARTENZA</p><h3>{rating === null ? "N/C" : `${rating} pt`}</h3><small>{ratingNote}</small></div>
+          <div><p className="eyebrow dark">PUNTO DI PARTENZA</p><h3>{rating === null ? "N/C" : `${eloLabel(rating)} pt`}</h3><small>{ratingNote}</small></div>
           <span className="team-create-played">
             <b>{existing?.matches_played ?? 0}</b>
             <small>{(existing?.matches_played ?? 0) === 1 ? "PARTITA" : "PARTITE"}</small>
@@ -3296,7 +3311,7 @@ function TeamRankingList({
               </span>
             )}
             <span className="ranking-points">
-              <b>{team.rating}</b>
+              <b>{teamRatingLabel(team)}</b>
               <small>PT</small>
             </span>
           </div>
@@ -3732,7 +3747,7 @@ function RankingList({
               </span>
             )}
             <span className="ranking-points">
-              <b>{isRanked ? profile.rating : "N/C"}</b>
+              <b>{isRanked ? eloLabel(profile.rating) : "N/C"}</b>
               <small>{isRanked ? "PT" : "0 PARTITE"}</small>
             </span>
           </>
@@ -3870,7 +3885,7 @@ function RankingHistoryChart({ profiles, matches, awards, season, compact }: { p
             const finalRating = line.values[line.values.length - 1].rating;
             return (
               <g key={line.profile.id}>
-                <title>{`${line.profile.display_name}: ${finalRating} punti Elo`}</title>
+                <title>{`${line.profile.display_name}: ${eloLabel(finalRating)} punti Elo`}</title>
                 <path d={path} fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={compact ? 2.5 : 3} />
                 <path d={`M ${plotRight} ${yAt(finalRating)} L ${badgeX - badgeRadius} ${endY}`} fill="none" stroke={color} strokeDasharray={endY === yAt(finalRating) ? undefined : "3 3"} strokeWidth="2" />
                 <circle cx={badgeX} cy={endY} r={badgeRadius + 2} fill="var(--white)" stroke={color} strokeWidth="3" />
@@ -3959,7 +3974,7 @@ function EloChart({ profile, matches, isSelf }: { profile: Profile; matches: Pad
     <article className="elo-panel">
       <div className="elo-panel-head">
         <div><p className="eyebrow dark">ANDAMENTO ELO</p><h2>{isSelf ? "La mia corsa" : `La corsa di ${profile.display_name}`}</h2></div>
-        <div className="elo-current"><b>{profile.rating}</b><small>PT ATTUALI</small><span className={overallDelta >= 0 ? "positive" : "negative"}>{overallDelta >= 0 ? "+" : ""}{overallDelta} dal debutto</span></div>
+        <div className="elo-current"><b>{eloLabel(profile.rating)}</b><small>PT ATTUALI</small><span className={overallDelta >= 0 ? "positive" : "negative"}>{eloDeltaLabel(overallDelta)} dal debutto</span></div>
       </div>
       <figure className="elo-chart">
         <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Grafico Elo di ${profile.display_name} su ${personalMatches.length} partite`}>
@@ -3977,7 +3992,7 @@ function EloChart({ profile, matches, isSelf }: { profile: Profile; matches: Pad
           <path className="elo-line" d={line} />
           {coordinates.slice(1).map((point) => (
             <circle className="elo-point" key={point.id} cx={point.x} cy={point.y} r="5">
-              <title>{`${new Intl.DateTimeFormat("it-IT").format(new Date(point.playedAt!))}: ${point.rating} punti (${point.delta >= 0 ? "+" : ""}${point.delta})`}</title>
+              <title>{`${new Intl.DateTimeFormat("it-IT").format(new Date(point.playedAt!))}: ${eloLabel(point.rating)} punti (${eloDeltaLabel(point.delta)})`}</title>
             </circle>
           ))}
           {dateLabels.map((date, index) => (
@@ -4003,8 +4018,8 @@ function matchSummary(profiles: Profile[], playerIds: string[], sets: PadelSet[]
 }
 
 // Legge il tabellone scritto nel modulo. Si puo registrare anche una partita
-// secca da un set: il database le assegna meta dell'Elo di una partita
-// standard. Il terzo set vale come set vinto solo se e finito.
+// secca da un set: il database le assegna un peso Elo dedicato. Il terzo
+// set vale come set vinto solo se e finito.
 function readMatchScore(scores: string[][]) {
   const filled = scores
     .map(([team1, team2], index) => ({ index, team1, team2 }))
@@ -4026,7 +4041,7 @@ function readMatchScore(scores: string[][]) {
   const team1Sets = decided.filter((set) => set.team1_games > set.team2_games).length;
   const team2Sets = decided.filter((set) => set.team2_games > set.team1_games).length;
   const singleSetMatch = sets.length === 1 && team1Sets + team2Sets === 1;
-  const standardMatch = Math.max(team1Sets, team2Sets) === 2 || (team1Sets === 1 && team2Sets === 1);
+  const standardMatch = [2, 3].includes(Math.max(team1Sets, team2Sets)) || (team1Sets === 1 && team2Sets === 1);
   const valid = sets.length >= 1
     && sets.every((set) => Number.isInteger(set.team1_games) && Number.isInteger(set.team2_games)
       && set.team1_games >= 0 && set.team2_games >= 0
@@ -4272,7 +4287,7 @@ function NewMatchModal({
 
     const { sets, valid, draw } = readMatchScore(scores);
     if (!valid) {
-      setError("Inserisci un set completo, due set vinti da una squadra, oppure un set a testa se avete smesso a metà.");
+      setError("Inserisci un set completo, due o tre set vinti da una squadra, oppure un set a testa se avete smesso a metà.");
       return;
     }
     // Il girone all'italiana assegna i punti sulle vittorie: finche non
@@ -5801,13 +5816,12 @@ function TournamentFormModal({
             </div>
           </div>
 
-          {/* Il formato non e una scelta di comodo: un set secco vale meta Elo
-              di una partita intera, e il torneo lo eredita. */}
+          {/* Il formato determina il peso Elo insieme ai set vinti e persi. */}
           <div className="tournament-choice">
-            <div><p className="eyebrow dark">FORMATO</p><h3>Quanti set si giocano?</h3><small>Il set secco pesa la metà, come una partita secca fuori dal torneo.</small></div>
+            <div><p className="eyebrow dark">FORMATO</p><h3>Quanti set si giocano?</h3><small>Il set secco pesa meno; fra due e tre set conta anche il risultato finale.</small></div>
             <div className="ranking-switch" role="group" aria-label="Formato delle partite">
               <button type="button" className={setsFormat === 1 ? "active" : ""} onClick={() => setSetsFormat(1)}>Set secco</button>
-              <button type="button" className={setsFormat === 3 ? "active" : ""} onClick={() => setSetsFormat(3)}>2 su 3</button>
+              <button type="button" className={setsFormat === 3 ? "active" : ""} onClick={() => setSetsFormat(3)}>Fino a 3 set</button>
             </div>
           </div>
 
@@ -5936,7 +5950,7 @@ function tournamentLegs(tournament: Tournament) {
 
 function tournamentFormatLabel(tournament: Tournament) {
   if (tournament.mode === "individual") return "Individuale · coppie variabili · set secco";
-  const sets = tournamentSetsFormat(tournament) === 1 ? "Set secco" : "Due set su tre";
+  const sets = tournamentSetsFormat(tournament) === 1 ? "Set secco" : "Fino a tre set";
   return `${sets} · ${tournamentLegs(tournament) === 2 ? "andata e ritorno" : "solo andata"}`;
 }
 
@@ -7970,11 +7984,11 @@ function AppShell({ session }: { session: Session | null }) {
                         ? "Gioca la prima partita per entrare nella classifica."
                         : currentRank === 1
                           ? "Sei in testa alla classifica."
-                          : <>Sei a <b>{pointsToNext} punti</b> dal prossimo posto.</>}
+                          : <>Sei a <b>{eloLabel(pointsToNext)} punti</b> dal prossimo posto.</>}
                     </p>
                   </div>
                   <div className="hero-kpis">
-                    <span><b>{currentRank ? currentUser.rating : "N/C"}</b><small>ELO PT</small></span>
+                    <span><b>{currentRank ? eloLabel(currentUser.rating) : "N/C"}</b><small>ELO PT</small></span>
                     <span><b>{winRate}%</b><small>WIN RATE</small></span>
                     <span><b>{currentUser.current_streak > 0 ? currentUser.current_streak : 0}</b><small>WIN STREAK</small></span>
                   </div>
@@ -8316,8 +8330,8 @@ function AppShell({ session }: { session: Session | null }) {
                     : selectedPlayerRank === 1
                       ? (isOwnCard ? "Sei in testa alla classifica." : "È in testa alla classifica.")
                       : isOwnCard
-                        ? <>Sei a <b>{playerPointsToNext} punti</b> dal prossimo posto.</>
-                        : <>È a <b>{playerPointsToNext} punti</b> dal prossimo posto.</>}
+                        ? <>Sei a <b>{eloLabel(playerPointsToNext)} punti</b> dal prossimo posto.</>
+                        : <>È a <b>{eloLabel(playerPointsToNext)} punti</b> dal prossimo posto.</>}
                 </p>
               </div>
               {/* I numeri di carriera, due per riga. Senza insegna: "Numeri in
@@ -8328,7 +8342,7 @@ function AppShell({ session }: { session: Session | null }) {
                   fuori: sono pochi e allungavano la fila per niente. */}
               <section className="player-stats-card" aria-label="Statistiche del giocatore">
                 <div className="player-kpis">
-                  <article><b>{selectedPlayer.matches_played ? selectedPlayer.rating : "N/C"}</b><small>Elo</small></article>
+                  <article><b>{selectedPlayer.matches_played ? eloLabel(selectedPlayer.rating) : "N/C"}</b><small>Elo</small></article>
                   <article><b>{selectedPlayer.matches_played}</b><small>N. partite</small></article>
                   <article><b>{padelWinRate(selectedPlayer.wins, selectedPlayer.losses)}%</b><small>Win rate</small></article>
                   <article><b>{selectedPlayer.wins}</b><small>Vittorie</small></article>

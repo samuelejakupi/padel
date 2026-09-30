@@ -40,12 +40,13 @@ ai file `.env` pubblicati, alle GitHub Actions o al codice frontend.
 6. Esegui `supabase/migration-pizza-voti-0-10.sql` per uniformare i criteri a 0–10, calcolare il risultato nel backend e consentire al creatore di eliminare una votazione aperta.
 7. Esegui anche `supabase/migration-tornei.sql` per abilitare tornei, calendario e moltiplicatore Elo.
 8. Esegui `supabase/migration-partite-casuali.sql` dopo `supabase/migration-pareggi.sql` per creare partite con squadre casuali e registrarne il risultato in seguito.
-9. Esegui `supabase/migration-partite-un-set.sql` per consentire partite secche da un set, con Elo e progressi degli emblemi dimezzati.
+9. Esegui `supabase/migration-partite-un-set.sql` per consentire partite secche da un set; il peso Elo iniziale viene poi aggiornato dalla migrazione del punto 12.
 10. Esegui `supabase/migration-trofei-immagine.sql` per associare ai tornei le immagini della sala trofei.
 11. Esegui `supabase/migration-paypal.sql` per consentire a ciascun profilo di aggiungere il proprio utente PayPal.Me e ricevere i saldi Cashout tramite un link con importo precompilato.
-12. In **Authentication → URL Configuration**, imposta **Site URL** con l’indirizzo Vercel finale, per esempio:
+12. Dopo le altre migrazioni Padel (incluse stagioni, premi Elo e tornei individuali), esegui `supabase/migration-elo-compromesso-decimali.sql`: ricalcola lo storico, salva l'Elo a decimali e applica i pesi per uno, due o tre set.
+13. In **Authentication → URL Configuration**, imposta **Site URL** con l’indirizzo Vercel finale, per esempio:
    `https://nome-progetto.vercel.app/`
-13. In **Project Settings → API**, copia:
+14. In **Project Settings → API**, copia:
    - Project URL
    - anon / publishable key
 
