@@ -3906,36 +3906,42 @@ function RankingHistoryChart({ profiles, matches, awards, season, compact }: { p
   );
 }
 
-function EloChart({ profile, matches, isSelf }: { profile: Profile; matches: PadelMatch[]; isSelf?: boolean }) {
+function EloChart({ profile, matches, awards, isSelf }: { profile: Profile; matches: PadelMatch[]; awards: RankingAward[] | null; isSelf?: boolean }) {
   const personalMatches = [...matches]
     .filter((match) => match.players.some((player) => player.profile_id === profile.id))
-    .sort((a, b) =>
-      new Date(a.played_at).getTime() - new Date(b.played_at).getTime()
-      || new Date(a.created_at ?? a.played_at).getTime() - new Date(b.created_at ?? b.played_at).getTime()
-      || a.id.localeCompare(b.id),
-    );
-  const deltas = personalMatches.map(
-    (match) => match.players.find((player) => player.profile_id === profile.id)?.rating_delta ?? 0,
-  );
-  const startingRating = profile.rating - deltas.reduce((sum, delta) => sum + delta, 0);
-  const matchPoints = personalMatches.reduce<{ id: string; rating: number; playedAt: string; delta: number }[]>(
-    (timeline, match, index) => [
-      ...timeline,
-      {
-        id: match.id,
-        rating: (timeline[timeline.length - 1]?.rating ?? startingRating) + deltas[index],
-        playedAt: match.played_at,
-        delta: deltas[index],
-      },
-    ],
-    [],
-  );
+  const awardsByMatch = new Map<string, number>();
+  for (const award of awards ?? []) {
+    if (award.profileId === profile.id) {
+      awardsByMatch.set(award.matchId, (awardsByMatch.get(award.matchId) ?? 0) + award.points);
+    }
+  }
+  // Anche un premio ottenuto senza giocare la partita conclusiva del torneo
+  // deve apparire nel giorno giusto: ripercorriamo tutti gli eventi cronologici.
+  const events = chronologicalMatches(matches).flatMap((match) => {
+    const matchDelta = match.players.find((player) => player.profile_id === profile.id)?.rating_delta;
+    const prize = awardsByMatch.get(match.id) ?? 0;
+    return matchDelta === undefined && prize === 0 ? [] : [{ match, matchDelta: matchDelta ?? 0, prize }];
+  });
+  let rating = 1000;
+  const matchPoints = events.map(({ match, matchDelta, prize }) => {
+    rating += matchDelta + prize;
+    return { id: match.id, rating, playedAt: match.played_at, delta: matchDelta + prize, prize };
+  });
   const points = [
-    { id: "start", rating: startingRating, playedAt: personalMatches[0]?.played_at ?? null, delta: 0 },
+    { id: "start", rating: 1000, playedAt: events[0]?.match.played_at ?? null, delta: 0, prize: 0 },
     ...matchPoints,
   ];
 
-  if (!personalMatches.length) {
+  if (awards === null) {
+    return (
+      <article className="elo-panel elo-panel-empty">
+        <div className="elo-panel-head"><div><p className="eyebrow dark">ANDAMENTO ELO</p><h2>Grafico non disponibile.</h2></div></div>
+        <p>Non è stato possibile caricare i premi Elo. Riprova tra poco.</p>
+      </article>
+    );
+  }
+
+  if (!events.length) {
     return (
       <article className="elo-panel elo-panel-empty">
         <div className="elo-panel-head"><div><p className="eyebrow dark">ANDAMENTO ELO</p><h2>Il grafico parte dalla prima sfida.</h2></div></div>
@@ -3963,12 +3969,12 @@ function EloChart({ profile, matches, isSelf }: { profile: Profile; matches: Pad
   const gridValues = Array.from({ length: 4 }, (_, index) =>
     Math.round(maxRating - (index / 3) * (maxRating - minRating)),
   );
-  const firstDate = personalMatches[0].played_at;
-  const middleDate = personalMatches[Math.floor((personalMatches.length - 1) / 2)].played_at;
-  const lastDate = personalMatches[personalMatches.length - 1].played_at;
+  const firstDate = events[0].match.played_at;
+  const middleDate = events[Math.floor((events.length - 1) / 2)].match.played_at;
+  const lastDate = events[events.length - 1].match.played_at;
   const dateLabels = [firstDate, middleDate, lastDate];
   const formatDate = (date: string) => new Intl.DateTimeFormat("it-IT", { month: "short", year: "2-digit" }).format(new Date(date));
-  const overallDelta = profile.rating - startingRating;
+  const overallDelta = profile.rating - 1000;
 
   return (
     <article className="elo-panel">
@@ -3992,7 +3998,7 @@ function EloChart({ profile, matches, isSelf }: { profile: Profile; matches: Pad
           <path className="elo-line" d={line} />
           {coordinates.slice(1).map((point) => (
             <circle className="elo-point" key={point.id} cx={point.x} cy={point.y} r="5">
-              <title>{`${new Intl.DateTimeFormat("it-IT").format(new Date(point.playedAt!))}: ${eloLabel(point.rating)} punti (${eloDeltaLabel(point.delta)})`}</title>
+              <title>{`${new Intl.DateTimeFormat("it-IT").format(new Date(point.playedAt!))}: ${eloLabel(point.rating)} punti (${eloDeltaLabel(point.delta)}${point.prize ? `, premio +${point.prize}` : ""})`}</title>
             </circle>
           ))}
           {dateLabels.map((date, index) => (
@@ -8382,7 +8388,7 @@ function AppShell({ session }: { session: Session | null }) {
               )}
             </section>
 
-            <EloChart profile={selectedPlayer} matches={matches} isSelf={isOwnCard} />
+            <EloChart profile={selectedPlayer} matches={matches} awards={rankingAwards} isSelf={isOwnCard} />
 
             <div className="player-teams">
               <div className="player-history-head">
