@@ -3854,7 +3854,6 @@ function RankingHistoryChart({ profiles, matches, awards, season, compact }: { p
     <article className="ranking-history-panel">
       <div className="ranking-history-head">
         <div><p className="eyebrow dark">STAGIONE {season}</p><h2>Andamento classifica</h2></div>
-        <span>{players.length} giocatori · {matchDays.length} giornate</span>
       </div>
       <figure className="ranking-history-chart">
         <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Andamento Elo di ${players.length} giocatori nella stagione ${season}`}>
