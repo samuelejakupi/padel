@@ -158,6 +158,7 @@ export type Tournament = {
   status: "active" | "completed";
   mode?: "teams" | "individual";
   target_matches?: number | null;
+  individual_schedule?: "adaptive" | "complete";
   participants?: { profile_id: string; sort_order: number }[];
   trophy_name: string;
   trophy_badge: "cup" | "crown" | "shield" | "star";

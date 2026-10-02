@@ -5993,7 +5993,9 @@ function tournamentLegs(tournament: Tournament) {
 }
 
 function tournamentFormatLabel(tournament: Tournament) {
-  if (tournament.mode === "individual") return "Individuale · coppie variabili · set secco";
+  if (tournament.mode === "individual") return tournament.individual_schedule === "complete"
+    ? "Individuale · girone completo · 15 set"
+    : "Individuale · coppie variabili · set secco";
   const sets = tournamentSetsFormat(tournament) === 1 ? "Set secco" : "Fino a tre set";
   return `${sets} · ${tournamentLegs(tournament) === 2 ? "andata e ritorno" : "solo andata"}`;
 }
@@ -6088,8 +6090,10 @@ function TournamentFixtures({
     const matchMap = new Map(matches.map((match) => [match.id, match]));
     const name = (id?: string | null) => profiles.find((profile) => profile.id === id)?.display_name ?? "Giocatore";
     const pending = tournament.fixtures.some((fixture) => !fixture.match_id);
+    const nextPendingNumber = tournament.fixtures.find((fixture) => !fixture.match_id)?.match_number;
+    const completeSchedule = tournament.individual_schedule === "complete";
     return <section className="tournament-fixtures">
-      <div className="player-history-head"><div><p className="eyebrow dark">ABBINAMENTI</p><h2>Una partita alla volta</h2></div><span>{tournament.fixtures.filter((fixture) => fixture.match_id).length}/{tournament.target_matches} partite</span></div>
+      <div className="player-history-head"><div><p className="eyebrow dark">ABBINAMENTI</p><h2>{completeSchedule ? "Girone completo" : "Una partita alla volta"}</h2></div><span>{tournament.fixtures.filter((fixture) => fixture.match_id).length}/{tournament.target_matches} partite</span></div>
       <div className="tournament-fixture-list">
         {tournament.fixtures.map((fixture) => {
           const match = fixture.match_id ? matchMap.get(fixture.match_id) : null;
@@ -6097,14 +6101,16 @@ function TournamentFixtures({
             <span className="tournament-match-number">{String(fixture.match_number).padStart(2, "0")}</span>
             <div><b className={match?.winner_team === 1 ? "winner" : ""}>{name(fixture.player1_id)} · {name(fixture.player2_id)}</b><small>vs</small><b className={match?.winner_team === 2 ? "winner" : ""}>{name(fixture.player3_id)} · {name(fixture.player4_id)}</b></div>
             {match ? <strong className="tournament-score">{match.sets[0]?.team1_games}-{match.sets[0]?.team2_games}</strong>
-              : onRecord && fixture.player1_id && fixture.player2_id && fixture.player3_id && fixture.player4_id
+              : onRecord && fixture.match_number === nextPendingNumber && fixture.player1_id && fixture.player2_id && fixture.player3_id && fixture.player4_id
                 ? <button className="button button-dark" onClick={() => onRecord({ fixtureId: fixture.id, tournamentName: tournament.name, eloMultiplier: tournament.elo_multiplier, setsFormat: 1, playerIds: [fixture.player1_id!, fixture.player2_id!, fixture.player3_id!, fixture.player4_id!] })}>Inserisci risultato</button>
                 : <span className="tournament-awaiting">Da giocare</span>}
           </article>;
         })}
       </div>
-      {!pending && !tournamentIsCompleted(tournament, matches) && onDraw ? <button className="button button-lime" type="button" onClick={() => onDraw(tournament)}>Sorteggia prossima partita</button> : null}
-      <p className="tournament-rule-note">Gli abbinamenti cambiano dopo ogni risultato. Nessuno gioca più di una partita in più degli altri.</p>
+      {!completeSchedule && !pending && !tournamentIsCompleted(tournament, matches) && onDraw ? <button className="button button-lime" type="button" onClick={() => onDraw(tournament)}>Sorteggia prossima partita</button> : null}
+      <p className="tournament-rule-note">{completeSchedule
+        ? "Tutti i 15 abbinamenti sono già pronti. Ogni giocatore disputa 12 set e riposa 3 volte; registra i risultati nell’ordine indicato."
+        : "Gli abbinamenti cambiano dopo ogni risultato. Nessuno gioca più di una partita in più degli altri."}</p>
     </section>;
   }
   const matchMap = new Map(matches.map((match) => [match.id, match]));
@@ -6166,18 +6172,25 @@ function IndividualTournamentForm({ profiles, onChooseTeams, onSaved }: {
   const [playerIds, setPlayerIds] = useState<string[]>([]);
   const [cycles, setCycles] = useState(2);
   const [eloMultiplier, setEloMultiplier] = useState(2);
+  const [scheduleMode, setScheduleMode] = useState<"adaptive" | "complete">("adaptive");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const n = playerIds.length;
   const gamesPerCycle = n % 4 === 0 ? n / 4 : n % 2 === 0 ? n / 2 : n;
   return <form className="sheet-form tournament-create-form" onSubmit={async (event) => {
       event.preventDefault();
-      if (!supabase || n < 4 || n > 8) { setError("Seleziona da 4 a 8 partecipanti."); return; }
+      if (!supabase || n < 4 || n > 8 || (scheduleMode === "complete" && n !== 5)) {
+        setError(scheduleMode === "complete" ? "Il girone completo richiede esattamente 5 partecipanti." : "Seleziona da 4 a 8 partecipanti.");
+        return;
+      }
       setBusy(true); setError("");
-      const { error: saveError } = await supabase.rpc("create_individual_tournament", {
+      const commonParams = {
         p_name: name.trim(), p_trophy_name: trophyName.trim(), p_trophy_badge: "cup",
-        p_elo_multiplier: eloMultiplier, p_players: playerIds, p_cycles: cycles,
-      });
+        p_elo_multiplier: eloMultiplier, p_players: playerIds,
+      };
+      const { error: saveError } = scheduleMode === "complete"
+        ? await supabase.rpc("create_complete_individual_tournament", commonParams)
+        : await supabase.rpc("create_individual_tournament", { ...commonParams, p_cycles: cycles });
       if (saveError) { setError(saveError.message); setBusy(false); return; }
       await onSaved();
     }}>
@@ -6188,20 +6201,32 @@ function IndividualTournamentForm({ profiles, onChooseTeams, onSaved }: {
           <button type="button" className="active" aria-pressed="true">Individuale</button>
         </div>
       </div>
-      <p className="tournament-rule-note">Coppie variabili, un set per partita. Il prossimo abbinamento viene sorteggiato dopo il risultato. A fine ciclo tutti hanno giocato lo stesso numero di partite.</p>
+      <p className="tournament-rule-note">Coppie variabili, un set per partita. Scegli se sorteggiare un incontro alla volta o preparare il girone completo.</p>
       <label>Nome torneo<input value={name} onChange={(event) => setName(event.target.value)} maxLength={70} required /></label>
       <label>Nome trofeo<input value={trophyName} onChange={(event) => setTrophyName(event.target.value)} maxLength={60} required /></label>
       <div className="tournament-form-head"><div><p className="eyebrow dark">PARTECIPANTI</p><h3>{n} selezionati</h3></div></div>
       <div className="tournament-participant-list">{profiles.map((profile) => {
         const selected = playerIds.includes(profile.id);
         return <label className={`tournament-participant${selected ? " is-selected" : ""}`} key={profile.id}>
-          <input type="checkbox" checked={selected} disabled={!selected && n >= 8} onChange={() => setPlayerIds((current) => selected ? current.filter((id) => id !== profile.id) : [...current, profile.id])} />
+          <input type="checkbox" checked={selected} disabled={!selected && n >= 8} onChange={() => {
+            const next = selected ? playerIds.filter((id) => id !== profile.id) : [...playerIds, profile.id];
+            setPlayerIds(next);
+            if (next.length !== 5) setScheduleMode("adaptive");
+          }} />
           <span>{profile.display_name}</span>
         </label>;
       })}</div>
-      <label>Cicli completi<select value={cycles} onChange={(event) => setCycles(Number(event.target.value))}><option value={1}>1 ciclo</option><option value={2}>2 cicli</option><option value={3}>3 cicli</option></select></label>
+      <div className="tournament-form-head"><div><p className="eyebrow dark">CALENDARIO</p><h3>Come creare le partite?</h3></div></div>
+      <div className="ranking-switch tournament-team-mode" role="group" aria-label="Calendario individuale">
+        <button type="button" className={scheduleMode === "adaptive" ? "active" : ""} aria-pressed={scheduleMode === "adaptive"} onClick={() => setScheduleMode("adaptive")}>Una alla volta</button>
+        <button type="button" className={scheduleMode === "complete" ? "active" : ""} aria-pressed={scheduleMode === "complete"} disabled={n !== 5} onClick={() => setScheduleMode("complete")}>Girone completo</button>
+      </div>
+      <p className="tournament-rule-note">{scheduleMode === "complete"
+        ? "Solo con 5 giocatori: 15 set già programmati, ogni sfida possibile tra coppie disgiunte si gioca una volta. Ognuno gioca 12 set e riposa 3 volte."
+        : "Il prossimo incontro si sorteggia dopo ogni risultato. Il girone completo è disponibile selezionando esattamente 5 giocatori."}</p>
+      {scheduleMode === "adaptive" ? <label>Cicli completi<select value={cycles} onChange={(event) => setCycles(Number(event.target.value))}><option value={1}>1 ciclo</option><option value={2}>2 cicli</option><option value={3}>3 cicli</option></select></label> : null}
       <label>Moltiplicatore Elo<select value={eloMultiplier} onChange={(event) => setEloMultiplier(Number(event.target.value))}><option value={1}>×1</option><option value={2}>×2</option></select></label>
-      {n >= 4 ? <p className="tournament-rule-note">{gamesPerCycle * cycles} partite totali · premio finale: +45 / +30 / +15 Elo ai primi tre.</p> : null}
+      {n >= 4 ? <p className="tournament-rule-note">{scheduleMode === "complete" ? 15 : gamesPerCycle * cycles} partite totali · premio finale: +45 / +30 / +15 Elo ai primi tre.</p> : null}
       {error ? <p className="form-error" role="alert">{error}</p> : null}
       <button className="button button-lime" disabled={busy || n < 4}>{busy ? "Creazione…" : "Crea torneo individuale"}</button>
     </form>;
@@ -6641,7 +6666,7 @@ function AppShell({ session }: { session: Session | null }) {
         .select("session_id, voter_id, location, pizza, dessert, price, bonus_fabio"),
       client
         .from("padel_tournaments")
-        .select("id, name, status, trophy_name, trophy_badge, trophy_image_path, elo_multiplier, sets_format, legs, mode, target_matches, created_by, created_at, participants:tournament_participants(profile_id, sort_order), teams:tournament_teams(id, tournament_id, name, player_a, player_b, sort_order), fixtures:tournament_fixtures(id, tournament_id, match_number, team1_id, team2_id, player1_id, player2_id, player3_id, player4_id, match_id, leg)")
+        .select("id, name, status, trophy_name, trophy_badge, trophy_image_path, elo_multiplier, sets_format, legs, mode, target_matches, individual_schedule, created_by, created_at, participants:tournament_participants(profile_id, sort_order), teams:tournament_teams(id, tournament_id, name, player_a, player_b, sort_order), fixtures:tournament_fixtures(id, tournament_id, match_number, team1_id, team2_id, player1_id, player2_id, player3_id, player4_id, match_id, leg)")
         .order("created_at", { ascending: false }),
       // Il campo da gioco sta in una query a parte: se la migrazione non e
       // stata eseguita questa fallisce da sola, senza portarsi dietro il

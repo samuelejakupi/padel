@@ -4052,6 +4052,11 @@ button.podium-person {
   padding: 0 var(--space-2);
 }
 
+.tournament-team-mode button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .tournament-random-builder {
   display: grid;
   gap: var(--space-4);
