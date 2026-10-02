@@ -4205,6 +4205,24 @@ button.podium-person {
   gap: var(--space-5);
 }
 
+.tournament-prize-preview.has-medals,
+.tournament-prize-card.has-medals {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.tournament-award-set {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.tournament-award-set > .tournament-trophy-image {
+  flex: 0 0 86px;
+}
+
 .tournament-prize-preview > span,
 .tournament-prize-card > span,
 .tournament-match-banner > span {
@@ -4239,6 +4257,8 @@ button.podium-person {
 .tournament-trophy-picker {
   display: flex;
   gap: var(--space-2);
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .tournament-trophy-picker > button {
@@ -4246,6 +4266,7 @@ button.podium-person {
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   cursor: pointer;
+  flex: 0 0 auto;
   padding: var(--space-2);
 }
 
@@ -8753,6 +8774,10 @@ button.pizza-ranking-row {
   .tournament-prize-card .tournament-trophy-image {
     height: 94px;
     width: 72px;
+  }
+
+  .tournament-prize-card .tournament-award-set > .tournament-trophy-image {
+    flex-basis: 72px;
   }
 
   .tournament-row-text b {
