@@ -6066,7 +6066,7 @@ function tournamentLegs(tournament: Tournament) {
 
 function tournamentFormatLabel(tournament: Tournament) {
   if (tournament.mode === "individual") return tournament.individual_schedule === "complete"
-    ? "Individuale · girone completo · 15 set"
+    ? `Individuale · girone completo · ${tournament.target_matches ?? 5} partite`
     : "Individuale · coppie variabili · set secco";
   const sets = tournamentSetsFormat(tournament) === 1 ? "Set secco" : "Fino a tre set";
   return `${sets} · ${tournamentLegs(tournament) === 2 ? "andata e ritorno" : "solo andata"}`;
@@ -6181,7 +6181,7 @@ function TournamentFixtures({
       </div>
       {!completeSchedule && !pending && !tournamentIsCompleted(tournament, matches) && onDraw ? <button className="button button-lime" type="button" onClick={() => onDraw(tournament)}>Sorteggia prossima partita</button> : null}
       <p className="tournament-rule-note">{completeSchedule
-        ? "Tutti i 15 abbinamenti sono già pronti. Ogni giocatore disputa 12 set e riposa 3 volte; registra i risultati nell’ordine indicato."
+        ? "Le 5 partite sono già pronte. Ognuno gioca 4 volte, riposa una volta, fa coppia con tutti una volta e affronta ogni avversario due volte."
         : "Gli abbinamenti cambiano dopo ogni risultato. Nessuno gioca più di una partita in più degli altri."}</p>
     </section>;
   }
@@ -6305,11 +6305,11 @@ function IndividualTournamentForm({ profiles, onChooseTeams, onSaved }: {
         <button type="button" className={scheduleMode === "complete" ? "active" : ""} aria-pressed={scheduleMode === "complete"} disabled={n !== 5} onClick={() => setScheduleMode("complete")}>Girone completo</button>
       </div>
       <p className="tournament-rule-note">{scheduleMode === "complete"
-        ? "Solo con 5 giocatori: 15 set già programmati, ogni sfida possibile tra coppie disgiunte si gioca una volta. Ognuno gioca 12 set e riposa 3 volte."
+        ? "Solo con 5 giocatori: 5 partite già programmate. Ognuno riposa una volta, gioca con tutti una volta e affronta ogni altro giocatore due volte."
         : "Il prossimo incontro si sorteggia dopo ogni risultato. Il girone completo è disponibile selezionando esattamente 5 giocatori."}</p>
       {scheduleMode === "adaptive" ? <label>Cicli completi<select value={cycles} onChange={(event) => setCycles(Number(event.target.value))}><option value={1}>1 ciclo</option><option value={2}>2 cicli</option><option value={3}>3 cicli</option></select></label> : null}
       <label>Moltiplicatore Elo<select value={eloMultiplier} onChange={(event) => setEloMultiplier(Number(event.target.value))}><option value={1}>×1</option><option value={2}>×2</option></select></label>
-      {n >= 4 ? <p className="tournament-rule-note">{scheduleMode === "complete" ? 15 : gamesPerCycle * cycles} partite totali · premio finale: +45 / +30 / +15 Elo ai primi tre.</p> : null}
+      {n >= 4 ? <p className="tournament-rule-note">{scheduleMode === "complete" ? 5 : gamesPerCycle * cycles} partite totali · premio finale: +45 / +30 / +15 Elo ai primi tre.</p> : null}
       {error ? <p className="form-error" role="alert">{error}</p> : null}
       <button className="button button-lime" disabled={busy || n < 4}>{busy ? "Creazione…" : "Crea torneo individuale"}</button>
     </form>;

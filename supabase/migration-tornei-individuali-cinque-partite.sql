@@ -1,11 +1,9 @@
--- Girone individuale completo per cinque giocatori: cinque partite.
--- Ognuno riposa una volta, gioca una volta insieme a ciascun altro giocatore
--- e affronta ciascuno degli altri esattamente due volte.
+-- Corregge il girone individuale completo a cinque giocatori:
+-- cinque partite, un riposo a testa, ogni coppia insieme una volta e contro
+-- due volte. Eseguire dopo migration-tornei-individuali-completi-cinque.sql.
 
 begin;
 
-alter table public.padel_tournaments
-  add column if not exists individual_schedule text not null default 'adaptive';
 alter table public.padel_tournaments
   drop constraint if exists padel_tournaments_individual_schedule_check;
 alter table public.padel_tournaments
@@ -86,9 +84,6 @@ begin
     c := shuffled_ids[((resting + 2) % 5) + 1];
     d := shuffled_ids[((resting + 3) % 5) + 1];
 
-    -- Le due coppie sono gli archi del girone dispari standard. Sui cinque
-    -- turni coprono tutte le dieci coppie una sola volta; ogni coppia si trova
-    -- quindi contro nelle altre due partite che gioca contemporaneamente.
     if random() < 0.5 then
       player1 := a; player2 := b; player3 := c; player4 := d;
     else

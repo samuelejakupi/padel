@@ -19,7 +19,7 @@ test("genera un sito statico pronto per GitHub Pages", async () => {
 });
 
 test("include configurazione Supabase e funzioni della webapp", async () => {
-  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, singleSetMigration, tournamentFormatMigration, tournamentPrizeMigration, tournamentDifferenceMigration, tournamentDrawMigration, trophyImageMigration, cashoutMigration, paypalMigration, page, cashoutPage, css] = await Promise.all([
+  const [schema, pizzaMigration, drawMigration, randomMatchesMigration, singleSetMigration, tournamentFormatMigration, tournamentPrizeMigration, tournamentDifferenceMigration, tournamentDrawMigration, completeFiveMigration, trophyImageMigration, cashoutMigration, paypalMigration, page, cashoutPage, css] = await Promise.all([
     readFile(new URL("supabase/schema.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pizza-sessioni.sql", root), "utf8"),
     readFile(new URL("supabase/migration-pareggi.sql", root), "utf8"),
@@ -29,6 +29,7 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
     readFile(new URL("supabase/migration-tornei-premio-elo.sql", root), "utf8"),
     readFile(new URL("supabase/migration-tornei-differenza-game.sql", root), "utf8"),
     readFile(new URL("supabase/migration-tornei-sorteggio.sql", root), "utf8"),
+    readFile(new URL("supabase/migration-tornei-individuali-cinque-partite.sql", root), "utf8"),
     readFile(new URL("supabase/migration-trofei-immagine.sql", root), "utf8"),
     readFile(new URL("supabase/migration-cashout.sql", root), "utf8"),
     readFile(new URL("supabase/migration-paypal.sql", root), "utf8"),
@@ -239,6 +240,13 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(tournamentDrawMigration, /with sorteggio as materialized/);
   assert.match(tournamentDrawMigration, /order by ordine/);
   assert.match(tournamentDrawMigration, /if p_first_leg = 2 then/);
+
+  // Con cinque giocatori il girone individuale completo ha una sola giornata
+  // per ogni riposo: 5 partite, non tutte le 15 divisioni possibili in coppie.
+  assert.match(completeFiveMigration, /target_matches = 5/);
+  assert.match(completeFiveMigration, /for turn in 1\.\.5 loop/);
+  assert.doesNotMatch(completeFiveMigration, /for stage in 1\.\.3 loop/);
+  assert.match(page, /Ognuno riposa una volta, gioca con tutti una volta e affronta ogni altro giocatore due volte/);
 
   // Una squadra si forma, non si scopre: nella scheda ci sono solo le coppie
   // con una riga in padel_teams, e in classifica ci entrano dopo la prima
