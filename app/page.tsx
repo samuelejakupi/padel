@@ -20,6 +20,7 @@ import WansportBoard from "./WansportBoard";
 import WansportAccesso from "./WansportAccesso";
 import CashoutPage from "./Cashout";
 import { drawTournamentTeams, type TournamentDraftTeam } from "@/lib/tournament-draw";
+import { buildIndividualStandings } from "@/lib/individual-standings";
 
 // Le quattro sezioni del gruppo. La home non e una di loro: e lo smistamento
 // che le apre, e da li la barra in basso cambia voci.
@@ -5334,34 +5335,6 @@ type TournamentStanding = {
 
 type RankingAward = { matchId: string; profileId: string; points: number };
 
-const INDIVIDUAL_TOURNAMENT_AWARDS = [30, 20, 10];
-
-function buildIndividualStandings(tournament: Tournament, matches: PadelMatch[]) {
-  const matchMap = new Map(matches.map((match) => [match.id, match]));
-  const rows = (tournament.participants ?? []).map((participant) => ({
-    profileId: participant.profile_id,
-    sortOrder: participant.sort_order,
-    played: 0, wins: 0, gamesWon: 0, gamesLost: 0,
-  }));
-  for (const fixture of tournament.fixtures) {
-    const match = fixture.match_id ? matchMap.get(fixture.match_id) : null;
-    const set = match?.sets[0];
-    if (!match || !set) continue;
-    for (const row of rows) {
-      const side = [fixture.player1_id, fixture.player2_id].includes(row.profileId) ? 1
-        : [fixture.player3_id, fixture.player4_id].includes(row.profileId) ? 2 : 0;
-      if (!side) continue;
-      row.played += 1;
-      if (match.winner_team === side) row.wins += 1;
-      row.gamesWon += side === 1 ? set.team1_games : set.team2_games;
-      row.gamesLost += side === 1 ? set.team2_games : set.team1_games;
-    }
-  }
-  return rows.sort((a, b) => b.wins - a.wins
-    || (b.gamesWon - b.gamesLost) - (a.gamesWon - a.gamesLost)
-    || b.gamesWon - a.gamesWon || a.sortOrder - b.sortOrder);
-}
-
 // Il simbolo del trofeo e ora l'emblema esagonale, lo stesso della bacheca:
 // i quattro glifi a tratto — coppa, corona, scudo, stella — erano disegnati
 // qui a mano e non c'entravano piu niente con il resto.
@@ -5463,9 +5436,9 @@ function TournamentRow({
   const done = tournamentIsCompleted(tournament, matches);
   const standings = tournament.mode === "individual" ? null : buildTournamentStandings(tournament, matches);
   // A torneo finito conta chi ha vinto; mentre e in corso, chi guida.
-  const individualLeader = tournament.mode === "individual" ? buildIndividualStandings(tournament, matches)[0] : null;
-  const leader = individualLeader?.played
-    ? profiles.find((profile) => profile.id === individualLeader.profileId)?.display_name ?? null
+  const individualLeaders = tournament.mode === "individual" ? buildIndividualStandings(tournament, matches).filter((row) => row.rankPosition === 1 && row.played) : [];
+  const leader = individualLeaders.length
+    ? individualLeaders.map((row) => profiles.find((profile) => profile.id === row.profileId)?.display_name ?? "Giocatore").join(" · ")
     : standings?.[0]?.played ? standings[0].team.name : null;
 
   return (
@@ -6116,12 +6089,12 @@ function TournamentStandingsContent({
       <div className="player-history-head"><div><p className="eyebrow dark">CLASSIFICA INDIVIDUALE</p><h2>{title}</h2></div></div>
       <div className="tournament-table">
         <div className="tournament-table-head"><span>#</span><span>Giocatore</span><span>G</span><span>V</span><span>GF</span><span>Diff.</span></div>
-        {individual.map((row, index) => <div className={`tournament-table-row${index === 0 && row.played ? " is-leader" : ""}`} key={row.profileId}>
-          <b>{index + 1}</b><span className="tournament-team-cell"><strong>{profileMap.get(row.profileId)?.display_name ?? "Giocatore"}{completed && INDIVIDUAL_TOURNAMENT_AWARDS[index] ? <em className="tournament-award">+{INDIVIDUAL_TOURNAMENT_AWARDS[index]}</em> : null}</strong></span>
+        {individual.map((row) => <div className={`tournament-table-row${row.rankPosition === 1 && row.played ? " is-leader" : ""}`} key={row.profileId}>
+          <b>{row.rankPosition}</b><span className="tournament-team-cell"><strong>{profileMap.get(row.profileId)?.display_name ?? "Giocatore"}{completed && row.award ? <em className="tournament-award">+{row.award.toLocaleString("it-IT", { maximumFractionDigits: 4 })}</em> : null}</strong></span>
           <span>{row.played}</span><span>{row.wins}</span><span>{row.gamesWon}</span><span>{row.gamesWon - row.gamesLost > 0 ? "+" : ""}{row.gamesWon - row.gamesLost}</span>
         </div>)}
       </div>
-      <p className="tournament-rule-note">Parità: differenza game, poi game fatti. A torneo finito i primi tre ricevono +30, +20 e +10 Elo.</p>
+      <p className="tournament-rule-note">Parità: vittorie negli scontri diretti, differenza game complessiva, differenza game negli scontri diretti, poi game vinti complessivi. Premi: +30, +20 e +10 Elo; a pari merito si dividono i premi dei posti occupati.</p>
     </>;
   }
   return (
@@ -6443,12 +6416,12 @@ function TournamentsPage({
                       <div className="tournament-recent-head">
                         <TournamentTrophyVisual tournament={tournament} compact />
                         <div><p className="eyebrow dark">COMPLETATO</p><h3>{tournament.name}</h3><span>{tournament.fixtures.length} partite · Elo ×{tournament.elo_multiplier}</span></div>
-                        <div className="tournament-winner"><small>VINCITORI</small><b>{individual ? profiles.find((profile) => profile.id === individual[0]?.profileId)?.display_name ?? "—" : winner?.team.name ?? "—"}</b></div>
+                        <div className="tournament-winner"><small>VINCITORI</small><b>{individual ? individual.filter((row) => row.rankPosition === 1).map((row) => profiles.find((profile) => profile.id === row.profileId)?.display_name ?? "—").join(" · ") : winner?.team.name ?? "—"}</b></div>
                       </div>
                       <button className="tournament-recent-ranking" type="button" onClick={() => setDetailId(tournament.id)}>
                         <span>CLASSIFICA FINALE</span>
                         <div>
-                          {individual ? individual.slice(0, 3).map((row, index) => <span key={row.profileId}><b>#{index + 1}</b>{profiles.find((profile) => profile.id === row.profileId)?.display_name}<strong>{row.wins}V</strong></span>) : standings?.slice(0, 3).map((row, index) => <span key={row.team.id}><b>#{index + 1}</b>{row.team.name}<strong>{row.wins}V</strong></span>)}
+                          {individual ? individual.filter((row) => row.rankPosition <= 3).map((row) => <span key={row.profileId}><b>#{row.rankPosition}</b>{profiles.find((profile) => profile.id === row.profileId)?.display_name}<strong>{row.wins}V</strong></span>) : standings?.slice(0, 3).map((row, index) => <span key={row.team.id}><b>#{index + 1}</b>{row.team.name}<strong>{row.wins}V</strong></span>)}
                         </div>
                         <strong>Apri dettagli →</strong>
                       </button>
@@ -7166,9 +7139,9 @@ function AppShell({ session }: { session: Session | null }) {
     if (!tournamentIsCompleted(tournament, matches)) return [];
     const monkeyAwards = tournament.trophy_image_path === MONKEY_TROPHY_PATH;
     if (tournament.mode === "individual") {
-      const position = buildIndividualStandings(tournament, matches).findIndex((row) => row.profileId === selectedPlayer.id);
-      return position >= 0 && (position === 0 || (monkeyAwards && position < 3))
-        ? [{ tournament, placement: (position + 1) as 1 | 2 | 3 }] : [];
+      const position = buildIndividualStandings(tournament, matches).find((row) => row.profileId === selectedPlayer.id)?.rankPosition;
+      return position && (position === 1 || (monkeyAwards && position <= 3))
+        ? [{ tournament, placement: position as 1 | 2 | 3 }] : [];
     }
     const standings = buildTournamentStandings(tournament, matches);
     const position = standings.findIndex((row) => row.team.player_a === selectedPlayer.id || row.team.player_b === selectedPlayer.id);
