@@ -2574,6 +2574,7 @@ function MatchCard({
   const canVoteMvp = Boolean(
     onVoteMvp
     && viewerPlayed
+    && !match.tournament_fixture_id
     && match.mvp_voting_enabled
     && !match.mvp_voting_closed_at
     && mvpNames.length === 0,
@@ -6832,7 +6833,7 @@ function AppShell({ session }: { session: Session | null }) {
         origin_by: origin?.author_id ?? match.created_by ?? null,
         court: courtMap.get(match.id) ?? null,
         tournament_fixture_id: fixtureByMatch.get(match.id) ?? null,
-        mvp_voting_enabled: mvpMatchMap.get(match.id)?.mvp_voting_enabled ?? false,
+        mvp_voting_enabled: !fixtureByMatch.has(match.id) && (mvpMatchMap.get(match.id)?.mvp_voting_enabled ?? false),
         mvp_voting_closed_at: mvpMatchMap.get(match.id)?.mvp_voting_closed_at ?? null,
         mvps: mvpMatchMap.get(match.id)?.mvps ?? [],
         mvp_votes_cast: mvpProgressMap.get(match.id)?.votes_cast ?? 0,
@@ -7051,7 +7052,7 @@ function AppShell({ session }: { session: Session | null }) {
   // scarto e salta l'ottimizzazione dell'intero componente.
   const viewerMvpId = session?.user.id;
   const pendingMvpMatches = useMemo(
-    () => matches.filter((match) => match.mvp_voting_enabled
+    () => matches.filter((match) => !match.tournament_fixture_id && match.mvp_voting_enabled
       && !match.mvp_voting_closed_at
       && (match.mvps ?? []).length === 0
       && !match.viewer_mvp_vote
