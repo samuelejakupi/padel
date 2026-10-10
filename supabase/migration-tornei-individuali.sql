@@ -209,7 +209,7 @@ language sql stable security definer set search_path = public, pg_temp as $$
   where standing.team_position in (1,2) and exists(select 1 from finished)
     and exists(select 1 from t where mode='teams')
   union all
-  select standing.profile_id, case standing.rank_position when 1 then 45 when 2 then 30 else 15 end
+  select standing.profile_id, case standing.rank_position when 1 then 30 when 2 then 20 else 10 end
   from public.individual_tournament_standings(p_tournament_id) standing
   where standing.rank_position in (1,2,3) and exists(select 1 from finished)
     and exists(select 1 from t where mode='individual');

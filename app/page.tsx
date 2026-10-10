@@ -5334,7 +5334,7 @@ type TournamentStanding = {
 
 type RankingAward = { matchId: string; profileId: string; points: number };
 
-const INDIVIDUAL_TOURNAMENT_AWARDS = [45, 30, 15];
+const INDIVIDUAL_TOURNAMENT_AWARDS = [30, 20, 10];
 
 function buildIndividualStandings(tournament: Tournament, matches: PadelMatch[]) {
   const matchMap = new Map(matches.map((match) => [match.id, match]));
@@ -6121,7 +6121,7 @@ function TournamentStandingsContent({
           <span>{row.played}</span><span>{row.wins}</span><span>{row.gamesWon}</span><span>{row.gamesWon - row.gamesLost > 0 ? "+" : ""}{row.gamesWon - row.gamesLost}</span>
         </div>)}
       </div>
-      <p className="tournament-rule-note">Parità: differenza game, poi game fatti. A torneo finito i primi tre ricevono +45, +30 e +15 Elo.</p>
+      <p className="tournament-rule-note">Parità: differenza game, poi game fatti. A torneo finito i primi tre ricevono +30, +20 e +10 Elo.</p>
     </>;
   }
   return (
@@ -6309,7 +6309,7 @@ function IndividualTournamentForm({ profiles, onChooseTeams, onSaved }: {
         : "Il prossimo incontro si sorteggia dopo ogni risultato. Il girone completo è disponibile selezionando esattamente 5 giocatori."}</p>
       {scheduleMode === "adaptive" ? <label>Cicli completi<select value={cycles} onChange={(event) => setCycles(Number(event.target.value))}><option value={1}>1 ciclo</option><option value={2}>2 cicli</option><option value={3}>3 cicli</option></select></label> : null}
       <label>Moltiplicatore Elo<select value={eloMultiplier} onChange={(event) => setEloMultiplier(Number(event.target.value))}><option value={1}>×1</option><option value={2}>×2</option></select></label>
-      {n >= 4 ? <p className="tournament-rule-note">{scheduleMode === "complete" ? 5 : gamesPerCycle * cycles} partite totali · premio finale: +45 / +30 / +15 Elo ai primi tre.</p> : null}
+      {n >= 4 ? <p className="tournament-rule-note">{scheduleMode === "complete" ? 5 : gamesPerCycle * cycles} partite totali · premio finale: +30 / +20 / +10 Elo ai primi tre.</p> : null}
       {error ? <p className="form-error" role="alert">{error}</p> : null}
       <button className="button button-lime" disabled={busy || n < 4}>{busy ? "Creazione…" : "Crea torneo individuale"}</button>
     </form>;
