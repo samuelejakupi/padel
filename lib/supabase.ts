@@ -78,6 +78,7 @@ export type MatchMvp = {
 
 export type PadelMatch = {
   id: string;
+  is_friendly?: boolean;
   played_at: string;
   // Resta uguale attraverso le modifiche: è la chiave dello storico.
   lineage_id?: string | null;

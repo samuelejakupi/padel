@@ -10977,6 +10977,7 @@ button.pizza-ranking-row {
 .admin-panel label { display: grid; font-size: 13px; font-weight: 700; gap: var(--space-2); }
 .admin-panel input { min-width: 0; width: 100%; }
 .admin-members { display: grid; gap: var(--space-5); }
+.match-friendly-label { color: var(--muted); font-size: 10px; font-weight: 700; }
 .admin-member { border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-5); }
 .admin-member header { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: space-between; margin-bottom: var(--space-4); }
 .admin-member small { color: var(--muted); }

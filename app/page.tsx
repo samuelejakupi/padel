@@ -664,7 +664,7 @@ function buildPadelTeams(
   const meta = new Map(records.map((record) => [`${record.player_a}|${record.player_b}`, record]));
   const byId = new Map(profiles.map((profile) => [profile.id, profile]));
   const teams = new Map<string, PadelTeam>();
-  const chronological = [...matches].sort(
+  const chronological = matches.filter((match) => !match.is_friendly).sort(
     (a, b) => new Date(a.played_at).getTime() - new Date(b.played_at).getTime(),
   );
 
@@ -1212,7 +1212,7 @@ function emptyBadgeMetrics(): PlayerBadgeMetrics {
 }
 
 function chronologicalMatches(matches: PadelMatch[]) {
-  return [...matches].sort((a, b) =>
+  return matches.filter((match) => !match.is_friendly).sort((a, b) =>
     new Date(a.played_at).getTime() - new Date(b.played_at).getTime()
     || new Date(a.created_at ?? a.played_at).getTime() - new Date(b.created_at ?? b.played_at).getTime()
     || a.id.localeCompare(b.id),
@@ -1222,6 +1222,7 @@ function chronologicalMatches(matches: PadelMatch[]) {
 // Una partita secca vale meta nei progressi legati alle partite. I set
 // restano interi: SET D'ACCIAIO misura i set, non la durata del match.
 function emblemMatchWeight(match: PadelMatch) {
+  if (match.is_friendly) return 0;
   return match.sets.length === 1 ? 0.5 : 1;
 }
 
@@ -2582,6 +2583,7 @@ function MatchCard({
   const canVoteMvp = Boolean(
     onVoteMvp
     && viewerPlayed
+    && !match.is_friendly
     && !match.tournament_fixture_id
     && match.mvp_voting_enabled
     && !match.mvp_voting_closed_at
@@ -2640,7 +2642,7 @@ function MatchCard({
         return (
           <span key={player.profile_id} className="match-team-player">
             {player.profile.display_name}
-            {compact ? null : (
+            {compact || match.is_friendly ? null : (
               <>
                 {" "}
                 <b className={`elo-delta ${delta >= 0 ? "up" : "down"}`}>
@@ -2681,6 +2683,7 @@ function MatchCard({
         <div className="match-date">
           <b>{new Intl.DateTimeFormat("it-IT", { day: "2-digit" }).format(new Date(match.played_at))}</b>
           <span>{new Intl.DateTimeFormat("it-IT", { month: "short" }).format(new Date(match.played_at)).replace(".", "")}</span>
+          {match.is_friendly ? <small className="match-friendly-label">Amichevole</small> : null}
         </div>
         {compact
           ? null
@@ -3807,7 +3810,7 @@ function RankingList({
 function RankingHistoryChart({ profiles, matches, awards, season, compact }: { profiles: Profile[]; matches: PadelMatch[]; awards: RankingAward[] | null; season: number; compact: boolean }) {
   const chartId = useId().replace(/:/g, "");
   const players = sortPadelProfiles(profiles).filter((profile) => profile.matches_played > 0);
-  const orderedMatches = [...matches].sort((a, b) =>
+  const orderedMatches = matches.filter((match) => !match.is_friendly).sort((a, b) =>
       new Date(a.played_at).getTime() - new Date(b.played_at).getTime()
       || new Date(a.created_at ?? a.played_at).getTime() - new Date(b.created_at ?? b.played_at).getTime()
       || a.id.localeCompare(b.id),
@@ -3939,7 +3942,7 @@ function RankingHistoryChart({ profiles, matches, awards, season, compact }: { p
 
 function EloChart({ profile, matches, awards, isSelf }: { profile: Profile; matches: PadelMatch[]; awards: RankingAward[] | null; isSelf?: boolean }) {
   const personalMatches = [...matches]
-    .filter((match) => match.players.some((player) => player.profile_id === profile.id))
+    .filter((match) => !match.is_friendly && match.players.some((player) => player.profile_id === profile.id))
   const awardsByMatch = new Map<string, number>();
   for (const award of awards ?? []) {
     if (award.profileId === profile.id) {
@@ -3953,11 +3956,11 @@ function EloChart({ profile, matches, awards, isSelf }: { profile: Profile; matc
     const prize = awardsByMatch.get(match.id) ?? 0;
     return matchDelta === undefined && prize === 0 ? [] : [{ match, matchDelta: matchDelta ?? 0, prize }];
   });
-  let rating = 1000;
-  const matchPoints = events.map(({ match, matchDelta, prize }) => {
-    rating += matchDelta + prize;
-    return { id: match.id, rating, playedAt: match.played_at, delta: matchDelta + prize, prize };
-  });
+  const matchPoints: { id: string; rating: number; playedAt: string; delta: number; prize: number }[] = [];
+  for (const { match, matchDelta, prize } of events) {
+    const rating = (matchPoints.at(-1)?.rating ?? 1000) + matchDelta + prize;
+    matchPoints.push({ id: match.id, rating, playedAt: match.played_at, delta: matchDelta + prize, prize });
+  }
   const points = [
     { id: "start", rating: 1000, playedAt: events[0]?.match.played_at ?? null, delta: 0, prize: 0 },
     ...matchPoints,
@@ -4189,6 +4192,7 @@ function NewMatchModal({
 
   const [players, setPlayers] = useState(initialPlayers);
   const [randomTeams, setRandomTeams] = useState(false);
+  const [friendly, setFriendly] = useState(match?.is_friendly ?? false);
   const [scores, setScores] = useState(initialScores);
   const [playedAt, setPlayedAt] = useState(
     match || plannedMatch
@@ -4357,7 +4361,7 @@ function NewMatchModal({
     setBusy(true);
     if (supabase) {
       if (plannedMatch) {
-        const { error: completionError } = await supabase.rpc("complete_random_match", {
+        const { error: completionError } = await supabase.rpc(friendly ? "complete_random_friendly_match" : "complete_random_match", {
           p_planned_match_id: plannedMatch.id,
           p_sets: sets,
           p_notes: notes.trim() || null,
@@ -4397,7 +4401,7 @@ function NewMatchModal({
           return;
         }
       }
-      const { data: newId, error: rpcError } = await supabase.rpc("record_match", {
+      const { data: newId, error: rpcError } = await supabase.rpc(friendly ? "record_friendly_match" : "record_match", {
         p_played_at: new Date(`${playedAt}T20:00:00`).toISOString(),
         p_team1: players.slice(0, 2),
         p_team2: players.slice(2, 4),
@@ -4420,7 +4424,7 @@ function NewMatchModal({
       // riparte da zero — un MVP gia assegnato sparisce e un voto gia chiuso
       // si riapre. restore_match_mvp riporta sulla riga nuova quello che
       // c'era: voti, MVP, chiusura e istante di apertura.
-      if (matchId && match) {
+      if (matchId && match && !friendly) {
         const { error: mvpCarryError } = await supabase.rpc("restore_match_mvp", {
           p_old_match_id: match.id,
           p_new_match_id: matchId,
@@ -4596,6 +4600,12 @@ function NewMatchModal({
               aria-label="Link del video YouTube"
             />
           ) : null}
+          {!tournamentContext && !match?.tournament_fixture_id && !randomTeams ? (
+            <label className="random-teams-toggle">
+              <input type="checkbox" checked={friendly} onChange={(event) => setFriendly(event.target.checked)} />
+              <span><b>Amichevole</b></span>
+            </label>
+          ) : null}
           {!editing && !tournamentContext && !completingPlanned ? (
             <label className="random-teams-toggle">
               <input
@@ -4604,6 +4614,7 @@ function NewMatchModal({
                 disabled={plannedMatchesReady === false}
                 onChange={(event) => {
                   setRandomTeams(event.target.checked);
+                  setFriendly(false);
                   setPlayers(event.target.checked ? [] : ["", "", "", ""]);
                 }}
               />
@@ -6708,7 +6719,7 @@ function AppShell({ session }: { session: Session | null }) {
       client.from("profiles").select("*").order("rating", { ascending: false }),
       client
         .from("matches")
-        .select("id, played_at, created_at, created_by, winner_team, notes, video_url, rating_delta, sets:match_sets(set_number, team1_games, team2_games), players:match_players(profile_id, team, rating_delta, profile:profiles(*))")
+        .select("id, is_friendly, played_at, created_at, created_by, winner_team, notes, video_url, rating_delta, sets:match_sets(set_number, team1_games, team2_games), players:match_players(profile_id, team, rating_delta, profile:profiles(*))")
         .order("played_at", { ascending: false })
         .order("created_at", { ascending: false }),
       client
@@ -6845,7 +6856,7 @@ function AppShell({ session }: { session: Session | null }) {
         origin_by: origin?.author_id ?? match.created_by ?? null,
         court: courtMap.get(match.id) ?? null,
         tournament_fixture_id: fixtureByMatch.get(match.id) ?? null,
-        mvp_voting_enabled: !fixtureByMatch.has(match.id) && (mvpMatchMap.get(match.id)?.mvp_voting_enabled ?? false),
+        mvp_voting_enabled: !match.is_friendly && !fixtureByMatch.has(match.id) && (mvpMatchMap.get(match.id)?.mvp_voting_enabled ?? false),
         mvp_voting_closed_at: mvpMatchMap.get(match.id)?.mvp_voting_closed_at ?? null,
         mvps: mvpMatchMap.get(match.id)?.mvps ?? [],
         mvp_votes_cast: mvpProgressMap.get(match.id)?.votes_cast ?? 0,
@@ -7064,7 +7075,7 @@ function AppShell({ session }: { session: Session | null }) {
   // scarto e salta l'ottimizzazione dell'intero componente.
   const viewerMvpId = session?.user.id;
   const pendingMvpMatches = useMemo(
-    () => matches.filter((match) => !match.tournament_fixture_id && match.mvp_voting_enabled
+    () => matches.filter((match) => !match.is_friendly && !match.tournament_fixture_id && match.mvp_voting_enabled
       && !match.mvp_voting_closed_at
       && (match.mvps ?? []).length === 0
       && !match.viewer_mvp_vote
