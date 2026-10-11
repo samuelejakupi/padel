@@ -21,6 +21,7 @@ import WansportAccesso from "./WansportAccesso";
 import CashoutPage from "./Cashout";
 import { drawTournamentTeams, type TournamentDraftTeam } from "@/lib/tournament-draw";
 import { buildIndividualStandings } from "@/lib/individual-standings";
+import { canRecordTournamentFixture } from "@/lib/tournament-fixture-order";
 
 // Le quattro sezioni del gruppo. La home non e una di loro: e lo smistamento
 // che le apre, e da li la barra in basso cambia voci.
@@ -6140,7 +6141,6 @@ function TournamentFixtures({
     const matchMap = new Map(matches.map((match) => [match.id, match]));
     const name = (id?: string | null) => profiles.find((profile) => profile.id === id)?.display_name ?? "Giocatore";
     const pending = tournament.fixtures.some((fixture) => !fixture.match_id);
-    const nextPendingNumber = tournament.fixtures.find((fixture) => !fixture.match_id)?.match_number;
     const completeSchedule = tournament.individual_schedule === "complete";
     return <section className="tournament-fixtures">
       <div className="player-history-head"><div><p className="eyebrow dark">ABBINAMENTI</p><h2>{completeSchedule ? "Girone completo" : "Una partita alla volta"}</h2></div><span>{tournament.fixtures.filter((fixture) => fixture.match_id).length}/{tournament.target_matches} partite</span></div>
@@ -6151,7 +6151,7 @@ function TournamentFixtures({
             <span className="tournament-match-number">{String(fixture.match_number).padStart(2, "0")}</span>
             <div><b className={match?.winner_team === 1 ? "winner" : ""}>{name(fixture.player1_id)} · {name(fixture.player2_id)}</b><small>vs</small><b className={match?.winner_team === 2 ? "winner" : ""}>{name(fixture.player3_id)} · {name(fixture.player4_id)}</b></div>
             {match ? <strong className="tournament-score">{match.sets[0]?.team1_games}-{match.sets[0]?.team2_games}</strong>
-              : onRecord && fixture.match_number === nextPendingNumber && fixture.player1_id && fixture.player2_id && fixture.player3_id && fixture.player4_id
+              : onRecord && canRecordTournamentFixture(tournament, fixture) && fixture.player1_id && fixture.player2_id && fixture.player3_id && fixture.player4_id
                 ? <button className="button button-dark" onClick={() => onRecord({ fixtureId: fixture.id, tournamentName: tournament.name, eloMultiplier: tournament.elo_multiplier, setsFormat: 1, playerIds: [fixture.player1_id!, fixture.player2_id!, fixture.player3_id!, fixture.player4_id!] })}>Inserisci risultato</button>
                 : <span className="tournament-awaiting">Da giocare</span>}
           </article>;
