@@ -1501,7 +1501,6 @@ function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch
     },
     recordBadge("summit", "gold", "summit", "RE DELLA VETTA", "Chi ha trascorso più partite al primo posto.", "Conta ogni partita dopo la quale il giocatore è rimasto o salito al numero uno.", own.firstPlaceMatches, maxOf((item) => item.firstPlaceMatches), "turni in vetta"),
     recordBadge("flame", "red", "flame", "FIAMMA VINCENTE", "La serie di vittorie più lunga.", "Ottieni il maggior numero di vittorie consecutive nella cronologia.", own.bestWinStreak, maxOf((item) => item.bestWinStreak), "vittorie di fila"),
-    recordBadge("sets", "red", "sets", "SET D'ACCIAIO", "La serie di set vinti consecutivamente più lunga.", "I set restano consecutivi anche attraversando partite diverse.", own.bestSetWinStreak, maxOf((item) => item.bestSetWinStreak), "set di fila"),
     {
       id: "turkey", tone: "bronze", glyph: "turkey", label: "TACCHINO DI CODA",
       meaning: "Il giocatore attualmente ultimo in classifica.",
@@ -1512,8 +1511,6 @@ function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch
       unlocked: isLast,
     },
     recordBadge("hook", "bronze", "hook", "AL GANCIO", "La serie di sconfitte consecutive più lunga.", "Detieni il record storico di sconfitte una dopo l'altra.", own.bestLoseStreak, maxOf((item) => item.bestLoseStreak), "sconfitte di fila"),
-    recordBadge("dominator", "ice", "dominator", "DOMINATORE", "Chi ha vinto più partite senza concedere set.", "Conta le vittorie concluse 2–0.", own.straightSetWins, maxOf((item) => item.straightSetWins), "vittorie 2–0"),
-    recordBadge("comeback", "ice", "comeback", "RE DELLA RIMONTA", "Chi ha ribaltato più partite dopo aver perso il primo set.", "Conta soltanto le vittorie ottenute partendo da 0–1 nei set; i pareggi sono esclusi.", own.comebackWins, maxOf((item) => item.comebackWins), "rimonte"),
     recordBadge("marathon", "steel", "marathon", "MARATONETA", "Il giocatore con più presenze.", "Detieni il maggior numero totale di partite disputate.", own.matchesPlayed, maxOf((item) => item.matchesPlayed), "partite"),
     {
       id: "duo", tone: "violet", glyph: "duo", label: "COPPIA D'ORO",
@@ -1605,7 +1602,7 @@ function BadgeTile({ badge, ghost }: { badge: Badge; ghost: boolean }) {
         {emblem ? (
           <Emblem name={emblem} className="badge-art" />
         ) : (
-          <Image className="badge-art" src={`${basePath}/emblems/${badge.glyph}.webp?v=prestige-20261011`} alt="" width={128} height={168} />
+          <Image className="badge-art" src={`${basePath}/emblems/${badge.glyph}.webp?v=rework-20261011`} alt="" width={128} height={168} />
         )}
       </div>
       <aside className="badge-tooltip" role="tooltip">
