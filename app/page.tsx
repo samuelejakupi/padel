@@ -19,6 +19,7 @@ import MonthGroup from "./MonthGroup";
 import WansportBoard from "./WansportBoard";
 import WansportAccesso from "./WansportAccesso";
 import CashoutPage from "./Cashout";
+import AdminAccess from "./AdminUsers";
 import { drawTournamentTeams, type TournamentDraftTeam } from "@/lib/tournament-draw";
 import { buildIndividualStandings } from "@/lib/individual-standings";
 import { canRecordTournamentFixture } from "@/lib/tournament-fixture-order";
@@ -1041,10 +1042,19 @@ function BlockMark({ size = "md" }: { size?: "md" | "lg" }) {
 }
 
 function LoginScreen() {
-  const [username, setUsername] = useState<(typeof groupUsers)[number]>("Samu");
+  const [username, setUsername] = useState("samu");
+  const [loginUsers, setLoginUsers] = useState(() => groupUsers.map(name => ({ username: name.toLowerCase(), display_name: name })));
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    if (supabase) void supabase.rpc("list_login_users").then(({ data, error }) => {
+      if (active && !error && data?.length) setLoginUsers(data);
+    });
+    return () => { active = false; };
+  }, []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -1084,10 +1094,10 @@ function LoginScreen() {
               Nome
               <select
                 value={username}
-                onChange={(event) => setUsername(event.target.value as (typeof groupUsers)[number])}
+                onChange={(event) => setUsername(event.target.value)}
                 required
               >
-                {groupUsers.map((name) => <option key={name} value={name}>{name}</option>)}
+                {loginUsers.map((user) => <option key={user.username} value={user.username}>{user.display_name}</option>)}
               </select>
             </label>
             <label>
@@ -8406,6 +8416,7 @@ function AppShell({ session }: { session: Session | null }) {
 
         {!loading && view === "padel" && padelView === "player" && selectedPlayer ? (
           <section className="page-section player-detail-page">
+            {isOwnCard && session ? <AdminAccess viewerId={session.user.id} onChanged={loadData} /> : null}
             <article className="player-detail-hero">
               <BlockMark size="lg" />
               {/* Il tasto di modifica sta nell'angolo, con la sola matita:

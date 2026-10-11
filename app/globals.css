@@ -10966,3 +10966,22 @@ button.pizza-ranking-row {
     grid-template-columns: minmax(0, 1fr) 100px;
   }
 }
+/* Gestione utenti, nello stesso linguaggio visivo dei moduli del club. */
+.admin-entry { display: flex; justify-content: flex-end; margin-bottom: var(--space-4); }
+.admin-panel { width: min(760px, calc(100vw - 24px)); max-height: 90dvh; overflow-y: auto; }
+.admin-heading { align-items: center; display: flex; gap: var(--space-5); justify-content: space-between; }
+.admin-heading h2 { margin: 0; }
+.admin-panel .form-message { color: var(--ink); }
+.admin-create { border-bottom: 1px solid var(--line); margin-bottom: var(--space-6); padding-bottom: var(--space-6); }
+.admin-panel form { display: grid; gap: var(--space-4); }
+.admin-panel label { display: grid; font-size: 13px; font-weight: 700; gap: var(--space-2); }
+.admin-panel input { min-width: 0; width: 100%; }
+.admin-members { display: grid; gap: var(--space-5); }
+.admin-member { border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-5); }
+.admin-member header { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: space-between; margin-bottom: var(--space-4); }
+.admin-member small { color: var(--muted); }
+.admin-member form { align-items: end; grid-template-columns: minmax(0, 1fr) auto; margin-top: var(--space-4); }
+@media (max-width: 540px) {
+  .admin-member form { grid-template-columns: 1fr; }
+  .admin-panel { padding: var(--space-6); }
+}
