@@ -9277,7 +9277,7 @@ function AppShell({ session }: { session: Session | null }) {
               {supabase ? null : <p className="demo-profile-note">Il profilo diventa modificabile dopo il collegamento a Supabase.</p>}
               <div className="modal-actions">
                 {supabase ? (
-                  <button type="button" className="signout-button" onClick={() => void supabase?.auth.signOut()}>Esci dal club</button>
+                  <button type="button" className="signout-button" onClick={() => void supabase?.auth.signOut()}>Logout</button>
                 ) : null}
                 <button type="button" className="button button-ghost" onClick={() => setShowProfileEdit(false)}>Annulla</button>
                 <button className="button button-primary" disabled={!supabase}>Salva modifiche</button>
