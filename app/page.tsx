@@ -1219,11 +1219,10 @@ function chronologicalMatches(matches: PadelMatch[]) {
   );
 }
 
-// Una partita secca vale meta nei progressi legati alle partite. I set
-// restano interi: SET D'ACCIAIO misura i set, non la durata del match.
+// Ogni partita competitiva vale uno negli emblemi, anche al set secco.
+// Le amichevoli restano escluse; il peso Elo è calcolato separatamente.
 function emblemMatchWeight(match: PadelMatch) {
-  if (match.is_friendly) return 0;
-  return match.sets.length === 1 ? 0.5 : 1;
+  return match.is_friendly ? 0 : 1;
 }
 
 function formatEmblemCount(value: number) {

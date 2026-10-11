@@ -177,7 +177,7 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(singleSetMigration, /before update of rating_delta/);
   assert.match(singleSetMigration, /recalculate_padel_ratings/);
   assert.match(page, /function emblemMatchWeight/);
-  assert.match(page, /match\.sets\.length === 1 \? 0\.5 : 1/);
+  assert.match(page, /return match\.is_friendly \? 0 : 1/);
   assert.match(page, /item\.matchesPlayed \+= matchWeight/);
   assert.match(page, /item\.winsAgainstGoat \+= matchWeight/);
   assert.match(page, /item\.firstPlaceMatches \+= matchWeight/);

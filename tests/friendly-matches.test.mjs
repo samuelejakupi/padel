@@ -44,6 +44,27 @@ test("ranking squadre identico aggiungendo un'amichevole", () => {
   assert.equal(JSON.stringify(context.buildPadelTeams([competitive], profiles)), JSON.stringify(context.buildPadelTeams([competitive, friendly], profiles)));
 });
 
+test("set secco e best of tre valgono entrambi uno negli emblemi", () => {
+  const standard = match("1");
+  const single = { ...match("2"), sets: [match("2").sets[0]] };
+  assert.equal(context.emblemMatchWeight(standard), 1);
+  assert.equal(context.emblemMatchWeight(single), 1);
+  const metric = context.buildBadgeMetrics(profiles, [standard, single]).metrics.get("1");
+  assert.equal(metric.matchesPlayed, 2);
+  assert.equal(metric.bestWinStreak, 2);
+  assert.equal(metric.mvpWins, 2);
+  assert.equal(metric.bestPairMatches, 2);
+  assert.equal(metric.bestSetWinStreak, 3);
+});
+
+test("una sconfitta al set secco interrompe la streak e conta una partita", () => {
+  const loss = { ...match("3", 2), sets: [match("3", 2).sets[0]] };
+  const metric = context.buildBadgeMetrics(profiles, [match("1"), match("2"), loss, match("4")]).metrics.get("1");
+  assert.equal(metric.matchesPlayed, 4);
+  assert.equal(metric.bestWinStreak, 2);
+  assert.equal(metric.bestLoseStreak, 1);
+});
+
 test("salvataggio normale e squadre casuali usano RPC dedicate per le amichevoli", () => {
   assert.ok(page.includes('friendly ? "record_friendly_match" : "record_match"'));
   assert.ok(page.includes('friendly ? "complete_random_friendly_match" : "complete_random_match"'));
