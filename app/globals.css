@@ -10985,3 +10985,7 @@ button.pizza-ranking-row {
   .admin-member form { grid-template-columns: 1fr; }
   .admin-panel { padding: var(--space-6); }
 }
+.profile-password { border-top: 1px solid var(--line); margin-top: var(--space-6); padding-top: var(--space-5); }
+.profile-password summary { cursor: pointer; font-weight: 700; }
+.profile-password form { margin-top: var(--space-5); }
+.profile-password .form-message { color: var(--ink); }

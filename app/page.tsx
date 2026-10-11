@@ -20,6 +20,7 @@ import WansportBoard from "./WansportBoard";
 import WansportAccesso from "./WansportAccesso";
 import CashoutPage from "./Cashout";
 import AdminAccess from "./AdminUsers";
+import ProfilePassword from "./ProfilePassword";
 import { drawTournamentTeams, type TournamentDraftTeam } from "@/lib/tournament-draw";
 import { buildIndividualStandings } from "@/lib/individual-standings";
 import { canRecordTournamentFixture } from "@/lib/tournament-fixture-order";
@@ -9289,6 +9290,7 @@ function AppShell({ session }: { session: Session | null }) {
                 <button className="button button-primary" disabled={!supabase}>Salva modifiche</button>
               </div>
             </form>
+            {session?.user.email ? <ProfilePassword account={{ id: session.user.id, email: session.user.email }} /> : null}
           </section>
         </div>
       ) : null}
