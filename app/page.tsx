@@ -1604,7 +1604,7 @@ function BadgeTile({ badge, ghost }: { badge: Badge; ghost: boolean }) {
         {emblem ? (
           <Emblem name={emblem} className="badge-art" />
         ) : (
-          <Image className="badge-art" src={`${basePath}/emblems/${badge.glyph}.webp${badge.glyph === "goat" ? "?v=prestige-20261011" : ""}`} alt="" width={128} height={168} />
+          <Image className="badge-art" src={`${basePath}/emblems/${badge.glyph}.webp?v=prestige-20261011`} alt="" width={128} height={168} />
         )}
       </div>
       <aside className="badge-tooltip" role="tooltip">
