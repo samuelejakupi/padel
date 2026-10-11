@@ -5293,13 +5293,13 @@ function PizzaVoteModal({
 }
 
 type TournamentTrophyKind = Tournament["trophy_badge"];
-type TournamentTrophyChoice = TournamentTrophyKind | "theboyz" | "monkey";
+type TournamentTrophyChoice = "none" | "theboyz" | "monkey";
 
 const THEBOYZ_TROPHY_PATH = "trophies/coppa-theboyz.png";
 const MONKEY_TROPHY_PATH = "trophies/scimmia-padel-banana.png";
 const MONKEY_SILVER_MEDAL_PATH = "trophies/medaglia-scimmia-argento.png";
 const MONKEY_BRONZE_MEDAL_PATH = "trophies/medaglia-scimmia-bronzo.png";
-const TOURNAMENT_TROPHY_CHOICES: TournamentTrophyChoice[] = ["theboyz", "monkey", "cup", "crown", "shield", "star"];
+const TOURNAMENT_TROPHY_CHOICES: TournamentTrophyChoice[] = ["theboyz", "monkey", "none"];
 
 function trophyImagePath(choice: TournamentTrophyChoice) {
   return choice === "theboyz" ? THEBOYZ_TROPHY_PATH : choice === "monkey" ? MONKEY_TROPHY_PATH : null;
@@ -5308,11 +5308,14 @@ function trophyImagePath(choice: TournamentTrophyChoice) {
 function trophyChoiceFromTournament(tournament?: Tournament): TournamentTrophyChoice {
   if (tournament?.trophy_image_path === MONKEY_TROPHY_PATH) return "monkey";
   if (tournament?.trophy_image_path === THEBOYZ_TROPHY_PATH) return "theboyz";
-  return tournament?.trophy_badge ?? "cup";
+  return "none";
 }
 
-function trophyBadgeForChoice(choice: TournamentTrophyChoice): TournamentTrophyKind {
-  return choice === "monkey" || choice === "theboyz" ? "cup" : choice;
+function NoTournamentTrophy({ compact = false }: { compact?: boolean }) {
+  return <svg className={`tournament-no-trophy${compact ? " is-compact" : ""}`} viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="5" aria-hidden="true">
+    <circle cx="24" cy="24" r="18" />
+    <path d="M11.3 11.3 36.7 36.7" />
+  </svg>;
 }
 
 type TournamentMatchContext = {
@@ -5364,7 +5367,7 @@ function TournamentAwardImage({ path, compact = false, alt = "" }: { path: strin
 function TournamentTrophyChoiceVisual({ choice, compact = false }: { choice: TournamentTrophyChoice; compact?: boolean }) {
   const path = trophyImagePath(choice);
   return path ? <TournamentAwardImage path={path} compact={compact} />
-    : <TournamentTrophyBadge kind={choice as TournamentTrophyKind} compact={compact} />;
+    : <NoTournamentTrophy compact={compact} />;
 }
 
 function TournamentTrophyVisual({
@@ -5384,7 +5387,7 @@ function TournamentTrophyVisual({
       sizes={compact ? "44px" : "(max-width: 780px) 72px, 86px"}
     />
   ) : (
-    <TournamentTrophyBadge kind={tournament.trophy_badge} compact={compact} />
+    <NoTournamentTrophy compact={compact} />
   );
 }
 
@@ -5412,7 +5415,8 @@ function TournamentTrophyPicker({ choice, onChange }: { choice: TournamentTrophy
       type="button"
       key={option}
       onClick={() => onChange(option)}
-      aria-label={option === "monkey" ? "Coppa scimmia, con medaglie d'argento e bronzo" : option === "theboyz" ? "Coppa TheBoyz" : `Simbolo ${option}`}
+      aria-label={option === "monkey" ? "Coppa scimmia, con medaglie d'argento e bronzo" : option === "theboyz" ? "Coppa TheBoyz" : "Nessun trofeo"}
+      title={option === "monkey" ? "Coppa scimmia" : option === "theboyz" ? "Coppa TheBoyz" : "Nessun trofeo"}
       aria-pressed={choice === option}
     ><TournamentTrophyChoiceVisual choice={option} compact /></button>)}
   </div>;
@@ -5692,7 +5696,7 @@ function TournamentFormModal({
       setError("Ogni partecipante può giocare in una sola squadra.");
       return;
     }
-    if (!name.trim() || !trophyName.trim()) {
+    if (!name.trim() || (trophyChoice !== "none" && !trophyName.trim())) {
       setError("Inserisci il nome del torneo e del trofeo.");
       return;
     }
@@ -5716,8 +5720,8 @@ function TournamentFormModal({
       ? await supabase.rpc("update_tournament_with_trophy", {
           p_tournament_id: tournament.id,
           p_name: name.trim(),
-          p_trophy_name: trophyName.trim(),
-          p_trophy_badge: trophyBadgeForChoice(trophyChoice),
+          p_trophy_name: trophyChoice === "none" ? "Nessun trofeo" : trophyName.trim(),
+          p_trophy_badge: "cup",
           p_trophy_image_path: trophyImagePath(trophyChoice),
           p_elo_multiplier: eloMultiplier,
           p_sets_format: setsFormat,
@@ -5726,8 +5730,8 @@ function TournamentFormModal({
         })
       : await supabase.rpc("create_round_robin_tournament_with_trophy", {
           p_name: name.trim(),
-          p_trophy_name: trophyName.trim(),
-          p_trophy_badge: trophyBadgeForChoice(trophyChoice),
+          p_trophy_name: trophyChoice === "none" ? "Nessun trofeo" : trophyName.trim(),
+          p_trophy_badge: "cup",
           p_trophy_image_path: trophyImagePath(trophyChoice),
           p_elo_multiplier: eloMultiplier,
           p_sets_format: setsFormat,
@@ -5892,9 +5896,9 @@ function TournamentFormModal({
           )}
 
           <div className="tournament-prize-form">
-            <div className={`tournament-prize-preview${trophyChoice === "monkey" ? " has-medals" : ""}`}><TournamentPrizeChoicePreview choice={trophyChoice} /><span><b>{trophyName || "Trofeo"}</b><small>{trophyChoice === "monkey" ? "COPPA · ARGENTO · BRONZO" : "IN PALIO"}</small></span></div>
+            <div className={`tournament-prize-preview${trophyChoice === "monkey" ? " has-medals" : ""}`}><TournamentPrizeChoicePreview choice={trophyChoice} /><span><b>{trophyChoice === "none" ? "Nessun trofeo" : trophyName || "Trofeo"}</b>{trophyChoice !== "none" ? <small>{trophyChoice === "monkey" ? "COPPA · ARGENTO · BRONZO" : "IN PALIO"}</small> : null}</span></div>
             <div>
-              <label>Nome del trofeo<input value={trophyName} onChange={(event) => setTrophyName(event.target.value)} maxLength={60} required /></label>
+              {trophyChoice !== "none" ? <label>Nome del trofeo<input value={trophyName} onChange={(event) => setTrophyName(event.target.value)} maxLength={60} required /></label> : null}
               <span className="tournament-field-label">Coppa del torneo</span>
               <TournamentTrophyPicker choice={trophyChoice} onChange={setTrophyChoice} />
             </div>
@@ -6232,7 +6236,7 @@ function IndividualTournamentForm({ profiles, onChooseTeams, onSaved }: {
       }
       setBusy(true); setError("");
       const commonParams = {
-        p_name: name.trim(), p_trophy_name: trophyName.trim(), p_trophy_badge: trophyBadgeForChoice(trophyChoice),
+        p_name: name.trim(), p_trophy_name: trophyChoice === "none" ? "Nessun trofeo" : trophyName.trim(), p_trophy_badge: "cup",
         p_trophy_image_path: trophyImagePath(trophyChoice),
         p_elo_multiplier: eloMultiplier, p_players: playerIds,
       };
@@ -6254,9 +6258,9 @@ function IndividualTournamentForm({ profiles, onChooseTeams, onSaved }: {
       <p className="tournament-rule-note">Coppie variabili, un set per partita. Scegli se sorteggiare un incontro alla volta o preparare il girone completo.</p>
       <label>Nome torneo<input value={name} onChange={(event) => setName(event.target.value)} maxLength={70} required /></label>
       <div className="tournament-prize-form">
-        <div className={`tournament-prize-preview${trophyChoice === "monkey" ? " has-medals" : ""}`}><TournamentPrizeChoicePreview choice={trophyChoice} /><span><b>{trophyName || "Trofeo"}</b><small>{trophyChoice === "monkey" ? "COPPA · ARGENTO · BRONZO" : "IN PALIO"}</small></span></div>
+        <div className={`tournament-prize-preview${trophyChoice === "monkey" ? " has-medals" : ""}`}><TournamentPrizeChoicePreview choice={trophyChoice} /><span><b>{trophyChoice === "none" ? "Nessun trofeo" : trophyName || "Trofeo"}</b>{trophyChoice !== "none" ? <small>{trophyChoice === "monkey" ? "COPPA · ARGENTO · BRONZO" : "IN PALIO"}</small> : null}</span></div>
         <div>
-          <label>Nome trofeo<input value={trophyName} onChange={(event) => setTrophyName(event.target.value)} maxLength={60} required /></label>
+          {trophyChoice !== "none" ? <label>Nome trofeo<input value={trophyName} onChange={(event) => setTrophyName(event.target.value)} maxLength={60} required /></label> : null}
           <span className="tournament-field-label">Coppa del torneo</span>
           <TournamentTrophyPicker choice={trophyChoice} onChange={setTrophyChoice} />
         </div>
@@ -6336,7 +6340,7 @@ function TournamentsPage({
           </div>
         </article>
         <article className="tournament-board-head">
-          <div className={`tournament-prize-card${detailTournament.trophy_image_path === MONKEY_TROPHY_PATH ? " has-medals" : ""}`}><TournamentPrizeVisual tournament={detailTournament} /><span><small>{detailTournament.trophy_image_path === MONKEY_TROPHY_PATH ? completed ? "PREMI ASSEGNATI" : "PREMI IN PALIO" : completed ? "TROFEO ASSEGNATO" : "TROFEO IN PALIO"}</small><b>{detailTournament.trophy_name}</b></span></div>
+          <div className={`tournament-prize-card${detailTournament.trophy_image_path === MONKEY_TROPHY_PATH ? " has-medals" : ""}`}><TournamentPrizeVisual tournament={detailTournament} /><span>{detailTournament.trophy_image_path ? <small>{detailTournament.trophy_image_path === MONKEY_TROPHY_PATH ? completed ? "PREMI ASSEGNATI" : "PREMI IN PALIO" : completed ? "TROFEO ASSEGNATO" : "TROFEO IN PALIO"}</small> : null}<b>{detailTournament.trophy_image_path ? detailTournament.trophy_name : "Nessun trofeo"}</b></span></div>
           <div className="tournament-title-card"><p className="eyebrow dark">FORMULA</p><h2>{detailTournament.mode === "individual" ? "Coppie variabili" : "Girone all’italiana"}</h2><span>{tournamentFormatLabel(detailTournament)}</span></div>
         </article>
         <div className="tournament-layout">
@@ -6373,7 +6377,7 @@ function TournamentsPage({
                 return (
                   <article className="tournament-live-card" key={tournament.id}>
                     <div className="tournament-board-head">
-                      <div className={`tournament-prize-card${tournament.trophy_image_path === MONKEY_TROPHY_PATH ? " has-medals" : ""}`}><TournamentPrizeVisual tournament={tournament} /><span><small>{tournament.trophy_image_path === MONKEY_TROPHY_PATH ? "PREMI IN PALIO" : "TROFEO IN PALIO"}</small><b>{tournament.trophy_name}</b></span></div>
+                      <div className={`tournament-prize-card${tournament.trophy_image_path === MONKEY_TROPHY_PATH ? " has-medals" : ""}`}><TournamentPrizeVisual tournament={tournament} /><span>{tournament.trophy_image_path ? <small>{tournament.trophy_image_path === MONKEY_TROPHY_PATH ? "PREMI IN PALIO" : "TROFEO IN PALIO"}</small> : null}<b>{tournament.trophy_image_path ? tournament.trophy_name : "Nessun trofeo"}</b></span></div>
                       <div className="tournament-title-card">
                         <p className="eyebrow dark">TORNEO IN CORSO</p><h2>{tournament.name}</h2><span>{playedMatches}/{target} partite · Elo ×{tournament.elo_multiplier} · {tournamentFormatLabel(tournament).toLowerCase()}</span>
                         <span className="tournament-progress" aria-label={`${progress}% completato`}><i style={{ width: `${progress}%` }} /></span>
@@ -7137,7 +7141,7 @@ function AppShell({ session }: { session: Session | null }) {
     return null;
   })();
   const selectedPlayerAwards: TournamentAwardEntry[] = selectedPlayer ? tournaments.flatMap((tournament) => {
-    if (!tournamentIsCompleted(tournament, matches)) return [];
+    if (!tournament.trophy_image_path || !tournamentIsCompleted(tournament, matches)) return [];
     const monkeyAwards = tournament.trophy_image_path === MONKEY_TROPHY_PATH;
     if (tournament.mode === "individual") {
       const position = buildIndividualStandings(tournament, matches).find((row) => row.profileId === selectedPlayer.id)?.rankPosition;

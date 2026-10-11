@@ -4293,6 +4293,18 @@ button.podium-person {
   width: 46px;
 }
 
+.tournament-no-trophy {
+  color: #d84b4b;
+  flex: 0 0 auto;
+  height: 64px;
+  width: 64px;
+}
+
+.tournament-no-trophy.is-compact {
+  height: 34px;
+  width: 34px;
+}
+
 .tournament-choice {
   background: var(--white);
   border: 1px solid var(--line);
