@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
+import WansportAccesso from "./WansportAccesso";
 
 type Member = { id: string; username: string; display_name: string };
 
@@ -124,6 +125,7 @@ function AdminPanel({ onClose, onChanged }: { onClose: () => void; onChanged: ()
       </section>
       <h3>Utenti</h3>
       <div className="admin-members">{users.map(member => <MemberEditor key={member.id} member={member} disabled={busy} onSave={save} />)}</div>
+      <WansportAccesso />
     </section>
   </div>, document.body);
 }

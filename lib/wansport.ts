@@ -118,7 +118,7 @@ export function minutiDa(orario: string): number {
 
 // ── L'accesso Wansport del gruppo ────────────────────────────────────────
 //
-// Le credenziali si mettono dal profilo e da li in poi non si rivedono piu:
+// Le credenziali si mettono da Admin e da li in poi non si rivedono piu:
 // vanno nel Vault del database e le rilegge solo la Edge Function. Da qui si
 // puo sapere se ci sono e sostituirle, non leggerle — non c'e nessuna
 // chiamata che le restituisca, ed e voluto.

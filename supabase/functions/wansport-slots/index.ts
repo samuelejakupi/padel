@@ -402,12 +402,20 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   );
 
-  // ── Le due azioni del profilo ──────────────────────────────────────────
+  // Stato e modifica dell'accesso sono riservati agli admin. Il tabellone
+  // sotto resta disponibile a tutti, con le stesse regole di prima.
+  if (corpo.azione === "stato" || corpo.azione === "salva") {
+    const profileId = await utenteDellaRichiesta(req);
+    if (!profileId) return rispondi({ errore: "Serve l'accesso" }, 401);
+    const { data: admin, error } = await db.from("admin_members")
+      .select("profile_id").eq("profile_id", profileId).maybeSingle();
+    if (error) return rispondi({ errore: "Verifica permessi non riuscita" }, 503);
+    if (!admin) return rispondi({ errore: "Accesso riservato agli admin" }, 403);
+  }
 
-  // "C'e un accesso configurato?" e tutto quello che il profilo ha bisogno di
+  // "C'e un accesso configurato?" e tutto quello che il pannello ha bisogno di
   // sapere: ne l'utente ne, tantomeno, la password tornano mai indietro.
   if (corpo.azione === "stato") {
-    if (!(await utenteDellaRichiesta(req))) return rispondi({ errore: "Serve l'accesso" }, 401);
     try {
       const { data } = await db.rpc("accesso_wansport_configurato");
       return rispondi({ configurato: data === true });
@@ -417,7 +425,6 @@ Deno.serve(async (req) => {
   }
 
   if (corpo.azione === "salva") {
-    if (!(await utenteDellaRichiesta(req))) return rispondi({ errore: "Serve l'accesso" }, 401);
 
     const utente = typeof corpo.utente === "string" ? corpo.utente.trim() : "";
     const segreto = typeof corpo.segreto === "string" ? corpo.segreto : "";

@@ -1,12 +1,7 @@
 "use client";
 
-// Il riquadro nel profilo da cui si mette l'account Wansport del gruppo.
-//
-// Perche sta nel profilo e non in un pannello di amministrazione: uno di noi
-// e iscritto a Wansport e i club lo tesserano; quell'accesso serve a tutti,
-// quindi si mette una volta e vale per l'app intera. Non e "il tuo account
-// Wansport", ed e per questo che il testo qui dentro dice "del gruppo": chi
-// legge deve capire che sta configurando una cosa comune, non un suo dato.
+// Il riquadro Admin da cui si configura l'account Wansport del gruppo.
+// L'accesso è comune, ma soltanto gli admin possono sostituirlo.
 //
 // Cosa NON fa: rileggere. Non esiste una chiamata che restituisca la
 // password, nemmeno mascherata — si puo sapere se c'e e sostituirla, non
