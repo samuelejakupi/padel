@@ -49,8 +49,13 @@ export async function handleAdminRequest(req, client) {
         email: `${username}@theboyz.local`, password: body.password, email_confirm: true,
         app_metadata: { theboyz_provisioned: true }, user_metadata: { display_name: name },
       });
-      if (error) return reply(400, { error: error.code === "email_exists" || error.code === "user_already_exists"
-        ? "Nome di accesso già utilizzato." : "Creazione non riuscita. Verifica nome di accesso e password." });
+      if (error) {
+        if (error.code === "email_exists" || error.code === "user_already_exists")
+          return reply(400, { error: "Nome di accesso già utilizzato." });
+        if (error.code === "weak_password")
+          return reply(400, { error: "La password non soddisfa i requisiti di sicurezza." });
+        return reply(500, { error: "Creazione non riuscita per un errore del servizio. Riprova o contatta un admin." });
+      }
       return reply(201, { id: data.user.id });
     }
     if (typeof body.id !== "string" || !/^[0-9a-f-]{36}$/i.test(body.id))

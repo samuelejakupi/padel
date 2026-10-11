@@ -49,6 +49,7 @@ function MemberEditor({ member, disabled, onSave }: {
 
 function AdminPanel({ onClose, onChanged }: { onClose: () => void; onChanged: () => Promise<void> }) {
   const [users, setUsers] = useState<Member[]>([]);
+  const [usersExpanded, setUsersExpanded] = useState(false);
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState("");
   const [username, setUsername] = useState("");
@@ -123,8 +124,12 @@ function AdminPanel({ onClose, onChanged }: { onClose: () => void; onChanged: ()
           <button className="button button-primary" disabled={busy}>Aggiungi utente</button>
         </form>
       </section>
-      <h3>Utenti</h3>
-      <div className="admin-members">{users.map(member => <MemberEditor key={member.id} member={member} disabled={busy} onSave={save} />)}</div>
+      <button type="button" className="button button-ghost" aria-expanded={usersExpanded} aria-controls="admin-members" onClick={() => setUsersExpanded(expanded => !expanded)}>
+        {usersExpanded ? "Nascondi utenti" : "Mostra utenti"}
+      </button>
+      <div id="admin-members" className="admin-members" hidden={!usersExpanded}>
+        {usersExpanded ? users.map(member => <MemberEditor key={member.id} member={member} disabled={busy} onSave={save} />) : null}
+      </div>
       <WansportAccesso />
     </section>
   </div>, document.body);

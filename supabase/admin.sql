@@ -46,18 +46,23 @@ as $$ select * from private.login_directory() $$;
 revoke all on function public.list_login_users() from public;
 grant execute on function public.list_login_users() to anon, authenticated;
 
+-- Auth Admin salva app_metadata dopo INSERT: il controllo deve aspettare
+-- la fine della transazione e rileggere la riga, non il NEW dell'inserimento.
 -- Solo Auth Admin può impostare app_metadata. user_metadata non autorizza iscrizioni.
 create or replace function private.provision_member()
 returns trigger language plpgsql security definer set search_path = '' as $$
-declare member_name text; login_name text;
+declare member_name text; login_name text; account auth.users%rowtype;
 begin
-  if coalesce(new.raw_app_meta_data->>'theboyz_provisioned', '') <> 'true' then
+  select * into account from auth.users where id = new.id;
+  if not found then return new; end if;
+  if coalesce(account.raw_app_meta_data->>'theboyz_provisioned', '') <> 'true' then
     raise exception 'Registrazione pubblica disabilitata';
   end if;
-  member_name := trim(new.raw_user_meta_data->>'display_name');
-  login_name := split_part(lower(new.email), '@', 1);
+  member_name := trim(account.raw_user_meta_data->>'display_name');
+  login_name := split_part(lower(account.email), '@', 1);
   if member_name is null or length(member_name) not between 2 and 40
-    or new.email <> login_name || '@theboyz.local' then
+    or account.email is null or account.email <> login_name || '@theboyz.local'
+    or login_name !~ '^[a-z0-9][a-z0-9._-]{1,31}$' then
     raise exception 'Dati utente non validi';
   end if;
   insert into public.profiles(id, display_name) values(new.id, member_name);
@@ -66,5 +71,6 @@ begin
 end $$;
 revoke all on function private.provision_member() from public, anon, authenticated;
 drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created after insert on auth.users
+create constraint trigger on_auth_user_created after insert on auth.users
+deferrable initially deferred
 for each row execute function private.provision_member();
