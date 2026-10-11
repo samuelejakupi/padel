@@ -1187,6 +1187,7 @@ type PlayerBadgeMetrics = {
   straightSetWins: number;
   comebackWins: number;
   matchesPlayed: number;
+  weightedMatchesPlayed: number;
   winsAgainstGoat: number;
   bestPairMatches: number;
   bestPairRate: number;
@@ -1203,6 +1204,7 @@ function emptyBadgeMetrics(): PlayerBadgeMetrics {
     straightSetWins: 0,
     comebackWins: 0,
     matchesPlayed: 0,
+    weightedMatchesPlayed: 0,
     winsAgainstGoat: 0,
     bestPairMatches: 0,
     bestPairRate: 0,
@@ -1223,6 +1225,11 @@ function chronologicalMatches(matches: PadelMatch[]) {
 // Le amichevoli restano escluse; il peso Elo è calcolato separatamente.
 function emblemMatchWeight(match: PadelMatch) {
   return match.is_friendly ? 0 : 1;
+}
+
+// Vetta e Maratoneta misurano le presenze pesate, non le serie o i traguardi.
+function emblemPresenceWeight(match: PadelMatch) {
+  return match.is_friendly ? 0 : match.sets.length === 1 ? 0.5 : 1;
 }
 
 function formatEmblemCount(value: number) {
@@ -1282,6 +1289,7 @@ function buildBadgeMetrics(profiles: Profile[], matches: PadelMatch[]) {
       item.bestWinStreak = Math.max(item.bestWinStreak, winRun);
       item.bestLoseStreak = Math.max(item.bestLoseStreak, loseRun);
       item.matchesPlayed += matchWeight;
+      item.weightedMatchesPlayed += emblemPresenceWeight(match);
       if (won && losingGoat) item.winsAgainstGoat += matchWeight;
 
       // Il set interrotto sta fuori da tutti i conteggi sui set: non e stato
@@ -1317,7 +1325,7 @@ function buildBadgeMetrics(profiles: Profile[], matches: PadelMatch[]) {
       activeAfter.forEach((profile) => {
         if ((ratings.get(profile.id) ?? 1000) === top) {
           const item = metrics.get(profile.id);
-          if (item) item.firstPlaceMatches += matchWeight;
+          if (item) item.firstPlaceMatches += emblemPresenceWeight(match);
         }
       });
     }
@@ -1509,7 +1517,7 @@ function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch
       progressLabel: isGoat ? "Sei in vetta" : profile.matches_played ? `${eloLabel(goatGap)} Elo dalla vetta` : "Gioca la prima partita",
       unlocked: isGoat,
     },
-    recordBadge("summit", "gold", "summit", "RE DELLA VETTA", "Chi ha trascorso più partite al primo posto.", "Conta ogni partita dopo la quale il giocatore è rimasto o salito al numero uno.", own.firstPlaceMatches, maxOf((item) => item.firstPlaceMatches), "turni in vetta"),
+    recordBadge("summit", "gold", "summit", "RE DELLA VETTA", "Chi ha trascorso più partite al primo posto.", "Conta ogni partita dopo la quale sei rimasto o salito al numero uno: una partita standard vale 1, un set secco 0,5.", own.firstPlaceMatches, maxOf((item) => item.firstPlaceMatches), "turni in vetta"),
     recordBadge("flame", "red", "flame", "FIAMMA VINCENTE", "La serie di vittorie più lunga.", "Ottieni il maggior numero di vittorie consecutive nella cronologia.", own.bestWinStreak, maxOf((item) => item.bestWinStreak), "vittorie di fila"),
     {
       id: "turkey", tone: "bronze", glyph: "turkey", label: "TACCHINO DI CODA",
@@ -1521,7 +1529,7 @@ function playerBadges(profile: Profile, profiles: Profile[], matches: PadelMatch
       unlocked: isLast,
     },
     recordBadge("hook", "bronze", "hook", "AL GANCIO", "La serie di sconfitte consecutive più lunga.", "Detieni il record storico di sconfitte una dopo l'altra.", own.bestLoseStreak, maxOf((item) => item.bestLoseStreak), "sconfitte di fila"),
-    recordBadge("marathon", "steel", "marathon", "MARATONETA", "Il giocatore con più presenze.", "Detieni il maggior numero totale di partite disputate.", own.matchesPlayed, maxOf((item) => item.matchesPlayed), "partite"),
+    recordBadge("marathon", "steel", "marathon", "MARATONETA", "Il giocatore con più presenze.", "Detieni il maggior numero di presenze: una partita standard vale 1, un set secco 0,5.", own.weightedMatchesPlayed, maxOf((item) => item.weightedMatchesPlayed), "partite"),
     {
       id: "duo", tone: "violet", glyph: "duo", label: "COPPIA D'ORO",
       meaning: "I componenti della coppia con il rendimento migliore.",

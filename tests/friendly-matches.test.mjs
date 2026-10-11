@@ -29,6 +29,7 @@ test("solo amichevoli: nessun progresso, MVP o squadra classificata", () => {
   const friendly = match("1", 1, true);
   for (const metric of context.buildBadgeMetrics(profiles, [friendly]).metrics.values()) {
     assert.equal(metric.matchesPlayed, 0);
+    assert.equal(metric.weightedMatchesPlayed, 0);
     assert.equal(metric.mvpWins, 0);
     assert.equal(metric.bestWinStreak, 0);
     assert.equal(metric.firstPlaceMatches, 0);
@@ -51,6 +52,8 @@ test("set secco e best of tre valgono entrambi uno negli emblemi", () => {
   assert.equal(context.emblemMatchWeight(single), 1);
   const metric = context.buildBadgeMetrics(profiles, [standard, single]).metrics.get("1");
   assert.equal(metric.matchesPlayed, 2);
+  assert.equal(metric.weightedMatchesPlayed, 1.5);
+  assert.equal(metric.firstPlaceMatches, 1.5);
   assert.equal(metric.bestWinStreak, 2);
   assert.equal(metric.mvpWins, 2);
   assert.equal(metric.bestPairMatches, 2);

@@ -180,7 +180,7 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(page, /return match\.is_friendly \? 0 : 1/);
   assert.match(page, /item\.matchesPlayed \+= matchWeight/);
   assert.match(page, /item\.winsAgainstGoat \+= matchWeight/);
-  assert.match(page, /item\.firstPlaceMatches \+= matchWeight/);
+  assert.match(page, /item\.firstPlaceMatches \+= emblemPresenceWeight\(match\)/);
   assert.match(page, /pair\.matches \+= matchWeight/);
 
   // Le partite organizzate non entrano nello storico e nell'Elo finche non
