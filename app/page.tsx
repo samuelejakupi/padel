@@ -5375,6 +5375,7 @@ function TournamentTrophyVisual({
   tournament: Tournament;
   compact?: boolean;
 }) {
+  if (compact && !tournament.trophy_image_path) return null;
   return tournament.trophy_image_path ? (
     <Image
       className={`tournament-trophy-image${compact ? " is-compact" : ""}`}
