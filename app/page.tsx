@@ -3749,7 +3749,7 @@ function RankingList({
   focusId?: string | null;
   bare?: boolean;
 }) {
-  const sorted = sortPadelProfiles(profiles);
+  const sorted = sortPadelProfiles(profiles).filter((profile) => profile.matches_played > 0);
   const ranks = padelRanks(sorted);
   const start = limit === undefined
     ? 0
