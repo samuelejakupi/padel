@@ -20,6 +20,7 @@ import WansportBoard from "./WansportBoard";
 import CashoutPage from "./Cashout";
 import AdminAccess from "./AdminUsers";
 import ProfilePassword from "./ProfilePassword";
+import PlayerInsights from "./PlayerInsights";
 import { drawTournamentTeams, type TournamentDraftTeam } from "@/lib/tournament-draw";
 import { buildIndividualStandings } from "@/lib/individual-standings";
 import { canRecordTournamentFixture } from "@/lib/tournament-fixture-order";
@@ -8545,6 +8546,16 @@ function AppShell({ session }: { session: Session | null }) {
             </section>
 
             <EloChart profile={selectedPlayer} matches={matches} awards={rankingAwards} isSelf={isOwnCard} />
+
+            <PlayerInsights
+              key={selectedPlayer.id}
+              player={selectedPlayer}
+              profiles={profiles}
+              matches={matches}
+              viewerId={session?.user.id}
+              renderAvatar={(profile) => <Avatar profile={profile} size="md" />}
+              renderMatch={(match) => <MatchCard match={match} viewerId={session?.user.id} onEdit={setEditingMatch} compact />}
+            />
 
             <div className="player-teams">
               <div className="player-history-head">
