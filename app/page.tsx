@@ -21,6 +21,8 @@ import CashoutPage from "./Cashout";
 import AdminAccess from "./AdminUsers";
 import ProfilePassword from "./ProfilePassword";
 import PlayerInsights from "./PlayerInsights";
+import { MatchFilterBar, MatchFormSteps, PadelToday, TournamentSnapshot, type TournamentSnapshotData } from "./PadelPresentation";
+import { filterMatchPeriod, filterMatchResults, type PeriodFilter, type ResultFilter } from "@/lib/padel-presentation";
 import { drawTournamentTeams, type TournamentDraftTeam } from "@/lib/tournament-draw";
 import { buildIndividualStandings } from "@/lib/individual-standings";
 import { canRecordTournamentFixture } from "@/lib/tournament-fixture-order";
@@ -4200,6 +4202,8 @@ function NewMatchModal({
 
   const [players, setPlayers] = useState(initialPlayers);
   const [randomTeams, setRandomTeams] = useState(false);
+  const [formStep, setFormStep] = useState<1 | 2>(1);
+  const twoStepForm = !editing && !completingPlanned && !tournamentContext && !randomTeams;
   const [friendly, setFriendly] = useState(match?.is_friendly ?? false);
   const [scores, setScores] = useState(initialScores);
   const [playedAt, setPlayedAt] = useState(
@@ -4217,6 +4221,7 @@ function NewMatchModal({
   const [showVideo, setShowVideo] = useState(false);
   // Le sei caselle del tabellone, per passare da sola alla successiva.
   const scoreRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
   // Quando una cifra sola potrebbe diventarne due (l'1 e il 2 aprono a 10-20)
   // il salto aspetta un attimo: se la seconda cifra arriva si scrive 10, se non
   // arriva si passa avanti lo stesso. Senza attesa un 6-2 costringerebbe a
@@ -4316,11 +4321,23 @@ function NewMatchModal({
   // dire come sta finendo la partita mentre la si scrive.
   const preview = readMatchScore(scores);
 
+  function showMatchStep(next: 1 | 2) {
+    window.clearTimeout(jumpTimer.current);
+    setError("");
+    setFormStep(next);
+    window.requestAnimationFrame(() => stepHeadingRef.current?.focus());
+  }
+
   async function save(event: FormEvent) {
     event.preventDefault();
     setError("");
     if (players.length !== 4 || new Set(players).size !== 4 || players.some((id) => !id)) {
       setError(randomTeams ? "Seleziona esattamente quattro partecipanti." : "Scegli quattro giocatori diversi.");
+      return;
+    }
+
+    if (twoStepForm && formStep === 1) {
+      showMatchStep(2);
       return;
     }
 
@@ -4526,7 +4543,10 @@ function NewMatchModal({
       title={editing ? "Modifica la partita" : completingPlanned ? "Inserisci il risultato" : "Registra una partita"}
       onClose={onClose}
     >
-      <form className="sheet-form" onSubmit={save}>
+      <form className="sheet-form match-registration-form" onSubmit={save} noValidate={twoStepForm && formStep === 1}>
+          {twoStepForm ? <MatchFormSteps step={formStep} onBack={() => showMatchStep(1)} /> : null}
+          {twoStepForm ? <div className="match-form-step-title" aria-live="polite"><p className="eyebrow dark">PASSO {formStep} DI 2</p><h3 ref={stepHeadingRef} tabIndex={-1}>{formStep === 1 ? "Chi è sceso in campo?" : "Com’è andata?"}</h3><p>{formStep === 1 ? "Scegli quattro giocatori, due per squadra." : "Controlla le squadre e inserisci il punteggio."}</p></div> : null}
+          {twoStepForm && formStep === 2 ? <div className="match-selected-teams">{[0, 2].map((start) => <span key={start}>{players.slice(start, start + 2).map((id) => { const profile = profiles.find((entry) => entry.id === id); return profile ? <span key={id}><Avatar profile={profile} size="sm" /><b>{profile.display_name}</b></span> : null; })}</span>)}<button className="button button-ghost" type="button" onClick={() => showMatchStep(1)}>Cambia squadre</button></div> : null}
           {tournamentContext ? (
             <div className="tournament-match-banner">
               <TournamentTrophyBadge kind="cup" compact />
@@ -4549,6 +4569,7 @@ function NewMatchModal({
               non c'e — quindi non prendono tre righe di modulo con la loro
               etichetta ciascuna: stanno in fila come i segni in cima a una card
               di partita, e si aprono solo se le tocchi. */}
+          <div className="match-form-step-content" hidden={twoStepForm && formStep === 1}>
           <div className="match-form-meta">
             <button
               type="button"
@@ -4614,6 +4635,8 @@ function NewMatchModal({
               <span><b>Amichevole</b></span>
             </label>
           ) : null}
+          </div>
+          <div className="match-form-step-content" hidden={twoStepForm && formStep === 2}>
           {!editing && !tournamentContext && !completingPlanned ? (
             <label className="random-teams-toggle">
               <input
@@ -4682,6 +4705,8 @@ function NewMatchModal({
               ))}
             </div>
           )}
+          </div>
+          <div className="match-form-step-content" hidden={twoStepForm && formStep === 1}>
           {!randomTeams ? <div className="match-form-sets">
             {/* Le quattro colonne dell'intestazione sono le stesse delle righe,
                 trattino compreso: con tre sole, le due etichette non stavano
@@ -4727,6 +4752,7 @@ function NewMatchModal({
                 : " · un set a testa e partita finita lì."}
             </p>
           ) : null}
+          </div>
           {/* Campo e video sono saliti in cima, nella riga dei segni. La nota e
               sparita: era una riga di modulo che restava vuota quasi sempre, e
               quello che di una partita vale la pena ricordare sta nel
@@ -4784,9 +4810,10 @@ function NewMatchModal({
               </button>
             ) : null}
             <button type="button" className="button button-ghost" onClick={onClose}>{canEdit ? "Annulla" : "Chiudi"}</button>
+            {twoStepForm && formStep === 2 ? <button type="button" className="button button-ghost" onClick={() => showMatchStep(1)}>Indietro</button> : null}
             {canEdit ? (
               <button className="button button-primary" disabled={busy || (randomTeams && players.length !== 4)}>
-                {busy ? "Salvataggio…" : randomTeams ? "Crea partita" : "Salva risultato"}
+                {busy ? "Salvataggio…" : randomTeams ? "Crea partita" : twoStepForm && formStep === 1 ? "Avanti: il risultato →" : "Salva risultato"}
               </button>
             ) : null}
           </div>
@@ -5452,19 +5479,41 @@ function TournamentTrophyPicker({ choice, onChange }: { choice: TournamentTrophy
 
 // Riga di un torneo nel riquadro della home: stesso impianto della riga
 // partita, con le sole informazioni che servono a colpo d'occhio.
+function tournamentSnapshot(tournament: Tournament, matches: PadelMatch[], profiles: Profile[], viewerId?: string | null): TournamentSnapshotData {
+  const knownMatches = new Set(matches.map((match) => match.id));
+  const played = tournament.fixtures.filter((fixture) => fixture.match_id && knownMatches.has(fixture.match_id)).length;
+  const total = tournament.mode === "individual" ? tournament.target_matches ?? tournament.fixtures.length : tournament.fixtures.length;
+  const team = tournament.teams.find((entry) => entry.player_a === viewerId || entry.player_b === viewerId);
+  const individual = tournament.mode === "individual" ? buildIndividualStandings(tournament, matches).find((row) => row.profileId === viewerId) : null;
+  const teams = team ? buildTournamentStandings(tournament, matches) : [];
+  const ownTeam = teams.find((row) => row.team.id === team?.id);
+  const position = individual?.played ? individual.rankPosition : ownTeam?.played ? teams.findIndex((row) => row.team.id === team?.id) + 1 : null;
+  const fixture = [...tournament.fixtures].sort((a, b) => a.match_number - b.match_number).find((entry) => !entry.match_id);
+  const name = (id?: string | null) => profiles.find((profile) => profile.id === id)?.display_name ?? "";
+  let next: string | null = null;
+  if (fixture && tournament.mode === "individual" && fixture.player1_id && fixture.player2_id && fixture.player3_id && fixture.player4_id) {
+    next = `${name(fixture.player1_id)} / ${name(fixture.player2_id)} vs ${name(fixture.player3_id)} / ${name(fixture.player4_id)}`;
+  } else if (fixture && tournament.mode !== "individual") {
+    const first = tournament.teams.find((entry) => entry.id === fixture.team1_id);
+    const second = tournament.teams.find((entry) => entry.id === fixture.team2_id);
+    if (first && second) next = `${first.name} vs ${second.name}`;
+  }
+  return { position, played, total, done: tournamentIsCompleted(tournament, matches), participating: Boolean(team || individual), next };
+}
+
 function TournamentRow({
   tournament,
   matches,
   profiles,
+  viewerId,
   onOpen,
 }: {
   tournament: Tournament;
   matches: PadelMatch[];
   profiles: Profile[];
+  viewerId?: string;
   onOpen: () => void;
 }) {
-  const played = tournament.fixtures.filter((fixture) => fixture.match_id).length;
-  const total = tournament.mode === "individual" ? tournament.target_matches ?? 0 : tournament.fixtures.length;
   // Stessa definizione usata dalla pagina tornei, invece di ricalcolarla qui.
   const done = tournamentIsCompleted(tournament, matches);
   const standings = tournament.mode === "individual" ? null : buildTournamentStandings(tournament, matches);
@@ -5504,11 +5553,12 @@ function TournamentRow({
           <span>
             {leader ? `${done ? "Vince" : "Guida"} ${leader}` : "Nessuna partita giocata"}
           </span>
+          <TournamentSnapshot data={tournamentSnapshot(tournament, matches, profiles, viewerId)} compact />
         </div>
       </div>
       <div className="match-video tournament-row-meta">
-        <b>{played}/{total}</b>
-        <small>×{tournament.elo_multiplier}</small>
+        <b>×{tournament.elo_multiplier}</b>
+        <small>ELO</small>
       </div>
     </article>
   );
@@ -6370,6 +6420,7 @@ function TournamentsPage({
           <div className={`tournament-prize-card${detailTournament.trophy_image_path === MONKEY_TROPHY_PATH ? " has-medals" : ""}`}><TournamentPrizeVisual tournament={detailTournament} /><span>{detailTournament.trophy_image_path ? <small>{detailTournament.trophy_image_path === MONKEY_TROPHY_PATH ? completed ? "PREMI ASSEGNATI" : "PREMI IN PALIO" : completed ? "TROFEO ASSEGNATO" : "TROFEO IN PALIO"}</small> : null}<b>{detailTournament.trophy_image_path ? detailTournament.trophy_name : "Nessun trofeo"}</b></span></div>
           <div className="tournament-title-card"><p className="eyebrow dark">FORMULA</p><h2>{detailTournament.mode === "individual" ? "Coppie variabili" : "Girone all’italiana"}</h2><span>{tournamentFormatLabel(detailTournament)}</span></div>
         </article>
+        <TournamentSnapshot data={tournamentSnapshot(detailTournament, matches, profiles, viewerId)} />
         <div className="tournament-layout">
           <section className="tournament-standings">
             <TournamentStandingsContent tournament={detailTournament} profiles={profiles} matches={matches} title={completed ? "Classifica finale" : "Situazione attuale"} />
@@ -6417,6 +6468,7 @@ function TournamentsPage({
                         <button className="button button-ghost tournament-card-edit" type="button" onClick={() => tournament.mode === "individual" ? onDelete(tournament) : onEdit(tournament)}>{tournament.mode === "individual" ? "Elimina" : "Modifica"}</button>
                       ) : null}
                     </div>
+                    <TournamentSnapshot data={tournamentSnapshot(tournament, matches, profiles, viewerId)} />
                     <div className="tournament-layout">
                       <div
                         className="tournament-standings tournament-standings-link"
@@ -6450,6 +6502,7 @@ function TournamentsPage({
                         <div><p className="eyebrow dark">COMPLETATO</p><h3>{tournament.name}</h3><span>{tournament.fixtures.length} partite · Elo ×{tournament.elo_multiplier}</span></div>
                         <div className="tournament-winner"><small>VINCITORI</small><b>{individual ? individual.filter((row) => row.rankPosition === 1).map((row) => profiles.find((profile) => profile.id === row.profileId)?.display_name ?? "—").join(" · ") : winner?.team.name ?? "—"}</b></div>
                       </div>
+                      <TournamentSnapshot data={tournamentSnapshot(tournament, matches, profiles, viewerId)} compact />
                       <button className="tournament-recent-ranking" type="button" onClick={() => setDetailId(tournament.id)}>
                         <span>CLASSIFICA FINALE</span>
                         <div>
@@ -6558,6 +6611,8 @@ function AppShell({ session }: { session: Session | null }) {
   // Quali partite mostrano la card e il foglio: le proprie o tutte, in
   // quest'ordine, che e quello dei pallini.
   const [matchesMode, setMatchesMode] = useState<"mine" | "all">("all");
+  const [resultFilter, setResultFilter] = useState<ResultFilter>("all");
+  const [resultPeriod, setResultPeriod] = useState<PeriodFilter>("all");
   // Quale raccoglitore del mese è aperto, uno solo per volta. Tre stati e non
   // due: undefined vuol dire "nessuna scelta ancora", e allora vale il mese
   // più recente; null vuol dire chiuso perché è stato chiuso apposta. Senza
@@ -7222,6 +7277,15 @@ function AppShell({ session }: { session: Session | null }) {
   const [saluteSeed] = useState(() => Math.random());
   const currentUserId = currentUser?.id ?? null;
   const currentUserName = currentUser?.display_name ?? "";
+  const personalRecentMatch = useMemo(() => [...matches].filter((match) => match.players.some((player) => player.profile_id === currentUserId))
+    .sort((a, b) => b.played_at.localeCompare(a.played_at) || (b.created_at ?? "").localeCompare(a.created_at ?? "") || b.id.localeCompare(a.id))[0], [matches, currentUserId]);
+  const personalNextMatch = useMemo(() => plannedMatches.filter((match) => match.players.some((player) => player.profile_id === currentUserId) && new Date(match.played_at) >= new Date())
+    .sort((a, b) => a.played_at.localeCompare(b.played_at))[0], [plannedMatches, currentUserId]);
+  const personalLiveTournament = useMemo(() => {
+    const live = tournaments.filter((tournament) => !tournamentIsCompleted(tournament, matches));
+    const selected = live.find((tournament) => tournamentSnapshot(tournament, matches, profiles, currentUserId).participating) ?? live[0];
+    return selected ? { name: selected.name, snapshot: tournamentSnapshot(selected, matches, profiles, currentUserId) } : undefined;
+  }, [tournaments, matches, profiles, currentUserId]);
 
   // Le partite scelte dai pallini. Il filtro sta qui e non dentro al foglio
   // perché lo stesso elenco serve in due posti: l'anteprima nella card e il
@@ -7233,6 +7297,11 @@ function AppShell({ session }: { session: Session | null }) {
     }
     return matches;
   }, [matches, matchesMode, currentUserId]);
+
+  const sheetPeriodMatches = useMemo(() => filterMatchPeriod(filteredMatches, resultPeriod), [filteredMatches, resultPeriod]);
+  const sheetResultMatches = useMemo(() => filterMatchResults(sheetPeriodMatches, resultFilter, currentUserId ?? undefined), [sheetPeriodMatches, resultFilter, currentUserId]);
+  const archivePeriodMatches = useMemo(() => filterMatchPeriod(matches, resultPeriod), [matches, resultPeriod]);
+  const archiveResultMatches = useMemo(() => filterMatchResults(archivePeriodMatches, resultFilter, currentUserId ?? undefined), [archivePeriodMatches, resultFilter, currentUserId]);
 
   const filteredPlannedMatches = useMemo(() => {
     if (matchesMode === "mine" && currentUserId) {
@@ -7253,7 +7322,7 @@ function AppShell({ session }: { session: Session | null }) {
   // sono davvero dentro e non quante ce ne sarebbero in totale.
   const matchMonths = useMemo(() => {
     const groups = new Map<string, { key: string; label: string; matches: PadelMatch[] }>();
-    filteredMatches.forEach((match) => {
+    sheetResultMatches.forEach((match) => {
       const date = new Date(match.played_at);
       // La chiave è ordinabile come testo, quindi il riordino qui sotto non
       // ha bisogno di ricostruire nessuna data.
@@ -7267,7 +7336,7 @@ function AppShell({ session }: { session: Session | null }) {
       group.matches.push(match);
     });
     return [...groups.values()].sort((a, b) => (a.key < b.key ? 1 : -1));
-  }, [filteredMatches]);
+  }, [sheetResultMatches]);
 
   // Il mese più recente è già aperto quando il foglio sale, e torna ad
   // aprirsi passando fra tutte le partite e le proprie: è quello che si va a
@@ -8156,6 +8225,15 @@ function AppShell({ session }: { session: Session | null }) {
                   </div>
                 </article>
 
+                <PadelToday
+                  last={personalRecentMatch}
+                  planned={personalNextMatch}
+                  viewerId={currentUserId ?? undefined}
+                  tournament={personalLiveTournament}
+                  onMatches={() => { setMatchesMode("mine"); setResultFilter("all"); setResultPeriod("all"); setChosenMonth(undefined); setSheet("matches"); }}
+                  onTournaments={() => openPadelPage("tournaments")}
+                />
+
                 <div className="section-head">
                   <div className="section-head-label"><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
                   <div className="court-actions">
@@ -8335,6 +8413,7 @@ function AppShell({ session }: { session: Session | null }) {
                           tournament={tournament}
                           matches={matches}
                           profiles={profiles}
+                          viewerId={currentUserId ?? undefined}
                           onOpen={() => openPadelPage("tournaments")}
                         />
                       ))}
@@ -8703,9 +8782,10 @@ function AppShell({ session }: { session: Session | null }) {
                 <div><p className="eyebrow">ARCHIVIO THEBOYZ PADEL</p><h1>Tutte le partite</h1><p>{matches.length} risultati registrati dal gruppo.</p></div>
               </div>
             </article>
-            {matches.length ? (
+            <MatchFilterBar matches={archivePeriodMatches} viewerId={currentUserId ?? undefined} viewerName={currentUserName} outcome={resultFilter} period={resultPeriod} onOutcome={setResultFilter} onPeriod={setResultPeriod} />
+            {archiveResultMatches.length ? (
               <div className="match-list match-list-full">
-                {matches.map((match) => (
+                {archiveResultMatches.map((match) => (
                   <MatchCard
                     key={match.id}
                     match={match}
@@ -8717,7 +8797,7 @@ function AppShell({ session }: { session: Session | null }) {
                 ))}
               </div>
             ) : (
-              <div className="empty-board"><span>00</span><h2>Ancora nessuna partita</h2><p>Registra il primo risultato per iniziare lo storico.</p></div>
+              <div className="empty-board"><span>00</span><h2>{matches.length ? "Nessun risultato con questi filtri" : "Ancora nessuna partita"}</h2><p>{matches.length ? "Cambia esito o periodo per esplorare lo storico." : "Registra il primo risultato per iniziare lo storico."}</p></div>
             )}
           </section>
         ) : null}
@@ -9094,6 +9174,7 @@ function AppShell({ session }: { session: Session | null }) {
               si accumulano, e scorrerne cento per arrivare a maggio non è
               cercare, è rassegnarsi. Aperto uno, gli altri si chiudono. */}
           <div className="month-groups">
+            <MatchFilterBar matches={sheetPeriodMatches} viewerId={currentUserId ?? undefined} viewerName={currentUserName} outcome={resultFilter} period={resultPeriod} onOutcome={(value) => { setResultFilter(value); setChosenMonth(undefined); }} onPeriod={(value) => { setResultPeriod(value); setChosenMonth(undefined); }} />
             {filteredPlannedMatches.length ? (
               <section className="planned-matches-sheet">
                 <h3>Da giocare</h3>
@@ -9130,10 +9211,10 @@ function AppShell({ session }: { session: Session | null }) {
                   ))}
                 </div>
               </MonthGroup>
-            )) : filteredPlannedMatches.length ? null : (
+            )) : filteredPlannedMatches.length && resultFilter === "all" && resultPeriod === "all" ? null : (
               <div className="compact-empty panel-empty">
                 <span>00</span>
-                <p>{emptyMatchesNote}</p>
+                <p>{resultFilter !== "all" || resultPeriod !== "all" ? "Nessun risultato con questi filtri. Prova un altro esito o periodo." : emptyMatchesNote}</p>
               </div>
             )}
           </div>
