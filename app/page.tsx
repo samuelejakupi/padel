@@ -21,7 +21,7 @@ import CashoutPage from "./Cashout";
 import AdminAccess from "./AdminUsers";
 import ProfilePassword from "./ProfilePassword";
 import PlayerInsights from "./PlayerInsights";
-import { MatchFilterBar, MatchFormSteps, PadelToday, TournamentSnapshot, type TournamentSnapshotData } from "./PadelPresentation";
+import { MatchFilterBar, MatchFormSteps } from "./PadelPresentation";
 import { filterMatchPeriod, filterMatchResults, type PeriodFilter, type ResultFilter } from "@/lib/padel-presentation";
 import { drawTournamentTeams, type TournamentDraftTeam } from "@/lib/tournament-draw";
 import { buildIndividualStandings } from "@/lib/individual-standings";
@@ -5479,41 +5479,19 @@ function TournamentTrophyPicker({ choice, onChange }: { choice: TournamentTrophy
 
 // Riga di un torneo nel riquadro della home: stesso impianto della riga
 // partita, con le sole informazioni che servono a colpo d'occhio.
-function tournamentSnapshot(tournament: Tournament, matches: PadelMatch[], profiles: Profile[], viewerId?: string | null): TournamentSnapshotData {
-  const knownMatches = new Set(matches.map((match) => match.id));
-  const played = tournament.fixtures.filter((fixture) => fixture.match_id && knownMatches.has(fixture.match_id)).length;
-  const total = tournament.mode === "individual" ? tournament.target_matches ?? tournament.fixtures.length : tournament.fixtures.length;
-  const team = tournament.teams.find((entry) => entry.player_a === viewerId || entry.player_b === viewerId);
-  const individual = tournament.mode === "individual" ? buildIndividualStandings(tournament, matches).find((row) => row.profileId === viewerId) : null;
-  const teams = team ? buildTournamentStandings(tournament, matches) : [];
-  const ownTeam = teams.find((row) => row.team.id === team?.id);
-  const position = individual?.played ? individual.rankPosition : ownTeam?.played ? teams.findIndex((row) => row.team.id === team?.id) + 1 : null;
-  const fixture = [...tournament.fixtures].sort((a, b) => a.match_number - b.match_number).find((entry) => !entry.match_id);
-  const name = (id?: string | null) => profiles.find((profile) => profile.id === id)?.display_name ?? "";
-  let next: string | null = null;
-  if (fixture && tournament.mode === "individual" && fixture.player1_id && fixture.player2_id && fixture.player3_id && fixture.player4_id) {
-    next = `${name(fixture.player1_id)} / ${name(fixture.player2_id)} vs ${name(fixture.player3_id)} / ${name(fixture.player4_id)}`;
-  } else if (fixture && tournament.mode !== "individual") {
-    const first = tournament.teams.find((entry) => entry.id === fixture.team1_id);
-    const second = tournament.teams.find((entry) => entry.id === fixture.team2_id);
-    if (first && second) next = `${first.name} vs ${second.name}`;
-  }
-  return { position, played, total, done: tournamentIsCompleted(tournament, matches), participating: Boolean(team || individual), next };
-}
-
 function TournamentRow({
   tournament,
   matches,
   profiles,
-  viewerId,
   onOpen,
 }: {
   tournament: Tournament;
   matches: PadelMatch[];
   profiles: Profile[];
-  viewerId?: string;
   onOpen: () => void;
 }) {
+  const played = tournament.fixtures.filter((fixture) => fixture.match_id).length;
+  const total = tournament.mode === "individual" ? tournament.target_matches ?? 0 : tournament.fixtures.length;
   // Stessa definizione usata dalla pagina tornei, invece di ricalcolarla qui.
   const done = tournamentIsCompleted(tournament, matches);
   const standings = tournament.mode === "individual" ? null : buildTournamentStandings(tournament, matches);
@@ -5553,12 +5531,11 @@ function TournamentRow({
           <span>
             {leader ? `${done ? "Vince" : "Guida"} ${leader}` : "Nessuna partita giocata"}
           </span>
-          <TournamentSnapshot data={tournamentSnapshot(tournament, matches, profiles, viewerId)} compact />
         </div>
       </div>
       <div className="match-video tournament-row-meta">
-        <b>×{tournament.elo_multiplier}</b>
-        <small>ELO</small>
+        <b>{played}/{total}</b>
+        <small>×{tournament.elo_multiplier}</small>
       </div>
     </article>
   );
@@ -6420,7 +6397,6 @@ function TournamentsPage({
           <div className={`tournament-prize-card${detailTournament.trophy_image_path === MONKEY_TROPHY_PATH ? " has-medals" : ""}`}><TournamentPrizeVisual tournament={detailTournament} /><span>{detailTournament.trophy_image_path ? <small>{detailTournament.trophy_image_path === MONKEY_TROPHY_PATH ? completed ? "PREMI ASSEGNATI" : "PREMI IN PALIO" : completed ? "TROFEO ASSEGNATO" : "TROFEO IN PALIO"}</small> : null}<b>{detailTournament.trophy_image_path ? detailTournament.trophy_name : "Nessun trofeo"}</b></span></div>
           <div className="tournament-title-card"><p className="eyebrow dark">FORMULA</p><h2>{detailTournament.mode === "individual" ? "Coppie variabili" : "Girone all’italiana"}</h2><span>{tournamentFormatLabel(detailTournament)}</span></div>
         </article>
-        <TournamentSnapshot data={tournamentSnapshot(detailTournament, matches, profiles, viewerId)} />
         <div className="tournament-layout">
           <section className="tournament-standings">
             <TournamentStandingsContent tournament={detailTournament} profiles={profiles} matches={matches} title={completed ? "Classifica finale" : "Situazione attuale"} />
@@ -6468,7 +6444,6 @@ function TournamentsPage({
                         <button className="button button-ghost tournament-card-edit" type="button" onClick={() => tournament.mode === "individual" ? onDelete(tournament) : onEdit(tournament)}>{tournament.mode === "individual" ? "Elimina" : "Modifica"}</button>
                       ) : null}
                     </div>
-                    <TournamentSnapshot data={tournamentSnapshot(tournament, matches, profiles, viewerId)} />
                     <div className="tournament-layout">
                       <div
                         className="tournament-standings tournament-standings-link"
@@ -6502,7 +6477,6 @@ function TournamentsPage({
                         <div><p className="eyebrow dark">COMPLETATO</p><h3>{tournament.name}</h3><span>{tournament.fixtures.length} partite · Elo ×{tournament.elo_multiplier}</span></div>
                         <div className="tournament-winner"><small>VINCITORI</small><b>{individual ? individual.filter((row) => row.rankPosition === 1).map((row) => profiles.find((profile) => profile.id === row.profileId)?.display_name ?? "—").join(" · ") : winner?.team.name ?? "—"}</b></div>
                       </div>
-                      <TournamentSnapshot data={tournamentSnapshot(tournament, matches, profiles, viewerId)} compact />
                       <button className="tournament-recent-ranking" type="button" onClick={() => setDetailId(tournament.id)}>
                         <span>CLASSIFICA FINALE</span>
                         <div>
@@ -7277,15 +7251,6 @@ function AppShell({ session }: { session: Session | null }) {
   const [saluteSeed] = useState(() => Math.random());
   const currentUserId = currentUser?.id ?? null;
   const currentUserName = currentUser?.display_name ?? "";
-  const personalRecentMatch = useMemo(() => [...matches].filter((match) => match.players.some((player) => player.profile_id === currentUserId))
-    .sort((a, b) => b.played_at.localeCompare(a.played_at) || (b.created_at ?? "").localeCompare(a.created_at ?? "") || b.id.localeCompare(a.id))[0], [matches, currentUserId]);
-  const personalNextMatch = useMemo(() => plannedMatches.filter((match) => match.players.some((player) => player.profile_id === currentUserId) && new Date(match.played_at) >= new Date())
-    .sort((a, b) => a.played_at.localeCompare(b.played_at))[0], [plannedMatches, currentUserId]);
-  const personalLiveTournament = useMemo(() => {
-    const live = tournaments.filter((tournament) => !tournamentIsCompleted(tournament, matches));
-    const selected = live.find((tournament) => tournamentSnapshot(tournament, matches, profiles, currentUserId).participating) ?? live[0];
-    return selected ? { name: selected.name, snapshot: tournamentSnapshot(selected, matches, profiles, currentUserId) } : undefined;
-  }, [tournaments, matches, profiles, currentUserId]);
 
   // Le partite scelte dai pallini. Il filtro sta qui e non dentro al foglio
   // perché lo stesso elenco serve in due posti: l'anteprima nella card e il
@@ -8225,15 +8190,6 @@ function AppShell({ session }: { session: Session | null }) {
                   </div>
                 </article>
 
-                <PadelToday
-                  last={personalRecentMatch}
-                  planned={personalNextMatch}
-                  viewerId={currentUserId ?? undefined}
-                  tournament={personalLiveTournament}
-                  onMatches={() => { setMatchesMode("mine"); setResultFilter("all"); setResultPeriod("all"); setChosenMonth(undefined); setSheet("matches"); }}
-                  onTournaments={() => openPadelPage("tournaments")}
-                />
-
                 <div className="section-head">
                   <div className="section-head-label"><p className="eyebrow dark">ULTIMI INCONTRI</p><h2>La storia recente</h2></div>
                   <div className="court-actions">
@@ -8413,7 +8369,6 @@ function AppShell({ session }: { session: Session | null }) {
                           tournament={tournament}
                           matches={matches}
                           profiles={profiles}
-                          viewerId={currentUserId ?? undefined}
                           onOpen={() => openPadelPage("tournaments")}
                         />
                       ))}

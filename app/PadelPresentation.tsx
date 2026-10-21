@@ -1,19 +1,8 @@
 "use client";
 
 import { useId } from "react";
-import type { PadelMatch, PlannedMatch } from "@/lib/supabase";
+import type { PadelMatch } from "@/lib/supabase";
 import { filterMatchResults, type PeriodFilter, type ResultFilter } from "@/lib/padel-presentation";
-
-export type TournamentSnapshotData = { position: number | null; played: number; total: number; done: boolean; participating: boolean; next: string | null };
-
-export function TournamentSnapshot({ data, compact = false }: { data: TournamentSnapshotData; compact?: boolean }) {
-  const remaining = Math.max(0, data.total - data.played);
-  return <div className={`tournament-snapshot${compact ? " is-compact" : ""}`}>
-    <span className="tournament-personal-position">{data.position ? <><b>#{data.position}</b><span>{data.done ? "il tuo piazzamento" : "la tua posizione"}</span></> : <><b>{data.done ? "FINITO" : "LIVE"}</b><span>{data.participating ? "in attesa dei risultati" : "segui il torneo"}</span></>}</span>
-    <span className="tournament-completion"><b>{data.played}<small> / {data.total}</small></b><span>{data.done ? "partite concluse" : `${remaining} ${remaining === 1 ? "partita da giocare" : "partite da giocare"}`}</span></span>
-    {!compact && !data.done ? <span className="tournament-next"><small>PROSSIMO IN CALENDARIO</small><b>{data.next ?? "Abbinamento da definire"}</b></span> : null}
-  </div>;
-}
 
 export function MatchFilterBar({ matches, viewerId, viewerName, outcome, period, onOutcome, onPeriod }: {
   matches: PadelMatch[]; viewerId?: string; viewerName?: string;
@@ -34,20 +23,4 @@ export function MatchFormSteps({ step, onBack }: { step: 1 | 2; onBack: () => vo
     <span className="match-step-connector" aria-hidden="true" />
     <span className={step === 2 ? "is-current" : ""} aria-current={step === 2 ? "step" : undefined}><b>2</b><span>Risultato<small>Data e punteggio</small></span></span>
   </nav>;
-}
-
-export function PadelToday({ last, planned, viewerId, tournament, onMatches, onTournaments }: {
-  last?: PadelMatch; planned?: PlannedMatch; viewerId?: string;
-  tournament?: { name: string; snapshot: TournamentSnapshotData };
-  onMatches: () => void; onTournaments: () => void;
-}) {
-  const player = last?.players.find((entry) => entry.profile_id === viewerId);
-  const delta = player?.rating_delta ?? 0;
-  const result = !last ? "Il primo match ti aspetta" : last.winner_team === 0 ? "Un punto d’incontro" : last.winner_team === player?.team ? "Hai vinto l’ultima" : "La rivincita ti aspetta";
-  const dateLabel = (date: string) => new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short" }).format(new Date(date));
-  return <div className="padel-today" aria-label="Il tuo padel a colpo d’occhio">
-    <button className="padel-today-card" type="button" onClick={onMatches}><span className="eyebrow dark">ULTIMO RISULTATO</span><strong>{result}</strong><span>{last ? `${dateLabel(last.played_at)} · ${last.sets.map((set) => player?.team === 2 ? `${set.team2_games}–${set.team1_games}` : `${set.team1_games}–${set.team2_games}`).join(" / ")}` : "Ritroverai qui il tuo risultato più recente"}</span><b className={delta < 0 ? "is-negative" : ""}>{last ? last.is_friendly ? "Amichevole" : `${delta >= 0 ? "+" : "−"}${Math.round(Math.abs(delta))} Elo dalla partita` : "Apri lo storico ↗"}</b></button>
-    <button className="padel-today-card" type="button" onClick={onMatches}><span className="eyebrow dark">PROSSIMO INCONTRO</span><strong>{planned ? dateLabel(planned.played_at) : "Campo aperto alla prossima"}</strong><span>{planned ? planned.players.map((entry) => entry.profile.display_name).join(" · ") : "Nessuna tua partita programmata"}</span><b>{planned?.court || "Le partite del gruppo ↗"}</b></button>
-    <button className="padel-today-card padel-today-tournament" type="button" onClick={onTournaments}><span className="eyebrow">IL TORNEO</span><strong>{tournament?.name ?? "La prossima coppa aspetta"}</strong>{tournament ? <TournamentSnapshot data={tournament.snapshot} compact /> : <><span>Nessun torneo in corso</span><b>Esplora i tornei ↗</b></>}</button>
-  </div>;
 }
