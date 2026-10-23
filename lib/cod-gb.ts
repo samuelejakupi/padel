@@ -15,6 +15,7 @@ export type CodGb = {
   id: string; created_by: string; mode: CodMode; map_name: string; played_at: string;
   status: "pending" | "processing" | "needs_review" | "processed";
   review_note: string | null; image_count: number;
+  photos_deleted_at: string | null;
   team1_score: number | null; team2_score: number | null; players: CodPlayerResult[];
 };
 export function codRanking(gbs: CodGb[], mode: CodMode) {
