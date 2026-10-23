@@ -56,6 +56,7 @@ begin
   if (select count(*) from cod_gbs where created_by=auth.uid() and created_at > now() - interval '1 day') >= 30 then raise exception 'Limite giornaliero raggiunto'; end if;
   if jsonb_typeof(p_images) <> 'array' then raise exception 'Immagini richieste'; end if;
   n := jsonb_array_length(p_images);
+  if n is null or n not between 1 and 4 then raise exception 'Scegli da 1 a 4 foto'; end if;
   insert into cod_gbs(created_by, mode, map_name, played_at, image_count) values(auth.uid(), p_mode, btrim(p_map), p_played_at, n) returning id into gb;
   for photo in select * from jsonb_array_elements(p_images) loop
     if length(photo->>'data') > 1400000 then raise exception 'Immagine troppo grande'; end if;

@@ -1,5 +1,30 @@
 @import "tailwindcss";
 
+.cod-add-gb {
+  margin-block: var(--space-5);
+  min-height: 48px;
+  width: 100%;
+}
+
+.cod-manual-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cod-manual-player {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-block: var(--space-5);
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+.cod-gb-modal {
+  max-height: 85dvh;
+  overflow-y: auto;
+}
+
 .cod-page > .section-head {
   flex-wrap: wrap;
   gap: var(--space-5);

@@ -4,6 +4,11 @@ export const codModes = {
   overload: { label: "Overload", stats: ["Sovraccarichi", "Trasporti", "Uccisioni obiettivo"] },
 } as const;
 export type CodMode = keyof typeof codModes;
+export const codModeStatKeys = {
+  hardpoint: ["hill_seconds", "objective_kills"],
+  search_destroy: ["plants", "defuses", "first_bloods"],
+  overload: ["overloads", "carries", "objective_kills"],
+} as const;
 export type CodStats = { kills: number; deaths: number } & Record<"damage" | "hill_seconds" | "objective_kills" | "plants" | "defuses" | "first_bloods" | "overloads" | "carries", number | null>;
 export type CodPlayerResult = CodStats & { profile_id: string | null; nickname: string; team: number };
 export type CodGb = {

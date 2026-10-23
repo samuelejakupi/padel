@@ -7377,7 +7377,7 @@ function AppShell({ session }: { session: Session | null }) {
   // schermata, e il trascinamento risulterebbe a scatti.
   const navRef = useRef<HTMLElement | null>(null);
   const navPillRef = useRef<HTMLSpanElement | null>(null);
-  const navButtonsRef = useRef<(HTMLButtonElement | null)[]>([]);
+  const navPointerKey = useRef<string | null>(null);
   const navDragging = useRef(false);
   const navPointerStart = useRef<number | null>(null);
   const contentRef = useRef<HTMLElement | null>(null);
@@ -7479,13 +7479,14 @@ function AppShell({ session }: { session: Session | null }) {
     const nav = navRef.current;
     const pill = navPillRef.current;
     if (!nav || !pill) return;
-    const button = navButtonsRef.current[index];
+    const button = nav.querySelectorAll<HTMLButtonElement>(":scope > button")[index];
     if (!button) {
       pill.style.opacity = "0";
       return;
     }
     const navBox = nav.getBoundingClientRect();
     const buttonBox = button.getBoundingClientRect();
+    pill.getAnimations().forEach((animation) => animation.cancel());
     const from = navPillLeft.current;
     const to = buttonBox.left - navBox.left;
     const wasHidden = pill.style.opacity !== "1";
@@ -7528,8 +7529,9 @@ function AppShell({ session }: { session: Session | null }) {
   const movePillTo = useCallback((clientX: number) => {
     const nav = navRef.current;
     const pill = navPillRef.current;
-    const first = navButtonsRef.current[0];
-    const last = navButtonsRef.current[navButtonsRef.current.length - 1];
+    const buttons = nav?.querySelectorAll<HTMLButtonElement>(":scope > button");
+    const first = buttons?.[0];
+    const last = buttons?.[buttons.length - 1];
     if (!nav || !pill || !first || !last) return;
     const navBox = nav.getBoundingClientRect();
     const firstBox = first.getBoundingClientRect();
@@ -7549,7 +7551,7 @@ function AppShell({ session }: { session: Session | null }) {
   const nearestNavIndex = useCallback((clientX: number) => {
     let best = 0;
     let bestDistance = Number.POSITIVE_INFINITY;
-    navButtonsRef.current.forEach((button, index) => {
+    navRef.current?.querySelectorAll<HTMLButtonElement>(":scope > button").forEach((button, index) => {
       if (!button) return;
       const box = button.getBoundingClientRect();
       const distance = Math.abs(clientX - (box.left + box.width / 2));
@@ -7576,7 +7578,7 @@ function AppShell({ session }: { session: Session | null }) {
       window.removeEventListener("resize", realign);
       window.removeEventListener("orientationchange", realign);
     };
-  }, [navActiveIndex, placePill, currentUser, loading]);
+  }, [navActiveIndex, navItems.length, placePill, currentUser, loading]);
   const heroGreeting = useMemo(() => {
     const pool = heroGreetingPool(currentRank, isLastRanked, hasNarrowLead);
     const salutes = heroSalutePool(currentRank, isLastRanked);
@@ -8973,6 +8975,7 @@ function AppShell({ session }: { session: Session | null }) {
         style={{ "--nav-count": navItems.length } as CSSProperties}
         onPointerDown={(event) => {
           navPointerStart.current = event.clientX;
+          navPointerKey.current = (event.target as Element).closest<HTMLButtonElement>("button[data-nav-key]")?.dataset.navKey ?? null;
           navDragging.current = false;
           event.currentTarget.setPointerCapture(event.pointerId);
         }}
@@ -8988,14 +8991,17 @@ function AppShell({ session }: { session: Session | null }) {
         }}
         onPointerUp={(event) => {
           if (navPointerStart.current === null) return;
-          const index = nearestNavIndex(navDragging.current ? event.clientX : navPointerStart.current);
+          const tappedIndex = navItems.findIndex((item) => item.key === navPointerKey.current);
+          const index = navDragging.current || tappedIndex < 0 ? nearestNavIndex(event.clientX) : tappedIndex;
           navPointerStart.current = null;
+          navPointerKey.current = null;
           navDragging.current = false;
           placePill(index, true);
           selectNavItem(index);
         }}
         onPointerCancel={() => {
           navPointerStart.current = null;
+          navPointerKey.current = null;
           navDragging.current = false;
           placePill(navActiveIndex, true);
         }}
@@ -9006,9 +9012,10 @@ function AppShell({ session }: { session: Session | null }) {
         {navItems.map((item, index) => (
           <button
             key={item.key}
-            ref={(element) => { navButtonsRef.current[index] = element; }}
+            data-nav-key={item.key}
+            aria-current={item.active ? "page" : undefined}
             className={item.active ? "active" : ""}
-            onClick={() => selectNavItem(index)}
+            onClick={(event) => { if (event.detail === 0) selectNavItem(index); }}
           >
             <span className="mobile-nav-icon">
               {item.key === "profile"
