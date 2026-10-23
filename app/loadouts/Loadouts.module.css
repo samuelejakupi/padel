@@ -21,7 +21,7 @@
 }
 
 .pageHead p:last-child {
-  color: var(--ink-soft);
+  color: var(--text-soft);
   font-size: 14px;
   margin-top: var(--space-2);
 }
@@ -261,7 +261,7 @@
 }
 
 .statFill {
-  background: var(--white);
+  background: var(--surface);
 }
 
 .statDelta[data-sign="up"] {
@@ -297,9 +297,9 @@
 /* Badge */
 .tier {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border-radius: var(--radius-sm);
-  color: var(--ink);
+  color: var(--text);
   display: inline-flex;
   flex: 0 0 auto;
   font-size: 18px;

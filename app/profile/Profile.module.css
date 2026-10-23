@@ -111,7 +111,7 @@
 
 /* Tre numeri divisi da un filo. */
 .statRow {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   display: grid;
@@ -204,7 +204,7 @@
 
 /* Riassunto di una sezione nel profilo della home. */
 .summary {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   display: grid;
@@ -272,7 +272,7 @@
 
 .list li {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   display: flex;
@@ -315,7 +315,7 @@
 
 /* Barre dei criteri: il tuo voto medio, e una tacca per la media del gruppo. */
 .bars {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   display: grid;

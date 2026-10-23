@@ -71,6 +71,25 @@ un'interfaccia: le categorie della pizza, per esempio.
 
 ---
 
+### Tema scuro
+
+Segue l'impostazione del telefono (`prefers-color-scheme`). Per funzionare
+da solo, nelle regole si usano i **ruoli**, non i colori:
+
+| Ruolo | Chiaro | Scuro | Per cosa |
+|---|---|---|---|
+| `--surface` | bianco | `#111d29` | Fondo di card, righe, campi |
+| `--text` | `--ink` | `#e7edf1` | Testo su card e pagina |
+| `--text-soft` | `--ink-soft` | `#b9c5ce` | Testo secondario |
+| `--paper` | `#f3f5f1` | `#060c12` | Fondo pagina |
+
+`--ink` e `--white` restano colori fissi: testate scure, testo bianco sulle
+testate, testo inchiostro sui tasti azzurri e lime. Quindi:
+- card → `background: var(--surface)`, mai `var(--white)`;
+- testo su card o pagina → `color: var(--text)`; su un tasto acceso → `var(--ink)`;
+- una superficie che resta chiara anche al buio (la barra in basso) ridefinisce
+  `--text` al suo interno, nel blocco del tema scuro.
+
 ## 2. Angoli
 
 | Variabile | Valore | Cosa |

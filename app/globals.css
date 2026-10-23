@@ -26,7 +26,7 @@
 
 .cod-emblem-card {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   display: flex;
@@ -113,7 +113,7 @@
 }
 
 .cod-gb-head p:last-child {
-  color: var(--ink-soft);
+  color: var(--text-soft);
   max-width: 560px;
 }
 
@@ -192,7 +192,7 @@
 
 .cod-stat-note,
 .cod-status {
-  color: var(--ink-soft);
+  color: var(--text-soft);
   font-size: 13px;
 }
 
@@ -208,7 +208,7 @@
 }
 
 .cod-gb-card {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   display: grid;
@@ -251,7 +251,7 @@
 
 .cod-status-pill {
   background: var(--veil-2);
-  color: var(--ink-soft);
+  color: var(--text-soft);
 }
 
 .cod-status-pill[data-status="needs_review"] {
@@ -343,7 +343,7 @@
 }
 
 .cod-table-wrap {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   overflow-x: auto;
@@ -358,7 +358,7 @@
    colonne sono piu della larghezza e senza nome non si sa di chi sono. */
 .cod-table tbody th,
 .cod-table thead th:first-child {
-  background: var(--white);
+  background: var(--surface);
   left: 0;
   position: sticky;
   z-index: 1;
@@ -473,7 +473,7 @@
 }
 
 .match-filter-bar {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   margin-bottom: var(--space-5);
@@ -506,7 +506,7 @@
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  color: var(--ink);
+  color: var(--text);
   font-size: 12px;
   font-weight: 700;
   min-height: 44px;
@@ -524,7 +524,7 @@
   background: var(--paper);
   border: 1px solid transparent;
   border-radius: var(--radius-pill);
-  color: var(--ink);
+  color: var(--text);
   cursor: pointer;
   display: flex;
   flex-wrap: wrap;
@@ -573,7 +573,7 @@
 }
 
 .match-form-steps > [aria-current="step"] {
-  color: var(--ink);
+  color: var(--text);
 }
 
 .match-form-steps > button > b,
@@ -719,10 +719,10 @@
 
 .insights-scope select,
 .insights-person select {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  color: var(--ink);
+  color: var(--text);
   cursor: pointer;
   font: inherit;
   font-size: 13px;
@@ -735,7 +735,7 @@
 .insights-partners,
 .insights-comparison {
   align-self: start;
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   min-width: 0;
@@ -825,7 +825,7 @@
   background: var(--paper);
   border: 1px solid transparent;
   border-radius: var(--radius);
-  color: var(--ink);
+  color: var(--text);
   cursor: pointer;
   display: grid;
   gap: var(--space-2);
@@ -854,7 +854,7 @@
 }
 
 .insights-sample {
-  background: var(--white);
+  background: var(--surface);
   border-radius: var(--radius-pill);
   padding: var(--space-1) var(--space-2);
 }
@@ -920,7 +920,7 @@
   background: transparent;
   border: 0;
   border-radius: var(--radius-pill);
-  color: var(--ink);
+  color: var(--text);
   cursor: pointer;
   font-size: 13px;
   font-weight: 800;
@@ -1070,6 +1070,14 @@
   --ink-soft: #183346;
   --paper: #f3f5f1;
   --white: #ffffff;
+  /* Ruoli, non colori: superficie delle card, testo, fondo pagina. In chiaro
+     coincidono con bianco, inchiostro e carta; in scuro cambiano loro e
+     basta (vedi il blocco prefers-color-scheme qui sotto). --ink e --white
+     restano colori fissi: le testate scure e il testo sui tasti accesi non
+     cambiano col tema. */
+  --surface: var(--white);
+  --text: var(--ink);
+  --text-soft: var(--ink-soft);
   --blue: #18dfe4;
   --blue-dark: #05aeb7;
   /* L'azzurro abbastanza scuro da fare da testo piccolo su carta e bianco
@@ -1146,6 +1154,42 @@
   --ranking-row-h: 68px;
 }
 
+/* Tema scuro: segue l'impostazione del telefono. Cambiano solo i ruoli
+   (fondo, card, testo, fili, veli); le testate restano inchiostro e i tasti
+   restano azzurri e lime. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --paper: #060c12;
+    --surface: #111d29;
+    --text: #e7edf1;
+    --text-soft: #b9c5ce;
+    --line: rgba(255, 255, 255, 0.1);
+    --muted: #9eabb6;
+    --veil-1: rgba(255, 255, 255, 0.04);
+    --veil-2: rgba(255, 255, 255, 0.08);
+    --veil-3: rgba(255, 255, 255, 0.12);
+    --ink-30: rgba(255, 255, 255, 0.3);
+    --ink-45: rgba(255, 255, 255, 0.45);
+    --positive-text: #4cc98e;
+    --danger-text: #ff8a87;
+    --blue-deep: var(--blue);
+    --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  }
+
+  /* Superfici che restano chiare anche al buio (la barra di vetro in basso,
+     le righe d'oro, argento e bronzo delle pizzerie): dentro di loro il
+     testo torna inchiostro. */
+  .mobile-nav,
+  .pizza-ranking-medal,
+  button.pizza-ranking-row.pizza-ranking-medal {
+    --muted: #4d5966;
+    --text: var(--ink);
+    --text-soft: var(--ink-soft);
+    color: var(--text);
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -1182,7 +1226,7 @@ html.theme-dark {
 body {
   margin: 0;
   background: var(--paper);
-  color: var(--ink);
+  color: var(--text);
   font-family: "Inter", Arial, Helvetica, sans-serif;
   font-size: 15px;
   -webkit-font-smoothing: antialiased;
@@ -1378,7 +1422,7 @@ button {
 /* Azione secondaria: leggibile ma senza gridare come il pieno scuro. */
 .button-ghost {
   background: var(--veil-2);
-  color: var(--ink);
+  color: var(--text);
 }
 
 .button-ghost:hover {
@@ -1386,19 +1430,19 @@ button {
 }
 
 .button-danger {
-  background: color-mix(in srgb, var(--danger) 12%, var(--white));
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
   color: var(--danger);
 }
 
 .button-danger:hover {
-  background: color-mix(in srgb, var(--danger) 20%, var(--white));
+  background: color-mix(in srgb, var(--danger) 20%, var(--surface));
 }
 
 /* Come una card: serve dove il tasto sta sul fondo pagina, che ha lo
    stesso colore del grigio secondario e lo farebbe sparire. */
 .button-card {
-  background: var(--white);
-  color: var(--ink);
+  background: var(--surface);
+  color: var(--text);
 }
 
 .button-card:hover {
@@ -1630,7 +1674,7 @@ button {
 @keyframes mvp-glow-pulse {
   0%,
   100% { border-color: var(--mvp-glow); }
-  50% { border-color: color-mix(in srgb, var(--mvp-glow) 28%, var(--white)); }
+  50% { border-color: color-mix(in srgb, var(--mvp-glow) 28%, var(--surface)); }
 }
 
 /* La pastiglia si stringe sulla corona: la parola "MVP" in corpo 7 sopra un
@@ -1818,7 +1862,7 @@ button {
 }
 
 form label {
-  color: var(--ink-soft);
+  color: var(--text-soft);
   display: block;
   font-size: 12px;
   font-weight: 900;
@@ -1829,10 +1873,10 @@ form label {
 
 form input,
 form select {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  color: var(--ink);
+  color: var(--text);
   display: block;
   margin-top: 8px;
   min-height: 48px;
@@ -1932,7 +1976,7 @@ form select:focus {
 }
 
 .setup-page code {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   color: var(--blue-deep);
@@ -1967,7 +2011,7 @@ form select:focus {
 
 .topbar {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border-bottom: 1px solid var(--line);
   display: flex;
   height: 76px;
@@ -2015,7 +2059,7 @@ body:has(.hub-page) .desktop-nav button.active {
 }
 
 .desktop-nav button.active {
-  color: var(--ink);
+  color: var(--text);
 }
 
 .desktop-nav button.active::after {
@@ -2060,7 +2104,7 @@ body:has(.hub-page) .desktop-nav button.active {
 }
 
 .profile-chip.active b {
-  color: var(--ink);
+  color: var(--text);
 }
 
 .profile-chip small {
@@ -2384,7 +2428,7 @@ body:has(.hub-page) .desktop-nav button.active {
 }
 
 .preview-point {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: var(--space-6);
@@ -2483,7 +2527,7 @@ body:has(.hub-page) .desktop-nav button.active {
 
 .compact-empty {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border-radius: var(--radius-md);
   display: flex;
   gap: 18px;
@@ -2525,7 +2569,7 @@ body:has(.hub-page) .desktop-nav button.active {
 
 .empty-board {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border: 1px dashed var(--line);
   border-radius: var(--radius);
   display: flex;
@@ -2876,7 +2920,7 @@ body:has(.hub-page) .desktop-nav button.active {
      spazio era occupato e la cosa funzionava. Tolto il tasto restava mezzo
      riquadro di bianco sotto la terza riga, che è il difetto da togliere. */
   align-self: start;
-  background: var(--white);
+  background: var(--surface);
   border-radius: var(--radius);
   box-shadow: 0 8px 30px rgba(16, 29, 43, 0.04);
   display: flex;
@@ -2915,7 +2959,7 @@ body:has(.hub-page) .desktop-nav button.active {
 
 .season:hover,
 .season[aria-expanded="true"] {
-  color: var(--ink);
+  color: var(--text);
 }
 
 .season i {
@@ -2924,7 +2968,7 @@ body:has(.hub-page) .desktop-nav button.active {
 }
 
 .season-menu {
-  background: var(--white);
+  background: var(--surface);
   border-radius: var(--radius-md);
   box-shadow: 0 14px 40px rgba(16, 29, 43, 0.18);
   list-style: none;
@@ -2942,7 +2986,7 @@ body:has(.hub-page) .desktop-nav button.active {
   background: transparent;
   border: 0;
   border-radius: var(--radius-sm);
-  color: var(--ink);
+  color: var(--text);
   cursor: pointer;
   display: block;
   font-family: inherit;
@@ -2988,7 +3032,7 @@ body:has(.hub-page) .desktop-nav button.active {
 }
 
 .rank-number {
-  color: var(--ink);
+  color: var(--text);
   font-size: 16px;
   font-weight: 900;
 }
@@ -3173,7 +3217,7 @@ button.ranking-row-link:focus-visible {
 
 .match-card {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border: 0;
   border-radius: var(--radius-md);
   color: inherit;
@@ -3223,8 +3267,8 @@ button.ranking-row-link:focus-visible {
 
 .planned-match-card {
   align-items: center;
-  background: linear-gradient(115deg, color-mix(in srgb, var(--blue) 11%, var(--white)), var(--white) 58%);
-  border: 1px solid color-mix(in srgb, var(--blue) 25%, var(--white));
+  background: linear-gradient(115deg, color-mix(in srgb, var(--blue) 11%, var(--surface)), var(--surface) 58%);
+  border: 1px solid color-mix(in srgb, var(--blue) 25%, var(--surface));
   border-radius: var(--radius-md);
   display: grid;
   gap: var(--space-5);
@@ -3432,14 +3476,14 @@ button.ranking-row-link:focus-visible {
 .match-verdict {
   background: color-mix(in srgb, var(--drawn) 14%, transparent);
   border-radius: var(--radius-md);
-  color: var(--ink-soft);
+  color: var(--text-soft);
   font-size: 12px;
   margin: 0;
   padding: 10px 12px;
 }
 
 .match-verdict b {
-  color: color-mix(in srgb, var(--drawn) 70%, var(--ink));
+  color: color-mix(in srgb, var(--drawn) 70%, var(--text));
   font-weight: 900;
   letter-spacing: 0.4px;
   text-transform: uppercase;
@@ -3546,7 +3590,7 @@ button.ranking-row-link:focus-visible {
 }
 
 .match-mvp-row > span b {
-  color: var(--ink);
+  color: var(--text);
   font-weight: 900;
 }
 
@@ -3608,7 +3652,7 @@ button.ranking-row-link:focus-visible {
 }
 
 .mvp-candidates legend {
-  color: var(--ink);
+  color: var(--text);
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.7px;
@@ -3629,7 +3673,7 @@ button.ranking-row-link:focus-visible {
 }
 
 .mvp-candidates label.is-selected {
-  background: color-mix(in srgb, var(--lime) 13%, var(--white));
+  background: color-mix(in srgb, var(--lime) 13%, var(--surface));
   border-color: var(--lime);
 }
 
@@ -3831,7 +3875,7 @@ button.ranking-row-link:focus-visible {
 }
 
 .match-locked b {
-  color: var(--ink);
+  color: var(--text);
 }
 
 /* Quanto resta prima che si chiuda. Sotto al modulo e non sopra: e
@@ -3861,7 +3905,7 @@ button.ranking-row-link:focus-visible {
 }
 
 .play-card {
-  background: var(--white);
+  background: var(--surface);
   border-radius: var(--radius);
   overflow: hidden;
   position: relative;
@@ -3978,7 +4022,7 @@ button.ranking-row-link:focus-visible {
 }
 
 .play-clock-label {
-  color: var(--ink-soft);
+  color: var(--text-soft);
   display: block;
   font-size: 12px;
   font-weight: 900;
@@ -4173,7 +4217,7 @@ button.podium-person {
   /* Colore pieno: l'attenuazione della voce spenta si fa con l'opacità sul
      glifo, non con un colore semitrasparente. Altrimenti ogni incrocio di
      tracciati si somma e si vede più scuro degli altri. */
-  color: var(--ink);
+  color: var(--text);
   cursor: pointer;
   display: flex;
   height: 30px;
@@ -4201,7 +4245,7 @@ button.podium-person {
 }
 
 .mode-switch button.active {
-  background: var(--white);
+  background: var(--surface);
   box-shadow: 0 1px 3px rgba(11, 27, 44, 0.12);
 }
 
@@ -4580,7 +4624,7 @@ button.podium-person {
 
 
 .ranking-table {
-  background: var(--white);
+  background: var(--surface);
   border-radius: var(--radius);
   padding: 12px 28px;
 }
@@ -4879,7 +4923,7 @@ button.podium-person {
 /* Lo storico resta una card separata sotto la tabella; l'avatar chiude ogni
    linea dentro al grafico, senza una legenda da inseguire su mobile. */
 .ranking-history-panel {
-  background: var(--white);
+  background: var(--surface);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   margin-top: var(--space-3);
@@ -5000,10 +5044,10 @@ button.podium-person {
    grande, mese piccolo — e si apre solo se lo tocchi. */
 .match-form-day {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  color: var(--ink);
+  color: var(--text);
   cursor: pointer;
   display: flex;
   flex: 0 0 auto;
@@ -5063,7 +5107,7 @@ button.podium-person {
    come colore di un dato, non di un'interfaccia. */
 .match-form-yt {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   color: var(--ink-30);
@@ -5104,7 +5148,7 @@ button.podium-person {
 }
 
 .match-form-teams fieldset {
-  background: var(--white);
+  background: var(--surface);
   border: 0;
   border-radius: var(--radius-md);
   margin: 0;
@@ -5138,7 +5182,7 @@ button.podium-person {
 /* Il tabellone. Le caselle sono grandi e centrate come i numeri di un
    punteggio, non come i campi di un modulo. */
 .match-form-sets {
-  background: var(--white);
+  background: var(--surface);
   border-radius: var(--radius-md);
   display: grid;
   gap: var(--space-2);
@@ -5156,7 +5200,7 @@ button.podium-person {
 /* Le intestazioni delle squadre sono nomi: in frase normale, su una riga. */
 .match-form-sets > span:nth-of-type(2),
 .match-form-sets > span:nth-of-type(4) {
-  color: var(--ink);
+  color: var(--text);
   font-size: 13px;
   letter-spacing: 0;
   overflow: hidden;
@@ -5290,7 +5334,7 @@ button.podium-person {
 
 .sheet-form .tournament-participant {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -5320,7 +5364,7 @@ button.podium-person {
 }
 
 .tournament-draw-preview {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   display: grid;
@@ -5350,7 +5394,7 @@ button.podium-person {
 }
 
 .tournament-team-builder fieldset {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   margin: 0;
@@ -5486,7 +5530,7 @@ button.podium-person {
 }
 
 .tournament-trophy-picker > button.active {
-  background: var(--white);
+  background: var(--surface);
   border-color: var(--blue);
 }
 
@@ -5521,7 +5565,7 @@ button.podium-person {
 }
 
 .tournament-choice {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   gap: var(--space-5);
@@ -5566,7 +5610,7 @@ button.podium-person {
 }
 
 .tournament-tabs button {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   color: var(--muted);
@@ -5632,7 +5676,7 @@ button.podium-person {
 }
 
 .tournament-title-card {
-  background: var(--white);
+  background: var(--surface);
   flex-direction: column;
   justify-content: center;
 }
@@ -5658,7 +5702,7 @@ button.podium-person {
 
 .tournament-standings,
 .tournament-fixtures {
-  background: var(--white);
+  background: var(--surface);
   border-radius: var(--radius);
   padding: var(--space-6);
 }
@@ -5748,7 +5792,7 @@ button.podium-person {
 }
 
 .tournament-table-row.is-leader .tournament-team-cell small {
-  color: var(--ink-soft);
+  color: var(--text-soft);
 }
 
 .tournament-rule-note {
@@ -5830,7 +5874,7 @@ button.podium-person {
 }
 
 .tournament-score {
-  color: var(--ink);
+  color: var(--text);
   font-size: 12px;
   letter-spacing: 0.5px;
   white-space: pre;
@@ -5908,7 +5952,7 @@ button.podium-person {
 }
 
 .tournament-recent-card {
-  background: var(--white);
+  background: var(--surface);
   border-radius: var(--radius);
   display: grid;
   gap: var(--space-5);
@@ -5959,7 +6003,7 @@ button.podium-person {
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  color: var(--ink);
+  color: var(--text);
   cursor: pointer;
   display: grid;
   font: inherit;
@@ -6005,7 +6049,7 @@ button.podium-person {
 }
 
 .tournament-recent-ranking > div strong {
-  color: var(--ink);
+  color: var(--text);
   font-size: 12px;
 }
 
@@ -6177,7 +6221,7 @@ button.podium-person {
 }
 
 .player-trophies-empty {
-  background: var(--white);
+  background: var(--surface);
   border: 1px dashed var(--line);
   border-radius: var(--radius);
   padding: 30px;
@@ -6326,7 +6370,7 @@ button.podium-person {
   border: 0;
   border-radius: 0;
   box-shadow: none;
-  color: var(--ink);
+  color: var(--text);
   display: flex;
   flex: 0 0 140px;
   flex-direction: column;
@@ -6520,7 +6564,7 @@ button.podium-person {
 }
 
 .badge-text small {
-  color: var(--ink-soft);
+  color: var(--text-soft);
   font-size: 8px;
   font-weight: 800;
   line-height: 1.25;
@@ -6632,7 +6676,7 @@ button.podium-person {
 
 .field-register-card {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   display: grid;
@@ -6816,7 +6860,7 @@ button.podium-person {
 }
 
 .elo-panel {
-  background: var(--white);
+  background: var(--surface);
   border-radius: var(--radius);
   box-shadow: 0 8px 30px rgba(16, 29, 43, 0.04);
   padding: 28px 30px 22px;
@@ -6940,7 +6984,7 @@ button.podium-person {
 
 /* Squadre: stanno fra l'andamento Elo e lo storico partite. */
 .player-teams-list {
-  background: var(--white);
+  background: var(--surface);
   border-radius: var(--radius);
   padding: 24px 26px 14px;
 }
@@ -6973,7 +7017,7 @@ button.podium-person {
 }
 
 .player-teams .demo-profile-note {
-  background: var(--white);
+  background: var(--surface);
   border-radius: var(--radius);
   margin: 0;
   padding: 24px 26px;
@@ -7257,7 +7301,7 @@ button.podium-person {
   background: var(--veil-1);
   border: 1px solid transparent;
   border-radius: var(--radius);
-  color: var(--ink);
+  color: var(--text);
   cursor: pointer;
   display: grid;
   gap: 3px;
@@ -7430,7 +7474,7 @@ button.podium-person {
 .pizza-podium li,
 .pizza-night-list li {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   display: flex;
@@ -7558,7 +7602,7 @@ button.podium-person {
 }
 
 .pizza-score-input input {
-  accent-color: var(--ink);
+  accent-color: var(--text);
   flex: 1 1 auto;
   margin: 0;
   /* Il cursore si prende col pollice: la fascia sensibile e alta un dito. */
@@ -7720,7 +7764,7 @@ button.podium-person {
 .pizza-board {
   background: var(--paper);
   border-radius: var(--radius);
-  color: var(--ink);
+  color: var(--text);
   overflow-x: auto;
 }
 
@@ -7827,7 +7871,7 @@ button.pizza-ranking-row {
 }
 
 .pizza-position {
-  color: var(--ink);
+  color: var(--text);
   font-size: 16px;
   font-weight: 900;
 }
@@ -7939,7 +7983,7 @@ button.pizza-ranking-row {
 
 /* La riga dei quattro voti sotto la barra, su desktop e su telefono. */
 .pizza-criteria-line {
-  color: var(--ink-soft);
+  color: var(--text-soft);
   display: flex;
   flex-wrap: wrap;
   font-size: 13px;
@@ -8008,7 +8052,7 @@ button.pizza-ranking-row {
 }
 
 .pizza-ranking-body .pizza-board {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
 }
 
@@ -8023,7 +8067,7 @@ button.pizza-ranking-row {
 
 .profile-card,
 .settings-card {
-  background: var(--white);
+  background: var(--surface);
   border-radius: var(--radius);
   padding: 38px;
 }
@@ -8156,7 +8200,7 @@ button.pizza-ranking-row {
 
 .profile-paypal-field {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   display: flex;
@@ -8475,7 +8519,7 @@ button.pizza-ranking-row {
 .month-count {
   background: var(--veil-2);
   border-radius: var(--radius-pill);
-  color: var(--ink);
+  color: var(--text);
   font-size: 12px;
   font-weight: 800;
   margin-right: auto;
@@ -8536,7 +8580,7 @@ button.pizza-ranking-row {
 
 .icon-button {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border: 0;
   border-radius: 50%;
   cursor: pointer;
@@ -8550,7 +8594,7 @@ button.pizza-ranking-row {
 
 .sheet-form label.random-teams-toggle {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -8630,7 +8674,7 @@ button.pizza-ranking-row {
 }
 
 .random-participants label.is-selected {
-  background: color-mix(in srgb, var(--blue) 9%, var(--white));
+  background: color-mix(in srgb, var(--blue) 9%, var(--surface));
   border-color: var(--blue);
 }
 
@@ -9419,7 +9463,7 @@ button.pizza-ranking-row {
     background: transparent;
     border: 0;
     border-radius: var(--radius-pill);
-    color: var(--ink);
+    color: var(--text);
     display: flex;
     flex-direction: column;
     gap: 3px;
@@ -9543,7 +9587,7 @@ button.pizza-ranking-row {
   /* Le ultime partite in un riquadro unico, come la classifica: righe
      separate da una linea invece di card staccate, e il tasto dentro. */
   .match-panel {
-    background: var(--white);
+    background: var(--surface);
     border-radius: var(--radius-lg);
     display: block;
     overflow: hidden;
@@ -10294,7 +10338,7 @@ button.pizza-ranking-row {
   }
 
   .match-result-line b {
-    color: var(--ink);
+    color: var(--text);
   }
 
   .match-score {
@@ -10313,7 +10357,7 @@ button.pizza-ranking-row {
   }
 
   .ranking-table .ranking-row {
-    background: var(--white);
+    background: var(--surface);
     border: 0;
     border-radius: var(--radius-lg);
     box-shadow: 0 5px 18px rgba(16, 29, 43, 0.04);
@@ -10460,7 +10504,7 @@ button.pizza-ranking-row {
   }
 
   .pizza-ranking-row {
-    background: var(--pizza-medal-bg, var(--white));
+    background: var(--pizza-medal-bg, var(--surface));
     border: 1px solid var(--line);
     border-radius: var(--radius-lg);
     gap: 10px 12px;
@@ -10535,7 +10579,7 @@ button.pizza-ranking-row {
 
   /* Due per riga: in colonna i quattro voti allungavano ogni card. */
   .pizza-criteria-line {
-    color: var(--ink-soft);
+    color: var(--text-soft);
     display: grid;
     font-size: 13px;
     gap: 4px 16px;
@@ -11064,7 +11108,7 @@ button.pizza-ranking-row {
   }
 
   .button-card:hover {
-    background: var(--white);
+    background: var(--surface);
   }
 
   .button-lime:hover {
@@ -11313,7 +11357,7 @@ button.pizza-ranking-row {
 }
 
 .wansport-tabellone tbody th {
-  color: var(--ink-soft);
+  color: var(--text-soft);
   font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.6px;
@@ -11480,7 +11524,7 @@ button.pizza-ranking-row {
 }
 
 .wansport-accesso-esito {
-  color: var(--ink-soft);
+  color: var(--text-soft);
   font-size: 12px;
   font-weight: 800;
   margin: 0;
@@ -11526,12 +11570,12 @@ button.pizza-ranking-row {
      Regola generale: aloni e ombre stanno sullo sfondo, mai su un altro
      tasto o su una card. Se qualcosa gli finisce accanto, quel qualcosa
      deve essere opaco — e disegnato dopo, vedi lo z-index qui sotto. */
-  background: var(--white);
+  background: var(--surface);
   /* Lati tondi come il tasto della votazione: sono i due comandi che
      stanno da soli in fondo a qualcosa, e devono leggersi come la stessa
      cosa. */
   border-radius: var(--radius-pill);
-  color: var(--ink);
+  color: var(--text);
   display: none;
   /* Non basta il fondo pieno. `.cta-carousel-track` ha `will-change:
      transform` sotto i 780px — serve allo scorrimento del carosello — e
@@ -11550,7 +11594,7 @@ button.pizza-ranking-row {
    restare pieno anche premuto, se no l'alone torna a passare. */
 @media (hover: hover) {
   .cta-campi-liberi:hover {
-    background: linear-gradient(var(--veil-1), var(--veil-1)), var(--white);
+    background: linear-gradient(var(--veil-1), var(--veil-1)), var(--surface);
   }
 }
 
@@ -11674,10 +11718,10 @@ button.pizza-ranking-row {
 
 .cashout-group-card {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  color: var(--ink);
+  color: var(--text);
   cursor: pointer;
   display: grid;
   gap: var(--space-4);
@@ -11751,7 +11795,7 @@ button.pizza-ranking-row {
 .cashout-back {
   background: transparent;
   border: 0;
-  color: var(--ink);
+  color: var(--text);
   cursor: pointer;
   font-size: 13px;
   min-height: 44px;
@@ -11775,7 +11819,7 @@ button.pizza-ranking-row {
   background: var(--veil-2);
   border: 2px solid var(--white);
   border-radius: 50%;
-  color: var(--ink);
+  color: var(--text);
   flex: 0 0 auto;
   height: 34px;
   object-fit: cover;
@@ -11809,7 +11853,7 @@ button.pizza-ranking-row {
 }
 
 .cashout-summary-grid article {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   display: grid;
@@ -11830,7 +11874,7 @@ button.pizza-ranking-row {
 
 .cashout-balance-list article {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   display: grid;
@@ -12000,7 +12044,7 @@ button.pizza-ranking-row {
 }
 
 .cashout-expense-card {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   display: grid;
@@ -12083,7 +12127,7 @@ button.pizza-ranking-row {
   background: transparent;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  color: var(--ink);
+  color: var(--text);
   display: flex;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
@@ -12339,7 +12383,7 @@ button.pizza-ranking-row {
 }
 
 .cashout-expense-line b {
-  color: var(--ink);
+  color: var(--text);
 }
 
 .cashout-expense-card > footer {
@@ -12374,7 +12418,7 @@ ul.cashout-settlement-history {
 
 .cashout-settlement-history li {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   display: flex;
@@ -12490,14 +12534,16 @@ ul.cashout-settlement-history {
   width: 1px;
 }
 
+/* Scelto = pieno del colore del testo: inchiostro in chiaro, chiaro al buio,
+   cosi si stacca dalla card in tutti e due i temi. */
 .cashout-chip-picker > div > label.is-selected {
-  background: var(--ink);
-  color: var(--white);
+  background: var(--text);
+  color: var(--paper);
 }
 
 .cashout-chip-picker > div > label.is-selected .cashout-avatar-fallback {
-  background: var(--white);
-  color: var(--ink);
+  background: var(--surface);
+  color: var(--text);
 }
 
 .cashout-chip-picker > div > label:focus-within {
@@ -12686,7 +12732,7 @@ ul.cashout-settlement-history {
 .admin-panel { width: min(760px, calc(100vw - 24px)); max-height: 90dvh; overflow-y: auto; }
 .admin-heading { align-items: center; display: flex; gap: var(--space-5); justify-content: space-between; }
 .admin-heading h2 { margin: 0; }
-.admin-panel .form-message { color: var(--ink); }
+.admin-panel .form-message { color: var(--text); }
 .admin-create { border-bottom: 1px solid var(--line); margin-bottom: var(--space-6); padding-bottom: var(--space-6); }
 .admin-panel form { display: grid; gap: var(--space-4); }
 .admin-panel label { display: grid; font-size: 13px; font-weight: 700; gap: var(--space-2); }
@@ -12706,7 +12752,7 @@ ul.cashout-settlement-history {
 .profile-password summary,
 .cod-emblems-available summary { cursor: pointer; font-weight: 700; min-height: 44px; padding-block: 12px; }
 .profile-password form { margin-top: var(--space-5); }
-.profile-password .form-message { color: var(--ink); }
+.profile-password .form-message { color: var(--text); }
 
 /* Scheda di un altro giocatore: tu e lui, contro e in coppia. Due righe
    bianche come i numeri sopra; le vinte in verde, le perse in rosso. */
@@ -12720,7 +12766,7 @@ ul.cashout-settlement-history {
 }
 
 .player-versus li {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   display: grid;

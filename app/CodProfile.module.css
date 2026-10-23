@@ -11,7 +11,7 @@
 }
 
 .mode {
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: var(--space-5);
@@ -61,7 +61,7 @@
 }
 
 .mode p {
-  color: var(--ink-soft);
+  color: var(--text-soft);
   font-size: 13px;
 }
 
@@ -75,7 +75,7 @@
 
 .recent li {
   align-items: center;
-  background: var(--white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   display: grid;
