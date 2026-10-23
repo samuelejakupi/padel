@@ -1,5 +1,77 @@
 @import "tailwindcss";
 
+.gaming-grid {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  margin-top: var(--space-7);
+}
+
+.gaming-card {
+  background: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--white);
+  cursor: pointer;
+  overflow: hidden;
+  padding: 0;
+  text-align: left;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+/* Il taglio orizzontale conserva il titolo al centro della locandina. */
+.gaming-card-image {
+  aspect-ratio: 16 / 9;
+  display: block;
+  height: auto;
+  object-fit: cover;
+  object-position: center 47%;
+  width: 100%;
+}
+
+.gaming-card-body {
+  align-items: center;
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+  padding: var(--space-5);
+}
+
+.gaming-card-series {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  margin-bottom: var(--space-1);
+  text-transform: uppercase;
+}
+
+.gaming-card-body strong {
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.gaming-card-arrow {
+  color: var(--lime);
+  font-size: 27px;
+}
+
+.gaming-card:focus-visible {
+  outline: 3px solid var(--blue-dark);
+  outline-offset: 4px;
+}
+
+.gaming-back {
+  margin-bottom: var(--space-5);
+}
+
+@media (hover: hover) {
+  .gaming-card:hover {
+    border-color: var(--blue);
+    transform: scale(1.02);
+  }
+}
+
 .match-filter-bar {
   background: var(--white);
   border: 1px solid var(--line);

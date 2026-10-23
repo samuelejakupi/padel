@@ -35,6 +35,7 @@ type PadelView = "overview" | "ranking" | "matches" | "tournaments" | "player";
 // Pizza e Gaming hanno una pagina principale e una classifica. Cash Out usa
 // invece una sola area operativa con gruppi, spese e resoconti.
 type SectionView = "overview" | "ranking";
+type GamingView = SectionView | "mw4";
 type PizzaRankingMode = "contemporary" | "classic" | "personal";
 type PizzaRankingEntry = {
   name: string;
@@ -6555,7 +6556,7 @@ function AppShell({ session }: { session: Session | null }) {
   const [view, setView] = useState<View>("home");
   const [padelView, setPadelView] = useState<PadelView>("overview");
   const [pizzaView, setPizzaView] = useState<SectionView>("overview");
-  const [gamingView, setGamingView] = useState<SectionView>("overview");
+  const [gamingView, setGamingView] = useState<GamingView>("overview");
   // La scheda giocatore vive dentro il Padel, ma ci si arriva da qualunque
   // sezione: senza ricordarsi da dove si veniva, aprire il profilo dal
   // Cashout riportava la barra su quella del Padel. Questo e l'ultimo
@@ -7156,7 +7157,7 @@ function AppShell({ session }: { session: Session | null }) {
     : navSection === "pizza"
       ? pizzaView
       : navSection === "gaming"
-        ? gamingView
+        ? (gamingView === "ranking" ? "ranking" : "overview")
         : "overview";
   const selectedPlayerRank = selectedPlayer?.matches_played ? rankOf(sorted, selectedPlayer.id) : 0;
   const selectedPlayerMatches = selectedPlayer
@@ -8948,18 +8949,52 @@ function AppShell({ session }: { session: Session | null }) {
         ) : null}
 
         {!loading && view === "gaming" && gamingView === "overview" ? (
-          <SectionPreview
-            eyebrow="THEBOYZ GAMING"
-            title="Il salotto conta come un campo"
-            lead="Ogni partita giocata insieme, su qualsiasi gioco, con lo stesso peso di una di padel: si registra, si archivia, fa classifica."
-            points={[
-              { title: "Una partita, un gioco", copy: "Si sceglie il gioco, chi ha giocato e chi ha vinto. FIFA, Fortnite, poker, carte: la sezione non è legata a un titolo solo." },
-              { title: "Ogni gioco ha la sua storia", copy: "Le partite restano divise per gioco, così il campione di FIFA non diventa campione di poker per inerzia." },
-              { title: "Le sfide si registrano dal telefono", copy: "Stesso giro dei risultati di padel: si apre la sezione, si registra, e la classifica si aggiorna da sola." },
-            ]}
-            emptyTitle="Nessuna partita registrata"
-            emptyCopy="La sezione è pronta, i dati no: il registro delle partite arriva col prossimo aggiornamento."
-          />
+          <section className="page-section gaming-page">
+            <article className="section-hero">
+              <BlockMark size="lg" />
+              <div className="section-hero-head">
+                <div>
+                  <p className="eyebrow">THEBOYZ GAMING</p>
+                  <h1>Scegli il tuo gioco</h1>
+                  <p>Ogni gioco ha il suo spazio. Si parte da Modern Warfare 4.</p>
+                </div>
+              </div>
+            </article>
+            <div className="gaming-grid" aria-label="Giochi">
+              <button className="gaming-card" type="button" onClick={() => {
+                setGamingView("mw4");
+                scrollPageTo(0, "instant" as ScrollBehavior);
+              }} aria-label="Apri Call of Duty: Modern Warfare 4">
+                <Image className="gaming-card-image" src={`${basePath}/gaming/mw4.png`} alt="" width={494} height={619} />
+                <span className="gaming-card-body">
+                  <span><span className="gaming-card-series">Call of Duty</span><strong>Modern Warfare 4</strong></span>
+                  <span className="gaming-card-arrow" aria-hidden="true">↗</span>
+                </span>
+              </button>
+            </div>
+          </section>
+        ) : null}
+
+        {!loading && view === "gaming" && gamingView === "mw4" ? (
+          <section className="page-section gaming-page">
+            <button className="button button-ghost gaming-back" type="button" onClick={() => openSection("gaming")}>
+              ← Tutti i giochi
+            </button>
+            <article className="section-hero">
+              <BlockMark size="lg" />
+              <div className="section-hero-head">
+                <div>
+                  <p className="eyebrow">GAMING · CALL OF DUTY</p>
+                  <h1>Modern Warfare 4</h1>
+                  <p>Lo spazio di MW4 per i TheBoyz.</p>
+                </div>
+              </div>
+            </article>
+            <div className="empty-board">
+              <h2>La sezione prende forma</h2>
+              <p>Qui arriveranno i contenuti dedicati a Modern Warfare 4.</p>
+            </div>
+          </section>
         ) : null}
 
         {!loading && view === "gaming" && gamingView === "ranking" ? (
