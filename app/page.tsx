@@ -7148,7 +7148,9 @@ function AppShell({ session }: { session: Session | null }) {
   // Ogni sezione ha il suo profilo: nel Gaming quello del gioco, altrove la
   // scheda Padel.
   const isOwnProfile = isOwnCard || (view === "gaming" && gamingView === "mw4-profile");
+  const isGamingOverview = navSection === "gaming" && gamingView === "overview";
   const openProfile = useCallback(() => {
+    if (isGamingOverview) return;
     if (navSection !== "gaming") {
       openOwnCard();
       return;
@@ -7157,7 +7159,7 @@ function AppShell({ session }: { session: Session | null }) {
     setLastSection("gaming");
     setGamingView("mw4-profile");
     scrollPageTo(0, "instant" as ScrollBehavior);
-  }, [navSection, openOwnCard]);
+  }, [navSection, isGamingOverview, openOwnCard]);
 
   // Torna allo smistamento. Azzera anche l'ultima sezione: in home la barra
   // ha due voci sole, e senza azzerarlo resterebbero quelle della sezione da
@@ -7273,7 +7275,7 @@ function AppShell({ session }: { session: Session | null }) {
         active: !isPlayerCard && gamingView === "overview",
         select: () => openSection("gaming"),
       };
-      if (gamingView === "overview") return [home, games, profile];
+      if (gamingView === "overview") return [home, games];
       const selectGameView = (next: GamingView) => {
         setView("gaming");
         setLastSection("gaming");
@@ -7845,13 +7847,13 @@ function AppShell({ session }: { session: Session | null }) {
             </button>
           ))}
         </nav>
-        <button
+        {!isGamingOverview ? <button
           className={`profile-chip ${isOwnProfile ? "active" : ""}`}
           onClick={openProfile}
         >
           <span><b>{currentUser.display_name}</b><small>{navSection === "gaming" ? "MW4" : `Padel ${currentRank ? `#${currentRank}` : "N/C"}`}</small></span>
           <Avatar profile={currentUser} size="sm" />
-        </button>
+        </button> : null}
       </header>
 
       {notice ? <button className="notice" onClick={() => setNotice("")}>{notice}<span>×</span></button> : null}
