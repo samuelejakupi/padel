@@ -20,7 +20,8 @@ function outcome(gb: CodGb, team: number) {
 
 export default function CodProfile({ profile, avatar }: { profile: Profile; avatar: ReactNode }) {
   const { gbs, loading, error, load } = useCodGbs();
-  const earned = codEmblems(gbs).filter(b => b.holders.includes(profile.id));
+  const badges = codEmblems(gbs);
+  const earnedCount = badges.filter(b => b.holders.includes(profile.id)).length;
   const played = gbs
     .filter(gb => gb.status === "processed")
     .flatMap(gb => gb.players.filter(p => p.profile_id === profile.id).map(player => ({ gb, player })));
@@ -53,11 +54,21 @@ export default function CodProfile({ profile, avatar }: { profile: Profile; avat
         <div><dt>Morti</dt><dd>{deaths}</dd></div>
       </dl>
 
-      <h2 className={styles.title}>I miei emblemi MW4</h2>
-      {earned.length ? <ul className="cod-emblem-grid">{earned.map(b => <li className="cod-emblem-card cod-emblem-earned" key={b.id}>
-        <Image src={`${basePath}/emblems/mw4/${b.id}.webp`} alt={`Emblema ricamato ${b.title}`} width={180} height={180} unoptimized />
-        <h3>{b.title}</h3><p>{b.criterion}</p>
-      </li>)}</ul> : <p>Nessun emblema conquistato. Scopri i sette premi nella classifica MW4.</p>}
+      <section aria-labelledby="cod-profile-emblems-title">
+        <h2 id="cod-profile-emblems-title" className={styles.title}>Emblemi MW4</h2>
+        {error ? <p>Gli emblemi saranno disponibili quando i risultati verranno caricati.</p> : <>
+          <p><strong>{earnedCount} / {badges.length} emblemi detenuti</strong> · Si aggiornano con i risultati delle GB. I pari merito condividono lo stesso emblema.</p>
+          <ul className="cod-emblem-grid">{badges.map(b => {
+            const isOwn = b.holders.includes(profile.id);
+            return <li className={`cod-emblem-card${isOwn ? " cod-emblem-earned" : ""}`} key={b.id}>
+              <Image src={`${basePath}/emblems/mw4/${b.id}.webp`} alt={`Emblema ricamato ${b.title}`} width={180} height={180} unoptimized />
+              <h3>{b.title}</h3><p>{b.criterion}</p>
+              <strong>{isOwn ? "Detenuto da te" : b.holders.length ? "Non detenuto" : "Da assegnare"}</strong>
+              {isOwn && b.value !== null ? <small>{b.value === Infinity ? "∞" : b.value.toLocaleString("it-IT", { maximumFractionDigits: 2 })} {b.metric === "kd" ? "K/D" : "punti / partita"}</small> : null}
+            </li>;
+          })}</ul>
+        </>}
+      </section>
 
       <h2 className={styles.title}>Per modalità</h2>
       <div className={styles.modes}>

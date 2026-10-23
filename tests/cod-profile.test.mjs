@@ -37,6 +37,9 @@ test('il profilo MW4 senza partite mostra il nick COD e nessun dato padel', () =
   assert.match(html, /MW4 · PROFILO/);
   assert.match(html, /Nessuna GB giocata/);
   assert.match(html, /Il mio nick Call of Duty/);
+  assert.match(html, /Emblemi MW4/);
+  assert.match(html, /0 \/ 7 emblemi detenuti/);
+  assert.equal((html.match(/alt="Emblema ricamato /g) ?? []).length, 7);
   assert.doesNotMatch(html, /Padel|Mano della racchetta|Lato del campo/);
 });
 
@@ -49,5 +52,9 @@ test('il profilo MW4 riassume solo le GB elaborate del giocatore', () => {
   assert.match(html, /<dt>K\/D<\/dt><dd>2\.00<\/dd>/);
   assert.match(html, /#1 su 2/);
   assert.match(html, /Vista/);
+  assert.match(html, /1 \/ 7 emblemi detenuti/);
+  assert.match(html, /Detenuto da te/);
+  assert.match(html, /Non detenuto/);
+  assert.equal((html.match(/alt="Emblema ricamato /g) ?? []).length, 7);
   assert.doesNotMatch(html, /Rio/);
 });
