@@ -7145,12 +7145,13 @@ function AppShell({ session }: { session: Session | null }) {
     setView("padel");
   }, [currentUserId]);
 
-  // Ogni sezione ha il suo profilo: nel Gaming quello del gioco, altrove la
-  // scheda Padel.
+  // Il profilo Padel si apre dalla home o dal Padel. Dentro MW4 si apre
+  // quello del gioco; Pizza, Cashout e la selezione Gaming non hanno questa voce.
   const isOwnProfile = isOwnCard || (view === "gaming" && gamingView === "mw4-profile");
   const isGamingOverview = navSection === "gaming" && gamingView === "overview";
+  const hasContextProfile = navSection === null || navSection === "padel" || (navSection === "gaming" && !isGamingOverview);
   const openProfile = useCallback(() => {
-    if (isGamingOverview) return;
+    if (!hasContextProfile) return;
     if (navSection !== "gaming") {
       openOwnCard();
       return;
@@ -7159,7 +7160,7 @@ function AppShell({ session }: { session: Session | null }) {
     setLastSection("gaming");
     setGamingView("mw4-profile");
     scrollPageTo(0, "instant" as ScrollBehavior);
-  }, [navSection, isGamingOverview, openOwnCard]);
+  }, [navSection, hasContextProfile, openOwnCard]);
 
   // Torna allo smistamento. Azzera anche l'ultima sezione: in home la barra
   // ha due voci sole, e senza azzerarlo resterebbero quelle della sezione da
@@ -7305,7 +7306,6 @@ function AppShell({ session }: { session: Session | null }) {
         active: !isPlayerCard,
         select: () => openSection(navSection),
       },
-      profile,
     ];
     return [
       home,
@@ -7323,7 +7323,7 @@ function AppShell({ session }: { session: Session | null }) {
         active: !isPlayerCard && sectionView === "ranking",
         select: () => openSectionRanking(navSection),
       },
-      profile,
+      ...(navSection === "padel" ? [profile] : []),
     ];
   }, [view, navSection, sectionView, gamingView, isPlayerCard, isOwnProfile, openProfile, goHome, openSection, openSectionRanking]);
 
@@ -7847,7 +7847,7 @@ function AppShell({ session }: { session: Session | null }) {
             </button>
           ))}
         </nav>
-        {!isGamingOverview ? <button
+        {hasContextProfile ? <button
           className={`profile-chip ${isOwnProfile ? "active" : ""}`}
           onClick={openProfile}
         >
