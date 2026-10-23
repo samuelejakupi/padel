@@ -167,7 +167,7 @@ export default function CodMeta({ viewerId, profiles, startWithForm = false }: {
     .filter((weapon, index, list) => list.findIndex(item => item.id === weapon.id) === index);
   return <>
     <BestLoadouts entries={entries} weapons={allWeapons} headerAction={
-      <button className="button button-primary" type="button" disabled={!viewerId || missingSchema} onClick={() => setShowForm(true)}>+ Aggiungi build</button>
+      <button className="button button-lime cta-new-match cta-aurora" type="button" disabled={!viewerId || missingSchema} onClick={() => setShowForm(true)}>+ Aggiungi build</button>
     } />
     {missingSchema ? <p className={`demo-profile-note ${styles.note}`}>Per caricare build dall&apos;app esegui <code>supabase/cod-meta-builds.sql</code> nel SQL Editor di Supabase.</p> : null}
     {error ? <p role="alert" className={styles.note}>{error}</p> : null}

@@ -75,6 +75,9 @@ export type Weapon = {
   // sagoma SVG a un solo tracciato pieno usata se il PNG manca.
   icon: string;
   silhouette: string;
+  // L'arma e il contorno separati, per il contorno animato. Solo le armi con
+  // un'icona vera; le altre usano il PNG unico.
+  layers?: { body: string; outline: string };
   // true finche l'icona e quella generica della categoria.
   placeholderIcon?: boolean;
   // Dati tecnici veri, da codmunity.gg: le barre sono stime, questi no.

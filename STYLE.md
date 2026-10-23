@@ -19,20 +19,24 @@ scrivere un numero nuovo, controlla se esiste già la variabile.**
 | `--white` | `#ffffff` | Card e pannelli |
 | `--blue` | `#18dfe4` | Accento del marchio, 2° e 3° posto |
 | `--blue-dark` | `#05aeb7` | Stesso accento quando serve contrasto su bianco |
+| `--blue-deep` | `--blue-dark` verso `--ink` | Testo azzurro piccolo su carta o bianco (occhielli), contrasto 5:1 |
 | `--lime` | `#efff00` | 1° posto, trofei rari, voce attiva su fondo scuro |
 | `--line` | `#dce2dc` | Bordi e separatori |
-| `--muted` | `#72808c` | Testo secondario |
-| `--danger` | `#d94b49` | Errori, record negativi, uscita |
-| `--positive` | `#299b66` | Guadagni Elo, serie positive |
+| `--muted` | `#5f6b76` | Testo secondario |
+| `--danger` | `#d94b49` | Errori, record negativi, uscita (fondi, barre, pallini) |
+| `--positive` | `#299b66` | Guadagni Elo, serie positive (fondi, barre, pallini) |
+| `--danger-text` | `--danger` verso `--ink` | Rosso usato **come testo** |
+| `--positive-text` | `--positive` verso `--ink` | Verde usato **come testo** |
 
-Ogni sezione ha un colore fisso, usato dalle card della home:
+**Colore e testo non sono la stessa cosa.** `--blue-dark`, `--positive` e
+`--danger` pieni, come testo piccolo su bianco o carta, non arrivano al
+contrasto minimo (4.5:1): per il testo si usano `--blue-deep`,
+`--positive-text` e `--danger-text`. I colori pieni restano per fondi, barre,
+bordi e pallini. Anche `--muted` è stato scurito da `#72808c` a `#5f6b76` per
+lo stesso motivo.
 
-| Variabile | Valore |
-|---|---|
-| `--section-padel` | `--lime` |
-| `--section-pizza` | `--danger` + `--pizza-yellow` (arancio) |
-| `--section-gaming` | `--blue` |
-| `--section-cashout` | `--positive` + `--lime` (verde acceso) |
+Le card delle sezioni in home non hanno un colore ciascuna: sono tutte
+chiare col filo animato azzurro-lime dei tasti `cta-aurora`.
 
 Per le tinte intermedie ci sono i **veli**, cioè il blu scuro a bassa opacità:
 
@@ -55,8 +59,8 @@ base, oppure `color-mix()`:
 ```
 
 Eccezioni ammesse, perché rappresentano un dato e non un'interfaccia: i quattro
-colori delle categorie della pizza e il gradiente di riempimento degli avatar
-senza foto.
+colori delle categorie della pizza, le rarità degli accessori delle build
+(`--rarity-*`) e il gradiente di riempimento degli avatar senza foto.
 
 Il motivo è pratico: cinque grigi quasi uguali scritti a mano non si notano
 uno per uno, ma insieme fanno sembrare la pagina sporca — e il giorno che si
@@ -145,10 +149,54 @@ Le etichette in maiuscolo vogliono sempre `letter-spacing` fra `0.4px` e
   e l'elemento rimane ingrandito finché non tocchi altrove.
 - Chi ha attivato la riduzione del movimento non deve vedere animazioni: c'è
   già un blocco `@media (prefers-reduced-motion: reduce)` in fondo al file.
+  Ogni animazione nuova va fermata anche lì.
+
+### Il filo aurora
+
+È l'unico effetto animato "di marca": un bordo con gradiente conico
+azzurro-lime che gira in 6 secondi su un fondo bianco. Si ottiene con le
+classi `button cta-new-match cta-aurora` (variante `button-lime` per il filo
+che parte dal lime). Si usa **solo** per:
+
+- i tasti d'azione principali di una sezione (Nuovo match, Nuovo torneo,
+  Carica GB, Aggiungi build);
+- le card delle sezioni in home (stesso filo, partenze sfasate);
+- il contorno delle icone delle armi nelle build.
+
+Non va su tasti secondari, filtri o elementi che si ripetono in elenchi
+lunghi: se gira tutto, non spicca niente. Con la riduzione del movimento il
+filo resta, smette solo di girare.
 
 ---
 
-## 6. Come si scrive una regola
+## 6. Accessibilità
+
+Il minimo è WCAG 2.1 AA. In pratica:
+
+- **Contrasto**: 4.5:1 per il testo normale, 3:1 per il testo grande (dai
+  24px, o 19px in grassetto) e per bordi e icone che servono a capire. Vedi
+  le varianti `-text` dei colori sopra.
+- **Bersagli da 44px**: tasti, filtri, tendine (`summary`) e tasti a icona
+  sono alti almeno 44px. Il tasto di chiusura delle modali è 44×44.
+- **Tastiera**: tutto ciò che si clicca si raggiunge col Tab e mostra il
+  focus (`:focus-visible`). Un'area che scorre di lato (tabelle) prende
+  `tabIndex={0}`, `role="region"` e un `aria-label`.
+- **Gruppi di tasti** (modalità, filtri): contenitore con `role="group"` e
+  `aria-label`; il tasto scelto ha `aria-pressed`. Senza `role`, l'etichetta
+  del contenitore non la legge nessuno.
+- **Titoli in ordine**: un `h1` per pagina, poi `h2`, poi `h3`, senza saltare
+  livelli. Mai un titolo dentro un `button`: si usa uno `span` con la classe
+  del titolo.
+- **Ruoli giusti**: `role="button"` va su un `div`, non su `article`;
+  `role="tooltip"` va su un `div`, non su `aside`.
+- **Decorazioni**: numeri e segni puramente decorativi prendono
+  `aria-hidden="true"`, ma devono comunque restare leggibili (3:1).
+- **Moduli**: ogni campo ha la sua `label`; gli errori stanno in un
+  elemento con `role="alert"` e dicono cosa correggere.
+
+---
+
+## 7. Come si scrive una regola
 
 - **Proprietà in ordine alfabetico** dentro il blocco. È la convenzione già
   usata in tutto il file: serve a trovare le cose senza leggerle tutte.
@@ -162,7 +210,7 @@ Le etichette in maiuscolo vogliono sempre `letter-spacing` fra `0.4px` e
 
 ---
 
-## 7. Struttura
+## 8. Struttura
 
 - Le classi seguono il blocco a cui appartengono: `.match-card`,
   `.match-card-link`, `.match-history-list`. Niente nomi generici come
@@ -170,16 +218,38 @@ Le etichette in maiuscolo vogliono sempre `letter-spacing` fra `0.4px` e
 - Le varianti si scrivono come classe aggiuntiva, non come selettore
   posizionale: `.ranking-row-gold`, non `.ranking-row:first-child`. La
   posizione cambia, il significato no.
-- Tailwind è importato ma **non lo usiamo nel JSX**: tutto lo stile sta in
+- Tailwind è importato ma **non lo usiamo nel JSX**: lo stile sta in
   `globals.css`. Meglio una convenzione sola applicata male che due applicate
   bene.
+- Eccezione: le parti grandi e a sé, con componenti propri, possono avere un
+  CSS module accanto (`app/loadouts/Loadouts.module.css`,
+  `app/CodProfile.module.css`). Stesse variabili, stesse regole di questo
+  file; nei module i `@keyframes` sono locali.
 
 ---
 
-## 8. Prima di aprire una pull request
+## 9. Immagini delle armi (Gaming)
+
+- Ogni arma ha in `public/gaming/loadouts/weapons/`: `<id>.png` (1024×1024,
+  trasparente, arma quasi monocromatica con contorno e glow), `<id>.svg`
+  (sagoma, un solo tracciato pieno), `<id>-body.png` e `<id>-outline.png`
+  (arma e contorno separati, per il filo aurora).
+- **Non si disegnano a mano**: si mette l'immagine laterale dell'arma in
+  `scripts/weapon-sources/<id>.png` e si lancia
+  `python3 scripts/weapon-icons.py`. Le icone degli slot e le sagome di
+  categoria si rigenerano con `scripts/render-weapon-icons.mts`.
+- L'inclinazione (-11°) la dà il CSS, non il file.
+
+---
+
+## 10. Prima di aprire una pull request
 
 - [ ] Nessun colore esadecimale nuovo
 - [ ] Angoli e spaziature presi dalle variabili
 - [ ] Pesi del testo solo fra 400, 600, 700, 800, 900
+- [ ] Testo colorato con le varianti `-text` / `--blue-deep`, non coi colori pieni
+- [ ] Tasti e filtri alti almeno 44px, con focus visibile
+- [ ] Titoli in ordine, niente titoli dentro i tasti
+- [ ] Animazioni nuove fermate in `prefers-reduced-motion`
 - [ ] Provato su mobile stretto (360px) e su desktop
 - [ ] Gli hover non spostano nulla e non restano attaccati su touch

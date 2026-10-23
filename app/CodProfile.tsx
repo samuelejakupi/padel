@@ -62,13 +62,13 @@ export default function CodProfile({ profile, avatar }: { profile: Profile; avat
           {earnedCount ? <CabinetMarquee items={badges.filter(b => b.holders.includes(profile.id))} rowClassName="badge-grid" keyOf={b => b.id} renderItem={(b, ghost) => (
             <article className={`badge badge-${b.direction === "min" ? "bronze" : "gold"} is-unlocked`} tabIndex={ghost ? -1 : 0} aria-hidden={ghost || undefined} aria-label={ghost ? undefined : `${b.title}. ${b.criterion}. Detenuto da te.`}>
               <div className="badge-emblem" aria-hidden="true"><Image className="badge-art" src={`${basePath}/emblems/mw4/${b.id}.webp`} alt={`Emblema ricamato ${b.title}`} width={128} height={168} unoptimized /></div>
-              <aside className="badge-tooltip" role="tooltip"><strong>{b.title}</strong><p>{b.criterion}</p><span>Detenuto da te</span><small>{b.value === Infinity ? "∞" : b.value?.toLocaleString("it-IT", { maximumFractionDigits: 2 })} {b.metric === "kd" ? "K/D" : "punti / partita"}</small></aside>
+              <div className="badge-tooltip" role="tooltip"><strong>{b.title}</strong><p>{b.criterion}</p><span>Detenuto da te</span><small>{b.value === Infinity ? "∞" : b.value?.toLocaleString("it-IT", { maximumFractionDigits: 2 })} {b.metric === "kd" ? "K/D" : "punti / partita"}</small></div>
             </article>
           )} /> : <div className="player-trophies-empty"><p>Nessun emblema ancora conquistato.</p></div>}
           {earnedCount < badges.length ? <details className="cod-emblems-available"><summary>Emblemi disponibili ({badges.length - earnedCount})</summary><div className="badge-grid">{badges.filter(b => !b.holders.includes(profile.id)).map(b => {
             return <article className={`badge badge-${b.direction === "min" ? "bronze" : "gold"} is-locked`} key={b.id} tabIndex={0} aria-label={`${b.title}. ${b.criterion}. ${b.holders.length ? "Non detenuto" : "Da assegnare"}.`}>
               <div className="badge-emblem" aria-hidden="true"><Image className="badge-art" src={`${basePath}/emblems/mw4/${b.id}.webp`} alt={`Emblema ricamato ${b.title}`} width={128} height={168} unoptimized /></div>
-              <aside className="badge-tooltip" role="tooltip"><strong>{b.title}</strong><p>{b.criterion}</p><span>{b.holders.length ? "Non detenuto" : "Da assegnare"}</span></aside>
+              <div className="badge-tooltip" role="tooltip"><strong>{b.title}</strong><p>{b.criterion}</p><span>{b.holders.length ? "Non detenuto" : "Da assegnare"}</span></div>
             </article>;
           })}</div></details> : null}
         </>}

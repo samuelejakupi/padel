@@ -8,7 +8,7 @@ import { codModes, codModeStatKeys, compressScoreboard, type CodMode } from "@/l
 import useCodGbs from "./useCodGbs";
 
 type Identity = { id: string; profile_id: string; nickname: string };
-const statusLabels = { pending: "In attesa · prossima lettura notturna", processing: "Lettura scoreboard in corso", needs_review: "Da verificare", processed: "Risultato registrato" };
+const statusLabels = { pending: "In attesa di lettura", processing: "Lettura in corso", needs_review: "Da verificare", processed: "Registrata" };
 
 export function CodNickname({ viewerId }: { viewerId: string }) {
   const [nick, setNick] = useState("");
@@ -97,7 +97,7 @@ function GbForm({ onClose, onSaved, profiles, viewerId }: { onClose: () => void;
   return <div className="modal-backdrop">
     <section className="modal cod-gb-modal" role="dialog" aria-modal="true" aria-labelledby="cod-gb-title">
       <div className="modal-head"><h2 id="cod-gb-title">Aggiungi GB</h2><button className="icon-button" type="button" aria-label="Chiudi" disabled={busy} onClick={onClose}>×</button></div>
-      <div className="cod-mode-tabs" aria-label="Metodo di inserimento"><button type="button" className="button button-ghost" aria-pressed={method === "photo"} disabled={busy} onClick={() => setMethod("photo")}>Da foto</button><button type="button" className="button button-ghost" aria-pressed={method === "manual"} disabled={busy} onClick={() => setMethod("manual")}>A mano</button></div>
+      <div className="cod-mode-tabs" role="group" aria-label="Metodo di inserimento"><button type="button" className="button button-ghost" aria-pressed={method === "photo"} disabled={busy} onClick={() => setMethod("photo")}>Da foto</button><button type="button" className="button button-ghost" aria-pressed={method === "manual"} disabled={busy} onClick={() => setMethod("manual")}>A mano</button></div>
       <p>{method === "photo" ? "Carica da 1 a 4 foto della stessa partita: risultato finale e scoreboard completi di entrambe le squadre." : "Inserisci il risultato finale e le statistiche dei giocatori. La classifica si aggiorna subito. Associa prima il tuo nick COD."}</p>
       <form onSubmit={event => void submit(event)}>
         <label>Modalità<select value={mode} disabled={busy} onChange={e => setMode(e.target.value as CodMode)}>{Object.entries(codModes).map(([key, item]) => <option key={key} value={key}>{item.label}</option>)}</select></label>
@@ -138,15 +138,42 @@ export default function CodGaming({ viewerId, profiles, startWithForm = false }:
     setRetrying(false);
   }
   const name = (id: string) => profiles.find(p => p.id === id)?.display_name ?? "Giocatore";
-  return <section className="page-section cod-page">
-    <div className="cod-page-head"><div><p className="eyebrow dark">CALL OF DUTY · MW4</p><h1>Le nostre GB</h1></div></div>
-    <button className="button button-primary cod-add-gb" type="button" onClick={() => setShowForm(true)} disabled={!viewerId}>+ Aggiungi GB</button>
-    <p>Scoreboard elaborati ogni notte alle 03:00. Le statistiche vengono divise per modalità.</p>
+  const shown = gbs.filter(g => g.mode === mode);
+  return <section className="page-section cod-page" aria-labelledby="cod-gb-title">
+    <div className="cod-page-head cod-gb-head">
+      <div><p className="eyebrow dark">CALL OF DUTY · MW4</p><h1 id="cod-gb-title">Le nostre GB</h1>
+        <p>Carica lo scoreboard a fine partita: viene letto ogni notte alle 03:00 e finisce nella classifica della sua modalità.</p></div>
+      <button className="button button-primary cta-new-match cta-aurora cod-add-gb" type="button" onClick={() => setShowForm(true)} disabled={!viewerId}>+ Aggiungi GB</button>
+    </div>
     <CodNickname viewerId={viewerId} />
-    <div className="cod-mode-tabs" aria-label="Modalità CDL">{Object.entries(codModes).map(([key, item]) => <button className="button button-ghost" key={key} aria-pressed={mode === key} onClick={() => setMode(key as CodMode)}>{item.label}</button>)}</div>
-    <p className="cod-stat-note">{codModes[mode].stats.join(" · ")} · Uccisioni · Morti · K/D · Danni</p>
+    <div className="cod-mode-tabs" role="group" aria-label="Modalità CDL">{Object.entries(codModes).map(([key, item]) => <button className="button button-ghost" type="button" key={key} aria-pressed={mode === key} onClick={() => setMode(key as CodMode)}>{item.label}</button>)}</div>
     {error ? <p role="alert">{error} <button className="button button-ghost" onClick={() => void load()}>Aggiorna</button></p> : null}
-    {loading ? <p role="status">Caricamento GB…</p> : <div className="cod-gb-list">{gbs.filter(g => g.mode === mode).map(gb => <article className="cod-gb-card" key={gb.id}><div><h2>{gb.map_name}</h2><small>{new Date(gb.played_at).toLocaleString("it-IT")} · {gb.image_count ? `${gb.image_count} foto${gb.photos_deleted_at ? " · eliminate dopo elaborazione" : ""}` : "Inserita a mano"}</small></div><p className="cod-status">{statusLabels[gb.status]}</p>{gb.status === "processed" ? <><strong>{gb.team1_score} – {gb.team2_score}</strong><ul>{gb.players.filter(p => p.profile_id).map(p => <li key={p.profile_id}>{name(p.profile_id!)} · {p.kills} U / {p.deaths} M</li>)}</ul></> : null}{gb.review_note ? <p>{gb.review_note}</p> : null}{gb.status === "needs_review" && gb.created_by === viewerId ? <button className="button button-ghost" disabled={retrying} onClick={() => void retry(gb.id)}>Ho aggiornato il nick: riprova</button> : null}</article>)}{!gbs.some(g => g.mode === mode) && !error ? <div className="empty-board"><h2>Nessuna GB caricata</h2><p>Aggiungi gli scoreboard di una partita {codModes[mode].label}.</p></div> : null}</div>}
+    {loading ? <p role="status">Caricamento GB…</p> : <div className="cod-gb-list">{shown.map(gb => {
+      const viewer = gb.players.find(p => p.profile_id === viewerId);
+      const won = viewer && gb.team1_score !== null && gb.team2_score !== null && gb.team1_score !== gb.team2_score
+        ? (viewer.team === 1) === (gb.team1_score > gb.team2_score) : null;
+      return <article className="cod-gb-card" key={gb.id} data-status={gb.status}>
+        <header>
+          <div><h2>{gb.map_name}</h2>
+            <small>{new Date(gb.played_at).toLocaleString("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · {gb.image_count ? `${gb.image_count} foto${gb.photos_deleted_at ? " eliminate" : ""}` : "inserita a mano"}</small></div>
+          {gb.status === "processed"
+            ? won !== null && won !== undefined ? <span className="cod-result" data-won={won}>{won ? "Vittoria" : "Sconfitta"}</span> : null
+            : <span className="cod-status-pill" data-status={gb.status}>{statusLabels[gb.status]}</span>}
+        </header>
+        {gb.status === "processed" ? <>
+          <p className="cod-score" aria-label={`Squadra 1 ${gb.team1_score}, squadra 2 ${gb.team2_score}`}>
+            <span data-win={(gb.team1_score ?? 0) > (gb.team2_score ?? 0)}>{gb.team1_score}</span><i aria-hidden="true">–</i><span data-win={(gb.team2_score ?? 0) > (gb.team1_score ?? 0)}>{gb.team2_score}</span>
+          </p>
+          <div className="cod-teams">{[1, 2].map(team => <ul key={team} aria-label={`Squadra ${team}`}>
+            {gb.players.filter(p => p.team === team && p.profile_id).map(p => <li key={p.profile_id} data-me={p.profile_id === viewerId || undefined}>
+              <span>{name(p.profile_id!)}</span><small>{p.kills} U / {p.deaths} M</small>
+            </li>)}
+          </ul>)}</div>
+        </> : null}
+        {gb.review_note ? <p className="cod-review-note">{gb.review_note}</p> : null}
+        {gb.status === "needs_review" && gb.created_by === viewerId ? <button className="button button-ghost" disabled={retrying} onClick={() => void retry(gb.id)}>Ho aggiornato il nick: riprova</button> : null}
+      </article>;
+    })}{!shown.length && !error ? <div className="empty-board"><h2>Nessuna GB in {codModes[mode].label}</h2><p>Carica lo scoreboard della prossima partita {codModes[mode].label}: comparirà qui.</p></div> : null}</div>}
     {showForm ? <GbForm onClose={() => setShowForm(false)} onSaved={load} profiles={profiles} viewerId={viewerId} /> : null}
   </section>;
 }

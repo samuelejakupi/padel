@@ -78,7 +78,8 @@
 /* I tasti sono i .button-ghost del sito; scelto, diventa scuro col testo
    lime come le modalita delle GB. */
 .filter button {
-  min-height: 36px;
+  min-height: 44px;
+  min-width: 44px;
   padding-inline: var(--space-4);
 }
 
@@ -122,6 +123,43 @@
   object-fit: cover;
   transform: rotate(-11deg) scale(0.92);
   width: 100%;
+}
+
+/* Arma e contorno sovrapposti, ruotati insieme. Il glow sta sul contenitore:
+   un filtro sul livello mascherato verrebbe tagliato dalla maschera. */
+.weaponLayers {
+  display: block;
+  filter: drop-shadow(0 0 6px rgba(24, 223, 228, 0.35));
+  height: 100%;
+  position: relative;
+  transform: rotate(-11deg) scale(0.92);
+  width: 100%;
+}
+
+.weaponLayers img {
+  transform: none;
+}
+
+.weaponOutline {
+  --a: 0deg;
+  animation: outline-spin 6s linear infinite;
+  background: conic-gradient(from var(--a), var(--blue), var(--lime), var(--blue), var(--lime), var(--blue));
+  inset: 0;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: cover;
+  position: absolute;
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: cover;
+}
+
+/* --a e registrata come angolo in globals.css (@property), per i tasti
+   aurora: qui serve solo la rotazione. */
+@keyframes outline-spin {
+  to {
+    --a: 360deg;
+  }
 }
 
 .weaponIcon[data-size="lg"] {
@@ -513,5 +551,10 @@
 @media (prefers-reduced-motion: reduce) {
   .weaponCard {
     transition: none;
+  }
+
+  /* Il contorno resta, smette solo di girare. */
+  .weaponOutline {
+    animation: none;
   }
 }

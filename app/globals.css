@@ -65,11 +65,31 @@
   margin-top: auto;
 }
 
+/* Gli emblemi stanno in fila accanto al nome, piccoli: in colonna facevano
+   le righe alte tre volte le altre. */
 .cod-player-emblems {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-  margin-top: var(--space-2);
+  display: inline-flex;
+  gap: 2px;
+  margin-left: var(--space-2);
+  vertical-align: middle;
+}
+
+.cod-player-emblems img {
+  flex: 0 0 auto;
+  height: 22px;
+  width: 20px;
+}
+
+/* Titolo della sezione emblemi. Non e una .section-head: su mobile quella
+   classe sparisce (vedi le regole del Padel), e con lei il titolo. */
+.cod-emblems-head {
+  margin: var(--space-8) 0 var(--space-4);
+}
+
+.cod-emblems-head h2 {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -1px;
 }
 
 .cod-player-emblems img {
@@ -82,10 +102,30 @@
   }
 }
 
+/* Titolo e tasto sulla stessa riga su schermo largo; sul telefono il tasto
+   scende sotto e prende tutta la larghezza, come gli altri CTA. */
+.cod-gb-head {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  justify-content: space-between;
+}
+
+.cod-gb-head p:last-child {
+  color: var(--ink-soft);
+  max-width: 560px;
+}
+
 .cod-add-gb {
-  margin-block: var(--space-5);
   min-height: 48px;
-  width: 100%;
+  padding-inline: var(--space-7);
+}
+
+@media (max-width: 780px) {
+  .cod-add-gb {
+    width: 100%;
+  }
 }
 
 .cod-manual-grid {
@@ -141,20 +181,136 @@
 
 .cod-gb-list {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
   margin-top: var(--space-6);
+}
+
+.cod-gb-list > .empty-board {
+  grid-column: 1 / -1;
 }
 
 .cod-gb-card {
   background: var(--white);
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  display: grid;
+  gap: var(--space-4);
+  grid-auto-rows: min-content;
   padding: var(--space-6);
+}
+
+.cod-gb-card[data-status="needs_review"] {
+  border-left: 4px solid var(--danger);
+}
+
+.cod-gb-card > header {
+  align-items: start;
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
 }
 
 .cod-gb-card h2 {
   font-size: 20px;
   font-weight: 900;
+}
+
+.cod-gb-card header small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cod-status-pill,
+.cod-result {
+  border-radius: var(--radius-pill);
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  text-transform: uppercase;
+}
+
+.cod-status-pill {
+  background: var(--veil-2);
+  color: var(--ink-soft);
+}
+
+.cod-status-pill[data-status="needs_review"] {
+  background: rgba(217, 75, 73, 0.12);
+  color: var(--danger-text);
+}
+
+/* Verde e rosso scuriti verso l'ink: sul loro velo, a 11px, quelli pieni
+   non arrivano al contrasto minimo. */
+.cod-result[data-won="true"] {
+  background: rgba(41, 155, 102, 0.14);
+  color: var(--positive-text);
+}
+
+.cod-result[data-won="false"] {
+  background: rgba(217, 75, 73, 0.12);
+  color: var(--danger-text);
+}
+
+/* Il risultato e la cosa che si cerca: grande, col punteggio vincente pieno
+   e quello perdente spento. */
+.cod-score {
+  align-items: baseline;
+  display: flex;
+  font-size: 34px;
+  font-style: italic;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  gap: var(--space-3);
+  line-height: 1;
+}
+
+.cod-score span[data-win="false"] {
+  color: var(--muted);
+}
+
+.cod-score i {
+  color: var(--ink-30);
+  font-style: normal;
+}
+
+.cod-teams {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr 1fr;
+}
+
+.cod-teams ul {
+  display: grid;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cod-teams li {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cod-teams li small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cod-teams li[data-me] span {
+  box-shadow: inset 0 -6px 0 rgba(239, 255, 0, 0.7);
+  width: fit-content;
+}
+
+.cod-review-note {
+  color: var(--danger-text);
+  font-size: 13px;
 }
 
 .cod-photo-previews {
@@ -174,6 +330,32 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   overflow-x: auto;
+}
+
+.cod-table-wrap:focus-visible {
+  outline: 2px solid var(--blue-deep);
+  outline-offset: 2px;
+}
+
+/* Il nome resta fermo mentre la tabella scorre di lato: sul telefono le
+   colonne sono piu della larghezza e senza nome non si sa di chi sono. */
+.cod-table tbody th,
+.cod-table thead th:first-child {
+  background: var(--white);
+  left: 0;
+  position: sticky;
+  z-index: 1;
+}
+
+/* La didascalia ripete la modalita gia scelta nei tasti: la sente solo chi
+   usa un lettore di schermo. */
+.cod-table > caption {
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
 }
 
 .cod-table {
@@ -702,7 +884,7 @@
 }
 
 .insights-versus-mark {
-  color: var(--blue-dark);
+  color: var(--blue-deep);
   font-size: 20px;
   font-style: italic;
   font-weight: 900;
@@ -873,11 +1055,18 @@
   --white: #ffffff;
   --blue: #18dfe4;
   --blue-dark: #05aeb7;
+  /* L'azzurro abbastanza scuro da fare da testo piccolo su carta e bianco
+     (contrasto 5:1). Non e una tinta nuova: e il blue-dark verso l'ink. */
+  --blue-deep: color-mix(in srgb, var(--blue-dark) 60%, var(--ink));
   --lime: #efff00;
   --line: #dce2dc;
-  --muted: #72808c;
+  --muted: #5f6b76;
   --danger: #d94b49;
   --positive: #299b66;
+  /* Verde e rosso quando sono testo piccolo: scuriti verso l'ink per
+     arrivare al contrasto AA. Fondi, barre e pallini usano quelli pieni. */
+  --positive-text: color-mix(in srgb, var(--positive) 68%, var(--ink));
+  --danger-text: color-mix(in srgb, var(--danger) 80%, var(--ink));
   /* Il terzo esito, il pareggio: sta fra il verde della vittoria e il rosso
      della sconfitta anche come colore. Nasce impastando due tinte che
      abbiamo gia invece di aggiungere un giallo nuovo: il lime da solo su
@@ -900,14 +1089,6 @@
   --pizza-yellow: #f0b82d;
   --pizza-blue: #5978d9;
 
-  /* Un colore per sezione, usato dalle card della home. Tutti accesi e tutti
-     impastati da tinte che esistono gia: l'arancio della Pizza viene dal
-     rosso e dal giallo, il verde del Cashout da quello dei guadagni col lime.
-     Il testo scuro sopra resta leggibile su tutti e quattro. */
-  --section-padel: var(--lime);
-  --section-pizza: color-mix(in srgb, var(--danger) 45%, var(--pizza-yellow));
-  --section-gaming: var(--blue);
-  --section-cashout: color-mix(in srgb, var(--positive) 65%, var(--lime));
 
   /* Rarita degli accessori nelle build: come le categorie della pizza
      rappresentano un dato, non l'interfaccia. Il raro riusa il ciano del
@@ -1021,8 +1202,10 @@ button {
   margin: 0 0 12px;
 }
 
+/* Su fondo chiaro l'azzurro del marchio non regge come testo piccolo: qui
+   prende la versione profonda, che passa il contrasto AA anche a 10px. */
 .eyebrow.dark {
-  color: var(--blue-dark);
+  color: var(--blue-deep);
 }
 
 .button {
@@ -2000,8 +2183,16 @@ form select:focus {
    su un portatile da 13". */
 .hub-card {
   align-items: center;
-  background: var(--hub-card-color, var(--white));
-  border: 0;
+  /* Vetro chiaro col filo azzurro-lime che gira, lo stesso dei tasti
+     "Nuovo match" e "Nuovo torneo": le quattro sezioni hanno la stessa
+     faccia, a distinguerle bastano icona e nome. */
+  --a: 0deg;
+  animation: cta-aurora-spin 6s linear infinite;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.9)) padding-box,
+    conic-gradient(from var(--a), var(--blue), var(--lime), var(--blue), var(--lime), var(--blue)) border-box;
+  border: 2px solid transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 12px 32px rgba(24, 223, 228, 0.18);
   border-radius: var(--radius);
   color: var(--ink);
   cursor: pointer;
@@ -2069,13 +2260,11 @@ form select:focus {
   }
 }
 
-/* Un colore fisso per sezione, dichiarato in :root: prima il giallo e
-   l'azzurro dividevano le sezioni vecchie dalle nuove, una distinzione che a
-   chi usa l'app non dice niente. */
-.hub-card-padel { --hub-card-color: var(--section-padel); }
-.hub-card-pizza { --hub-card-color: var(--section-pizza); }
-.hub-card-gaming { --hub-card-color: var(--section-gaming); }
-.hub-card-cashout { --hub-card-color: var(--section-cashout); }
+/* Le quattro card non girano all'unisono: ognuna parte da un punto diverso
+   del giro, cosi la pagina non pulsa tutta insieme. */
+.hub-card-pizza { animation-delay: -1.5s; }
+.hub-card-gaming { animation-delay: -3s; }
+.hub-card-cashout { animation-delay: -4.5s; }
 
 /* Pallino delle cose che aspettano te, in alto a destra nella card. Stessa
    lettura del pallino sulla barra in basso. */
@@ -2726,12 +2915,12 @@ form select:focus {
 
 .up,
 .positive {
-  color: var(--positive);
+  color: var(--positive-text);
 }
 
 .down,
 .negative {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 .ranking-points {
@@ -3091,7 +3280,7 @@ button.ranking-row-link:focus-visible {
 }
 
 .match-team em {
-  color: var(--positive);
+  color: var(--positive-text);
   font-size: 9px;
   font-style: normal;
   font-weight: 900;
@@ -5752,14 +5941,14 @@ button.podium-person {
   cursor: pointer;
   display: flex;
   font-size: 15px;
-  height: 38px;
+  height: 44px;
   justify-content: center;
   line-height: 1;
   position: absolute;
-  right: 18px;
-  top: 18px;
+  right: 16px;
+  top: 16px;
   transition: background 150ms ease;
-  width: 38px;
+  width: 44px;
   z-index: 3;
 }
 
@@ -5963,7 +6152,7 @@ button.podium-person {
 }
 
 .bacheca-group-head > div > span {
-  color: var(--line);
+  color: var(--muted);
   font-size: 27px;
   font-weight: 900;
   letter-spacing: -1px;
@@ -5973,7 +6162,7 @@ button.podium-person {
   margin-bottom: 4px;
 }
 
-.bacheca-group-head h3 {
+.bacheca-group-head h2 {
   font-size: 19px;
   margin: 0;
 }
@@ -7610,11 +7799,24 @@ button.pizza-ranking-row {
   opacity: 1;
 }
 
-/* Su touch non esiste l'hover: la scritta resta leggibile ma discreta. */
+/* Su touch non esiste l'hover. Prima il velo restava sempre sopra la foto
+   e la scritta copriva l'iniziale: ora e un'etichetta appesa sotto
+   all'avatar, che lascia la faccia libera e si tocca bene col pollice. */
 @media (hover: none) {
   .photo-button {
-    background: rgba(11, 27, 44, 0.42);
-    opacity: 0.68;
+    background: var(--ink);
+    border: 2px solid var(--white);
+    border-radius: var(--radius-pill);
+    bottom: -14px;
+    font-size: 10px;
+    left: 50%;
+    min-height: 32px;
+    opacity: 1;
+    padding: 0 var(--space-4);
+    right: auto;
+    top: auto;
+    transform: translateX(-50%);
+    white-space: nowrap;
   }
 }
 
@@ -8101,9 +8303,10 @@ button.pizza-ranking-row {
   cursor: pointer;
   display: flex;
   font-size: 22px;
-  height: 38px;
+  /* 44px: la misura minima per un tasto da toccare col pollice. */
+  height: 44px;
   justify-content: center;
-  width: 38px;
+  width: 44px;
 }
 
 .sheet-form label.random-teams-toggle {
@@ -10661,7 +10864,8 @@ button.pizza-ranking-row {
 
   /* Il filo resta, smette solo di girare: e il bordo del tasto, non un
      effetto, e senza di lui il tasto perderebbe il contorno. */
-  .button.cta-aurora {
+  .button.cta-aurora,
+  .hub-card {
     animation: none;
   }
 
@@ -11890,6 +12094,8 @@ button.pizza-ranking-row {
   .admin-panel { padding: var(--space-6); }
 }
 .profile-password { border-top: 1px solid var(--line); margin-top: var(--space-6); padding-top: var(--space-5); }
-.profile-password summary { cursor: pointer; font-weight: 700; }
+/* Le tendine si aprono col pollice: la riga e alta quanto un tasto. */
+.profile-password summary,
+.cod-emblems-available summary { cursor: pointer; font-weight: 700; min-height: 44px; padding-block: 12px; }
 .profile-password form { margin-top: var(--space-5); }
 .profile-password .form-message { color: var(--ink); }

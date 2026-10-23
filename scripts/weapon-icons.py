@@ -2,7 +2,9 @@
 # prese da wzstats.gg) genera per ogni arma in public/gaming/loadouts/weapons:
 # - <id>.png: 1024x1024 trasparente, arma quasi monocromatica, contorno ciano
 #   sottile e glow leggero;
-# - <id>.svg: la sagoma, un solo tracciato pieno, ricavata dalla trasparenza.
+# - <id>.svg: la sagoma, un solo tracciato pieno, ricavata dalla trasparenza;
+# - <id>-body.png e <id>-outline.png: l'arma e il suo contorno separati, per
+#   il contorno animato della pagina.
 # Uso: python3 scripts/weapon-icons.py   (servono pillow, numpy, opencv, potracer)
 import pathlib, cv2, numpy as np, potrace
 from PIL import Image, ImageFilter, ImageOps
@@ -42,6 +44,14 @@ for path in sorted(SRC.glob("*.png")):
     canvas.paste(Image.new("RGBA", (SIZE, SIZE), CYAN + (255,)), (0, 0), outline)
     canvas.alpha_composite(body, at)
     canvas.save(OUT / f"{path.stem}.png", optimize=True)
+
+    # I due livelli del contorno animato: l'arma da sola e il solo anello del
+    # contorno (bianco, la pagina lo usa come maschera e ci fa girare sopra
+    # il gradiente azzurro-lime dei tasti).
+    plain = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0)); plain.alpha_composite(body, at)
+    plain.save(OUT / f"{path.stem}-body.png", optimize=True)
+    ring_only = np.clip(np.array(outline, dtype=np.int16) - np.array(hard, dtype=np.int16), 0, 255).astype(np.uint8)
+    Image.merge("RGBA", [Image.new("L", (SIZE, SIZE), 255)] * 3 + [Image.fromarray(ring_only)]).save(OUT / f"{path.stem}-outline.png", optimize=True)
 
     # Sagoma: la trasparenza ripulita e ricalcata. potracer considera
     # "pieno" il valore falso, quindi la maschera va invertita.

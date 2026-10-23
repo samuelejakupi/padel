@@ -15,6 +15,7 @@ import type { Attachment, AttachmentSlot, Build, Weapon } from "./types";
 const asset = (id: string) => ({
   icon: `/gaming/loadouts/weapons/${id}.png`,
   silhouette: `/gaming/loadouts/weapons/${id}.svg`,
+  layers: { body: `/gaming/loadouts/weapons/${id}-body.png`, outline: `/gaming/loadouts/weapons/${id}-outline.png` },
 });
 
 export const weapons: Weapon[] = [

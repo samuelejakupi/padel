@@ -1652,12 +1652,12 @@ function BadgeTile({ badge, ghost }: { badge: Badge; ghost: boolean }) {
           <Image className="badge-art" src={`${basePath}/emblems/${badge.glyph}.webp?v=rework-20261011`} alt="" width={128} height={168} />
         )}
       </div>
-      <aside className="badge-tooltip" role="tooltip">
+      <div className="badge-tooltip" role="tooltip">
         <strong>{badge.label}</strong>
         <p>{badge.meaning}</p>
         <span>{badge.criterion}</span>
         <small>{badge.value}{badge.progressLabel ? ` · ${badge.progressLabel}` : ""}</small>
-      </aside>
+      </div>
     </article>
   );
 }
@@ -2546,7 +2546,7 @@ function MatchCard({
   );
 
   return (
-    <article
+    <div
       // Il filo lime sul fianco dice che la partita e nata dentro a un
       // torneo. Non ha una sezione sua nell'elenco: le partite di torneo
       // sono partite come le altre, contano nell'Elo e stanno nel loro mese
@@ -2653,7 +2653,7 @@ function MatchCard({
           ) : null}
         </div>
       ) : null}
-    </article>
+    </div>
   );
 }
 
@@ -5381,7 +5381,7 @@ function TournamentRow({
     : standings?.[0]?.played ? standings[0].team.name : null;
 
   return (
-    <article
+    <div
       className="match-card match-card-link tournament-row"
       onClick={onOpen}
       onKeyDown={(event) => {
@@ -5416,7 +5416,7 @@ function TournamentRow({
         <b>{played}/{total}</b>
         <small>×{tournament.elo_multiplier}</small>
       </div>
-    </article>
+    </div>
   );
 }
 
@@ -8460,7 +8460,7 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
 
               <div className="bacheca-group-head">
-                <div><span>01</span><div><h3>Emblemi</h3></div></div>
+                <div><span aria-hidden="true">01</span><div><h2>Emblemi</h2></div></div>
               </div>
               {earnedPlayerBadges.length ? <BadgeList badges={earnedPlayerBadges} /> : (
                 <div className="player-trophies-empty"><p>Nessun emblema ancora conquistato.</p></div>
@@ -8469,7 +8469,7 @@ function AppShell({ session }: { session: Session | null }) {
               <FieldRegister badges={selectedPlayerBadges} />
 
               <div className="bacheca-group-head">
-                <div><span>02</span><div><p className="eyebrow dark">TORNEI</p><h3>Sala trofei</h3></div></div>
+                <div><span aria-hidden="true">02</span><div><p className="eyebrow dark">TORNEI</p><h2>Sala trofei</h2></div></div>
                 <small>{selectedPlayerAwards.length ? `${selectedPlayerAwards.length} conquistati` : "Nessun trofeo"}</small>
               </div>
               {selectedPlayerAwards.length ? (
@@ -8869,12 +8869,12 @@ function AppShell({ session }: { session: Session | null }) {
             {/* Le due cose che si fanno piu spesso, a un tocco dalla pagina
                 dei giochi invece che tre schermate piu in la. */}
             <div className="gaming-actions" aria-label="Azioni rapide MW4">
-              <button className="button button-primary" type="button" onClick={() => {
+              <button className="button button-primary cta-new-match cta-aurora" type="button" onClick={() => {
                 setGamingAction("gb");
                 setGamingView("mw4");
                 scrollPageTo(0, "instant" as ScrollBehavior);
               }}>+ Carica GB</button>
-              <button className="button button-ghost" type="button" onClick={() => {
+              <button className="button button-lime cta-new-match cta-aurora" type="button" onClick={() => {
                 setGamingAction("build");
                 setGamingView("mw4-meta");
                 scrollPageTo(0, "instant" as ScrollBehavior);

@@ -15,6 +15,18 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 export function WeaponIcon({ weapon, size = "md" }: { weapon: Weapon; size?: "sm" | "md" | "lg" }) {
   const sources = [weapon.icon, weapon.silhouette, `/gaming/loadouts/weapons/placeholder-${weapon.category}.svg`];
   const [attempt, setAttempt] = useState(0);
+  const [layersFailed, setLayersFailed] = useState(false);
+  // Contorno animato: l'arma da sola, e sopra il suo contorno usato come
+  // maschera su cui gira il gradiente azzurro-lime dei tasti del Padel.
+  if (weapon.layers && !layersFailed) {
+    return <span className={styles.weaponIcon} data-size={size}>
+      <span className={styles.weaponLayers}>
+        <Image src={`${basePath}${weapon.layers.body}`} alt={weapon.name} width={1024} height={1024} onError={() => setLayersFailed(true)} />
+        <span className={styles.weaponOutline} aria-hidden="true"
+          style={{ maskImage: `url(${basePath}${weapon.layers.outline})`, WebkitMaskImage: `url(${basePath}${weapon.layers.outline})` }} />
+      </span>
+    </span>;
+  }
   return <span className={styles.weaponIcon} data-size={size}>
     <Image src={`${basePath}${sources[Math.min(attempt, sources.length - 1)]}`} alt={weapon.name} width={1024} height={1024}
       onError={() => setAttempt(current => current + 1)} />
