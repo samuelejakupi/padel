@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+.cod-emblems-available {
+  margin-top: var(--space-5);
+}
+
+.cod-emblems-available summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  padding-block: var(--space-3);
+}
+
+.player-trophies .cod-emblems-available > .badge-grid {
+  flex-wrap: wrap;
+}
+
 .cod-emblem-grid {
   display: grid;
   gap: var(--space-4);

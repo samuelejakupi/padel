@@ -114,7 +114,7 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(trophyImageMigration, /trophies\/coppa-theboyz\.png/);
   assert.match(page, /tournamentVictoryDate/);
   assert.match(page, /trophy_image_path/);
-  assert.match(page, /function CabinetMarquee/);
+  assert.match(await readFile(new URL("app/CabinetMarquee.tsx", root), "utf8"), /function CabinetMarquee/);
   assert.match(page, /rowClassName="trophy-room-list"/);
   assert.match(css, /\.trophy-room-card[\s\S]*background: transparent/);
   assert.match(pizzaMigration, /name ilike '%spizza%'/);

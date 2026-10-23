@@ -8,6 +8,7 @@ import { CodNickname } from "./CodGaming";
 import useCodGbs from "./useCodGbs";
 import styles from "./CodProfile.module.css";
 import { codEmblems } from "@/lib/cod-emblems";
+import CabinetMarquee from "./CabinetMarquee";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
@@ -54,19 +55,22 @@ export default function CodProfile({ profile, avatar }: { profile: Profile; avat
         <div><dt>Morti</dt><dd>{deaths}</dd></div>
       </dl>
 
-      <section aria-labelledby="cod-profile-emblems-title">
+      <section className="player-trophies" aria-labelledby="cod-profile-emblems-title">
         <h2 id="cod-profile-emblems-title" className={styles.title}>Emblemi MW4</h2>
         {error ? <p>Gli emblemi saranno disponibili quando i risultati verranno caricati.</p> : <>
           <p><strong>{earnedCount} / {badges.length} emblemi detenuti</strong> · Si aggiornano con i risultati delle GB. I pari merito condividono lo stesso emblema.</p>
-          <ul className="cod-emblem-grid">{badges.map(b => {
-            const isOwn = b.holders.includes(profile.id);
-            return <li className={`cod-emblem-card${isOwn ? " cod-emblem-earned" : ""}`} key={b.id}>
-              <Image src={`${basePath}/emblems/mw4/${b.id}.webp`} alt={`Emblema ricamato ${b.title}`} width={180} height={180} unoptimized />
-              <h3>{b.title}</h3><p>{b.criterion}</p>
-              <strong>{isOwn ? "Detenuto da te" : b.holders.length ? "Non detenuto" : "Da assegnare"}</strong>
-              {isOwn && b.value !== null ? <small>{b.value === Infinity ? "∞" : b.value.toLocaleString("it-IT", { maximumFractionDigits: 2 })} {b.metric === "kd" ? "K/D" : "punti / partita"}</small> : null}
-            </li>;
-          })}</ul>
+          {earnedCount ? <CabinetMarquee items={badges.filter(b => b.holders.includes(profile.id))} rowClassName="badge-grid" keyOf={b => b.id} renderItem={(b, ghost) => (
+            <article className={`badge badge-${b.direction === "min" ? "bronze" : "gold"} is-unlocked`} tabIndex={ghost ? -1 : 0} aria-hidden={ghost || undefined} aria-label={ghost ? undefined : `${b.title}. ${b.criterion}. Detenuto da te.`}>
+              <div className="badge-emblem" aria-hidden="true"><Image className="badge-art" src={`${basePath}/emblems/mw4/${b.id}.webp`} alt={`Emblema ricamato ${b.title}`} width={128} height={168} unoptimized /></div>
+              <aside className="badge-tooltip" role="tooltip"><strong>{b.title}</strong><p>{b.criterion}</p><span>Detenuto da te</span><small>{b.value === Infinity ? "∞" : b.value?.toLocaleString("it-IT", { maximumFractionDigits: 2 })} {b.metric === "kd" ? "K/D" : "punti / partita"}</small></aside>
+            </article>
+          )} /> : <div className="player-trophies-empty"><p>Nessun emblema ancora conquistato.</p></div>}
+          {earnedCount < badges.length ? <details className="cod-emblems-available"><summary>Emblemi disponibili ({badges.length - earnedCount})</summary><div className="badge-grid">{badges.filter(b => !b.holders.includes(profile.id)).map(b => {
+            return <article className={`badge badge-${b.direction === "min" ? "bronze" : "gold"} is-locked`} key={b.id} tabIndex={0} aria-label={`${b.title}. ${b.criterion}. ${b.holders.length ? "Non detenuto" : "Da assegnare"}.`}>
+              <div className="badge-emblem" aria-hidden="true"><Image className="badge-art" src={`${basePath}/emblems/mw4/${b.id}.webp`} alt={`Emblema ricamato ${b.title}`} width={128} height={168} unoptimized /></div>
+              <aside className="badge-tooltip" role="tooltip"><strong>{b.title}</strong><p>{b.criterion}</p><span>{b.holders.length ? "Non detenuto" : "Da assegnare"}</span></aside>
+            </article>;
+          })}</div></details> : null}
         </>}
       </section>
 

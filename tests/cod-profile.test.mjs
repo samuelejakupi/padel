@@ -18,9 +18,16 @@ const compiled = ts.transpileModule(readFileSync(filename, 'utf8'), {
 }).outputText;
 const profileModule = new Module(filename);
 profileModule.filename = filename;
+const marqueeFilename = fileURLToPath(new URL('../app/CabinetMarquee.tsx', import.meta.url));
+const marqueeModule = new Module(marqueeFilename);
+marqueeModule.require = require;
+marqueeModule._compile(ts.transpileModule(readFileSync(marqueeFilename, 'utf8'), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
+}).outputText, marqueeFilename);
 const stubs = {
   '@/lib/cod-gb': cod,
   '@/lib/cod-emblems': emblems,
+  './CabinetMarquee': marqueeModule.exports,
   './useCodGbs': { __esModule: true, default: () => snapshot },
   './CodGaming': { CodNickname: () => React.createElement('details', null, 'Il mio nick Call of Duty') },
   './CodProfile.module.css': { __esModule: true, default: new Proxy({}, { get: (_, key) => String(key) }) },
@@ -40,6 +47,7 @@ test('il profilo MW4 senza partite mostra il nick COD e nessun dato padel', () =
   assert.match(html, /Emblemi MW4/);
   assert.match(html, /0 \/ 7 emblemi detenuti/);
   assert.equal((html.match(/alt="Emblema ricamato /g) ?? []).length, 7);
+  assert.match(html, /Emblemi disponibili \(7\)/);
   assert.doesNotMatch(html, /Padel|Mano della racchetta|Lato del campo/);
 });
 
@@ -54,6 +62,9 @@ test('il profilo MW4 riassume solo le GB elaborate del giocatore', () => {
   assert.match(html, /Vista/);
   assert.match(html, /1 \/ 7 emblemi detenuti/);
   assert.match(html, /Detenuto da te/);
+  assert.match(html, /class="cabinet-marquee"/);
+  assert.match(html, /badge badge-gold is-unlocked/);
+  assert.doesNotMatch(html, /cod-emblem-card/);
   assert.match(html, /Non detenuto/);
   assert.equal((html.match(/alt="Emblema ricamato /g) ?? []).length, 7);
   assert.doesNotMatch(html, /Rio/);
