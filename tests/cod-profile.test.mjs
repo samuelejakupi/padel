@@ -7,6 +7,7 @@ import ts from 'typescript';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import * as cod from '../lib/cod-gb.ts';
+import * as emblems from '../lib/cod-emblems.ts';
 
 // Renderizza il componente reale con il solo accesso dati sostituito.
 const require = createRequire(import.meta.url);
@@ -19,6 +20,7 @@ const profileModule = new Module(filename);
 profileModule.filename = filename;
 const stubs = {
   '@/lib/cod-gb': cod,
+  '@/lib/cod-emblems': emblems,
   './useCodGbs': { __esModule: true, default: () => snapshot },
   './CodGaming': { CodNickname: () => React.createElement('details', null, 'Il mio nick Call of Duty') },
   './CodProfile.module.css': { __esModule: true, default: new Proxy({}, { get: (_, key) => String(key) }) },

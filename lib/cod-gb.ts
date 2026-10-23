@@ -9,7 +9,7 @@ export const codModeStatKeys = {
   search_destroy: ["plants", "defuses", "first_bloods"],
   overload: ["overloads", "carries", "objective_kills"],
 } as const;
-export type CodStats = { kills: number; deaths: number } & Record<"damage" | "hill_seconds" | "objective_kills" | "plants" | "defuses" | "first_bloods" | "overloads" | "carries", number | null>;
+export type CodStats = { kills: number; deaths: number; score?: number | null } & Record<"damage" | "hill_seconds" | "objective_kills" | "plants" | "defuses" | "first_bloods" | "overloads" | "carries", number | null>;
 export type CodPlayerResult = CodStats & { profile_id: string | null; nickname: string; team: number };
 export type CodGb = {
   id: string; created_by: string; mode: CodMode; map_name: string; played_at: string;
@@ -23,11 +23,11 @@ export function codRanking(gbs: CodGb[], mode: CodMode) {
   for (const gb of gbs.filter(g => g.mode === mode && g.status === "processed")) {
     for (const p of gb.players) {
       if (!p.profile_id) continue;
-      const row = totals.get(p.profile_id) ?? { profileId: p.profile_id, games: 0, wins: 0, kills: 0, deaths: 0, damage: null, hill_seconds: null, objective_kills: null, plants: null, defuses: null, first_bloods: null, overloads: null, carries: null };
+      const row = totals.get(p.profile_id) ?? { profileId: p.profile_id, games: 0, wins: 0, kills: 0, deaths: 0, score: null, damage: null, hill_seconds: null, objective_kills: null, plants: null, defuses: null, first_bloods: null, overloads: null, carries: null };
       row.games++; row.kills += p.kills; row.deaths += p.deaths;
       if (gb.team1_score !== null && gb.team2_score !== null && ((p.team === 1 && gb.team1_score > gb.team2_score) || (p.team === 2 && gb.team2_score > gb.team1_score))) row.wins++;
-      for (const key of ["damage", "hill_seconds", "objective_kills", "plants", "defuses", "first_bloods", "overloads", "carries"] as const) {
-        row[key] = row.games === 1 ? p[key] : row[key] === null || p[key] === null ? null : row[key]! + p[key]!;
+      for (const key of ["score", "damage", "hill_seconds", "objective_kills", "plants", "defuses", "first_bloods", "overloads", "carries"] as const) {
+        row[key] = row.games === 1 ? p[key] ?? null : row[key] == null || p[key] == null ? null : row[key]! + p[key]!;
       }
       totals.set(p.profile_id, row);
     }

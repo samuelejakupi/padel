@@ -7,6 +7,7 @@ import ts from 'typescript';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import * as cod from '../lib/cod-gb.ts';
+import * as emblems from '../lib/cod-emblems.ts';
 
 // Renderizza il componente reale con il solo accesso dati sostituito.
 const require = createRequire(import.meta.url);
@@ -17,7 +18,7 @@ const compiled = ts.transpileModule(readFileSync(filename, 'utf8'), {
 }).outputText;
 const rankingModule = new Module(filename);
 rankingModule.filename = filename;
-rankingModule.require = (name) => name === '@/lib/cod-gb' ? cod : name === './useCodGbs' ? { __esModule: true, default: () => snapshot } : require(name);
+rankingModule.require = (name) => name === '@/lib/cod-gb' ? cod : name === '@/lib/cod-emblems' ? emblems : name === './useCodGbs' ? { __esModule: true, default: () => snapshot } : require(name);
 rankingModule._compile(compiled, filename);
 const Page = rankingModule.exports.default;
 const render = () => renderToStaticMarkup(React.createElement(Page, { profiles: [{ id: 'a', display_name: 'Giocatore A' }] }));

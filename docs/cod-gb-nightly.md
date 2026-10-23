@@ -68,7 +68,7 @@ esecuzione dopo l'elaborazione; non conservare copie nel repository.
   `objective_kills`; Cerca e distruggi: `plants`, `defuses`, `first_bloods`;
   Overload: `overloads`, `carries`, `objective_kills`, solo se le colonne
   effettivamente mostrano quelle metriche. Non equiparare trasporti a consegne.
-- Comuni: `kills`, `deaths`, `damage`. Statistiche opzionali non visibili = null,
+- Comuni: `kills`, `deaths`, `score` (punti individuali della colonna SCORE/PUNTI, mai il punteggio squadra), `damage`. Statistiche opzionali non visibili = null,
   mai zero inventato. Tutti i valori sono interi non negativi.
 - Non inferire vincitore dall'ordine delle righe: leggi punteggi e team.
 - Nick: corrispondenza esatta ignorando solo maiuscole e spazi esterni.

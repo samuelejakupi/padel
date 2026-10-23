@@ -1,0 +1,42 @@
+{
+  "generator": "Built-in ImageGen",
+  "reference": "public/emblems/goat.webp: forma, fondo nero e cuciture; riferimenti utente: tono meme militare e personaggi.",
+  "sharedPrompt": "Scudo pentagonale ricamato su tessuto nero, bordo merrow dorato (bronzo per i due premi negativi), fili visibili e riempimenti a punto satin, soggetto surreale militare, scudo intero e centrato, sfondo trasparente, nessun testo o logo.",
+  "assets": [
+    {
+      "id": "kd-king",
+      "file": "public/emblems/mw4/kd-king.webp",
+      "prompt": "Best kill/death ratio. A smug BLACK CARTOON DUCK in shiny medieval chrome knight armor holding a jewel-encrusted gold futuristic rifle diagonally upward, dramatic direct flash, dominant cool silver and gold. The duck's tired half-closed eyes and orange beak have absurd low-fi internet meme energy. No shooting, no victims."
+    },
+    {
+      "id": "goat",
+      "file": "public/emblems/mw4/goat.webp",
+      "prompt": "GOAT: highest average individual score overall. A charismatic anthropomorphic GOAT with curled horns, wearing a flowing ivory cloak over black modern tactical armor and lifted night-vision goggles, ornate gold crown between horns. Regal centered portrait, glowing gold halo, subtle embroidered laurel. Surreal military meme character, authoritative and funny."
+    },
+    {
+      "id": "kd-last",
+      "file": "public/emblems/mw4/kd-last.webp",
+      "prompt": "Lowest kill/death ratio, affectionate loser badge. A hapless WHITE PLUSH RABBIT with huge floppy ears in a ghillie camouflage hood and loose tactical helmet, looking into a rifle scope that points away from the target while a tiny harmless suction dart is stuck to its helmet. Bewildered cross-eyed expression. Copper bronze rim instead of gold, muted khaki and ivory thread. Absurd funny military meme, no injuries."
+    },
+    {
+      "id": "score-last",
+      "file": "public/emblems/mw4/score-last.webp",
+      "prompt": "Lowest average score overall, affectionate loser badge. A very ROUND RED PLUSH PUPPET with big white googly eyes and a wide flat friendly mouth, crammed into a tiny tactical vest, sitting helplessly on a crate holding an unplugged videogame controller whose cable dangles obviously unplugged; small empty star silhouette behind him. Sheepish expression and slumped posture. Bronze copper rim, red/khaki/cream threads. Surreal Italian internet meme energy, no text."
+    },
+    {
+      "id": "hardpoint",
+      "file": "public/emblems/mw4/hardpoint.webp",
+      "prompt": "Highest average score in HARDPOINT. A big goofy YELLOW LONG-BEAKED PLUSH BIRD with googly eyes, wearing a white hood dotted with green embroidered spots over tactical body armor. Confidently planted on a glowing AMBER CAPTURE ZONE with concentric rings, holding a small fortress flag, surrounded by stylized barricades. He refuses to leave the hill. Surreal vintage puppet military meme, friendly heroic expression. Gold rim, amber/cream/green colors. No bag, no victim, no violence."
+    },
+    {
+      "id": "search-destroy",
+      "file": "public/emblems/mw4/search-destroy.webp",
+      "prompt": "Highest average score in SEARCH AND DESTROY. A WHITE PLUSH RABBIT with tall ears in an olive ghillie hood and tactical goggles kneeling beside a fictional glowing cyan objective case, one gloved hand pressing a large safe disarm button, the other raised in a shushing gesture. Cool calm sneaky specialist, little cyan timer-shaped icon without digits. Gold rim with cyan accents, tightly focused composition, humorous military meme. No technical bomb construction detail, no text."
+    },
+    {
+      "id": "overload",
+      "file": "public/emblems/mw4/overload.webp",
+      "prompt": "Highest average score in OVERLOAD. A RED ROUND PLUSH PUPPET with big white googly eyes and wide smile wearing a chunky olive tactical vest and helmet, sprinting like a rugby champion with a futuristic glowing VIOLET ENERGY CORE cradled in both arms, sparks and embroidered lightning and a goal arch behind. Energetic absurd military meme in direct-flash styling, golden rim, crimson and violet accents. No real people, no flags, no text."
+    }
+  ]
+}

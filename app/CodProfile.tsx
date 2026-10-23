@@ -1,11 +1,15 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Image from "next/image";
 import type { Profile } from "@/lib/supabase";
 import { codModes, codModeStatKeys, codRanking, type CodGb, type CodMode } from "@/lib/cod-gb";
 import { CodNickname } from "./CodGaming";
 import useCodGbs from "./useCodGbs";
 import styles from "./CodProfile.module.css";
+import { codEmblems } from "@/lib/cod-emblems";
+
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 const kd = (kills: number, deaths: number) => deaths ? (kills / deaths).toFixed(2) : kills ? "∞" : "—";
 
@@ -16,6 +20,7 @@ function outcome(gb: CodGb, team: number) {
 
 export default function CodProfile({ profile, avatar }: { profile: Profile; avatar: ReactNode }) {
   const { gbs, loading, error, load } = useCodGbs();
+  const earned = codEmblems(gbs).filter(b => b.holders.includes(profile.id));
   const played = gbs
     .filter(gb => gb.status === "processed")
     .flatMap(gb => gb.players.filter(p => p.profile_id === profile.id).map(player => ({ gb, player })));
@@ -48,6 +53,12 @@ export default function CodProfile({ profile, avatar }: { profile: Profile; avat
         <div><dt>Morti</dt><dd>{deaths}</dd></div>
       </dl>
 
+      <h2 className={styles.title}>I miei emblemi MW4</h2>
+      {earned.length ? <ul className="cod-emblem-grid">{earned.map(b => <li className="cod-emblem-card cod-emblem-earned" key={b.id}>
+        <Image src={`${basePath}/emblems/mw4/${b.id}.webp`} alt={`Emblema ricamato ${b.title}`} width={180} height={180} unoptimized />
+        <h3>{b.title}</h3><p>{b.criterion}</p>
+      </li>)}</ul> : <p>Nessun emblema conquistato. Scopri i sette premi nella classifica MW4.</p>}
+
       <h2 className={styles.title}>Per modalità</h2>
       <div className={styles.modes}>
         {modes.map(({ mode, row, rank, total }) => <article key={mode} className={styles.mode}>
@@ -57,6 +68,7 @@ export default function CodProfile({ profile, avatar }: { profile: Profile; avat
             <div><dt>Vittorie</dt><dd>{row.wins}</dd></div>
             <div><dt>K/D</dt><dd>{kd(row.kills, row.deaths)}</dd></div>
             <div><dt>Danni</dt><dd>{row.damage ?? "—"}</dd></div>
+            <div><dt>Punti medi</dt><dd>{row.score != null ? (row.score / row.games).toLocaleString("it-IT", { maximumFractionDigits: 1 }) : "—"}</dd></div>
             {codModeStatKeys[mode].map((key, i) => <div key={key}><dt>{codModes[mode].stats[i]}</dt><dd>{row[key] ?? "—"}</dd></div>)}
           </dl> : <p>Nessuna GB registrata in questa modalità.</p>}
         </article>)}

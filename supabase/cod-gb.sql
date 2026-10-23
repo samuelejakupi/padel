@@ -96,7 +96,7 @@ begin
     foreach key in array array['kills','deaths'] loop
       if (player->>key) is null or (player->>key)::int not between 0 and 10000 then raise exception 'K/D non valido'; end if;
     end loop;
-    foreach key in array array['damage','hill_seconds','objective_kills','plants','defuses','first_bloods','overloads','carries'] loop
+    foreach key in array array['score','damage','hill_seconds','objective_kills','plants','defuses','first_bloods','overloads','carries'] loop
       if player->>key is not null and (player->>key)::int not between 0 and 1000000 then raise exception 'Statistica non valida'; end if;
       if not (player ? key) then player := player || jsonb_build_object(key,null); end if;
     end loop;
