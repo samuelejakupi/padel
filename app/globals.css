@@ -2476,6 +2476,27 @@ body:has(.hub-page) .desktop-nav button.active {
   font-weight: 900;
 }
 
+/* Al posto del "00": la tessera nera con l'icona della cosa che manca.
+   Vale anche per i riquadri vuoti grandi (.empty-board). */
+.compact-empty > .compact-empty-icon,
+.empty-board > .compact-empty-icon {
+  align-items: center;
+  background: var(--ink);
+  border-radius: var(--radius-md);
+  color: var(--lime);
+  display: flex;
+  flex: 0 0 auto;
+  font-size: 0;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.compact-empty-icon svg {
+  height: 26px;
+  width: 26px;
+}
+
 .compact-empty p {
   color: var(--muted);
   margin: 0;
@@ -7314,6 +7335,120 @@ button.podium-person {
   font-weight: 900;
   letter-spacing: -1px;
   margin-top: var(--space-1);
+}
+
+/* Sotto la testata, sul fondo scuro: il podio e le serate prima. Righe di
+   vetro, il numero a destra; l'oro e la sola tinta piena. */
+.pizza-overview-block {
+  color: var(--white);
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  position: relative;
+  z-index: 1;
+}
+
+.pizza-overview-head {
+  align-items: center;
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+}
+
+.pizza-overview-head h2 {
+  font-size: 20px;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.pizza-overview-head .text-link {
+  color: var(--lime);
+  font-size: 13px;
+  min-height: 44px;
+  padding: 0;
+}
+
+.pizza-podium,
+.pizza-night-list {
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pizza-podium li,
+.pizza-night-list li {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius);
+  display: flex;
+  gap: var(--space-4);
+  min-height: 56px;
+  padding: var(--space-3) var(--space-5);
+}
+
+.pizza-podium li > b,
+.pizza-night-list li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.pizza-podium li > b,
+.pizza-night-list b {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.pizza-night-list li > div {
+  display: grid;
+  gap: 2px;
+}
+
+.pizza-night-list small {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+}
+
+.pizza-podium-position {
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  display: flex;
+  flex: 0 0 auto;
+  font-size: 15px;
+  font-weight: 900;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.pizza-podium li[data-medal="gold"] .pizza-podium-position {
+  background: var(--lime);
+  border-color: var(--lime);
+  color: var(--ink);
+}
+
+.pizza-podium-score {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pizza-podium-score b {
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.pizza-podium-score small {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  font-weight: 700;
+  margin-left: 2px;
 }
 
 .pizza-ranking-toolbar {

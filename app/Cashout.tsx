@@ -146,6 +146,16 @@ export function groupBalances(group: CashoutGroup, profiles: Profile[]): Cashout
   })).filter((item): item is CashoutBalance => Boolean(item.profile));
 }
 
+// Uno scontrino, per i riquadri vuoti: al posto del vecchio "00".
+function ReceiptGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <path d="M6 3.5h12v17l-2.4-1.6-2.4 1.6-1.2-.8-1.2.8-2.4-1.6L6 20.5Z" />
+      <path d="M9 8h6M9 11.5h6M9 15h3.5" />
+    </svg>
+  );
+}
+
 function CashoutAvatar({ profile }: { profile?: Profile }) {
   const initials = (profile?.display_name ?? "?")
     .split(/\s+/)
@@ -644,7 +654,7 @@ function CashoutGroupDetail({
               </article>
             ))}
           </div>
-        ) : <div className="compact-empty"><span>00</span><p>Non ci sono ancora spese. Aggiungi la prima quando qualcuno anticipa.</p></div>}
+        ) : <div className="compact-empty"><span className="compact-empty-icon"><ReceiptGlyph /></span><p>Non ci sono ancora spese. Aggiungi la prima quando qualcuno anticipa.</p></div>}
       </section>
 
       {group.settlements.length ? (
@@ -756,7 +766,7 @@ export default function CashoutPage({ profiles, viewerId, initialGroupId = null 
               })}
             </div>
           </section>
-        ) : <div className="compact-empty cashout-first-empty"><span>00</span><div><h2>Nessun gruppo di spesa</h2><p>Crea “Grigliata” o “Vacanza Mykonos”, scegli chi partecipa e poi aggiungi le spese.</p></div></div>}
+        ) : <div className="compact-empty cashout-first-empty"><span className="compact-empty-icon"><ReceiptGlyph /></span><div><h2>Nessun gruppo di spesa</h2><p>Crea “Grigliata” o “Vacanza Mykonos”, scegli chi partecipa e poi aggiungi le spese.</p></div></div>}
       </section>
       {expenseModal}
       {showGroupCreate ? <CashoutDialogPortal><CashoutGroupModal profiles={profiles} viewerId={viewerId} onClose={() => setShowGroupCreate(false)} onCreated={async (groupId) => { setShowGroupCreate(false); await loadGroups(); setSelectedId(groupId); }} /></CashoutDialogPortal> : null}

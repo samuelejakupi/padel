@@ -6380,7 +6380,7 @@ function TournamentsPage({
                 })}
               </div>
             ) : (
-              <div className="compact-empty tournament-recent-empty"><span>00</span><p>{tournaments.length ? "Nessun torneo concluso." : "Nessun torneo creato."}</p></div>
+              <div className="compact-empty tournament-recent-empty"><span className="compact-empty-icon"><NavGlyph name="ranking" /></span><p>{tournaments.length ? "Nessun torneo concluso." : "Nessun torneo creato."}</p></div>
             )}
             {completedTournaments.length > 3 ? (
               <button className="button button-ghost button-full tournament-see-all" type="button" onClick={() => setShowAllCompleted((current) => !current)}>{showAllCompleted ? "Vedi gli ultimi 3" : `Vedi tutto (${completedTournaments.length})`}</button>
@@ -8292,7 +8292,7 @@ function AppShell({ session }: { session: Session | null }) {
                       </div>
                     )
                   ) : filteredPlannedMatches.length ? null : (
-                    <div className="compact-empty panel-empty"><span>00</span><p>{emptyMatchesNote}</p></div>
+                    <div className="compact-empty panel-empty"><span className="compact-empty-icon"><NavGlyph name="racket" /></span><p>{emptyMatchesNote}</p></div>
                   )}
                   {/* Gli stessi pallini della classifica: dicono che la card
                       ha due facce e quale stai guardando. Non si toccano —
@@ -8339,7 +8339,7 @@ function AppShell({ session }: { session: Session | null }) {
                       ))}
                     </div>
                   ) : (
-                    <div className="compact-empty panel-empty"><span>00</span><p>Nessun torneo ancora. Il primo trofeo aspetta un nome.</p></div>
+                    <div className="compact-empty panel-empty"><span className="compact-empty-icon"><NavGlyph name="ranking" /></span><p>Nessun torneo ancora. Il primo trofeo aspetta un nome.</p></div>
                   )}
                   {tournaments.length ? (
                     <button
@@ -8396,7 +8396,7 @@ function AppShell({ session }: { session: Session | null }) {
               <TeamRankingList teams={rankedSeasonTeams} expanded />
             ) : (
               <div className="empty-board">
-                <span>00</span>
+                <span className="compact-empty-icon"><NavGlyph name="racket" /></span>
                 <h2>Nessuna squadra in classifica</h2>
                 <p>
                   Le coppie si formano da sole con le partite, ma entrano in classifica solo quando
@@ -8579,7 +8579,7 @@ function AppShell({ session }: { session: Session | null }) {
                 ) : null}
               </div>
             ) : (
-              <div className="empty-board"><span>00</span><h2>Nessuna partita giocata</h2><p>La scheda si completerà dopo il primo risultato.</p></div>
+              <div className="empty-board"><span className="compact-empty-icon"><NavGlyph name="racket" /></span><h2>Nessuna partita giocata</h2><p>La scheda si completerà dopo il primo risultato.</p></div>
             )}
 
             <section className="player-plays">
@@ -8668,7 +8668,7 @@ function AppShell({ session }: { session: Session | null }) {
                 ))}
               </div>
             ) : (
-              <div className="empty-board"><span>00</span><h2>{matches.length ? "Nessun risultato con questi filtri" : "Ancora nessuna partita"}</h2><p>{matches.length ? "Cambia esito o periodo per esplorare lo storico." : "Registra il primo risultato per iniziare lo storico."}</p></div>
+              <div className="empty-board"><span className="compact-empty-icon"><NavGlyph name="racket" /></span><h2>{matches.length ? "Nessun risultato con questi filtri" : "Ancora nessuna partita"}</h2><p>{matches.length ? "Cambia esito o periodo per esplorare lo storico." : "Registra il primo risultato per iniziare lo storico."}</p></div>
             )}
           </section>
         ) : null}
@@ -8757,7 +8757,41 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
             ) : null}
 
-
+            {/* Senza votazioni aperte la pagina non resta vuota: il podio delle
+                pizzerie e le serate prima dell'ultima (quella e gia nel titolo). */}
+            {pizzaEntries.some((item) => !item.pending) ? (
+              <section className="pizza-overview-block" aria-labelledby="pizza-podium-title">
+                <div className="pizza-overview-head">
+                  <h2 id="pizza-podium-title">Il podio</h2>
+                  <button className="text-link" type="button" onClick={() => openSectionRanking("pizza")}>Classifica completa →</button>
+                </div>
+                <ol className="pizza-podium">
+                  {pizzaEntries.filter((item) => !item.pending).slice(0, 3).map((restaurant, index) => (
+                    <li key={restaurant.id ?? restaurant.name} data-medal={pizzaMedalTones[index]}>
+                      <span className="pizza-podium-position">{index + 1}</span>
+                      <b>{restaurant.name}</b>
+                      <span className="pizza-podium-score"><b>{restaurant.total}</b><small>/100</small></span>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ) : null}
+            {pizzaSessions.filter((item) => item.completed_at && !item.is_solo).length > 1 ? (
+              <section className="pizza-overview-block" aria-labelledby="pizza-nights-title">
+                <div className="pizza-overview-head"><h2 id="pizza-nights-title">Le serate prima</h2></div>
+                <ul className="pizza-night-list">
+                  {pizzaSessions.filter((item) => item.completed_at && !item.is_solo && item.id !== lastClosedPizzaSession?.id).slice(0, 3).map((night) => (
+                    <li key={night.id}>
+                      <div>
+                        <b>{pizzaRestaurants.find((item) => item.id === night.restaurant_id)?.name ?? "Pizzeria"}</b>
+                        <small>{new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long" }).format(new Date(night.completed_at!))} · {night.participants.length} {night.participants.length === 1 ? "persona" : "persone"}</small>
+                      </div>
+                      <span className="pizza-podium-score"><b>{finalPizzaScore(pizzaSessionVotes.filter((vote) => vote.session_id === night.id), night, profiles)}</b><small>/100</small></span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
           </section></>
         ) : null}
 
@@ -9129,7 +9163,7 @@ function AppShell({ session }: { session: Session | null }) {
               </MonthGroup>
             )) : filteredPlannedMatches.length && resultFilter === "all" && resultPeriod === "all" ? null : (
               <div className="compact-empty panel-empty">
-                <span>00</span>
+                <span className="compact-empty-icon"><NavGlyph name="racket" /></span>
                 <p>{resultFilter !== "all" || resultPeriod !== "all" ? "Nessun risultato con questi filtri. Prova un altro esito o periodo." : emptyMatchesNote}</p>
               </div>
             )}

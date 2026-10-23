@@ -53,72 +53,7 @@
   text-transform: uppercase;
 }
 
-/* Filtri */
-.filters {
-  display: grid;
-  gap: var(--space-3);
-  /* minmax(0, …): senza, la riga che scorre allarga tutta la colonna. */
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.filter {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.filterLabel {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  min-width: 80px;
-  text-transform: uppercase;
-}
-
-/* I tasti sono i .button-ghost del sito; scelto, diventa scuro col testo
-   lime come le modalita delle GB. */
-.filter button {
-  min-height: 44px;
-  min-width: 44px;
-  padding-inline: var(--space-4);
-}
-
-.filterOptions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-/* Su telefono le voci di ogni filtro stanno su una riga sola che scorre di
-   lato, sotto l'etichetta: tre gruppi che vanno a capo occupavano mezzo
-   schermo prima della prima arma. */
-@media (max-width: 780px) {
-  .filterOptions {
-    flex-wrap: nowrap;
-    min-width: 0;
-    overflow-x: auto;
-    width: 100%;
-    scrollbar-width: none;
-  }
-
-  .filterOptions::-webkit-scrollbar {
-    display: none;
-  }
-
-  .filter button {
-    flex: 0 0 auto;
-  }
-}
-
-.filter button[aria-pressed="true"] {
-  background: var(--ink);
-  color: var(--lime);
-}
-
-.filter button:focus-visible,
-.weaponCardHit:focus-visible {
+.weaponCard:focus-visible {
   outline: 2px solid var(--lime);
   outline-offset: 2px;
 }
@@ -199,34 +134,55 @@
   aspect-ratio: 2.2 / 1;
 }
 
-/* Card dell'arma */
-.weaponGrid {
+/* Elenco delle armi: ognuna e un tasto largo quanto la colonna, con sotto
+   (quando e aperta) le sue build. */
+.weaponList {
   display: grid;
   gap: var(--space-4);
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.weaponList > li {
+  display: grid;
+  gap: var(--space-3);
 }
 
 .weaponCard {
+  align-items: center;
+  cursor: pointer;
   display: grid;
-  gap: var(--space-3);
-  padding: var(--space-5);
+  font: inherit;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 220px) auto;
+  min-height: 112px;
+  padding: var(--space-4) var(--space-5);
+  text-align: left;
   transition: border-color 160ms ease;
+  width: 100%;
 }
 
 .weaponCard[data-selected] {
   border-color: var(--lime);
 }
 
-.weaponCardHit {
-  background: none;
-  border: 0;
-  cursor: pointer;
-  inset: 0;
-  position: absolute;
-  z-index: 1;
+.weaponCardText {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
 }
 
-.weaponCardHead,
+.weaponCardName,
+.buildHead h2 {
+  font-size: 24px;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
 .buildHead {
   align-items: start;
   display: flex;
@@ -234,15 +190,8 @@
   justify-content: space-between;
 }
 
-.weaponCardHead h3,
-.buildHead h3 {
-  font-size: 24px;
-  font-style: italic;
-  font-weight: 900;
-  letter-spacing: -0.5px;
-  line-height: 1;
+.buildHead h2 {
   margin-top: var(--space-1);
-  text-transform: uppercase;
 }
 
 /* I dati tecnici veri, sopra le barre che sono stime. */
@@ -262,8 +211,8 @@
 }
 
 .weaponCardFoot {
-  color: rgba(255, 255, 255, 0.45);
-  font-size: 12px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -576,8 +525,9 @@
     border-top: 1px solid rgba(24, 223, 228, 0.12);
   }
 
-  .filterLabel {
-    min-width: 100%;
+  .weaponCard {
+    grid-template-columns: minmax(0, 1fr) 132px auto;
+    padding: var(--space-4);
   }
 }
 
@@ -590,4 +540,10 @@
   .weaponOutline {
     animation: none;
   }
+}
+
+/* Nella card dell'arma la categoria sta su una riga: con la spaziatura larga
+   "Fucile d'assalto" andava a capo. */
+.weaponCard .kicker {
+  letter-spacing: 0.06em;
 }

@@ -114,37 +114,30 @@ export const attachments: Attachment[] = [
   make("haebang-orc70", "Haebang ORC70", "muzzle"),
   make("mag-30", "Caricatore da 30 colpi", "magazine"),
   make("exp-u-turn", "EXP U-Turn", "stock"),
+  // Dalla foto dell'armaiolo di Dani (M4). La canna nello schermo e tagliata
+  // dopo "Highmark": e la canna pesante.
+  make("zlr-type-c-mini-reflex", "ZLR Type C Mini Reflex", "optic"),
+  make("highmark-heavy", "Canna Highmark (pesante)", "barrel"),
+  make("tzl-110-v1", "TZL-110 V1", "muzzle", "base", "Spegnifiamma"),
+  make("stock-removed", "Calcio rimosso", "stock"),
+  make("ammo-556-hv", "5,56 NATO alta velocità", "ammo"),
 ];
 
 // Gli slot ancora da scoprire: "pending:<slot>" in una build diventa una
 // card "Da confermare" con l'icona dello slot.
 export const pending = (slot: AttachmentSlot) => `pending:${slot}`;
 
-const WZ = "wzstats.gg · Versatile · multiplayer";
-const CM = "codmunity.gg · pro build · multiplayer";
 const CDL = "Screenshot del gruppo · CDL";
+const FOTO = "Foto dell'armaiolo";
 
+// Solo le build del gruppo: le due CDL dei primi screenshot e la M4 dalla
+// foto di Dani. Le build dei siti (codmunity, wzstats) erano troppe e non
+// erano nostre; le nuove arrivano da "Aggiungi build".
 export const builds: Build[] = [
-  { id: "m4-versatile", weaponId: "m4", title: "Versatile", playstyles: ["meta", "aggressive"], source: WZ,
-    attachmentIds: ["fss-is300", "fss-fireline-grip", "zlr-phase-grip", "zlr-asp50-stock", "sa-laz-500"] },
-  { id: "m4-pro", weaponId: "m4", title: "Pro", playstyles: ["meta", "longRange"], source: CM,
-    attachmentIds: ["xrk-mil-tac", "le-crosswind-18", "zlr-type-c-optic", "demo-dozer", "sa-laz-500"] },
+  { id: "m4-dani", weaponId: "m4", title: "Di Dani", playstyles: ["meta"], source: FOTO,
+    attachmentIds: ["zlr-type-c-mini-reflex", "highmark-heavy", "tzl-110-v1", "stock-removed", "ammo-556-hv"] },
   { id: "han-86-cdl", weaponId: "han-86", title: "CDL ranked", playstyles: ["meta", "longRange"], source: CDL,
     attachmentIds: ["zlr-type-c-optic", "corvus-lvl-40", "fss-tac90-grip", "xrk-justice-ii-grip", pending("stock")] },
-  { id: "han-86-pro", weaponId: "han-86", title: "Pro", playstyles: ["longRange"], source: CM,
-    attachmentIds: ["xrk-mil-tac", "sa-h86-465", "zlr-type-c-optic", "xrk-justice-ii-grip", "xrk-clutch-ls"] },
-  { id: "han-86-long", weaponId: "han-86", title: "Versatile", playstyles: ["longRange"], source: WZ,
-    attachmentIds: ["sz-prima-4-dot", "han-86-silenced-413", "fss-tac90-grip", "meiko-l9p-fold", "schlager-visiv-5"] },
   { id: "vel-46-cdl", weaponId: "vel-46", title: "CDL ranked", playstyles: ["meta", "closeRange"], source: CDL,
     attachmentIds: ["haebang-orc70", "vb-46-series-11", "lm-combat-grip", "mag-30", "exp-u-turn"] },
-  { id: "vel-46-pro", weaponId: "vel-46", title: "Pro", playstyles: ["meta", "closeRange", "aggressive"], source: CM,
-    attachmentIds: ["xrk-herder-40", "vb-46-series-11", "fss-fireline-grip", "v46-r-skel-grip", "xrk-clutch-ls"] },
-  { id: "vel-46-run", weaponId: "vel-46", title: "Versatile", playstyles: ["closeRange", "mobile"], source: WZ,
-    attachmentIds: ["fss-crackdown", "vb-46-series-11", "lm-combat-grip", "vel-46-extended", "schlager-visiv-5"] },
-  { id: "rezi-12-pro", weaponId: "rezi-12", title: "Pro", playstyles: ["closeRange", "aggressive"], source: CM,
-    attachmentIds: ["ftac-lts-707", "zlr-rogue-90", "xrk-bygone-39", "zlr-tac12-pro", "schlager-visiv-5"] },
-  { id: "kg-7-pro", weaponId: "kg-7-vulcan", title: "Pro", playstyles: ["longRange"], source: CM,
-    attachmentIds: ["ivanov-qr600", "tt-baem-12", "schlager-7x", "tt-type-40", "kt76-light-bolt"] },
-  { id: "finn-pro", weaponId: "finn-lmg", title: "Pro", playstyles: ["longRange"], source: CM,
-    attachmentIds: ["xrk-mil-tac", "ta-sustain-99", "sz-gen6-peq", "exp-bulldog-9", "xrk-singularity-13"] },
 ];
