@@ -993,7 +993,10 @@ function NavGlyph({ name }: { name: GlyphName }) {
           che si tiene. */}
       {name === "wallet" ? (
         <>
-          <path d="M4.6 8.1a2 2 0 0 1 2-2h9.6a2 2 0 0 1 2 2v0.9" />
+          {/* Il lembo dietro poggia sul tratto dritto del bordo (fra 5.8 e
+              18.2, dove finiscono gli angoli tondi): se tocca la curva, ne
+              esce un dentino. */}
+          <path d="M6.2 8.1a2 2 0 0 1 2-2h7.6a2 2 0 0 1 2 2" />
           <rect x="3.4" y="8.1" width="17.2" height="11.5" rx="2.4" />
           <path d="M20.6 12.6h-3.4a1.6 1.6 0 0 0 0 3.2h3.4" />
         </>
