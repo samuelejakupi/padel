@@ -10,7 +10,7 @@ import useCodGbs from "./useCodGbs";
 type Identity = { id: string; profile_id: string; nickname: string };
 const statusLabels = { pending: "In attesa di lettura", processing: "Lettura in corso", needs_review: "Da verificare", processed: "Registrata" };
 
-export function CodNickname({ viewerId }: { viewerId: string }) {
+export function CodNickname({ viewerId, open = false }: { viewerId: string; open?: boolean }) {
   const [nick, setNick] = useState("");
   const [aliases, setAliases] = useState<Identity[]>([]);
   const [busy, setBusy] = useState(false);
@@ -33,7 +33,7 @@ export function CodNickname({ viewerId }: { viewerId: string }) {
     }
     setBusy(false);
   }
-  return <details className="profile-password cod-nickname">
+  return <details className="profile-password cod-nickname" open={open || undefined}>
     <summary>Il mio nick Call of Duty</summary>
     <p>Inserisci il nick esatto che appare negli scoreboard, compreso #ID se visibile. Puoi aggiungere altri nick usati: quelli precedenti restano riconoscibili.</p>
     {aliases.length ? <ul>{aliases.map(alias => <li key={alias.id}>{alias.nickname}</li>)}</ul> : <p>Nessun nick associato.</p>}
@@ -145,7 +145,9 @@ export default function CodGaming({ viewerId, profiles, startWithForm = false }:
         <p>Carica lo scoreboard a fine partita: viene letto ogni notte alle 03:00 e finisce nella classifica della sua modalità.</p></div>
       <button className="button button-primary cta-new-match cta-aurora cod-add-gb" type="button" onClick={() => setShowForm(true)} disabled={!viewerId}>+ Carica GB</button>
     </div>
-    <CodNickname viewerId={viewerId} />
+    {/* Il nick si imposta una volta, nel profilo MW4. Qui torna solo quando
+        serve: una tua GB non si legge perche un nick non e associato. */}
+    {gbs.some(gb => gb.status === "needs_review" && gb.created_by === viewerId) ? <CodNickname viewerId={viewerId} open /> : null}
     <div className="cod-mode-tabs" role="group" aria-label="Modalità CDL">{Object.entries(codModes).map(([key, item]) => <button className="button button-ghost" type="button" key={key} aria-pressed={mode === key} onClick={() => setMode(key as CodMode)}>{item.label}</button>)}</div>
     {error ? <p role="alert">{error} <button className="button button-ghost" onClick={() => void load()}>Aggiorna</button></p> : null}
     {loading ? <p role="status">Caricamento GB…</p> : <div className="cod-gb-list">{shown.map(gb => {

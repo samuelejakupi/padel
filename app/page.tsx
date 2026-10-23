@@ -2617,6 +2617,25 @@ function MatchCard({
           {draw ? <em>PAREGGIO</em> : match.winner_team === rightSide ? <em>VITTORIA</em> : null}
         </div>
       </div>
+      {/* Su telefono "VITTORIA" accanto alla squadra non c'e: chi ha vinto
+          si legge qui, in parole, sotto i punteggi. */}
+      <p className="match-result-line">
+        {(() => {
+          const sets = decidedSets(match.sets ?? []);
+          const leftWins = sets.filter((set) => (leftSide === 1 ? set.team1_games > set.team2_games : set.team2_games > set.team1_games)).length;
+          const rightWins = sets.filter((set) => (leftSide === 1 ? set.team2_games > set.team1_games : set.team1_games > set.team2_games)).length;
+          if (draw) return <>Pareggio {leftWins}-{rightWins}</>;
+          const leftWon = match.winner_team === leftSide;
+          const winners = leftWon ? team1 : team2;
+          const viewerWon = winners.some((player) => player.profile_id === viewerId);
+          const others = winners.filter((player) => player.profile_id !== viewerId).map((player) => player.profile.display_name);
+          const names = others.length > 1 ? `${others.slice(0, -1).join(", ")} e ${others.at(-1)}` : others[0] ?? "";
+          const score = leftWon ? `${leftWins}-${rightWins}` : `${rightWins}-${leftWins}`;
+          return viewerWon
+            ? <><b>Hai vinto {score}</b>{names ? ` con ${names}` : ""}</>
+            : <><b>Vincono {names}</b> {score}</>;
+        })()}
+      </p>
       {compact ? null : (
       <div className="match-video">
         {videoId ? (
@@ -3618,6 +3637,29 @@ function rankingWindowStart(total: number, size: number, focusIndex: number) {
   return Math.max(0, Math.min(start, total - size));
 }
 
+// Di quante posizioni si e mosso ognuno negli ultimi sette giorni: la
+// classifica di una settimana fa si ricostruisce togliendo dal rating i
+// punti presi nelle partite di questi giorni. Positivo = posizioni guadagnate.
+// Chi una settimana fa non aveva ancora giocato non ha un prima: resta fuori.
+const RANK_MOVE_DAYS = 7;
+function rankMovements(sorted: Profile[], ranks: number[], matches: PadelMatch[]) {
+  const since = Date.now() - RANK_MOVE_DAYS * 864e5;
+  const recent = matches.filter((match) => new Date(match.played_at).getTime() >= since);
+  const before = sorted.map((profile) => {
+    const played = recent.filter((match) => match.players.some((player) => player.profile_id === profile.id));
+    const delta = played.reduce((sum, match) => sum + (match.players.find((player) => player.profile_id === profile.id)?.rating_delta ?? 0), 0);
+    return { ...profile, rating: profile.rating - delta, matches_played: profile.matches_played - played.length };
+  });
+  const beforeSorted = sortPadelProfiles(before).filter((profile) => profile.matches_played > 0);
+  const beforeRanks = padelRanks(beforeSorted);
+  const moves = new Map<string, number>();
+  sorted.forEach((profile, index) => {
+    const beforeIndex = beforeSorted.findIndex((item) => item.id === profile.id);
+    if (beforeIndex >= 0) moves.set(profile.id, beforeRanks[beforeIndex] - ranks[index]);
+  });
+  return moves;
+}
+
 function RankingList({
   profiles,
   expanded = false,
@@ -3625,9 +3667,13 @@ function RankingList({
   limit,
   focusId,
   showTrend = true,
+  trendMatches,
   bare = false,
 }: {
   profiles: Profile[];
+  // Le partite da cui ricavare chi e salito e chi e sceso in settimana.
+  // Senza (stagione archiviata) la colonna resta vuota.
+  trendMatches?: PadelMatch[];
   expanded?: boolean;
   onSelect?: (profile: Profile) => void;
   // Le frecce dicono come sta andando adesso: in una stagione archiviata non
@@ -3649,6 +3695,7 @@ function RankingList({
     ? 0
     : rankingWindowStart(sorted.length, limit, sorted.findIndex((profile) => profile.id === focusId));
   const visible = limit === undefined ? sorted : sorted.slice(start, start + limit);
+  const moves = showTrend && trendMatches ? rankMovements(sorted, ranks, trendMatches) : null;
   return (
     <div className={`${expanded ? "ranking-table" : "ranking-list"}${bare ? " ranking-table-bare" : ""}`}>
       {visible.map((profile, index) => {
@@ -3677,9 +3724,19 @@ function RankingList({
                 </span>
               </>
             ) : (
-              <span className={`trend ${showTrend && isRanked ? (profile.current_streak >= 0 ? "up" : "down") : ""}`}>
-                {showTrend ? (isRanked ? (profile.current_streak >= 0 ? "↑" : "↓") : "—") : ""}
-              </span>
+              (() => {
+                // Non la freccia della serie, ma di quanto ti sei mosso in
+                // classifica in settimana: "▲2", "▼1".
+                const move = moves?.get(profile.id);
+                // Fermo o senza un prima: niente segno, una colonna di "="
+                // non dice nulla.
+                if (!move) return <span className="trend" aria-hidden="true" />;
+                const label = move > 0 ? `${move} ${move === 1 ? "posizione guadagnata" : "posizioni guadagnate"} in settimana`
+                  : `${-move} ${move === -1 ? "posizione persa" : "posizioni perse"} in settimana`;
+                return <span className={`trend ${move > 0 ? "up" : "down"}`} title={label} aria-label={label}>
+                  {move > 0 ? `▲${move}` : `▼${-move}`}
+                </span>;
+              })()
             )}
             <span className="ranking-points">
               <b>{isRanked ? eloLabel(profile.rating) : "N/C"}</b>
@@ -8389,7 +8446,7 @@ function AppShell({ session }: { session: Session | null }) {
             </header>
             {rankingMode === "single" ? (
               <>
-                <RankingList profiles={seasonProfiles} onSelect={openPlayer} />
+                <RankingList profiles={seasonProfiles} onSelect={openPlayer} trendMatches={season === currentYear ? matches : undefined} />
                 <RankingHistoryChart profiles={seasonProfiles} matches={matches} awards={rankingAwards} season={season} compact={isPhone} />
               </>
             ) : rankedSeasonTeams.length ? (

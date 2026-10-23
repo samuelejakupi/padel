@@ -2995,9 +2995,13 @@ body:has(.hub-page) .desktop-nav button.active {
 .trend {
   align-items: center;
   display: flex;
-  font-size: 14px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
   justify-content: center;
+  white-space: nowrap;
 }
+
 
 .up,
 .positive {
@@ -3363,6 +3367,12 @@ button.ranking-row-link:focus-visible {
   color: var(--muted);
   content: " · ";
   font-weight: 400;
+}
+
+/* Chi ha vinto, in parole: solo su telefono (sotto i 780px), dove la
+   scritta VITTORIA accanto alla squadra non ci sta. */
+.match-result-line {
+  display: none;
 }
 
 .match-team em {
@@ -10185,6 +10195,19 @@ button.pizza-ranking-row {
 
   .match-team em {
     display: none;
+  }
+
+  .match-result-line {
+    color: var(--muted);
+    display: block;
+    font-size: 13px;
+    grid-column: 1 / -1;
+    margin: 0;
+    text-align: center;
+  }
+
+  .match-result-line b {
+    color: var(--ink);
   }
 
   .match-score {
