@@ -20,7 +20,8 @@ import WansportBoard from "./WansportBoard";
 import CashoutPage from "./Cashout";
 import AdminAccess from "./AdminUsers";
 import ProfilePassword from "./ProfilePassword";
-import CodGaming, { CodNickname } from "./CodGaming";
+import CodGaming from "./CodGaming";
+import CodProfile from "./CodProfile";
 import CodRanking from "./CodRanking";
 import CodMeta from "./CodMeta";
 import PlayerInsights from "./PlayerInsights";
@@ -38,7 +39,7 @@ type PadelView = "overview" | "ranking" | "matches" | "tournaments" | "player";
 // Pizza e Gaming hanno una pagina principale e una classifica. Cash Out usa
 // invece una sola area operativa con gruppi, spese e resoconti.
 type SectionView = "overview" | "ranking";
-type GamingView = "overview" | "mw4" | "mw4-meta" | "mw4-ranking";
+type GamingView = "overview" | "mw4" | "mw4-meta" | "mw4-ranking" | "mw4-profile";
 type PizzaRankingMode = "contemporary" | "classic" | "personal";
 type PizzaRankingEntry = {
   name: string;
@@ -7290,6 +7291,20 @@ function AppShell({ session }: { session: Session | null }) {
     setView("padel");
   }, [currentUserId]);
 
+  // Ogni sezione ha il suo profilo: nel Gaming quello del gioco, altrove la
+  // scheda Padel.
+  const isOwnProfile = isOwnCard || (view === "gaming" && gamingView === "mw4-profile");
+  const openProfile = useCallback(() => {
+    if (navSection !== "gaming") {
+      openOwnCard();
+      return;
+    }
+    setView("gaming");
+    setLastSection("gaming");
+    setGamingView("mw4-profile");
+    scrollPageTo(0, "instant" as ScrollBehavior);
+  }, [navSection, openOwnCard]);
+
   // Torna allo smistamento. Azzera anche l'ultima sezione: in home la barra
   // ha due voci sole, e senza azzerarlo resterebbero quelle della sezione da
   // cui si e usciti.
@@ -7395,7 +7410,7 @@ function AppShell({ session }: { session: Session | null }) {
   // Gaming mostra la classifica solo dentro il gioco selezionato.
   const navItems = useMemo(() => {
     const home = { key: "home", glyph: "home" as GlyphName, label: "Home", active: view === "home", select: goHome };
-    const profile = { key: "profile", glyph: "" as GlyphName, label: "Profilo", active: isOwnCard, select: openOwnCard };
+    const profile = { key: "profile", glyph: "" as GlyphName, label: "Profilo", active: isOwnProfile, select: openProfile };
     if (!navSection) return [home, profile];
     const meta = sectionMeta(navSection);
     if (navSection === "gaming") {
@@ -7454,7 +7469,7 @@ function AppShell({ session }: { session: Session | null }) {
       },
       profile,
     ];
-  }, [view, navSection, sectionView, gamingView, isPlayerCard, isOwnCard, openOwnCard, goHome, openSection, openSectionRanking]);
+  }, [view, navSection, sectionView, gamingView, isPlayerCard, isOwnProfile, openProfile, goHome, openSection, openSectionRanking]);
 
   const navActiveIndex = navItems.findIndex((item) => item.active);
 
@@ -7822,7 +7837,7 @@ function AppShell({ session }: { session: Session | null }) {
   function openMobileDestination(destination: MobileDestination) {
     if (destination === "home") goHome();
     if (destination === "section") openSection(navSection ?? "padel");
-    if (destination === "profile") openOwnCard();
+    if (destination === "profile") openProfile();
   }
 
   function clearPageMotion() {
@@ -7977,10 +7992,10 @@ function AppShell({ session }: { session: Session | null }) {
           ))}
         </nav>
         <button
-          className={`profile-chip ${isOwnCard ? "active" : ""}`}
-          onClick={openOwnCard}
+          className={`profile-chip ${isOwnProfile ? "active" : ""}`}
+          onClick={openProfile}
         >
-          <span><b>{currentUser.display_name}</b><small>Padel {currentRank ? `#${currentRank}` : "N/C"}</small></span>
+          <span><b>{currentUser.display_name}</b><small>{navSection === "gaming" ? "MW4" : `Padel ${currentRank ? `#${currentRank}` : "N/C"}`}</small></span>
           <Avatar profile={currentUser} size="sm" />
         </button>
       </header>
@@ -8960,7 +8975,9 @@ function AppShell({ session }: { session: Session | null }) {
               ? <CodMeta />
               : gamingView === "mw4-ranking"
                 ? <CodRanking profiles={profiles} />
-                : <CodGaming viewerId={session?.user.id ?? ""} profiles={profiles} />}
+                : gamingView === "mw4-profile" && currentUser
+                  ? <CodProfile profile={currentUser} avatar={<Avatar profile={currentUser} size="lg" />} />
+                  : <CodGaming viewerId={session?.user.id ?? ""} profiles={profiles} />}
           </>
         ) : null}
         {!loading && view === "cashout" ? (
@@ -9345,7 +9362,6 @@ function AppShell({ session }: { session: Session | null }) {
                 <button className="button button-primary" disabled={!supabase}>Salva modifiche</button>
               </div>
             </form>
-            <CodNickname viewerId={currentUser.id} />
             {session?.user.email ? <ProfilePassword account={{ id: session.user.id, email: session.user.email }} /> : null}
           </section>
         </div>
