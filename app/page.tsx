@@ -21,6 +21,7 @@ import CashoutPage from "./Cashout";
 import AdminAccess from "./AdminUsers";
 import ProfilePassword from "./ProfilePassword";
 import CodGaming, { CodNickname } from "./CodGaming";
+import CodMeta from "./CodMeta";
 import PlayerInsights from "./PlayerInsights";
 import { MatchFilterBar, MatchFormSteps } from "./PadelPresentation";
 import { filterMatchPeriod, filterMatchResults, type PeriodFilter, type ResultFilter } from "@/lib/padel-presentation";
@@ -36,7 +37,7 @@ type PadelView = "overview" | "ranking" | "matches" | "tournaments" | "player";
 // Pizza e Gaming hanno una pagina principale e una classifica. Cash Out usa
 // invece una sola area operativa con gruppi, spese e resoconti.
 type SectionView = "overview" | "ranking";
-type GamingView = "overview" | "mw4" | "mw4-ranking";
+type GamingView = "overview" | "mw4" | "mw4-meta" | "mw4-ranking";
 type PizzaRankingMode = "contemporary" | "classic" | "personal";
 type PizzaRankingEntry = {
   name: string;
@@ -846,7 +847,7 @@ function Avatar({
   );
 }
 
-type GlyphName = "home" | "ranking" | "racket" | "rackets" | "person" | "people" | "pizza" | "gamepad" | "wallet";
+type GlyphName = "home" | "ranking" | "racket" | "rackets" | "person" | "people" | "pizza" | "gamepad" | "wallet" | "crosshair";
 
 // La racchetta singola, riusata anche per la coppia.
 const RACKET_HEAD = "M9.6 16.2C7 15 5.3 12.4 5.3 9.4 5.3 5.7 8.3 2.7 12 2.7s6.7 3 6.7 6.7c0 3-1.7 5.6-4.3 6.8Z";
@@ -887,6 +888,13 @@ function NavGlyph({ name }: { name: GlyphName }) {
             <circle cx="9.7" cy="15.3" r="0.85" />
             <circle cx="13.7" cy="15.1" r="0.85" />
           </g>
+        </>
+      ) : null}
+      {name === "crosshair" ? (
+        <>
+          <circle cx="12" cy="12" r="7.6" />
+          <path d="M12 2.6v4.2M12 17.2v4.2M2.6 12h4.2M17.2 12h4.2" />
+          <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
         </>
       ) : null}
       {/* Podio: il gradino centrale è il più alto. */}
@@ -7407,6 +7415,10 @@ function AppShell({ session }: { session: Session | null }) {
         active: !isPlayerCard && gamingView === "mw4",
         select: () => selectGameView("mw4"),
       }, {
+        key: "mw4-meta", glyph: "crosshair" as GlyphName, label: "Meta",
+        active: !isPlayerCard && gamingView === "mw4-meta",
+        select: () => selectGameView("mw4-meta"),
+      }, {
         key: "mw4-ranking", glyph: "ranking" as GlyphName, label: "Classifica",
         active: !isPlayerCard && gamingView === "mw4-ranking",
         select: () => selectGameView("mw4-ranking"),
@@ -8941,7 +8953,9 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "gaming" && gamingView !== "overview" ? (
           <>
             <button className="button button-ghost gaming-back" type="button" onClick={() => openSection("gaming")}>← Tutti i giochi</button>
-            <CodGaming viewerId={session?.user.id ?? ""} profiles={profiles} ranking={gamingView === "mw4-ranking"} />
+            {gamingView === "mw4-meta"
+              ? <CodMeta />
+              : <CodGaming viewerId={session?.user.id ?? ""} profiles={profiles} ranking={gamingView === "mw4-ranking"} />}
           </>
         ) : null}
         {!loading && view === "cashout" ? (
