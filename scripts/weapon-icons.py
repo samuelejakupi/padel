@@ -12,6 +12,7 @@ SRC = ROOT / "scripts/weapon-sources"
 OUT = ROOT / "public/gaming/loadouts/weapons"
 CYAN = (24, 223, 228)
 SIZE, MARGIN = 1024, 70
+SS, OUTLINE = 4, 2  # sovracampionamento e spessore del contorno in px
 
 for path in sorted(SRC.glob("*.png")):
     im = Image.open(path).convert("RGBA")
@@ -25,9 +26,18 @@ for path in sorted(SRC.glob("*.png")):
     body = Image.merge("RGBA", (gray, gray, gray, alpha))
     canvas = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
     at = ((SIZE - im.width) // 2, (SIZE - im.height) // 2)
-    hard = Image.new("L", (SIZE, SIZE)); hard.paste(alpha.point(lambda a: 255 if a > 100 else 0), at)
+    # Contorno liscio: la maschera si lavora a 4x, si ammorbidisce, si allarga
+    # con un disco (non un quadrato, che fa gli scalini) e torna a 1x con
+    # l'antialiasing. A 1x il contorno usciva seghettato.
+    base = Image.new("L", (SIZE, SIZE)); base.paste(alpha, at)
+    big = np.array(base.resize((SIZE * SS, SIZE * SS), Image.BICUBIC), dtype=np.uint8)
+    big = cv2.GaussianBlur(big, (0, 0), SS * 0.9)
+    big = np.where(big > 110, 255, 0).astype(np.uint8)
+    ring = cv2.dilate(big, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * OUTLINE * SS + 1,) * 2))
+    ring = cv2.GaussianBlur(ring, (0, 0), SS * 0.6)
+    outline = Image.fromarray(ring).resize((SIZE, SIZE), Image.LANCZOS)
+    hard = Image.fromarray(big).resize((SIZE, SIZE), Image.LANCZOS)
     glow = hard.filter(ImageFilter.GaussianBlur(14)).point(lambda a: int(a * 0.55))
-    outline = hard.filter(ImageFilter.MaxFilter(5))
     canvas.paste(Image.new("RGBA", (SIZE, SIZE), CYAN + (255,)), (0, 0), glow)
     canvas.paste(Image.new("RGBA", (SIZE, SIZE), CYAN + (255,)), (0, 0), outline)
     canvas.alpha_composite(body, at)

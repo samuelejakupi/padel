@@ -21,25 +21,41 @@ for (const [id, category] of Object.entries(placeholders)) {
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 6 200 64"><path fill="#d3dbe1" d="${d}"/></svg>\n`);
 }
 
-// Icone degli slot: tratto chiaro su trasparente, stesso spessore per tutte.
+// Icone degli slot: disegno a due toni su griglia 64, tratto chiaro e
+// riempimento appena accennato, tutte con lo stesso spessore e la stessa
+// luce. Il pezzo e sempre visto di lato, come l'arma.
+const fill = 'fill="#d3dbe1" fill-opacity=".14"';
 const slotIcons: Record<string, string> = {
-  muzzle: '<rect x="10" y="26" width="34" height="12" rx="3"/><path d="M44 29h10v6H44M18 26v12M26 26v12M34 26v12"/>',
-  barrel: '<path d="M6 30h44v4H6z"/><rect x="48" y="26" width="10" height="12" rx="2"/><path d="M14 28v8M22 28v8"/>',
-  laser: '<rect x="12" y="24" width="24" height="16" rx="3"/><circle cx="20" cy="32" r="3"/><path d="M36 32h22" stroke-dasharray="3 3"/>',
-  optic: '<rect x="12" y="20" width="30" height="20" rx="4"/><circle cx="27" cy="30" r="5"/><path d="M27 30h.01M10 46h44M18 40v6M36 40v6"/>',
-  stock: '<path d="M8 26h18l26-6v24H40l-6-8H8z"/><path d="M36 26v6"/>',
-  underbarrel: '<path d="M10 16h44M26 16v8M38 16v8"/><path d="M26 24h12l-2 26h-8z"/><path d="M28 32h8M28 38h8"/>',
-  magazine: '<path d="M22 10h18l-2 20 6 24H26l-6-24z"/><path d="M24 20h14M25 32h15"/>',
-  rearGrip: '<path d="M18 14h24l-4 8 6 28H30l-6-26z"/><path d="M30 26l2 10"/>',
-  ammo: '<path d="M14 50V26l5-10 5 10v24zM28 50V26l5-10 5 10v24zM42 50V26l5-10 5 10v24z"/><path d="M14 42h10M28 42h10M42 42h10"/>',
-  comb: '<path d="M8 30h22l24-8v20H8z"/><path d="M20 22h16l-2 8H20z"/>',
-  bolt: '<rect x="10" y="26" width="30" height="12" rx="3"/><path d="M40 32h8v12h6"/><circle cx="54" cy="44" r="3"/>',
-  guard: '<path d="M8 24h48v16H8z"/><path d="M16 24v16M26 24v16M36 24v16M46 24v16"/>',
-  apex: '<path d="M32 8l22 24-22 24-22-24z"/><path d="M32 20l10 12-10 12-10-12z"/>',
+  // Silenziatore: corpo cilindrico, anelli e innesto filettato.
+  muzzle: `<rect x="14" y="24" width="34" height="16" rx="4" ${fill}/><path d="M22 24v16M30 24v16M38 24v16"/><path d="M48 28h6v8h-6M8 30h6v4H8z"/>`,
+  // Canna: tubo lungo con blocco del gas e volata.
+  barrel: `<path d="M6 30h46v4H6z" ${fill}/><rect x="30" y="26" width="8" height="12" rx="1.5" ${fill}/><path d="M52 27h6v10h-6z"/><path d="M14 34v3M20 34v3"/>`,
+  // Laser: scatola con lente, attacco a slitta e raggio.
+  laser: `<rect x="10" y="22" width="26" height="16" rx="3" ${fill}/><circle cx="31" cy="30" r="3"/><path d="M14 38v4h18v-4M16 26h8"/><path d="M38 30h20" stroke-dasharray="2 3"/>`,
+  // Ottica red dot: cappuccio, vetro e punto, sopra la slitta.
+  optic: `<path d="M14 40V26a6 6 0 0 1 6-6h20a6 6 0 0 1 6 6v14z" ${fill}/><path d="M22 26v10M38 26v10"/><circle cx="30" cy="31" r="1.6" fill="#d3dbe1"/><path d="M10 40h44v5H10z"/>`,
+  // Calcio telescopico: tubo, corpo e calciolo.
+  stock: `<path d="M6 28h16v6H6z"/><path d="M22 24h20l14-4v26l-8 2H40l-6-6H22z" ${fill}/><path d="M48 22v26M30 30h8"/>`,
+  // Impugnatura verticale agganciata alla slitta.
+  underbarrel: `<path d="M8 14h48v6H8z"/><path d="M24 20h16l-2 30a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4z" ${fill}/><path d="M27 30h10M27 36h10M27 42h10"/>`,
+  // Caricatore curvo con fondello.
+  magazine: `<path d="M22 8h18l-1 18q1 14 7 26H26q-6-12-5-26z" ${fill}/><path d="M24 50h24v6H24zM25 18h14M25 30h15"/>`,
+  // Impugnatura a pistola inclinata, con zigrinatura.
+  rearGrip: `<path d="M16 12h26l-3 8 7 30a3 3 0 0 1-3 4H32a3 3 0 0 1-3-2l-7-28z" ${fill}/><path d="M33 26l3 14M38 25l3 14"/>`,
+  // Tre cartucce: bossolo e ogiva.
+  ammo: `<g ${fill}><path d="M12 54V28l5-12 5 12v26zM27 54V28l5-12 5 12v26zM42 54V28l5-12 5 12v26z"/></g><path d="M12 28h10M27 28h10M42 28h10M12 48h10M27 48h10M42 48h10"/>`,
+  // Poggiaguancia: il rialzo sopra il calcio.
+  comb: `<path d="M6 32h22l26-6v20H6z" ${fill}/><path d="M22 22h20v8H22zM26 30v2M38 30v-2"/>`,
+  // Otturatore: corpo, leva e pomello.
+  bolt: `<rect x="8" y="24" width="34" height="12" rx="3" ${fill}/><path d="M42 30h6l4 10"/><circle cx="53" cy="44" r="4" ${fill}/><path d="M16 24v12"/>`,
+  // Guardia / pompa: manicotto con scanalature.
+  guard: `<rect x="8" y="22" width="48" height="20" rx="4" ${fill}/><path d="M16 26v12M24 26v12M32 26v12M40 26v12M48 26v12"/>`,
+  // Apex: il simbolo a rombo dell'arma trasformata.
+  apex: `<path d="M32 6l24 26-24 26L8 32z" ${fill}/><path d="M32 18l12 14-12 14-12-14z"/><circle cx="32" cy="32" r="2" fill="#d3dbe1"/>`,
 };
 for (const [slot, body] of Object.entries(slotIcons)) {
   fs.writeFileSync(new URL(`attachments/${slot}.svg`, root),
-    `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 64 64" fill="none" stroke="#d3dbe1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${body}</svg>\n`);
+    `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 64 64" fill="none" stroke="#d3dbe1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${body}</svg>\n`);
 }
 
 // PNG: la sagoma ripassata con un contorno ciano sottile e un glow leggero,
