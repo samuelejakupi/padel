@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
 import { supabase, type Profile } from "@/lib/supabase";
-import { codModes, codModeStatKeys, codRanking, compressScoreboard, type CodGb, type CodMode } from "@/lib/cod-gb";
+import { codModes, codModeStatKeys, compressScoreboard, type CodMode } from "@/lib/cod-gb";
+
+import useCodGbs from "./useCodGbs";
 
 type Identity = { id: string; profile_id: string; nickname: string };
 const statusLabels = { pending: "In attesa · prossima lettura notturna", processing: "Lettura scoreboard in corso", needs_review: "Da verificare", processed: "Risultato registrato" };
@@ -123,26 +125,11 @@ function GbForm({ onClose, onSaved, profiles, viewerId }: { onClose: () => void;
   </div>;
 }
 
-export default function CodGaming({ viewerId, profiles, ranking }: { viewerId: string; profiles: Profile[]; ranking: boolean }) {
-  const [gbs, setGbs] = useState<CodGb[]>([]);
+export default function CodGaming({ viewerId, profiles }: { viewerId: string; profiles: Profile[] }) {
+  const { gbs, loading, error, setError, load } = useCodGbs();
   const [mode, setMode] = useState<CodMode>("hardpoint");
   const [showForm, setShowForm] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [retrying, setRetrying] = useState(false);
-  const load = useCallback(async () => {
-    if (!supabase) return;
-    const { data, error: queryError } = await supabase.from("cod_gbs").select("id,created_by,mode,map_name,played_at,status,review_note,image_count,photos_deleted_at,team1_score,team2_score,players").order("played_at", { ascending: false });
-    setError(queryError ? "Impossibile caricare le GB. Riprova." : "");
-    if (!queryError) setGbs((data ?? []) as CodGb[]);
-    setLoading(false);
-  }, []);
-  useEffect(() => {
-    const refresh = () => { void load(); };
-    const timer = window.setTimeout(refresh, 0);
-    window.addEventListener("focus", refresh);
-    return () => { window.clearTimeout(timer); window.removeEventListener("focus", refresh); };
-  }, [load]);
   async function retry(id: string) {
     if (!supabase || retrying) return;
     setRetrying(true);
@@ -151,19 +138,15 @@ export default function CodGaming({ viewerId, profiles, ranking }: { viewerId: s
     setRetrying(false);
   }
   const name = (id: string) => profiles.find(p => p.id === id)?.display_name ?? "Giocatore";
-  const rows = codRanking(gbs, mode);
   return <section className="page-section cod-page">
-    <div className="cod-page-head"><div><p className="eyebrow dark">CALL OF DUTY · MW4</p><h1>{ranking ? "Classifica MW4" : "Le nostre GB"}</h1></div></div>
+    <div className="cod-page-head"><div><p className="eyebrow dark">CALL OF DUTY · MW4</p><h1>Le nostre GB</h1></div></div>
     <button className="button button-primary cod-add-gb" type="button" onClick={() => setShowForm(true)} disabled={!viewerId}>+ Aggiungi GB</button>
     <p>Scoreboard elaborati ogni notte alle 03:00. Le statistiche vengono divise per modalità.</p>
-    {!ranking ? <CodNickname viewerId={viewerId} /> : null}
+    <CodNickname viewerId={viewerId} />
     <div className="cod-mode-tabs" aria-label="Modalità CDL">{Object.entries(codModes).map(([key, item]) => <button className="button button-ghost" key={key} aria-pressed={mode === key} onClick={() => setMode(key as CodMode)}>{item.label}</button>)}</div>
     <p className="cod-stat-note">{codModes[mode].stats.join(" · ")} · Uccisioni · Morti · K/D · Danni</p>
     {error ? <p role="alert">{error} <button className="button button-ghost" onClick={() => void load()}>Aggiorna</button></p> : null}
-    {loading ? <p role="status">Caricamento GB…</p> : ranking ? <>
-      <p>Ordine per vittorie, poi K/D complessivo. Sono incluse solo le GB elaborate. “—” indica un dato non leggibile.</p>
-      {rows.length ? <div className="cod-table-wrap"><table className="cod-table"><caption>{codModes[mode].label}</caption><thead><tr>{["Giocatore", "GB", "Vittorie", "Uccisioni", "Morti", "K/D", "Danni", ...codModes[mode].stats].map(h => <th key={h}>{h}</th>)}</tr></thead><tbody>{rows.map(row => <tr key={row.profileId}><th scope="row">{name(row.profileId)}</th><td>{row.games}</td><td>{row.wins}</td><td>{row.kills}</td><td>{row.deaths}</td><td>{row.deaths ? (row.kills / row.deaths).toFixed(2) : row.kills ? "∞" : "—"}</td><td>{row.damage ?? "—"}</td>{(mode === "hardpoint" ? [row.hill_seconds, row.objective_kills] : mode === "search_destroy" ? [row.plants, row.defuses, row.first_bloods] : [row.overloads, row.carries, row.objective_kills]).map((stat, i) => <td key={i}>{stat ?? "—"}</td>)}</tr>)}</tbody></table></div> : <div className="empty-board"><h2>Nessuna GB elaborata</h2><p>La classifica di {codModes[mode].label} si popolerà dopo la lettura degli scoreboard.</p></div>}
-    </> : <div className="cod-gb-list">{gbs.filter(g => g.mode === mode).map(gb => <article className="cod-gb-card" key={gb.id}><div><h2>{gb.map_name}</h2><small>{new Date(gb.played_at).toLocaleString("it-IT")} · {gb.image_count ? `${gb.image_count} foto${gb.photos_deleted_at ? " · eliminate dopo elaborazione" : ""}` : "Inserita a mano"}</small></div><p className="cod-status">{statusLabels[gb.status]}</p>{gb.status === "processed" ? <><strong>{gb.team1_score} – {gb.team2_score}</strong><ul>{gb.players.filter(p => p.profile_id).map(p => <li key={p.profile_id}>{name(p.profile_id!)} · {p.kills} U / {p.deaths} M</li>)}</ul></> : null}{gb.review_note ? <p>{gb.review_note}</p> : null}{gb.status === "needs_review" && gb.created_by === viewerId ? <button className="button button-ghost" disabled={retrying} onClick={() => void retry(gb.id)}>Ho aggiornato il nick: riprova</button> : null}</article>)}{!gbs.some(g => g.mode === mode) && !error ? <div className="empty-board"><h2>Nessuna GB caricata</h2><p>Aggiungi gli scoreboard di una partita {codModes[mode].label}.</p></div> : null}</div>}
+    {loading ? <p role="status">Caricamento GB…</p> : <div className="cod-gb-list">{gbs.filter(g => g.mode === mode).map(gb => <article className="cod-gb-card" key={gb.id}><div><h2>{gb.map_name}</h2><small>{new Date(gb.played_at).toLocaleString("it-IT")} · {gb.image_count ? `${gb.image_count} foto${gb.photos_deleted_at ? " · eliminate dopo elaborazione" : ""}` : "Inserita a mano"}</small></div><p className="cod-status">{statusLabels[gb.status]}</p>{gb.status === "processed" ? <><strong>{gb.team1_score} – {gb.team2_score}</strong><ul>{gb.players.filter(p => p.profile_id).map(p => <li key={p.profile_id}>{name(p.profile_id!)} · {p.kills} U / {p.deaths} M</li>)}</ul></> : null}{gb.review_note ? <p>{gb.review_note}</p> : null}{gb.status === "needs_review" && gb.created_by === viewerId ? <button className="button button-ghost" disabled={retrying} onClick={() => void retry(gb.id)}>Ho aggiornato il nick: riprova</button> : null}</article>)}{!gbs.some(g => g.mode === mode) && !error ? <div className="empty-board"><h2>Nessuna GB caricata</h2><p>Aggiungi gli scoreboard di una partita {codModes[mode].label}.</p></div> : null}</div>}
     {showForm ? <GbForm onClose={() => setShowForm(false)} onSaved={load} profiles={profiles} viewerId={viewerId} /> : null}
   </section>;
 }

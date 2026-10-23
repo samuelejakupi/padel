@@ -21,6 +21,7 @@ import CashoutPage from "./Cashout";
 import AdminAccess from "./AdminUsers";
 import ProfilePassword from "./ProfilePassword";
 import CodGaming, { CodNickname } from "./CodGaming";
+import CodRanking from "./CodRanking";
 import CodMeta from "./CodMeta";
 import PlayerInsights from "./PlayerInsights";
 import { MatchFilterBar, MatchFormSteps } from "./PadelPresentation";
@@ -8957,7 +8958,9 @@ function AppShell({ session }: { session: Session | null }) {
             <button className="button button-ghost gaming-back" type="button" onClick={() => openSection("gaming")}>← Tutti i giochi</button>
             {gamingView === "mw4-meta"
               ? <CodMeta />
-              : <CodGaming viewerId={session?.user.id ?? ""} profiles={profiles} ranking={gamingView === "mw4-ranking"} />}
+              : gamingView === "mw4-ranking"
+                ? <CodRanking profiles={profiles} />
+                : <CodGaming viewerId={session?.user.id ?? ""} profiles={profiles} />}
           </>
         ) : null}
         {!loading && view === "cashout" ? (
@@ -8974,6 +8977,12 @@ function AppShell({ session }: { session: Session | null }) {
            il JSX, perche in CSS non c'e modo di sapere quante sono. */
         style={{ "--nav-count": navItems.length } as CSSProperties}
         onPointerDown={(event) => {
+          // Nei giochi il click nativo collega direttamente la voce alla pagina:
+          // il riconoscimento del trascinamento non deve selezionare un'altra voce.
+          if (navSection === "gaming") {
+            navPointerStart.current = null;
+            return;
+          }
           navPointerStart.current = event.clientX;
           navPointerKey.current = (event.target as Element).closest<HTMLButtonElement>("button[data-nav-key]")?.dataset.navKey ?? null;
           navDragging.current = false;
@@ -9015,7 +9024,7 @@ function AppShell({ session }: { session: Session | null }) {
             data-nav-key={item.key}
             aria-current={item.active ? "page" : undefined}
             className={item.active ? "active" : ""}
-            onClick={(event) => { if (event.detail === 0) selectNavItem(index); }}
+            onClick={(event) => { if (navSection === "gaming" || event.detail === 0) selectNavItem(index); }}
           >
             <span className="mobile-nav-icon">
               {item.key === "profile"
