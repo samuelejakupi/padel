@@ -2254,6 +2254,27 @@ body:has(.hub-page) .desktop-nav button.active {
   transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
+/* Su uno schermo largo le quattro sezioni stanno in una fila sola: in due
+   file restavano larghe come mezzo schermo e vuote a destra. In colonna:
+   icona, nome, stato. */
+@media (min-width: 1100px) {
+  .hub-cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .hub-card {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-5);
+    min-height: 240px;
+    padding: var(--space-7);
+  }
+
+  .hub-card .hub-card-title {
+    font-size: 36px;
+  }
+}
+
 .hub-card-copy {
   display: flex;
   flex-direction: column;
@@ -7347,15 +7368,12 @@ button.podium-person {
   margin-top: var(--space-1);
 }
 
-/* Sotto la testata, sul fondo scuro: il podio e le serate prima. Righe di
-   vetro, il numero a destra; l'oro e la sola tinta piena. */
+/* Sotto la card scura, sul fondo chiaro: il podio e le serate prima.
+   Righe bianche col filo, il numero a destra; l'oro e la sola tinta piena. */
 .pizza-overview-block {
-  color: var(--white);
   display: grid;
   gap: var(--space-3);
   margin-top: var(--space-6);
-  position: relative;
-  z-index: 1;
 }
 
 .pizza-overview-head {
@@ -7375,7 +7393,7 @@ button.podium-person {
 }
 
 .pizza-overview-head .text-link {
-  color: var(--lime);
+  color: var(--blue-deep);
   font-size: 13px;
   min-height: 44px;
   padding: 0;
@@ -7393,8 +7411,8 @@ button.podium-person {
 .pizza-podium li,
 .pizza-night-list li {
   align-items: center;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--white);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   display: flex;
   gap: var(--space-4);
@@ -7420,13 +7438,13 @@ button.podium-person {
 }
 
 .pizza-night-list small {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
   font-size: 13px;
 }
 
 .pizza-podium-position {
   align-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--line);
   border-radius: 50%;
   display: flex;
   flex: 0 0 auto;
@@ -7455,7 +7473,7 @@ button.podium-person {
 }
 
 .pizza-podium-score small {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
   font-size: 13px;
   font-weight: 700;
   margin-left: 2px;
@@ -7677,13 +7695,20 @@ button.podium-person {
   overflow-x: auto;
 }
 
+/* Posizione, pizzeria (con la barra e i quattro voti sotto) e totale.
+   Le quattro colonne dei voti non ci sono piu: dicevano gli stessi numeri
+   della barra colorata. */
 .pizza-board-head,
 .pizza-ranking-row {
   align-items: center;
   display: grid;
   gap: 12px;
-  grid-template-columns: 42px minmax(220px, 1fr) repeat(4, 66px) 82px;
-  min-width: 720px;
+  grid-template-columns: 42px minmax(0, 1fr) 96px;
+}
+
+.pizza-board-head span:nth-child(n + 3):not(:last-child),
+.pizza-ranking-row > .pizza-category-score {
+  display: none;
 }
 
 .pizza-board-head {
@@ -7883,9 +7908,28 @@ button.pizza-ranking-row {
   background: var(--criterion-color);
 }
 
-/* La riga dei quattro voti: solo su telefono, dove le colonne non ci sono. */
+/* La riga dei quattro voti sotto la barra, su desktop e su telefono. */
 .pizza-criteria-line {
-  display: none;
+  color: var(--ink-soft);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 13px;
+  gap: 4px 18px;
+  margin-top: 8px;
+}
+
+.pizza-criteria-line > span::before {
+  background: var(--criterion-color);
+  border-radius: 50%;
+  content: "";
+  display: inline-block;
+  height: 8px;
+  margin-right: 5px;
+  width: 8px;
+}
+
+.pizza-criteria-line b {
+  font-variant-numeric: tabular-nums;
 }
 
 
@@ -7930,7 +7974,8 @@ button.pizza-ranking-row {
 
 /* La classifica sotto la testata scura, sul fondo chiaro della pagina. */
 .pizza-ranking-body {
-  margin-top: var(--space-6);
+  margin: var(--space-6) auto 0;
+  max-width: 960px;
 }
 
 .pizza-ranking-body .pizza-board {
@@ -12622,3 +12667,45 @@ ul.cashout-settlement-history {
 .cod-emblems-available summary { cursor: pointer; font-weight: 700; min-height: 44px; padding-block: 12px; }
 .profile-password form { margin-top: var(--space-5); }
 .profile-password .form-message { color: var(--ink); }
+
+/* Scheda di un altro giocatore: tu e lui, contro e in coppia. Due righe
+   bianche come i numeri sopra; le vinte in verde, le perse in rosso. */
+.player-versus {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.player-versus li {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-5);
+}
+
+.player-versus small {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.player-versus b {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.player-versus .player-versus-none {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+@media (max-width: 480px) {
+  .player-versus {
+    grid-template-columns: 1fr;
+  }
+}

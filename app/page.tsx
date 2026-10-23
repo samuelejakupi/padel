@@ -8520,6 +8520,36 @@ function AppShell({ session }: { session: Session | null }) {
               { label: "Perse", value: selectedPlayer.losses },
               { label: "Serie", value: selectedPlayer.current_streak > 0 ? `+${selectedPlayer.current_streak}` : selectedPlayer.current_streak, tone: selectedPlayer.current_streak > 0 ? "up" : selectedPlayer.current_streak < 0 ? "down" : undefined },
             ]} />
+            {/* Nella scheda di un altro: tu e lui, contro e in coppia. E la
+                prima cosa che si va a cercare aprendo la scheda di un amico. */}
+            {!isOwnCard && session ? (() => {
+              const viewerId = session.user.id;
+              const shared = matches.filter((match) => !match.is_friendly
+                && match.players.some((player) => player.profile_id === viewerId)
+                && match.players.some((player) => player.profile_id === selectedPlayer.id));
+              const teamOf = (match: PadelMatch, id: string) => match.players.find((player) => player.profile_id === id)?.team;
+              const against = shared.filter((match) => teamOf(match, viewerId) !== teamOf(match, selectedPlayer.id));
+              const together = shared.filter((match) => teamOf(match, viewerId) === teamOf(match, selectedPlayer.id));
+              const won = (list: PadelMatch[]) => list.filter((match) => match.winner_team === teamOf(match, viewerId)).length;
+              const lost = (list: PadelMatch[]) => list.filter((match) => match.winner_team !== 0 && match.winner_team !== teamOf(match, viewerId)).length;
+              const name = selectedPlayer.display_name;
+              return (
+                <ul className="player-versus" aria-label={`Tu e ${name}`}>
+                  <li>
+                    <small>Contro {name}</small>
+                    {against.length
+                      ? <b><span className="up">{won(against)} {won(against) === 1 ? "vinta" : "vinte"}</span> · <span className="down">{lost(against)} {lost(against) === 1 ? "persa" : "perse"}</span></b>
+                      : <b className="player-versus-none">Mai giocato contro</b>}
+                  </li>
+                  <li>
+                    <small>In coppia con {name}</small>
+                    {together.length
+                      ? <b>{together.length} {together.length === 1 ? "partita" : "partite"} · {won(together)} {won(together) === 1 ? "vinta" : "vinte"}</b>
+                      : <b className="player-versus-none">Mai in coppia</b>}
+                  </li>
+                </ul>
+              );
+            })() : null}
             </div>
 
             <section className="player-trophies">
@@ -8814,7 +8844,8 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
             ) : null}
 
-            {/* Senza votazioni aperte la pagina non resta vuota: il podio delle
+          </section>
+            {/* Sotto la card scura, sul fondo della pagina: il podio delle
                 pizzerie e le serate prima dell'ultima (quella e gia nel titolo). */}
             {pizzaEntries.some((item) => !item.pending) ? (
               <section className="pizza-overview-block" aria-labelledby="pizza-podium-title">
@@ -8849,7 +8880,7 @@ function AppShell({ session }: { session: Session | null }) {
                 </ul>
               </section>
             ) : null}
-          </section></>
+          </>
         ) : null}
 
         {!loading && view === "pizza" && !sectionProfile && pizzaView === "ranking" ? (
