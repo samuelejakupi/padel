@@ -110,7 +110,7 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(pizzaMigration, /result_price \* 10/);
   assert.match(pizzaMigration, /delete_open_pizza_session/);
   assert.match(page, /VOTO MEDIO ATTUALE/);
-  assert.match(page, /0–10 · peso 7\/31/);
+  assert.match(page, /conta il 23%/);
   assert.match(trophyImageMigration, /trophies\/coppa-theboyz\.png/);
   assert.match(page, /tournamentVictoryDate/);
   assert.match(page, /trophy_image_path/);

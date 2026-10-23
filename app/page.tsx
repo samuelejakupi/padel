@@ -4268,6 +4268,11 @@ function NewMatchModal({
   // Lo stesso conteggio che poi finisce nel salvataggio: qui serve solo a
   // dire come sta finendo la partita mentre la si scrive.
   const preview = readMatchScore(scores);
+  // I nomi di una squadra del modulo ("Dani · Samu"), per le colonne dei set.
+  const teamLabelOf = (team: number) => {
+    const names = players.slice(team * 2, team * 2 + 2).map((id) => profiles.find((profile) => profile.id === id)?.display_name).filter(Boolean);
+    return names.length ? names.join(" · ") : `Squadra ${team + 1}`;
+  };
 
   function showMatchStep(next: 1 | 2) {
     window.clearTimeout(jumpTimer.current);
@@ -4659,7 +4664,9 @@ function NewMatchModal({
             {/* Le quattro colonne dell'intestazione sono le stesse delle righe,
                 trattino compreso: con tre sole, le due etichette non stavano
                 sopra ai campi che nominavano. */}
-            <span>SET</span><span>SQUADRA 1</span><span aria-hidden="true" /><span>SQUADRA 2</span>
+            {/* Le colonne portano i nomi: "Squadra 1" costringeva a ricordare
+                chi era finito dove al passo prima. */}
+            <span>SET</span><span>{teamLabelOf(0)}</span><span aria-hidden="true" /><span>{teamLabelOf(1)}</span>
             {scores.map((score, index) => index === 2 && preview.finishedInTwo ? null : (
               <div className="set-row" key={index}>
                 <b>{index + 1}</b>
@@ -4679,15 +4686,20 @@ function NewMatchModal({
                       // 6 in un 7 vuol dire riscriverlo, non infilare una cifra
                       // accanto a quella che c'e gia.
                       onFocus={(e) => e.currentTarget.select()}
-                      aria-label={`Giochi squadra ${teamIndex + 1} set ${index + 1}`}
+                      aria-label={`Giochi di ${teamLabelOf(teamIndex)} nel set ${index + 1}`}
                     />
                   </Fragment>
                 ))}
               </div>
             ))}
           </div> : null}
-          {!randomTeams && preview.finishedInTwo ? (
-            <p className="match-verdict"><b>Partita conclusa 2-0</b> · non serve il terzo set.</p>
+          {/* Chi vince, in parole, mentre si scrivono i set: un 6-4 invertito
+              per sbaglio si vede qui prima di salvarlo. */}
+          {!randomTeams && preview.valid && !preview.draw ? (
+            <p className="match-verdict">
+              <b>Vincono {teamLabelOf(preview.team1Sets > preview.team2Sets ? 0 : 1).replace(" · ", " e ")} {Math.max(preview.team1Sets, preview.team2Sets)}-{Math.min(preview.team1Sets, preview.team2Sets)}</b>
+              {preview.finishedInTwo ? " · non serve il terzo set." : null}
+            </p>
           ) : null}
           {/* L'esito si legge da solo dal tabellone, ma un pareggio nasce da
               un set lasciato a metà: scritto qui sopra al tasto, un 2-1
@@ -5225,12 +5237,12 @@ function PizzaVoteModal({
         {open && participant ? (
           <form onSubmit={submit}>
             <div className="pizza-score-fields">
-              <PizzaScoreField label="Location" caption="0–10 · peso 7/31" value={scores.location} onChange={(value) => updateScore("location", value)} />
-              <PizzaScoreField label="Pizza" caption="0–10 · peso 10/31" value={scores.pizza} onChange={(value) => updateScore("pizza", value)} />
-              <PizzaScoreField label="Dolce" caption="0–10 · peso 4/31" value={scores.dessert} onChange={(value) => updateScore("dessert", value)} />
-              <PizzaScoreField label="Prezzo" caption="0–10 · peso 10/31" value={scores.price} onChange={(value) => updateScore("price", value)} />
+              <PizzaScoreField label="Location" caption="conta il 23%" value={scores.location} onChange={(value) => updateScore("location", value)} />
+              <PizzaScoreField label="Pizza" caption="conta il 32%" value={scores.pizza} onChange={(value) => updateScore("pizza", value)} />
+              <PizzaScoreField label="Dolce" caption="conta il 13%" value={scores.dessert} onChange={(value) => updateScore("dessert", value)} />
+              <PizzaScoreField label="Prezzo" caption="conta il 32%" value={scores.price} onChange={(value) => updateScore("price", value)} />
               {viewerIsFabio ? (
-                <PizzaScoreField label="Bonus Fabio" caption="0–7" max={7} value={scores.bonus_fabio} onChange={(value) => updateScore("bonus_fabio", value)} />
+                <PizzaScoreField label="Bonus Fabio" caption="da 0 a 7" max={7} value={scores.bonus_fabio} onChange={(value) => updateScore("bonus_fabio", value)} />
               ) : null}
             </div>
             <div className="pizza-current-average" aria-live="polite">
@@ -5239,16 +5251,18 @@ function PizzaVoteModal({
             </div>
             {error ? <p className="form-message error">{error}</p> : null}
             <div className="modal-actions">
-              {canDelete ? (
-                <button type="button" className="button button-danger" onClick={() => void removeSession()} disabled={busy || deleting}>
-                  {deleting ? "Eliminazione…" : "Elimina votazione"}
-                </button>
-              ) : null}
               <button type="button" className="button button-ghost" onClick={onClose}>Chiudi</button>
               <button className="button button-primary" disabled={busy || deleting}>
                 {busy ? "Salvataggio…" : hasVoted ? "Aggiorna il voto" : "Vota"}
               </button>
             </div>
+            {/* Eliminare sta in fondo e in piccolo: prima era un tasto rosso
+                pieno sopra a "Vota", a un pollice dal toccarlo per sbaglio. */}
+            {canDelete ? (
+              <button type="button" className="text-link pizza-delete-session" onClick={() => void removeSession()} disabled={busy || deleting}>
+                {deleting ? "Eliminazione…" : "Elimina questa votazione"}
+              </button>
+            ) : null}
           </form>
         ) : open ? (
           <p className="demo-profile-note">Non sei tra i partecipanti di questa votazione.</p>
@@ -5286,7 +5300,7 @@ function PizzaVoteModal({
           </div>
         ) : (
           <p className="demo-profile-note">
-            Risultato nascosto: mancano {missingVotes} {missingVotes === 1 ? "voto" : "voti"} su {voteSession.participants.length}.
+            Il risultato si vede quando hanno votato tutti: {missingVotes === 1 ? "manca 1 voto" : `mancano ${missingVotes} voti`} su {voteSession.participants.length}.
           </p>
         )}
       </section>
