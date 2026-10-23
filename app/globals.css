@@ -889,13 +889,14 @@
   --pizza-yellow: #f0b82d;
   --pizza-blue: #5978d9;
 
-  /* Un colore per sezione, usato dalle card della home. Tutti presi da tinte
-     che esistono gia: il verde del Cashout e quello dei guadagni schiarito,
-     perche il testo scuro sopra resti leggibile. */
+  /* Un colore per sezione, usato dalle card della home. Tutti accesi e tutti
+     impastati da tinte che esistono gia: l'arancio della Pizza viene dal
+     rosso e dal giallo, il verde del Cashout da quello dei guadagni col lime.
+     Il testo scuro sopra resta leggibile su tutti e quattro. */
   --section-padel: var(--lime);
-  --section-pizza: var(--pizza-yellow);
+  --section-pizza: color-mix(in srgb, var(--danger) 45%, var(--pizza-yellow));
   --section-gaming: var(--blue);
-  --section-cashout: color-mix(in srgb, var(--positive) 62%, var(--white));
+  --section-cashout: color-mix(in srgb, var(--positive) 65%, var(--lime));
 
   /* Angoli. Quattro gradini, non uno in più. */
   --radius-sm: 4px;   /* chip, etichette, badge di serie */

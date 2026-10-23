@@ -30,9 +30,9 @@ Ogni sezione ha un colore fisso, usato dalle card della home:
 | Variabile | Valore |
 |---|---|
 | `--section-padel` | `--lime` |
-| `--section-pizza` | `--pizza-yellow` |
+| `--section-pizza` | `--danger` + `--pizza-yellow` (arancio) |
 | `--section-gaming` | `--blue` |
-| `--section-cashout` | `--positive` schiarito col bianco |
+| `--section-cashout` | `--positive` + `--lime` (verde acceso) |
 
 Per le tinte intermedie ci sono i **veli**, cioè il blu scuro a bassa opacità:
 
