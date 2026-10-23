@@ -15,8 +15,10 @@ function Filter<T extends string>({ label, value, options, onChange }: {
 }) {
   return <div className={styles.filter} role="group" aria-label={label}>
     <span className={styles.filterLabel}>{label}</span>
-    <button type="button" className="button button-ghost" aria-pressed={value === null} onClick={() => onChange(null)}>Tutti</button>
-    {options.map(option => <button key={option.key} type="button" className="button button-ghost" aria-pressed={value === option.key} onClick={() => onChange(value === option.key ? null : option.key)}>{option.label}</button>)}
+    <div className={styles.filterOptions}>
+      <button type="button" className="button button-ghost" aria-pressed={value === null} onClick={() => onChange(null)}>Tutti</button>
+      {options.map(option => <button key={option.key} type="button" className="button button-ghost" aria-pressed={value === option.key} onClick={() => onChange(value === option.key ? null : option.key)}>{option.label}</button>)}
+    </div>
   </div>;
 }
 

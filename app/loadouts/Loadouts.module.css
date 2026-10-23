@@ -57,6 +57,8 @@
 .filters {
   display: grid;
   gap: var(--space-3);
+  /* minmax(0, …): senza, la riga che scorre allarga tutta la colonna. */
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .filter {
@@ -81,6 +83,33 @@
   min-height: 44px;
   min-width: 44px;
   padding-inline: var(--space-4);
+}
+
+.filterOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Su telefono le voci di ogni filtro stanno su una riga sola che scorre di
+   lato, sotto l'etichetta: tre gruppi che vanno a capo occupavano mezzo
+   schermo prima della prima arma. */
+@media (max-width: 780px) {
+  .filterOptions {
+    flex-wrap: nowrap;
+    min-width: 0;
+    overflow-x: auto;
+    width: 100%;
+    scrollbar-width: none;
+  }
+
+  .filterOptions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter button {
+    flex: 0 0 auto;
+  }
 }
 
 .filter button[aria-pressed="true"] {
@@ -257,14 +286,14 @@
   align-items: center;
   display: grid;
   gap: var(--space-3);
-  grid-template-columns: 74px 1fr 46px;
+  grid-template-columns: 96px 1fr 40px;
 }
 
 .statLabel {
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.72);
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 

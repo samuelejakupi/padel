@@ -28,13 +28,13 @@ test('la classifica vuota è distinta dal registro e dal caricamento GB', () => 
   const html = render();
   assert.match(html, /<h1>Classifica MW4<\/h1>/);
   assert.match(html, /Classifica Hardpoint ancora vuota/);
-  assert.doesNotMatch(html, /Aggiungi GB|Le nostre GB|cod-gb-list|Scoreboard elaborati|Il mio nick/);
+  assert.doesNotMatch(html, /Carica GB|Le nostre GB|cod-gb-list|Scoreboard elaborati|Il mio nick/);
 });
 test('il caricamento mostra la classifica e non una pagina GB', () => {
   snapshot = { ...snapshot, loading: true };
   const html = render();
   assert.match(html, /Caricamento classifica/);
-  assert.doesNotMatch(html, /Caricamento GB|Aggiungi GB|Le nostre GB/);
+  assert.doesNotMatch(html, /Caricamento GB|Carica GB|Le nostre GB/);
 });
 test('i risultati compaiono come righe della classifica senza card partita', () => {
   snapshot = { ...snapshot, loading: false, gbs: [{ mode: 'hardpoint', status: 'processed', team1_score: 250, team2_score: 150, players: [{ profile_id: 'a', team: 1, kills: 20, deaths: 10, damage: 1500, hill_seconds: 90, objective_kills: 3 }] }] };
@@ -42,5 +42,5 @@ test('i risultati compaiono come righe della classifica senza card partita', () 
   assert.match(html, /<table/);
   assert.match(html, /Giocatore A/);
   assert.match(html, /2\.00/);
-  assert.doesNotMatch(html, /cod-gb-card|Aggiungi GB/);
+  assert.doesNotMatch(html, /cod-gb-card|Carica GB/);
 });

@@ -96,7 +96,7 @@ export default function CodProfile({ profile, avatar }: { profile: Profile; avat
           return <li key={gb.id}>
             <b data-result={result ?? undefined}>{result ?? "–"}</b>
             <span><strong>{gb.map_name}</strong><small>{codModes[gb.mode].label} · {new Date(gb.played_at).toLocaleDateString("it-IT")}</small></span>
-            <span className={styles.line}>{gb.team1_score}–{gb.team2_score}<small>{player.kills} U / {player.deaths} M</small></span>
+            <span className={styles.line}>{gb.team1_score}–{gb.team2_score}<small>{player.kills} kill · {player.deaths} morti</small></span>
           </li>;
         })}
       </ol> : <div className="empty-board"><h2>Nessuna GB giocata</h2><p>Le tue partite compariranno qui dopo la registrazione dei risultati.</p></div>}

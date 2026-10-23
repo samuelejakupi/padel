@@ -164,6 +164,23 @@
   margin-block: var(--space-6) var(--space-3);
 }
 
+/* Le modalita su una riga che scorre, come i filtri della Meta. */
+@media (max-width: 780px) {
+  .cod-mode-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .cod-mode-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cod-mode-tabs button {
+    flex: 0 0 auto;
+  }
+}
+
 .cod-mode-tabs button[aria-pressed="true"] {
   background: var(--ink);
   color: var(--lime);
@@ -1918,7 +1935,7 @@ form select:focus {
   background: var(--white);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  color: var(--blue);
+  color: var(--blue-deep);
   display: inline-block;
   font-size: 12px;
   margin: 4px;
@@ -6791,7 +6808,7 @@ button.podium-person {
 .elo-axis-label,
 .elo-date-label {
   fill: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
 }
 

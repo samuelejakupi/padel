@@ -25,6 +25,7 @@ import CodProfile from "./CodProfile";
 import CabinetMarquee from "./CabinetMarquee";
 import CodRanking from "./CodRanking";
 import CodMeta from "./CodMeta";
+import useCodGbs from "./useCodGbs";
 import PlayerInsights from "./PlayerInsights";
 import { MatchFilterBar, MatchFormSteps } from "./PadelPresentation";
 import { filterMatchPeriod, filterMatchResults, type PeriodFilter, type ResultFilter } from "@/lib/padel-presentation";
@@ -7523,6 +7524,13 @@ function AppShell({ session }: { session: Session | null }) {
   const hubLastMatch = matches.find((match) => match.players.some((player) => player.profile_id === viewerHubId));
   // Il saldo Cashout di chi guarda, per dirlo in parole sulla card della home.
   const hubCashout = useCashoutSummary(viewerHubId, profiles);
+  // E l'ultima GB giocata, per dire "vittoria su Skyline" invece dello slogan.
+  const { gbs: hubGbs } = useCodGbs();
+  const hubGbsToCheck = hubGbs.filter((gb) => gb.status === "needs_review" && gb.created_by === viewerHubId).length;
+  const hubLastGb = hubGbs.find((gb) => gb.status === "processed" && gb.players.some((player) => player.profile_id === viewerHubId));
+  const hubLastGbTeam = hubLastGb?.players.find((player) => player.profile_id === viewerHubId)?.team;
+  const hubLastGbResult = !hubLastGb || hubLastGb.team1_score === null || hubLastGb.team2_score === null || hubLastGb.team1_score === hubLastGb.team2_score ? "pareggio"
+    : (hubLastGbTeam === 1) === (hubLastGb.team1_score > hubLastGb.team2_score) ? "vittoria" : "sconfitta";
   const hubStatus: Record<Section, string> = {
     padel: hubMe?.matches_played
       ? [`#${currentRank} · ${eloLabel(hubMe.rating)} Elo`, hubLastMatch ? lastPlayedLabel(hubLastMatch.played_at) : ""]
@@ -7531,7 +7539,8 @@ function AppShell({ session }: { session: Session | null }) {
     pizza: pendingPizzaVotes.length
       ? `${pendingPizzaVotes.length} ${pendingPizzaVotes.length === 1 ? "votazione da fare" : "votazioni da fare"}`
       : pizzaEntries[0] ? `In testa: ${pizzaEntries[0].name}` : "",
-    gaming: "",
+    gaming: hubGbsToCheck ? `${hubGbsToCheck} GB da verificare`
+      : hubLastGb ? `Ultima GB: ${hubLastGbResult} su ${hubLastGb.map_name}` : "",
     cashout: hubCashout.loading || !hubCashout.groups.length ? ""
       : hubCashout.net < -0.005 ? `Devi ${formatMoney(hubCashout.net)}`
         : hubCashout.net > 0.005 ? `Ti devono ${formatMoney(hubCashout.net)}` : "Sei in pari",
@@ -8140,9 +8149,9 @@ function AppShell({ session }: { session: Session | null }) {
                     </p>
                   </div>
                   <div className="hero-kpis">
-                    <span><b>{currentRank ? eloLabel(currentUser.rating) : "N/C"}</b><small>ELO PT</small></span>
-                    <span><b>{winRate}%</b><small>WIN RATE</small></span>
-                    <span><b>{currentUser.current_streak > 0 ? currentUser.current_streak : 0}</b><small>WIN STREAK</small></span>
+                    <span><b>{currentRank ? eloLabel(currentUser.rating) : "N/C"}</b><small>Elo</small></span>
+                    <span><b>{winRate}%</b><small>Vittorie</small></span>
+                    <span><b>{currentUser.current_streak > 0 ? `+${currentUser.current_streak}` : currentUser.current_streak}</b><small>Serie</small></span>
                   </div>
                 </article>
 
@@ -8748,11 +8757,6 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
             ) : null}
 
-            {openPizzaSessions.length ? null : (
-              <p className="pizza-no-sessions">
-                Nessuna votazione aperta.
-              </p>
-            )}
 
           </section></>
         ) : null}
@@ -8898,7 +8902,7 @@ function AppShell({ session }: { session: Session | null }) {
                 setGamingView("mw4");
                 scrollPageTo(0, "instant" as ScrollBehavior);
               }}>+ Carica GB</button>
-              <button className="button button-lime cta-new-match cta-aurora" type="button" onClick={() => {
+              <button className="button button-card" type="button" onClick={() => {
                 setGamingAction("build");
                 setGamingView("mw4-meta");
                 scrollPageTo(0, "instant" as ScrollBehavior);

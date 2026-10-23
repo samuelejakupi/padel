@@ -96,7 +96,7 @@ function GbForm({ onClose, onSaved, profiles, viewerId }: { onClose: () => void;
   }
   return <div className="modal-backdrop">
     <section className="modal cod-gb-modal" role="dialog" aria-modal="true" aria-labelledby="cod-gb-title">
-      <div className="modal-head"><h2 id="cod-gb-title">Aggiungi GB</h2><button className="icon-button" type="button" aria-label="Chiudi" disabled={busy} onClick={onClose}>×</button></div>
+      <div className="modal-head"><h2 id="cod-gb-title">Carica GB</h2><button className="icon-button" type="button" aria-label="Chiudi" disabled={busy} onClick={onClose}>×</button></div>
       <div className="cod-mode-tabs" role="group" aria-label="Metodo di inserimento"><button type="button" className="button button-ghost" aria-pressed={method === "photo"} disabled={busy} onClick={() => setMethod("photo")}>Da foto</button><button type="button" className="button button-ghost" aria-pressed={method === "manual"} disabled={busy} onClick={() => setMethod("manual")}>A mano</button></div>
       <p>{method === "photo" ? "Carica da 1 a 4 foto della stessa partita: risultato finale e scoreboard completi di entrambe le squadre." : "Inserisci il risultato finale e le statistiche dei giocatori. La classifica si aggiorna subito. Associa prima il tuo nick COD."}</p>
       <form onSubmit={event => void submit(event)}>
@@ -143,7 +143,7 @@ export default function CodGaming({ viewerId, profiles, startWithForm = false }:
     <div className="cod-page-head cod-gb-head">
       <div><p className="eyebrow dark">CALL OF DUTY · MW4</p><h1 id="cod-gb-title">Le nostre GB</h1>
         <p>Carica lo scoreboard a fine partita: viene letto ogni notte alle 03:00 e finisce nella classifica della sua modalità.</p></div>
-      <button className="button button-primary cta-new-match cta-aurora cod-add-gb" type="button" onClick={() => setShowForm(true)} disabled={!viewerId}>+ Aggiungi GB</button>
+      <button className="button button-primary cta-new-match cta-aurora cod-add-gb" type="button" onClick={() => setShowForm(true)} disabled={!viewerId}>+ Carica GB</button>
     </div>
     <CodNickname viewerId={viewerId} />
     <div className="cod-mode-tabs" role="group" aria-label="Modalità CDL">{Object.entries(codModes).map(([key, item]) => <button className="button button-ghost" type="button" key={key} aria-pressed={mode === key} onClick={() => setMode(key as CodMode)}>{item.label}</button>)}</div>
@@ -166,7 +166,7 @@ export default function CodGaming({ viewerId, profiles, startWithForm = false }:
           </p>
           <div className="cod-teams">{[1, 2].map(team => <ul key={team} aria-label={`Squadra ${team}`}>
             {gb.players.filter(p => p.team === team && p.profile_id).map(p => <li key={p.profile_id} data-me={p.profile_id === viewerId || undefined}>
-              <span>{name(p.profile_id!)}</span><small>{p.kills} U / {p.deaths} M</small>
+              <span>{name(p.profile_id!)}</span><small>{p.kills} kill · {p.deaths} morti</small>
             </li>)}
           </ul>)}</div>
         </> : null}
