@@ -54,9 +54,10 @@ export default function CashoutProfile({ profile, profiles, avatar, onOpenGroup,
     <ProfileHeader eyebrow="Cashout · profilo" name={profile.display_name} avatar={avatar} onEdit={onEdit}
       pill={summary.loading ? "Caricamento…" : settled ? "Sei in pari con tutti" : net > 0 ? <>Ti devono <b>{formatMoney(net)}</b></> : <>Devi <b>{formatMoney(net)}</b></>}>
       <StatRow dark stats={[
-        { label: "Saldo", value: summary.loading ? "—" : `${net > 0.005 ? "+" : net < -0.005 ? "−" : ""}${formatMoney(net)}`, tone: net > 0.005 ? "up" : net < -0.005 ? "down" : undefined },
+        // Il saldo e gia nella pastiglia: qui le due meta che lo compongono.
+        { label: "Da ricevere", value: summary.loading ? "—" : formatMoney(summary.owed) },
+        { label: "Da dare", value: summary.loading ? "—" : formatMoney(summary.owe) },
         { label: "Anticipato", value: summary.loading ? "—" : formatMoney(summary.advanced) },
-        { label: "Gruppi", value: summary.loading ? "—" : summary.groups.length },
       ]} />
     </ProfileHeader>
 

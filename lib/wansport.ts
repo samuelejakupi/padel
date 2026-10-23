@@ -171,5 +171,9 @@ export async function leggiTabellone(club: string, giorno: string): Promise<Esit
       : { stato: "errore" };
   }
 
+  // Una risposta senza l'elenco dei campi (funzione aggiornata a meta, centro
+  // cambiato) diventa un errore raccontato, non una pagina che si rompe.
+  if (!Array.isArray(data.campi) || data.campi.some((campo) => !Array.isArray(campo?.slot))) return { stato: "errore" };
+
   return { stato: "ok", tabellone: data };
 }

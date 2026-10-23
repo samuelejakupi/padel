@@ -67,7 +67,8 @@ export default function PizzaProfile({ profile, avatar, sessions, votes, restaur
     <ProfileHeader eyebrow="Pizza · profilo" name={profile.display_name} avatar={avatar} onEdit={onEdit}
       pill={attended.length ? <><b>{attended.length}</b> {attended.length === 1 ? "serata" : "serate"} con il gruppo</> : "Nessuna serata ancora"}>
       <StatRow dark stats={[
-        { label: "Serate", value: attended.length },
+        // Le serate sono gia nella pastiglia: qui le pizzerie diverse provate.
+        { label: "Pizzerie", value: best.size },
         { label: "Voti dati", value: mine.length },
         { label: "Voto medio", value: one(myAverage), unit: "/10" },
       ]} />

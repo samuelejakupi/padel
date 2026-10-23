@@ -4587,7 +4587,7 @@ function NewMatchModal({
                         aria-label={`Giocatore ${position + 1} squadra ${team}`}
                         disabled={Boolean(tournamentContext || completingPlanned)}
                       >
-                        <option value="">Player {position + 1}</option>
+                        <option value="">Giocatore {position + 1}</option>
                         {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.display_name}</option>)}
                       </select>
                     );
@@ -4956,7 +4956,7 @@ function PizzaSessionCreateModal({
       <section className="modal pizza-vote-modal" role="dialog" aria-modal="true" aria-labelledby="pizza-create-title">
         <div className="modal-head">
           <div>
-            <p className="eyebrow dark">NUOVA VOTAZIONE</p>
+            <p className="eyebrow dark">PIZZA NIGHT</p>
             <h2 id="pizza-create-title">Nuova votazione</h2>
           </div>
           <button className="icon-button" onClick={onClose} aria-label="Chiudi">×</button>
@@ -5822,7 +5822,7 @@ function TournamentFormModal({
                         onChange={(event) => updateTeam(index, key, event.target.value)}
                         aria-label={`Giocatore ${position + 1} squadra ${teamLetter(index)}`}
                       >
-                        <option value="">Player {position + 1}</option>
+                        <option value="">Giocatore {position + 1}</option>
                         {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.display_name}</option>)}
                       </select>
                     ))}
@@ -9343,9 +9343,8 @@ function AppShell({ session }: { session: Session | null }) {
               <label>Email<input value={session?.user.email ?? ""} disabled /></label>
               {supabase ? null : <p className="demo-profile-note">Il profilo diventa modificabile dopo il collegamento a Supabase.</p>}
               <div className="modal-actions">
-                {supabase ? (
-                  <button type="button" className="signout-button" onClick={() => void supabase?.auth.signOut()}>Logout</button>
-                ) : null}
+                {/* "Esci" sta in fondo al profilo, non qui: accanto a "Salva" si
+                    toccava per sbaglio. */}
                 <button type="button" className="button button-ghost" onClick={() => setShowProfileEdit(false)}>Annulla</button>
                 <button className="button button-primary" disabled={!supabase}>Salva modifiche</button>
               </div>

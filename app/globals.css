@@ -7825,10 +7825,11 @@ button.pizza-ranking-row {
 
 .pizza-name-cell > small {
   color: var(--muted);
-  font-size: 12px;
-  letter-spacing: 0.8px;
+  font-size: 13px;
   margin-top: 3px;
-  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* L'indirizzo apre la mappa: e un link, e deve potersi toccare. La riga
@@ -10273,7 +10274,7 @@ button.pizza-ranking-row {
   }
 
   .pizza-ranking-page .pizza-info-trigger {
-    min-height: 34px;
+    min-height: 44px;
     padding-inline: 11px;
   }
 
@@ -10420,12 +10421,13 @@ button.pizza-ranking-row {
     display: none;
   }
 
+  /* Due per riga: in colonna i quattro voti allungavano ogni card. */
   .pizza-criteria-line {
     color: var(--ink-soft);
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
     font-size: 13px;
-    gap: 4px 12px;
+    gap: 4px 16px;
+    grid-template-columns: repeat(2, max-content);
     margin-top: 8px;
   }
 
@@ -11118,6 +11120,7 @@ button.pizza-ranking-row {
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.6px;
+  min-height: 44px;
   padding: var(--space-2) var(--space-4);
   text-transform: uppercase;
   transition: background 160ms ease, color 160ms ease, scale 160ms ease;
