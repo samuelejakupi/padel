@@ -2192,7 +2192,14 @@ form select:focus {
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.9)) padding-box,
     conic-gradient(from var(--a), var(--blue), var(--lime), var(--blue), var(--lime), var(--blue)) border-box;
   border: 2px solid transparent;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 12px 32px rgba(24, 223, 228, 0.18);
+  /* L'alone azzurro-lime dei tasti del Padel, piu forte perche qui il fondo
+     e scuro. Lo spread negativo lo tiene sotto la card e non ai lati: la
+     card successiva, che viene dopo, ci passa sopra e lo copre, quindi
+     l'alone non finisce mai sopra a un altro tasto. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 16px 30px -12px rgba(24, 223, 228, 0.6),
+    0 20px 36px -16px rgba(239, 255, 0, 0.38);
   border-radius: var(--radius);
   color: var(--ink);
   cursor: pointer;
@@ -7771,57 +7778,12 @@ button.pizza-ranking-row {
   position: relative;
 }
 
-/* Coperchio circolare sopra la foto: invisibile finché non si passa sopra,
-   ma sempre cliccabile, così su touch basta toccare la foto. */
-.photo-button {
+/* Foto e tasto per cambiarla, in cima alla scheda "Dati del profilo". */
+.profile-edit-photo {
   align-items: center;
-  background: rgba(11, 27, 44, 0.62);
-  border: 0;
-  border-radius: 50%;
-  color: var(--white);
-  cursor: pointer;
   display: flex;
-  font-size: 11px;
-  font-weight: 900;
-  inset: 0;
-  justify-content: center;
-  letter-spacing: 0.4px;
-  opacity: 0;
-  padding: 0;
-  position: absolute;
-  text-align: center;
-  text-transform: uppercase;
-  transition: opacity 160ms ease;
-}
-
-.profile-photo:hover .photo-button,
-.photo-button:focus-visible {
-  opacity: 1;
-}
-
-/* Su touch non esiste l'hover. Prima il velo restava sempre sopra la foto
-   e la scritta copriva l'iniziale: ora e un'etichetta appesa sotto
-   all'avatar, che lascia la faccia libera e si tocca bene col pollice. */
-@media (hover: none) {
-  .photo-button {
-    background: var(--ink);
-    border: 2px solid var(--white);
-    border-radius: var(--radius-pill);
-    bottom: -14px;
-    font-size: 10px;
-    left: 50%;
-    min-height: 32px;
-    opacity: 1;
-    padding: 0 var(--space-4);
-    right: auto;
-    top: auto;
-    transform: translateX(-50%);
-    white-space: nowrap;
-  }
-}
-
-.photo-button input {
-  display: none;
+  gap: var(--space-5);
+  margin-bottom: var(--space-5);
 }
 
 /* Scelta della foto: da file oppure da indirizzo web. */
@@ -10850,6 +10812,52 @@ button.pizza-ranking-row {
    sovrascritta. */
 .mobile-nav:has(button:active) .mobile-nav-pill {
   scale: 0.92;
+}
+
+/* La home sul telefono sta in uno schermo: saluto in alto, barra in basso, e
+   le quattro card si dividono in parti uguali lo spazio che resta, qualunque
+   sia l'altezza del telefono. .content e alta 100dvh e il suo padding tiene
+   gia conto della barra in vetro. Testo e icone scalano con l'altezza, cosi
+   su un telefono basso la card resta ordinata invece di tagliarsi. Sta in
+   fondo al file per vincere anche sulle misure del blocco sotto i 520px. */
+@media (max-width: 780px) {
+  .app-shell-hub .hub-page {
+    height: 100%;
+  }
+
+  .app-shell-hub .hub-cards {
+    flex: 1 1 auto;
+    gap: 12px;
+    grid-template-rows: repeat(4, minmax(76px, 1fr));
+    min-height: 0;
+  }
+
+  .app-shell-hub .hub-card {
+    min-height: 0;
+    padding-block: var(--space-3);
+  }
+
+  .app-shell-hub .hub-card-title {
+    font-size: clamp(24px, 4.4dvh, 34px);
+  }
+
+  .app-shell-hub .hub-card-icon {
+    height: clamp(48px, 9dvh, 84px);
+    width: clamp(48px, 9dvh, 84px);
+  }
+
+  .app-shell-hub .hub-card-icon .nav-glyph {
+    height: clamp(38px, 7dvh, 66px);
+    width: clamp(38px, 7dvh, 66px);
+  }
+
+  /* Su schermi bassi la spiegazione non va oltre due righe. */
+  .app-shell-hub .hub-card-copy small {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

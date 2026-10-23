@@ -94,10 +94,14 @@
   outline-offset: 2px;
 }
 
-/* Card scure, stesso fondo del riquadro "La tua posizione" del Padel. */
+/* Card scure come il riquadro "La tua posizione" del Padel, con sopra la
+   griglia della home: un foglio blueprint su cui sta l'arma. Stesso passo
+   (34px) e stessa tinta delle righe del fondo della home. */
 .weaponCard,
 .buildCard {
   background:
+    linear-gradient(rgba(24, 223, 228, 0.07) 1px, transparent 1px) 0 0 / 34px 34px,
+    linear-gradient(90deg, rgba(24, 223, 228, 0.07) 1px, transparent 1px) 0 0 / 34px 34px,
     radial-gradient(circle at 78% 30%, rgba(24, 223, 228, 0.16), transparent 40%),
     linear-gradient(135deg, var(--ink), var(--ink-soft));
   border: 2px solid transparent;

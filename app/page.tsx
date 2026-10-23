@@ -8414,11 +8414,6 @@ function AppShell({ session }: { session: Session | null }) {
                   <div className="hero-player">
                     <div className="profile-photo">
                       <Avatar profile={selectedPlayer} size="xl" rank={selectedPlayerRank || undefined} />
-                      {isOwnCard && supabase ? (
-                        <button className="photo-button" type="button" onClick={() => setShowAvatarPicker(true)}>
-                          Cambia foto
-                        </button>
-                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -9230,6 +9225,13 @@ function AppShell({ session }: { session: Session | null }) {
                 <h2 id="profile-edit-title">Dati del profilo</h2>
               </div>
               <button className="icon-button" onClick={() => setShowProfileEdit(false)} aria-label="Chiudi">×</button>
+            </div>
+            {/* La foto si cambia da qui, con gli altri dati del profilo: sopra
+                l'avatar della scheda la scritta copriva la faccia. */}
+            <div className="profile-edit-photo">
+              <Avatar profile={currentUser} size="lg" />
+              <button type="button" className="button button-ghost" disabled={!supabase}
+                onClick={() => { setShowProfileEdit(false); setShowAvatarPicker(true); }}>Cambia foto</button>
             </div>
             <form onSubmit={(event) => { void updateProfile(event); setShowProfileEdit(false); }}>
               <label>Nome in classifica<input value={profileName || currentUser.display_name} onChange={(e) => setProfileName(e.target.value)} disabled={!supabase} /></label>
