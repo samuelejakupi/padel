@@ -117,8 +117,12 @@
   max-width: 560px;
 }
 
-.cod-add-gb {
-  min-height: 48px;
+/* Su desktop resta il tasto principale della pagina, come su telefono:
+   prima era un tastino nascosto in fondo a destra. */
+.button.cod-add-gb {
+  font-size: 18px;
+  min-height: 60px;
+  min-width: 260px;
   padding-inline: var(--space-7);
 }
 
@@ -12806,4 +12810,41 @@ ul.cashout-settlement-history {
 button.button.tournament-add-team {
   height: auto;
   min-height: 44px;
+}
+
+/* Accesso: il tasto per vedere la password sta dentro al campo, a destra. */
+.login-password {
+  display: block;
+  position: relative;
+}
+
+.login-password input {
+  padding-right: 96px;
+  width: 100%;
+}
+
+.login-password-toggle {
+  background: transparent;
+  border: 0;
+  color: var(--blue-deep);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Desktop: le pagine fatte di righe (saldi di un gruppo, scheda di un
+   giocatore, GB) stanno in una colonna centrale. Larghe 1400px avevano il
+   nome a un capo dello schermo e l'importo all'altro. */
+.cashout-detail-page,
+.player-detail-page,
+.cod-page:not(.cod-ranking-page) {
+  margin-inline: auto;
+  max-width: 960px;
+  width: 100%;
 }

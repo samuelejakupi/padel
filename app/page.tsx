@@ -1082,10 +1082,16 @@ function BlockMark({ size = "md" }: { size?: "md" | "lg" }) {
   );
 }
 
+// L'ultimo nome con cui si e entrati da questo telefono: la volta dopo e gia
+// scelto. Mai un nome a caso preimpostato: chi non lo cambiava provava a
+// entrare come qualcun altro.
+const LAST_LOGIN_KEY = "theboyz:ultimo-accesso";
+
 function LoginScreen() {
-  const [username, setUsername] = useState("samu");
+  const [username, setUsername] = useState("");
   const [loginUsers, setLoginUsers] = useState(() => groupUsers.map(name => ({ username: name.toLowerCase(), display_name: name })));
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -1094,12 +1100,19 @@ function LoginScreen() {
     if (supabase) void supabase.rpc("list_login_users").then(({ data, error }) => {
       if (active && !error && data?.length) setLoginUsers(data);
     });
-    return () => { active = false; };
+    const timer = window.setTimeout(() => {
+      try {
+        const last = window.localStorage.getItem(LAST_LOGIN_KEY);
+        if (last && active) setUsername(last);
+      } catch { /* senza memoria del telefono si sceglie a mano */ }
+    }, 0);
+    return () => { active = false; window.clearTimeout(timer); };
   }, []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!supabase) return;
+    if (!username) return setMessage("Scegli il tuo nome.");
     setBusy(true);
     setMessage("");
 
@@ -1108,6 +1121,8 @@ function LoginScreen() {
 
     if (result.error) {
       setMessage("Nome o password non corretti.");
+    } else {
+      try { window.localStorage.setItem(LAST_LOGIN_KEY, username); } catch { /* niente da ricordare */ }
     }
     setBusy(false);
   }
@@ -1138,20 +1153,28 @@ function LoginScreen() {
                 onChange={(event) => setUsername(event.target.value)}
                 required
               >
+                <option value="" disabled>Chi sei?</option>
                 {loginUsers.map((user) => <option key={user.username} value={user.username}>{user.display_name}</option>)}
               </select>
             </label>
             <label>
               Password
-              <input type="password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Almeno 6 caratteri" required />
+              <span className="login-password">
+                <input type={showPassword ? "text" : "password"} minLength={6} value={password} onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password" autoCapitalize="none" autoCorrect="off" spellCheck={false} required />
+                <button type="button" className="login-password-toggle" onClick={() => setShowPassword((current) => !current)}
+                  aria-pressed={showPassword} aria-label={showPassword ? "Nascondi la password" : "Mostra la password"}>
+                  {showPassword ? "Nascondi" : "Mostra"}
+                </button>
+              </span>
             </label>
-            {message ? <p className="form-message">{message}</p> : null}
+            {message ? <p className="form-message" role="alert">{message}</p> : null}
             <button className="button button-primary button-full" disabled={busy}>
               {busy ? "Un momento…" : "Entra in TheBoyz"}
             </button>
           </form>
         </div>
-        <p className="login-footer">Accesso protetto da Supabase · Solo per TheBoyz</p>
+        <p className="login-footer">Password dimenticata? Chiedila a un admin del gruppo.</p>
       </section>
     </main>
   );
@@ -5311,6 +5334,11 @@ function PizzaVoteModal({
 type TournamentTrophyKind = Tournament["trophy_badge"];
 type TournamentTrophyChoice = "none" | "theboyz" | "monkey";
 
+// I percorsi restano quelli salvati nel database (.png); a schermo va la
+// versione WebP accanto, 40-80 KB invece di 2 MB.
+function trophyImageSrc(path: string) {
+  return `${basePath}/${path.replace(/^trophies\/(.+)\.png$/, "trophies/$1.webp")}`;
+}
 const THEBOYZ_TROPHY_PATH = "trophies/coppa-theboyz.png";
 const MONKEY_TROPHY_PATH = "trophies/scimmia-padel-banana.png";
 const MONKEY_SILVER_MEDAL_PATH = "trophies/medaglia-scimmia-argento.png";
@@ -5372,7 +5400,7 @@ function TournamentTrophyBadge({ kind, compact = false }: { kind: TournamentTrop
 function TournamentAwardImage({ path, compact = false, alt = "" }: { path: string; compact?: boolean; alt?: string }) {
   return <Image
     className={`tournament-trophy-image${compact ? " is-compact" : ""}`}
-    src={`${basePath}/${path}`}
+    src={trophyImageSrc(path)}
     alt={alt}
     width={compact ? 34 : 86}
     height={compact ? 44 : 112}
@@ -5397,7 +5425,7 @@ function TournamentTrophyVisual({
   return tournament.trophy_image_path ? (
     <Image
       className={`tournament-trophy-image${compact ? " is-compact" : ""}`}
-      src={`${basePath}/${tournament.trophy_image_path}`}
+      src={trophyImageSrc(tournament.trophy_image_path)}
       alt=""
       width={compact ? 34 : 86}
       height={compact ? 44 : 112}
@@ -6015,7 +6043,7 @@ function TournamentTrophyTile({
       {imagePath ? (
         <Image
           className="trophy-room-image"
-          src={`${basePath}/${imagePath}`}
+          src={trophyImageSrc(imagePath)}
           alt={ghost ? "" : `${prizeLabel} del ${tournament.name}`}
           width={128}
           height={168}

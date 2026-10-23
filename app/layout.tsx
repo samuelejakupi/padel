@@ -38,13 +38,13 @@ export const metadata: Metadata = {
     description: "Padel, Pizzeria Ranking e tutte le nostre cose.",
     type: "website",
     locale: "it_IT",
-    images: siteUrl ? [{ url: "/og-theboyz.png", width: 1200, height: 630, alt: "TheBoyz Group HQ" }] : undefined,
+    images: siteUrl ? [{ url: "/og-theboyz.jpg", width: 1200, height: 630, alt: "TheBoyz Group HQ" }] : undefined,
   },
   twitter: {
     card: "summary_large_image",
     title: "TheBoyz · Group HQ",
     description: "Padel, Pizzeria Ranking e tutte le nostre cose.",
-    images: siteUrl ? ["/og-theboyz.png"] : undefined,
+    images: siteUrl ? ["/og-theboyz.jpg"] : undefined,
   },
   manifest: `${basePath}/manifest.webmanifest`,
   appleWebApp: {
