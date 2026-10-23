@@ -1,0 +1,517 @@
+/* Best Loadouts con lo stile del resto del sito: pagina chiara, card scure
+   come il riquadro del Padel, lime e azzurro come accenti. Colori, angoli e
+   spaziature vengono tutti da :root in globals.css (vedi STYLE.md). */
+
+.page {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.pageHead {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  justify-content: space-between;
+}
+
+.pageHead h1 {
+  font-size: clamp(27px, 4vw, 40px);
+  font-weight: 900;
+}
+
+.pageHead p:last-child {
+  color: var(--ink-soft);
+  font-size: 14px;
+  margin-top: var(--space-2);
+}
+
+.pageHead :global(.button) {
+  min-height: 44px;
+}
+
+.note {
+  margin-top: var(--space-4);
+}
+
+/* Etichetta piccola in maiuscolo sopra i titoli: categoria, sezione. */
+.kicker {
+  color: var(--blue);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.sectionTitle {
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  padding-bottom: var(--space-2);
+  text-transform: uppercase;
+}
+
+/* Filtri */
+.filters {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.filter {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.filterLabel {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  min-width: 80px;
+  text-transform: uppercase;
+}
+
+/* I tasti sono i .button-ghost del sito; scelto, diventa scuro col testo
+   lime come le modalita delle GB. */
+.filter button {
+  min-height: 36px;
+  padding-inline: var(--space-4);
+}
+
+.filter button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--lime);
+}
+
+.filter button:focus-visible,
+.weaponCardHit:focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 2px;
+}
+
+/* Card scure, stesso fondo del riquadro "La tua posizione" del Padel. */
+.weaponCard,
+.buildCard {
+  background:
+    radial-gradient(circle at 78% 30%, rgba(24, 223, 228, 0.16), transparent 40%),
+    linear-gradient(135deg, var(--ink), var(--ink-soft));
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  color: var(--white);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Icona dell'arma: inclinata verso l'alto a destra, come nelle schermate
+   delle build. Il PNG e quadrato con l'arma al centro: il riquadro 2:1 ne
+   taglia il vuoto sopra e sotto. */
+.weaponIcon {
+  aspect-ratio: 2 / 1;
+  display: block;
+  width: 100%;
+}
+
+.weaponIcon img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  transform: rotate(-11deg) scale(0.92);
+  width: 100%;
+}
+
+.weaponIcon[data-size="lg"] {
+  aspect-ratio: 2.2 / 1;
+}
+
+/* Card dell'arma */
+.weaponGrid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+}
+
+.weaponCard {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  transition: border-color 160ms ease;
+}
+
+.weaponCard[data-selected] {
+  border-color: var(--lime);
+}
+
+.weaponCardHit {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  inset: 0;
+  position: absolute;
+  z-index: 1;
+}
+
+.weaponCardHead,
+.buildHead {
+  align-items: start;
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+}
+
+.weaponCardHead h3,
+.buildHead h3 {
+  font-size: 24px;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  margin-top: var(--space-1);
+  text-transform: uppercase;
+}
+
+/* I dati tecnici veri, sopra le barre che sono stime. */
+.specs {
+  color: rgba(255, 255, 255, 0.6);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 11px;
+  font-weight: 700;
+  gap: var(--space-2) var(--space-4);
+  letter-spacing: 0.04em;
+}
+
+.specs b {
+  color: var(--white);
+  font-variant-numeric: tabular-nums;
+}
+
+.weaponCardFoot {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (hover: hover) {
+  .weaponCard:hover {
+    border-color: var(--blue);
+  }
+}
+
+/* Statistiche: barre orizzontali, con la parte cambiata dagli accessori in
+   verde o rosso sopra la base. */
+.stats {
+  display: grid;
+  gap: 6px;
+}
+
+.statBar {
+  align-items: center;
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 74px 1fr 46px;
+}
+
+.statLabel {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.statTrack {
+  background: rgba(255, 255, 255, 0.08);
+  height: 6px;
+  position: relative;
+}
+
+.statFill,
+.statDelta {
+  bottom: 0;
+  left: 0;
+  position: absolute;
+  top: 0;
+}
+
+.statFill {
+  background: var(--white);
+}
+
+.statDelta[data-sign="up"] {
+  background: var(--positive);
+}
+
+.statDelta[data-sign="down"] {
+  background: var(--danger);
+}
+
+.statValue {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  text-align: right;
+}
+
+.statValue small {
+  font-size: 10px;
+  margin-left: 3px;
+}
+
+.statValue small[data-sign="up"],
+.slotMods [data-sign="up"] {
+  color: var(--positive);
+}
+
+.statValue small[data-sign="down"],
+.slotMods [data-sign="down"] {
+  color: var(--danger);
+}
+
+/* Badge */
+.tier {
+  align-items: center;
+  background: var(--white);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 18px;
+  font-style: italic;
+  font-weight: 900;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.tier[data-tier="S"] {
+  background: var(--lime);
+}
+
+.tier[data-tier="A"] {
+  background: var(--blue);
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.playstyle,
+.rarity {
+  border: 1px solid currentColor;
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  padding: 3px 7px;
+  text-transform: uppercase;
+}
+
+.playstyle {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.playstyle[data-playstyle="meta"] {
+  background: var(--lime);
+  border-color: var(--lime);
+  color: var(--ink);
+}
+
+.rarity[data-rarity="base"] { color: var(--rarity-base); }
+.rarity[data-rarity="rare"] { color: var(--rarity-rare); }
+.rarity[data-rarity="epic"] { color: var(--rarity-epic); }
+.rarity[data-rarity="legendary"] { color: var(--rarity-legendary); }
+
+/* Card della build: a sinistra arma e statistiche, a destra gli slot. */
+.buildList {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.buildCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+}
+
+.buildMain {
+  align-content: start;
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+
+.buildSide {
+  background: rgba(0, 0, 0, 0.18);
+  border-left: 1px solid rgba(24, 223, 228, 0.12);
+  display: grid;
+  gap: var(--space-3);
+  grid-auto-rows: min-content;
+  padding: var(--space-6);
+}
+
+.buildHead {
+  justify-content: flex-start;
+}
+
+.source {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.slots {
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.slot {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 3px solid var(--slot-color, var(--rarity-base));
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  padding: var(--space-3) var(--space-4);
+}
+
+.slot[data-rarity="rare"] { --slot-color: var(--rarity-rare); }
+.slot[data-rarity="epic"] { --slot-color: var(--rarity-epic); }
+.slot[data-rarity="legendary"] { --slot-color: var(--rarity-legendary); }
+
+.slot[data-empty] {
+  border-style: dashed;
+  border-left-style: solid;
+  opacity: 0.6;
+}
+
+.slotIcon {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  display: block;
+  height: 48px;
+  padding: 6px;
+  width: 48px;
+}
+
+.slotIcon img {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.slotBody {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.slotBody small {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.slotBody strong {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.slot[data-empty] strong {
+  font-style: italic;
+}
+
+.slotEffect {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
+}
+
+.slotMods {
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 11px;
+  font-weight: 700;
+  gap: var(--space-3);
+}
+
+.loadout {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.loadout li {
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+
+.loadout small {
+  color: rgba(255, 255, 255, 0.45);
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.loadout strong {
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.empty {
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  color: var(--muted);
+  padding: var(--space-6);
+  text-align: center;
+}
+
+/* Desktop-first: sotto i 900px la card della build va in colonna. */
+@media (max-width: 900px) {
+  .buildCard {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .buildSide {
+    border-left: 0;
+    border-top: 1px solid rgba(24, 223, 228, 0.12);
+  }
+
+  .filterLabel {
+    min-width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weaponCard {
+    transition: none;
+  }
+}

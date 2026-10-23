@@ -6387,6 +6387,10 @@ function AppShell({ session }: { session: Session | null }) {
   const [padelView, setPadelView] = useState<PadelView>("overview");
   const [pizzaView, setPizzaView] = useState<SectionView>("overview");
   const [gamingView, setGamingView] = useState<GamingView>("overview");
+  // Le scorciatoie della pagina Gaming aprono la vista giusta col modulo gia
+  // aperto. Si azzera a ogni altro cambio di vista, cosi tornando sulla
+  // stessa pagina dalla barra il modulo non si riapre da solo.
+  const [gamingAction, setGamingAction] = useState<null | "gb" | "build">(null);
   // La scheda giocatore vive dentro il Padel, ma ci si arriva da qualunque
   // sezione: senza ricordarsi da dove si veniva, aprire il profilo dal
   // Cashout riportava la barra su quella del Padel. Questo e l'ultimo
@@ -7191,6 +7195,7 @@ function AppShell({ session }: { session: Session | null }) {
     if (section === "padel") setPadelView("overview");
     if (section === "pizza") setPizzaView("overview");
     if (section === "gaming") setGamingView("overview");
+    setGamingAction(null);
     scrollPageTo(0, "instant" as ScrollBehavior);
   }, []);
 
@@ -7294,6 +7299,7 @@ function AppShell({ session }: { session: Session | null }) {
         setView("gaming");
         setLastSection("gaming");
         setGamingView(next);
+        setGamingAction(null);
         scrollPageTo(0, "instant" as ScrollBehavior);
       };
       return [home, {
@@ -8860,6 +8866,20 @@ function AppShell({ session }: { session: Session | null }) {
                 </span>
               </button>
             </div>
+            {/* Le due cose che si fanno piu spesso, a un tocco dalla pagina
+                dei giochi invece che tre schermate piu in la. */}
+            <div className="gaming-actions" aria-label="Azioni rapide MW4">
+              <button className="button button-primary" type="button" onClick={() => {
+                setGamingAction("gb");
+                setGamingView("mw4");
+                scrollPageTo(0, "instant" as ScrollBehavior);
+              }}>+ Carica GB</button>
+              <button className="button button-ghost" type="button" onClick={() => {
+                setGamingAction("build");
+                setGamingView("mw4-meta");
+                scrollPageTo(0, "instant" as ScrollBehavior);
+              }}>+ Aggiungi build</button>
+            </div>
           </section>
         ) : null}
 
@@ -8867,12 +8887,12 @@ function AppShell({ session }: { session: Session | null }) {
           <>
             <button className="button button-ghost gaming-back" type="button" onClick={() => openSection("gaming")}>← Tutti i giochi</button>
             {gamingView === "mw4-meta"
-              ? <CodMeta />
+              ? <CodMeta viewerId={session?.user.id ?? ""} profiles={profiles} startWithForm={gamingAction === "build"} />
               : gamingView === "mw4-ranking"
                 ? <CodRanking profiles={profiles} />
                 : gamingView === "mw4-profile" && currentUser
                   ? <CodProfile profile={currentUser} avatar={<Avatar profile={currentUser} size="lg" />} />
-                  : <CodGaming viewerId={session?.user.id ?? ""} profiles={profiles} />}
+                  : <CodGaming viewerId={session?.user.id ?? ""} profiles={profiles} startWithForm={gamingAction === "gb"} />}
           </>
         ) : null}
         {!loading && view === "cashout" ? (

@@ -197,6 +197,17 @@
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
 }
 
+.gaming-actions {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  margin-top: var(--space-5);
+}
+
+.gaming-actions .button {
+  min-height: 48px;
+}
+
 .gaming-card {
   background: var(--ink);
   border: 1px solid var(--line);
@@ -897,6 +908,14 @@
   --section-pizza: color-mix(in srgb, var(--danger) 45%, var(--pizza-yellow));
   --section-gaming: var(--blue);
   --section-cashout: color-mix(in srgb, var(--positive) 65%, var(--lime));
+
+  /* Rarita degli accessori nelle build: come le categorie della pizza
+     rappresentano un dato, non l'interfaccia. Il raro riusa il ciano del
+     marchio, il leggendario il giallo dell'MVP. */
+  --rarity-base: var(--muted);
+  --rarity-rare: var(--blue);
+  --rarity-epic: #a77bff;
+  --rarity-legendary: var(--pizza-yellow);
 
   /* Angoli. Quattro gradini, non uno in più. */
   --radius-sm: 4px;   /* chip, etichette, badge di serie */

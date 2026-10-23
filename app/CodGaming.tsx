@@ -125,10 +125,10 @@ function GbForm({ onClose, onSaved, profiles, viewerId }: { onClose: () => void;
   </div>;
 }
 
-export default function CodGaming({ viewerId, profiles }: { viewerId: string; profiles: Profile[] }) {
+export default function CodGaming({ viewerId, profiles, startWithForm = false }: { viewerId: string; profiles: Profile[]; startWithForm?: boolean }) {
   const { gbs, loading, error, setError, load } = useCodGbs();
   const [mode, setMode] = useState<CodMode>("hardpoint");
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(startWithForm);
   const [retrying, setRetrying] = useState(false);
   async function retry(id: string) {
     if (!supabase || retrying) return;
