@@ -8908,6 +8908,10 @@ function AppShell({ session }: { session: Session | null }) {
               </div>
             </div>
 
+          </section>
+          {/* La classifica sta sotto la testata, sul fondo della pagina: dentro
+              la card scura diventava una card dentro un'altra card. */}
+          <section className="pizza-ranking-body" aria-label="Classifica pizzerie">
             <div className="pizza-board">
               <div className="pizza-board-head">
                 <span>#</span>

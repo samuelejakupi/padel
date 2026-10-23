@@ -7846,7 +7846,10 @@ button.pizza-ranking-row {
    resta quella del testo, l'area sensibile si allarga col padding. */
 .pizza-address-link {
   color: inherit;
-  display: inline-block;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   padding-block: 12px;
   text-decoration: none;
 }
@@ -7918,11 +7921,21 @@ button.pizza-ranking-row {
 }
 
 .pizza-source-note {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 12px;
-  letter-spacing: 0.6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
   margin: 16px 0 0;
   text-align: right;
+}
+
+/* La classifica sotto la testata scura, sul fondo chiaro della pagina. */
+.pizza-ranking-body {
+  margin-top: var(--space-6);
+}
+
+.pizza-ranking-body .pizza-board {
+  background: var(--white);
+  border: 1px solid var(--line);
 }
 
 /* Profile */
@@ -10360,8 +10373,10 @@ button.pizza-ranking-row {
     display: none;
   }
 
-  .pizza-board {
+  .pizza-board,
+  .pizza-ranking-body .pizza-board {
     background: transparent;
+    border: 0;
     overflow: visible;
   }
 
@@ -10371,8 +10386,8 @@ button.pizza-ranking-row {
   }
 
   .pizza-ranking-row {
-    background: var(--pizza-medal-bg, var(--paper));
-    border: 0;
+    background: var(--pizza-medal-bg, var(--white));
+    border: 1px solid var(--line);
     border-radius: var(--radius-lg);
     gap: 10px 12px;
     /* Il totale sale in alto a destra, accanto al nome: è il dato che si
