@@ -5715,7 +5715,7 @@ function TournamentFormModal({
         // una colonna che non ci sta.
         name: team.name.trim()
           || savedTeamOf(team.playerA, team.playerB)?.name?.trim()
-          || `Team ${teamLetter(index)}`,
+          || `Squadra ${teamLetter(index)}`,
         sort_order: index + 1,
       };
     });
@@ -5808,7 +5808,7 @@ function TournamentFormModal({
           <div className="tournament-form-head">
             <div><p className="eyebrow dark">PARTECIPANTI E SQUADRE</p><h3>{teamSelectionMode === "random" ? `${randomParticipantIds.length} partecipanti` : `${teams.length} coppie`} · {fixtureCount} partite</h3></div>
             {teamSelectionMode === "manual" && !playedFixtures && teams.length < 4 && profiles.length >= (teams.length + 1) * 2 ? (
-              <button className="button button-ghost" type="button" onClick={() => setTeams((current) => [...current, { playerA: "", playerB: "", name: "" }])}>+ Squadra</button>
+              <button className="button button-ghost tournament-add-team" type="button" onClick={() => setTeams((current) => [...current, { playerA: "", playerB: "", name: "" }])}>+ Squadra</button>
             ) : null}
           </div>
           {playedFixtures ? (
@@ -5835,7 +5835,7 @@ function TournamentFormModal({
                 <div className="tournament-draw-preview" aria-live="polite">
                   <p className="eyebrow dark">SQUADRE ESTRATTE</p>
                   {drawnTeams.map((team, index) => (
-                    <div key={index}><b>{savedTeamOf(team.playerA, team.playerB)?.name || `Team ${teamLetter(index)}`}</b><span>{profiles.find((profile) => profile.id === team.playerA)?.display_name} · {profiles.find((profile) => profile.id === team.playerB)?.display_name}</span></div>
+                    <div key={index}><b>{savedTeamOf(team.playerA, team.playerB)?.name || `Squadra ${teamLetter(index)}`}</b><span>{profiles.find((profile) => profile.id === team.playerA)?.display_name} · {profiles.find((profile) => profile.id === team.playerB)?.display_name}</span></div>
                   ))}
                 </div>
               ) : null}
@@ -5887,7 +5887,7 @@ function TournamentFormModal({
                   <input
                     value={team.name}
                     onChange={(event) => updateTeam(index, "name", event.target.value)}
-                    placeholder={chosenTeam ? teamLabel(chosenTeam) : `Team ${teamLetter(index)}`}
+                    placeholder={chosenTeam ? teamLabel(chosenTeam) : `Squadra ${teamLetter(index)}`}
                     maxLength={50}
                     aria-label={`Nome squadra ${teamLetter(index)}`}
                   />
@@ -6098,7 +6098,9 @@ function TournamentStandingsContent({
       <div className="tournament-table">
         <div className="tournament-table-head"><span>#</span><span>Giocatore</span><span>G</span><span>V</span><span>GF</span><span>Diff.</span></div>
         {individual.map((row) => <div className={`tournament-table-row${row.rankPosition === 1 && row.played ? " is-leader" : ""}`} key={row.profileId}>
-          <b>{row.rankPosition}</b><span className="tournament-team-cell"><strong>{profileMap.get(row.profileId)?.display_name ?? "Giocatore"}{completed && row.award ? <em className="tournament-award">+{row.award.toLocaleString("it-IT", { maximumFractionDigits: 4 })}</em> : null}</strong></span>
+          {/* Prima di giocare sarebbero tutti "1": niente posizione finche
+              non si e giocato. */}
+          <b>{row.played ? row.rankPosition : "—"}</b><span className="tournament-team-cell"><strong>{profileMap.get(row.profileId)?.display_name ?? "Giocatore"}{completed && row.award ? <em className="tournament-award">+{row.award.toLocaleString("it-IT", { maximumFractionDigits: 4 })}</em> : null}</strong></span>
           <span>{row.played}</span><span>{row.wins}</span><span>{row.gamesWon}</span><span>{row.gamesWon - row.gamesLost > 0 ? "+" : ""}{row.gamesWon - row.gamesLost}</span>
         </div>)}
       </div>
@@ -6154,7 +6156,7 @@ function TournamentFixtures({
             <div><b className={match?.winner_team === 1 ? "winner" : ""}>{name(fixture.player1_id)} · {name(fixture.player2_id)}</b><small>vs</small><b className={match?.winner_team === 2 ? "winner" : ""}>{name(fixture.player3_id)} · {name(fixture.player4_id)}</b></div>
             {match ? <strong className="tournament-score">{match.sets[0]?.team1_games}-{match.sets[0]?.team2_games}</strong>
               : onRecord && canRecordTournamentFixture(tournament, fixture) && fixture.player1_id && fixture.player2_id && fixture.player3_id && fixture.player4_id
-                ? <button className="button button-dark" onClick={() => onRecord({ fixtureId: fixture.id, tournamentName: tournament.name, eloMultiplier: tournament.elo_multiplier, setsFormat: 1, playerIds: [fixture.player1_id!, fixture.player2_id!, fixture.player3_id!, fixture.player4_id!] })}>Inserisci risultato</button>
+                ? <button className="button button-ghost tournament-record" onClick={() => onRecord({ fixtureId: fixture.id, tournamentName: tournament.name, eloMultiplier: tournament.elo_multiplier, setsFormat: 1, playerIds: [fixture.player1_id!, fixture.player2_id!, fixture.player3_id!, fixture.player4_id!] })}>Inserisci risultato</button>
                 : <span className="tournament-awaiting">Da giocare</span>}
           </article>;
         })}
@@ -6196,7 +6198,7 @@ function TournamentFixtures({
                   <span className="tournament-match-number">{String(fixture.match_number).padStart(2, "0")}</span>
                   <div><b className={match?.winner_team === 1 ? "winner" : ""}>{team1.name}</b><small>vs</small><b className={match?.winner_team === 2 ? "winner" : ""}>{team2.name}</b></div>
                   {match ? <strong className="tournament-score">{score}</strong> : onRecord ? (
-                    <button className="button button-dark" onClick={() => onRecord({
+                    <button className="button button-ghost tournament-record" onClick={() => onRecord({
                       fixtureId: fixture.id,
                       tournamentName: tournament.name,
                       eloMultiplier: tournament.elo_multiplier,
@@ -6342,7 +6344,9 @@ function TournamentsPage({
           </div>
         </article>
         <article className="tournament-board-head">
-          <div className={`tournament-prize-card${detailTournament.trophy_image_path === MONKEY_TROPHY_PATH ? " has-medals" : ""}`}><TournamentPrizeVisual tournament={detailTournament} /><span>{detailTournament.trophy_image_path ? <small>{detailTournament.trophy_image_path === MONKEY_TROPHY_PATH ? completed ? "PREMI ASSEGNATI" : "PREMI IN PALIO" : completed ? "TROFEO ASSEGNATO" : "TROFEO IN PALIO"}</small> : null}<b>{detailTournament.trophy_image_path ? detailTournament.trophy_name : "Nessun trofeo"}</b></span></div>
+          {/* Senza trofeo non c'e un riquadro "Nessun trofeo": era la superficie
+              piu accesa della pagina per dire che manca qualcosa. */}
+          {detailTournament.trophy_image_path ? <div className={`tournament-prize-card${detailTournament.trophy_image_path === MONKEY_TROPHY_PATH ? " has-medals" : ""}`}><TournamentPrizeVisual tournament={detailTournament} /><span><small>{detailTournament.trophy_image_path === MONKEY_TROPHY_PATH ? completed ? "PREMI ASSEGNATI" : "PREMI IN PALIO" : completed ? "TROFEO ASSEGNATO" : "TROFEO IN PALIO"}</small><b>{detailTournament.trophy_name}</b></span></div> : null}
           <div className="tournament-title-card"><p className="eyebrow dark">FORMULA</p><h2>{detailTournament.mode === "individual" ? "Coppie variabili" : "Girone all’italiana"}</h2><span>{tournamentFormatLabel(detailTournament)}</span></div>
         </article>
         <div className="tournament-layout">
@@ -6379,10 +6383,10 @@ function TournamentsPage({
                 return (
                   <article className="tournament-live-card" key={tournament.id}>
                     <div className="tournament-board-head">
-                      <div className={`tournament-prize-card${tournament.trophy_image_path === MONKEY_TROPHY_PATH ? " has-medals" : ""}`}><TournamentPrizeVisual tournament={tournament} /><span>{tournament.trophy_image_path ? <small>{tournament.trophy_image_path === MONKEY_TROPHY_PATH ? "PREMI IN PALIO" : "TROFEO IN PALIO"}</small> : null}<b>{tournament.trophy_image_path ? tournament.trophy_name : "Nessun trofeo"}</b></span></div>
+                      {tournament.trophy_image_path ? <div className={`tournament-prize-card${tournament.trophy_image_path === MONKEY_TROPHY_PATH ? " has-medals" : ""}`}><TournamentPrizeVisual tournament={tournament} /><span><small>{tournament.trophy_image_path === MONKEY_TROPHY_PATH ? "PREMI IN PALIO" : "TROFEO IN PALIO"}</small><b>{tournament.trophy_name}</b></span></div> : null}
                       <div className="tournament-title-card">
-                        <p className="eyebrow dark">TORNEO IN CORSO</p><h2>{tournament.name}</h2><span>{playedMatches}/{target} partite · Elo ×{tournament.elo_multiplier} · {tournamentFormatLabel(tournament).toLowerCase()}</span>
-                        <span className="tournament-progress" aria-label={`${progress}% completato`}><i style={{ width: `${progress}%` }} /></span>
+                        <p className="eyebrow dark">TORNEO IN CORSO</p><h2>{tournament.name}</h2><span>{playedMatches}/{target} partite · Elo ×{tournament.elo_multiplier} · {tournamentFormatLabel(tournament).toLowerCase()}{tournament.trophy_image_path ? "" : " · senza trofeo"}</span>
+                        <span className="tournament-progress" role="progressbar" aria-label="Partite giocate" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><i style={{ width: `${progress}%` }} /></span>
                       </div>
                       {/* Anche qui, non solo nella scheda: un torneo in corso
                           sta tutto in questa card — classifica e calendario

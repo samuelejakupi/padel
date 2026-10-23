@@ -5581,6 +5581,11 @@ button.podium-person {
   margin-bottom: var(--space-3);
 }
 
+/* Torneo senza trofeo: il riquadro del nome prende tutta la riga. */
+.tournament-board-head:not(:has(.tournament-prize-card)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 /* Il comando della card sta sotto ai due riquadri, a destra: dentro alla
    testata ruberebbe spazio al nome del torneo, che e la cosa che si legge. */
 .tournament-card-edit {
@@ -5687,8 +5692,11 @@ button.podium-person {
   border-bottom: 0;
 }
 
+/* Chi guida: un velo lime e il filo a sinistra, non la riga piena. La
+   superficie piena della pagina resta il tasto principale. */
 .tournament-table-row.is-leader {
-  background: var(--lime);
+  background: rgba(239, 255, 0, 0.16);
+  box-shadow: inset 4px 0 0 var(--lime);
 }
 
 .tournament-table-row > b,
@@ -12708,4 +12716,16 @@ ul.cashout-settlement-history {
   .player-versus {
     grid-template-columns: 1fr;
   }
+}
+
+/* Calendario del torneo: un tasto chiaro per partita, alto quanto un dito.
+   Sei tasti neri di fila pesavano piu della classifica accanto. */
+.tournament-fixture .tournament-record {
+  min-height: 44px;
+}
+
+/* "+ Squadra" nel modulo del torneo: alto quanto un dito. */
+button.button.tournament-add-team {
+  height: auto;
+  min-height: 44px;
 }
