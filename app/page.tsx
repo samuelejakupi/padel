@@ -64,6 +64,16 @@ function eloLabel(value: number) {
   return String(roundedElo(value));
 }
 
+// "oggi", "ieri", "3 giorni fa": conta i giorni di calendario, non le 24 ore,
+// cosi una partita di ieri sera resta "ieri" anche alle nove di mattina.
+function lastPlayedLabel(iso: string) {
+  const day = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const days = Math.round((day(new Date()) - day(new Date(iso))) / 86_400_000);
+  if (days <= 0) return "giocato oggi";
+  if (days === 1) return "giocato ieri";
+  return `giocato ${days} giorni fa`;
+}
+
 function eloDeltaLabel(value: number) {
   const displayed = roundedElo(value);
   return `${displayed > 0 ? "+" : ""}${displayed}`;
@@ -7460,6 +7470,23 @@ function AppShell({ session }: { session: Session | null }) {
       rest: pool[Math.floor(greetingSeed * pool.length)] ?? pool[0] ?? "",
     };
   }, [currentRank, isLastRanked, hasNarrowLead, currentUserName, greetingSeed, saluteSeed]);
+  // La riga viva sotto il nome di ogni card della home. Usa solo dati che la
+  // pagina ha gia caricato: Gaming e Cashout caricano i loro alla prima
+  // apertura, quindi in home restano con la frase che li spiega.
+  const viewerHubId = session?.user.id;
+  const hubMe = profiles.find((profile) => profile.id === viewerHubId);
+  const hubLastMatch = matches.find((match) => match.players.some((player) => player.profile_id === viewerHubId));
+  const hubStatus: Record<Section, string> = {
+    padel: hubMe?.matches_played
+      ? [`#${currentRank} · ${eloLabel(hubMe.rating)} Elo`, hubLastMatch ? lastPlayedLabel(hubLastMatch.played_at) : ""]
+        .filter(Boolean).join(" · ")
+      : "",
+    pizza: pendingPizzaVotes.length
+      ? `${pendingPizzaVotes.length} ${pendingPizzaVotes.length === 1 ? "votazione da fare" : "votazioni da fare"}`
+      : pizzaEntries[0] ? `In testa: ${pizzaEntries[0].name}` : "",
+    gaming: "",
+    cashout: "",
+  };
   // Stessa formula di padelWinRate, scritta a mano solo qui: una chiamata a
   // funzione in questo punto del componente fa rinunciare il compilatore di
   // React a tutte le memoizzazioni manuali della pagina (lo dice `npm run
@@ -7965,6 +7992,9 @@ function AppShell({ session }: { session: Session | null }) {
               <img className="hub-mark" src={`${basePath}/theboyz-mark.png`} alt="" width={600} height={600} aria-hidden="true" />
               <div className="hub-hero-copy">
                 <p className="eyebrow">THEBOYZ</p>
+                {/* Lo stesso saluto che apre il Padel, senza la virgola: qui
+                    non lo segue la frase sulla classifica. */}
+                <h1 className="hero-greeting hub-greeting">{heroGreeting.lead.replace(/,$/, "")}</h1>
                 <div className="hub-members">
                   <div className="mini-avatars">
                     {profiles.slice(0, 5).map((profile) => (
@@ -7984,9 +8014,15 @@ function AppShell({ session }: { session: Session | null }) {
                   onClick={() => openSection(item.key)}
                 >
                   <span className="hub-card-icon"><NavGlyph name={item.glyph} /></span>
+                  {/* Un titolo dentro un bottone non e HTML valido: il nome e
+                      uno span con l'aspetto di prima. Sotto, la riga coi dati
+                      di chi guarda; la frase che spiega la sezione solo
+                      finche dati non ce ne sono. */}
                   <span className="hub-card-copy">
-                    <h3>{item.label}</h3>
-                    <small>{item.claim}</small>
+                    <span className="hub-card-title">{item.label}</span>
+                    {hubStatus[item.key]
+                      ? <span className="hub-card-status">{hubStatus[item.key]}</span>
+                      : <small>{item.claim}</small>}
                   </span>
                   {/* Gli stessi pallini della barra: da qui si vede subito
                       dove c'e qualcosa che aspetta te. */}

@@ -889,6 +889,14 @@
   --pizza-yellow: #f0b82d;
   --pizza-blue: #5978d9;
 
+  /* Un colore per sezione, usato dalle card della home. Tutti presi da tinte
+     che esistono gia: il verde del Cashout e quello dei guadagni schiarito,
+     perche il testo scuro sopra resti leggibile. */
+  --section-padel: var(--lime);
+  --section-pizza: var(--pizza-yellow);
+  --section-gaming: var(--blue);
+  --section-cashout: color-mix(in srgb, var(--positive) 62%, var(--white));
+
   /* Angoli. Quattro gradini, non uno in più. */
   --radius-sm: 4px;   /* chip, etichette, badge di serie */
   --radius: 9px;      /* card, righe di classifica, pannelli */
@@ -1911,6 +1919,17 @@ form select:focus {
   z-index: 2;
 }
 
+/* In home il saluto e il titolo della pagina: stessa voce del Padel, ma alla
+   misura dei nomi delle card, cosi testata e card parlano la stessa lingua. */
+.hub-hero .hub-greeting {
+  font-size: 44px;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: -2px;
+  line-height: 1;
+  margin: var(--space-3) 0 0;
+}
+
 .hub-members {
   align-items: center;
   display: flex;
@@ -1956,10 +1975,12 @@ form select:focus {
 /* Card ridotte all'essenziale: icona a sinistra, nome e riga di spiegazione a
    destra. L'altezza e scesa da 275px a 210px quando le sezioni sono passate da
    due a quattro: alla misura di prima la seconda fila finiva sotto la piega e
-   meta dello smistamento non si vedeva senza scorrere. */
+   meta dello smistamento non si vedeva senza scorrere. Poi a 168px quando il
+   saluto e entrato nella testata: le due file restano sopra la piega anche
+   su un portatile da 13". */
 .hub-card {
   align-items: center;
-  background: var(--white);
+  background: var(--hub-card-color, var(--white));
   border: 0;
   border-radius: var(--radius);
   color: var(--ink);
@@ -1970,7 +1991,7 @@ form select:focus {
      gruppo, i titoli corti come Padel slittavano rispetto a Pizza, Gaming e
      Cashout perché cambiava la larghezza complessiva icona+testo. */
   justify-content: flex-start;
-  min-height: 210px;
+  min-height: 168px;
   overflow: hidden;
   /* Compensazione ottica: il gruppo icona+titolo va spostato a sinistra,
      altrimenti a centratura geometrica sembra spostato a destra.
@@ -1988,7 +2009,8 @@ form select:focus {
   min-width: 0;
 }
 
-.hub-card h3 {
+.hub-card-title {
+  display: block;
   font-size: 44px;
   font-style: italic;
   font-weight: 900;
@@ -2010,6 +2032,16 @@ form select:focus {
   text-transform: uppercase;
 }
 
+/* La riga coi dati di chi guarda prende il posto della spiegazione: e
+   un'informazione da leggere, non un'etichetta, quindi niente maiuscolo e
+   niente trasparenza. */
+.hub-card-status {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.1px;
+  line-height: 1.3;
+}
+
 @media (hover: hover) {
   .hub-card:hover {
     box-shadow: var(--shadow);
@@ -2017,19 +2049,13 @@ form select:focus {
   }
 }
 
-/* Le due storiche gialle, le due nuove azzurre: il colore divide le sezioni
-   che c'erano da quelle appena aperte senza bisogno di scriverlo. */
-.hub-card-padel,
-.hub-card-pizza {
-  background: var(--lime);
-  color: var(--ink);
-}
-
-.hub-card-gaming,
-.hub-card-cashout {
-  background: var(--blue);
-  color: var(--ink);
-}
+/* Un colore fisso per sezione, dichiarato in :root: prima il giallo e
+   l'azzurro dividevano le sezioni vecchie dalle nuove, una distinzione che a
+   chi usa l'app non dice niente. */
+.hub-card-padel { --hub-card-color: var(--section-padel); }
+.hub-card-pizza { --hub-card-color: var(--section-pizza); }
+.hub-card-gaming { --hub-card-color: var(--section-gaming); }
+.hub-card-cashout { --hub-card-color: var(--section-cashout); }
 
 /* Pallino delle cose che aspettano te, in alto a destra nella card. Stessa
    lettura del pallino sulla barra in basso. */
@@ -8543,6 +8569,11 @@ button.pizza-ranking-row {
     margin-top: 10px;
   }
 
+  .hub-hero .hub-greeting {
+    font-size: 34px;
+    letter-spacing: -1.4px;
+  }
+
   /* Su mobile il riquadro è troppo stretto: il marchio finirebbe sotto al
      testo invece di restare un fondale. */
   .hub-mark {
@@ -8577,7 +8608,7 @@ button.pizza-ranking-row {
     width: 66px;
   }
 
-  .hub-card h3 {
+  .hub-card-title {
     font-size: 34px;
     font-weight: 900;
     letter-spacing: -1.6px;
@@ -10109,7 +10140,7 @@ button.pizza-ranking-row {
     width: calc(100vw - 24px);
   }
 
-  .hub-card h3 {
+  .hub-card-title {
     font-size: 30px;
     font-weight: 900;
   }

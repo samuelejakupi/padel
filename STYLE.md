@@ -25,6 +25,15 @@ scrivere un numero nuovo, controlla se esiste già la variabile.**
 | `--danger` | `#d94b49` | Errori, record negativi, uscita |
 | `--positive` | `#299b66` | Guadagni Elo, serie positive |
 
+Ogni sezione ha un colore fisso, usato dalle card della home:
+
+| Variabile | Valore |
+|---|---|
+| `--section-padel` | `--lime` |
+| `--section-pizza` | `--pizza-yellow` |
+| `--section-gaming` | `--blue` |
+| `--section-cashout` | `--positive` schiarito col bianco |
+
 Per le tinte intermedie ci sono i **veli**, cioè il blu scuro a bassa opacità:
 
 | Variabile | Uso |
