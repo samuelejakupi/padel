@@ -1,0 +1,398 @@
+/* I profili (home, Pizza, Cashout e, in prova, Padel). Misure prese da
+   PlayPro: nome 26px, numeri 20px, etichette mai sotto i 13px. Colori e
+   angoli da :root in globals.css (vedi STYLE.md). */
+
+.page {
+  display: grid;
+  gap: var(--space-6);
+}
+
+/* Testata: lo stesso fondo scuro con griglia della home. */
+.header {
+  align-items: center;
+  background:
+    linear-gradient(rgba(24, 223, 228, 0.07) 1px, transparent 1px) 0 0 / 34px 34px,
+    linear-gradient(90deg, rgba(24, 223, 228, 0.07) 1px, transparent 1px) 0 0 / 34px 34px,
+    radial-gradient(circle at 50% 20%, rgba(24, 223, 228, 0.18), transparent 55%),
+    linear-gradient(160deg, var(--ink), var(--ink-soft));
+  border-radius: var(--radius);
+  color: var(--white);
+  display: grid;
+  gap: var(--space-3);
+  justify-items: center;
+  padding: var(--space-7) var(--space-6);
+  text-align: center;
+}
+
+.eyebrow {
+  color: var(--lime);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+/* L'avatar dentro un disco di vetro; la matita e il pallino lime in basso a
+   destra, l'unica superficie piena di colore della testata. */
+.avatarDisc {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  padding: 8px;
+  position: relative;
+}
+
+.editBadge {
+  align-items: center;
+  background: var(--lime);
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  bottom: -2px;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  height: 44px;
+  justify-content: center;
+  position: absolute;
+  right: -6px;
+  width: 44px;
+}
+
+.editBadge svg {
+  fill: none;
+  height: 20px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  width: 20px;
+}
+
+.editBadge:focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 3px;
+}
+
+.name {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+  margin: var(--space-2) 0 0;
+  overflow-wrap: anywhere;
+}
+
+.pill {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: var(--space-2);
+  margin: 0;
+  min-height: 36px;
+  padding: 0 var(--space-5);
+}
+
+.pill b {
+  color: var(--lime);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tre numeri divisi da un filo. */
+.statRow {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: var(--space-5) var(--space-2);
+}
+
+.statRow > div {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: center;
+  min-width: 0;
+  padding: 0 var(--space-2);
+  text-align: center;
+}
+
+.statRow > div + div {
+  border-left: 1px solid var(--line);
+}
+
+.statRow dt {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  order: 2;
+}
+
+.statRow dd {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  line-height: 1;
+  margin: 0;
+  order: 1;
+  white-space: nowrap;
+}
+
+.statRow dd small {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.statRow dd[data-tone="up"] {
+  color: var(--positive-text);
+}
+
+.statRow dd[data-tone="down"] {
+  color: var(--danger-text);
+}
+
+/* Dentro alla testata scura i tre numeri sono vetro, non una card bianca. */
+.statRow[data-dark] {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--white);
+  margin-top: var(--space-4);
+  width: 100%;
+}
+
+.statRow[data-dark] > div + div {
+  border-left-color: rgba(255, 255, 255, 0.14);
+}
+
+.statRow[data-dark] dt,
+.statRow[data-dark] dd small {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.section {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.sectionHead {
+  align-items: center;
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+}
+
+.sectionHead h2 {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.3px;
+  margin: 0;
+}
+
+/* Riassunto di una sezione nel profilo della home. */
+.summary {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.summary > header {
+  align-items: center;
+  display: flex;
+  gap: var(--space-4);
+}
+
+.summary h2 {
+  flex: 1;
+  font-size: 20px;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.summary > header :global(.button) {
+  min-height: 44px;
+  padding-inline: var(--space-4);
+}
+
+.summary .statRow {
+  border: 0;
+  padding: 0;
+}
+
+.summaryIcon {
+  align-items: center;
+  background: var(--ink);
+  border-radius: var(--radius-md);
+  color: var(--lime);
+  display: flex;
+  flex: 0 0 auto;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.summaryIcon svg {
+  height: 26px;
+  width: 26px;
+}
+
+.empty {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Elenchi del profilo: righe bianche con testo a sinistra e valore a destra. */
+.list {
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.list li {
+  align-items: center;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+  min-height: 56px;
+  padding: var(--space-3) var(--space-5);
+}
+
+.list li > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.list strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.list small {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.list b {
+  flex: 0 0 auto;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+
+.list b[data-tone="up"] {
+  color: var(--positive-text);
+}
+
+.list b[data-tone="down"] {
+  color: var(--danger-text);
+}
+
+/* Barre dei criteri: il tuo voto medio, e una tacca per la media del gruppo. */
+.bars {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.bar {
+  align-items: center;
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 82px 1fr 64px;
+}
+
+.bar > span:first-child {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.track {
+  background: var(--veil-2);
+  border-radius: var(--radius-pill);
+  height: 8px;
+  position: relative;
+}
+
+.fill {
+  background: var(--ink);
+  border-radius: var(--radius-pill);
+  inset: 0 auto 0 0;
+  position: absolute;
+}
+
+.marker {
+  background: var(--blue-deep);
+  border-radius: 2px;
+  height: 16px;
+  position: absolute;
+  top: -4px;
+  transform: translateX(-50%);
+  width: 3px;
+}
+
+.bar > b {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.legend {
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 13px;
+  gap: var(--space-4);
+}
+
+.legend i {
+  display: inline-block;
+  height: 10px;
+  margin-right: var(--space-2);
+  vertical-align: middle;
+  width: 14px;
+}
+
+.legend i[data-kind="me"] {
+  background: var(--ink);
+  border-radius: var(--radius-pill);
+}
+
+.legend i[data-kind="group"] {
+  background: var(--blue-deep);
+  border-radius: 2px;
+  width: 3px;
+}
+
+/* In fondo, le azioni dell'account. */
+.actions {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.actions :global(.button),
+.actions :global(.signout-button) {
+  min-height: 48px;
+  width: 100%;
+}

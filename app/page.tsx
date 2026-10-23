@@ -31,6 +31,9 @@ import { filterMatchPeriod, filterMatchResults, type PeriodFilter, type ResultFi
 import { drawTournamentTeams, type TournamentDraftTeam } from "@/lib/tournament-draw";
 import { buildIndividualStandings } from "@/lib/individual-standings";
 import { canRecordTournamentFixture } from "@/lib/tournament-fixture-order";
+import HomeProfile from "./profile/HomeProfile";
+import PizzaProfile from "./profile/PizzaProfile";
+import CashoutProfile from "./profile/CashoutProfile";
 
 // Le quattro sezioni del gruppo. La home non e una di loro: e lo smistamento
 // che le apre, e da li la barra in basso cambia voci.
@@ -6391,6 +6394,12 @@ function AppShell({ session }: { session: Session | null }) {
   // aperto. Si azzera a ogni altro cambio di vista, cosi tornando sulla
   // stessa pagina dalla barra il modulo non si riapre da solo.
   const [gamingAction, setGamingAction] = useState<null | "gb" | "build">(null);
+  // I profili che non sono la scheda del Padel o quello MW4: il riassunto
+  // della home e i profili di Pizza e Cashout. Valgono solo nella loro
+  // vista; ogni altro cambio di pagina li chiude.
+  const [sectionProfile, setSectionProfile] = useState<null | "home" | "pizza" | "cashout">(null);
+  // Il gruppo Cashout da aprire arrivando dal profilo ("Salda").
+  const [cashoutGroupId, setCashoutGroupId] = useState<string | null>(null);
   // La scheda giocatore vive dentro il Padel, ma ci si arriva da qualunque
   // sezione: senza ricordarsi da dove si veniva, aprire il profilo dal
   // Cashout riportava la barra su quella del Padel. Questo e l'ultimo
@@ -7156,6 +7165,7 @@ function AppShell({ session }: { session: Session | null }) {
   // ricostruite a ogni render.
   const openOwnCard = useCallback(() => {
     if (!currentUserId) return;
+    setSectionProfile(null);
     setSelectedPlayerId(currentUserId);
     setShowAllPlayerMatches(false);
     setPadelView("player");
@@ -7164,12 +7174,20 @@ function AppShell({ session }: { session: Session | null }) {
 
   // Il profilo Padel si apre dalla home o dal Padel. Dentro MW4 si apre
   // quello del gioco; Pizza, Cashout e la selezione Gaming non hanno questa voce.
-  const isOwnProfile = isOwnCard || (view === "gaming" && gamingView === "mw4-profile");
+  const isOwnProfile = isOwnCard || (view === "gaming" && gamingView === "mw4-profile")
+    || (sectionProfile === "home" && view === "home") || (sectionProfile !== null && sectionProfile === view);
   const isGamingOverview = navSection === "gaming" && gamingView === "overview";
-  const hasContextProfile = navSection === null || navSection === "padel" || (navSection === "gaming" && !isGamingOverview);
+  // Ogni sezione ha il suo profilo; la pagina dei giochi no, perche ancora
+  // non si sa di quale gioco.
+  const hasContextProfile = !isGamingOverview;
   const openProfile = useCallback(() => {
     if (!hasContextProfile) return;
-    if (navSection !== "gaming") {
+    if (navSection === null || navSection === "pizza" || navSection === "cashout") {
+      setSectionProfile(navSection ?? "home");
+      scrollPageTo(0, "instant" as ScrollBehavior);
+      return;
+    }
+    if (navSection === "padel") {
       openOwnCard();
       return;
     }
@@ -7183,6 +7201,7 @@ function AppShell({ session }: { session: Session | null }) {
   // ha due voci sole, e senza azzerarlo resterebbero quelle della sezione da
   // cui si e usciti.
   const goHome = useCallback(() => {
+    setSectionProfile(null);
     setLastSection(null);
     setView("home");
     scrollPageTo(0, "instant" as ScrollBehavior);
@@ -7196,6 +7215,8 @@ function AppShell({ session }: { session: Session | null }) {
     if (section === "pizza") setPizzaView("overview");
     if (section === "gaming") setGamingView("overview");
     setGamingAction(null);
+    setSectionProfile(null);
+    setCashoutGroupId(null);
     scrollPageTo(0, "instant" as ScrollBehavior);
   }, []);
 
@@ -7206,6 +7227,7 @@ function AppShell({ session }: { session: Session | null }) {
     setView(section);
     if (section === "padel") setPadelView("ranking");
     if (section === "pizza") setPizzaView("ranking");
+    setSectionProfile(null);
     scrollPageTo(0, "instant" as ScrollBehavior);
   }, []);
 
@@ -7215,10 +7237,10 @@ function AppShell({ session }: { session: Session | null }) {
   // smontandosi, se lo porterebbe via lasciando la home chiara.
   useEffect(() => {
     const root = document.documentElement;
-    if (view !== "home" || loading) return;
+    if (view !== "home" || sectionProfile || loading) return;
     root.classList.add("theme-dark");
     return () => root.classList.remove("theme-dark");
-  }, [view, loading]);
+  }, [view, sectionProfile, loading]);
 
   // I due tasti del nastro, disegnati una volta sola: quello in scena e il
   // vicino che arriva sono lo stesso tasto, e devono restarlo — se si
@@ -7322,9 +7344,10 @@ function AppShell({ session }: { session: Session | null }) {
         key: meta.key,
         glyph: meta.glyph as GlyphName,
         label: meta.label,
-        active: !isPlayerCard,
+        active: !isPlayerCard && !isOwnProfile,
         select: () => openSection(navSection),
       },
+      profile,
     ];
     return [
       home,
@@ -7332,17 +7355,17 @@ function AppShell({ session }: { session: Session | null }) {
         key: meta.key,
         glyph: meta.glyph as GlyphName,
         label: meta.label,
-        active: !isPlayerCard && sectionView === "overview",
+        active: !isPlayerCard && !isOwnProfile && sectionView === "overview",
         select: () => openSection(navSection),
       },
       {
         key: "ranking",
         glyph: "ranking" as GlyphName,
         label: "Classifica",
-        active: !isPlayerCard && sectionView === "ranking",
+        active: !isPlayerCard && !isOwnProfile && sectionView === "ranking",
         select: () => openSectionRanking(navSection),
       },
-      ...(navSection === "padel" ? [profile] : []),
+      profile,
     ];
   }, [view, navSection, sectionView, gamingView, isPlayerCard, isOwnProfile, openProfile, goHome, openSection, openSectionRanking]);
 
@@ -7854,7 +7877,7 @@ function AppShell({ session }: { session: Session | null }) {
 
 
   return (
-    <div className={`app-shell${view === "home" ? " app-shell-hub" : ""}`}>
+    <div className={`app-shell${view === "home" && !sectionProfile ? " app-shell-hub" : ""}`}>
       {/* La sfocatura sotto la barra di sistema dell'iPhone: sfoca tutto
           quello che passa dietro all'ora e alle icone, e finisce dove finisce
           l'area sicura — la pagina vera, che comincia piu sotto, non la tocca.
@@ -7994,7 +8017,25 @@ function AppShell({ session }: { session: Session | null }) {
             porte e una scheda profilo, e basta. Un'anteprima per ognuna
             avrebbe reso la prima schermata la piu lenta da caricare, che e
             l'opposto di quello che deve fare. */}
-        {!loading && view === "home" ? (
+        {!loading && view === "home" && sectionProfile === "home" && currentUser ? (
+          <HomeProfile profile={currentUser} profiles={profiles} avatar={<Avatar profile={currentUser} size="lg" />}
+            icons={{ padel: <NavGlyph name="racket" />, pizza: <NavGlyph name="pizza" />, gaming: <NavGlyph name="gamepad" />, cashout: <NavGlyph name="wallet" /> }}
+            padel={{ rank: currentRank, rating: eloLabel(currentUser.rating), winRate, played: currentUser.matches_played }}
+            pizzaSessions={pizzaSessions} pizzaVotes={pizzaSessionVotes}
+            onEdit={() => setShowProfileEdit(true)}
+            onSignOut={supabase ? () => void supabase?.auth.signOut() : undefined}
+            onOpen={(section) => {
+              setSectionProfile(null);
+              setLastSection(section);
+              if (section === "padel") { openOwnCard(); return; }
+              setView(section);
+              if (section === "gaming") setGamingView("mw4-profile");
+              else setSectionProfile(section);
+              scrollPageTo(0, "instant" as ScrollBehavior);
+            }} />
+        ) : null}
+
+        {!loading && view === "home" && !sectionProfile ? (
           <section className="hub-page">
             <div className="hub-hero">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -8659,7 +8700,12 @@ function AppShell({ session }: { session: Session | null }) {
 
         {/* La pagina della sezione: le votazioni. La classifica e diventata la
             voce accanto nella barra, e sta nel blocco qui sotto. */}
-        {!loading && view === "pizza" && pizzaView === "overview" ? (
+        {!loading && view === "pizza" && sectionProfile === "pizza" && currentUser ? (
+          <PizzaProfile profile={currentUser} avatar={<Avatar profile={currentUser} size="lg" />}
+            sessions={pizzaSessions} votes={pizzaSessionVotes} restaurants={pizzaRestaurants} />
+        ) : null}
+
+        {!loading && view === "pizza" && !sectionProfile && pizzaView === "overview" ? (
           <><section className="pizza-page">
             <BlockMark size="lg" />
             <div className="pizza-hero">
@@ -8736,7 +8782,7 @@ function AppShell({ session }: { session: Session | null }) {
           </section></>
         ) : null}
 
-        {!loading && view === "pizza" && pizzaView === "ranking" ? (
+        {!loading && view === "pizza" && !sectionProfile && pizzaView === "ranking" ? (
           <><section className="pizza-page pizza-ranking-page">
             <BlockMark size="lg" />
             <div className="pizza-hero">
@@ -8890,8 +8936,12 @@ function AppShell({ session }: { session: Session | null }) {
                   : <CodGaming viewerId={session?.user.id ?? ""} profiles={profiles} startWithForm={gamingAction === "gb"} />}
           </>
         ) : null}
-        {!loading && view === "cashout" ? (
-          <CashoutPage profiles={profiles} viewerId={session?.user.id ?? ""} />
+        {!loading && view === "cashout" && sectionProfile === "cashout" && currentUser ? (
+          <CashoutProfile profile={currentUser} profiles={profiles} avatar={<Avatar profile={currentUser} size="lg" />}
+            onOpenGroup={(groupId) => { setCashoutGroupId(groupId); setSectionProfile(null); scrollPageTo(0, "instant" as ScrollBehavior); }} />
+        ) : null}
+        {!loading && view === "cashout" && !sectionProfile ? (
+          <CashoutPage key={cashoutGroupId ?? "all"} profiles={profiles} viewerId={session?.user.id ?? ""} initialGroupId={cashoutGroupId} />
         ) : null}
 
       </main>

@@ -11,7 +11,7 @@ type CashoutShare = {
   profile_id: string;
   amount: number;
 };
-type CashoutSettlement = {
+export type CashoutSettlement = {
   id: string;
   group_id: string;
   from_profile_id: string;
@@ -20,7 +20,7 @@ type CashoutSettlement = {
   created_by: string;
   created_at: string;
 };
-type CashoutExpense = {
+export type CashoutExpense = {
   id: string;
   group_id: string;
   description: string;
@@ -37,7 +37,7 @@ function CashoutDialogPortal({ children }: { children: ReactNode }) {
   return typeof document === "undefined" ? null : createPortal(children, document.body);
 }
 
-type CashoutGroup = {
+export type CashoutGroup = {
   id: string;
   name: string;
   created_by: string;
@@ -47,7 +47,7 @@ type CashoutGroup = {
   settlements: CashoutSettlement[];
 };
 
-async function fetchCashoutGroups() {
+export async function fetchCashoutGroups() {
   if (!supabase) return { groups: [] as CashoutGroup[], schemaReady: false };
   const { data, error } = await supabase
     .from("cashout_groups")
@@ -72,7 +72,7 @@ async function fetchCashoutGroups() {
 }
 
 const euro = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
-const formatMoney = (value: number) => euro.format(Math.abs(value));
+export const formatMoney = (value: number) => euro.format(Math.abs(value));
 const numericAmount = (value: string) => Math.round(Number(value.replace(",", ".")) * 100) / 100;
 // PayPal.Me documenta l'importo nel percorso, ma alcune versioni dell'app
 // mobile aprono soltanto il profilo. Il tap copia quindi anche l'importo: il
@@ -102,16 +102,16 @@ function copyPayPalAmount(amount: number) {
     void navigator.clipboard.writeText(value).catch(() => undefined);
   }
 }
-const paidBy = (expense: CashoutExpense, profileId: string) => (
+export const paidBy = (expense: CashoutExpense, profileId: string) => (
   expense.payers.find((payer) => payer.profile_id === profileId)?.amount ?? 0
 );
-const shareOf = (expense: CashoutExpense, profileId: string) => (
+export const shareOf = (expense: CashoutExpense, profileId: string) => (
   expense.shares.find((share) => share.profile_id === profileId)?.amount ?? 0
 );
-type CashoutBalance = { profile: Profile; balance: number };
-type CashoutTransfer = { fromId: string; toId: string; amount: number };
+export type CashoutBalance = { profile: Profile; balance: number };
+export type CashoutTransfer = { fromId: string; toId: string; amount: number };
 
-function buildCashoutTransfers(balances: CashoutBalance[]): CashoutTransfer[] {
+export function buildCashoutTransfers(balances: CashoutBalance[]): CashoutTransfer[] {
   const debtors = balances
     .map(({ profile, balance }) => ({ id: profile.id, cents: Math.max(0, -Math.round(balance * 100)) }))
     .filter((item) => item.cents > 0);
@@ -133,6 +133,17 @@ function buildCashoutTransfers(balances: CashoutBalance[]): CashoutTransfer[] {
     if (creditor.cents === 0) creditorIndex += 1;
   }
   return transfers;
+}
+
+// Il saldo di ognuno in un gruppo: pagato meno la sua quota, piu i saldi
+// mandati, meno quelli ricevuti. Positivo = deve ricevere. Lo usano la pagina
+// del gruppo, l'elenco dei gruppi e il profilo Cashout.
+export function groupBalances(group: CashoutGroup, profiles: Profile[]): CashoutBalance[] {
+  return group.members.map((member) => ({
+    profile: profiles.find((profile) => profile.id === member.profile_id),
+    balance: group.expenses.reduce((sum, expense) => sum + paidBy(expense, member.profile_id) - shareOf(expense, member.profile_id), 0)
+      + group.settlements.reduce((sum, settlement) => sum + (settlement.from_profile_id === member.profile_id ? settlement.amount : 0) - (settlement.to_profile_id === member.profile_id ? settlement.amount : 0), 0),
+  })).filter((item): item is CashoutBalance => Boolean(item.profile));
 }
 
 function CashoutAvatar({ profile }: { profile?: Profile }) {
@@ -547,11 +558,12 @@ function CashoutGroupDetail({
   );
 }
 
-export default function CashoutPage({ profiles, viewerId }: { profiles: Profile[]; viewerId: string }) {
+export default function CashoutPage({ profiles, viewerId, initialGroupId = null }: { profiles: Profile[]; viewerId: string; initialGroupId?: string | null }) {
   const [groups, setGroups] = useState<CashoutGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [schemaReady, setSchemaReady] = useState(true);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Il profilo Cashout apre direttamente il gruppo di un debito.
+  const [selectedId, setSelectedId] = useState<string | null>(initialGroupId);
   const [showGroupCreate, setShowGroupCreate] = useState(false);
   const [showExpenseCreate, setShowExpenseCreate] = useState(false);
   const [settlementTransfer, setSettlementTransfer] = useState<CashoutTransfer | null>(null);
@@ -601,12 +613,7 @@ export default function CashoutPage({ profiles, viewerId }: { profiles: Profile[
             <div className="cashout-group-grid">
               {groups.map((group) => {
                 const total = group.expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
-                const rawBalances = group.members.map((member) => ({
-                  profile: profiles.find((profile) => profile.id === member.profile_id),
-                  balance: group.expenses.reduce((sum, expense) => sum + paidBy(expense, member.profile_id) - shareOf(expense, member.profile_id), 0)
-                    + group.settlements.reduce((sum, settlement) => sum + (settlement.from_profile_id === member.profile_id ? settlement.amount : 0) - (settlement.to_profile_id === member.profile_id ? settlement.amount : 0), 0),
-                })).filter((item): item is CashoutBalance => Boolean(item.profile));
-                const open = buildCashoutTransfers(rawBalances).length;
+                const open = buildCashoutTransfers(groupBalances(group, profiles)).length;
                 return (
                   <button className="cashout-group-card" type="button" onClick={() => setSelectedId(group.id)} key={group.id}>
                     <span className="cashout-group-icon">€</span>
