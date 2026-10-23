@@ -8949,17 +8949,7 @@ function AppShell({ session }: { session: Session | null }) {
         ) : null}
 
         {!loading && view === "gaming" && gamingView === "overview" ? (
-          <section className="page-section gaming-page">
-            <article className="section-hero">
-              <BlockMark size="lg" />
-              <div className="section-hero-head">
-                <div>
-                  <p className="eyebrow">THEBOYZ GAMING</p>
-                  <h1>Scegli il tuo gioco</h1>
-                  <p>Ogni gioco ha il suo spazio. Si parte da Modern Warfare 4.</p>
-                </div>
-              </div>
-            </article>
+          <section className="page-section gaming-page" aria-label="Gaming">
             <div className="gaming-grid" aria-label="Giochi">
               <button className="gaming-card" type="button" onClick={() => {
                 setGamingView("mw4");
