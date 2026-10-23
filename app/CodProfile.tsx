@@ -5,6 +5,7 @@ import Image from "next/image";
 import type { Profile } from "@/lib/supabase";
 import { codModes, codModeStatKeys, codRanking, type CodGb, type CodMode } from "@/lib/cod-gb";
 import { CodNickname } from "./CodGaming";
+import { ProfileHeader, StatRow } from "./profile/parts";
 import useCodGbs from "./useCodGbs";
 import styles from "./CodProfile.module.css";
 import { codEmblems } from "@/lib/cod-emblems";
@@ -19,7 +20,7 @@ function outcome(gb: CodGb, team: number) {
   return (team === 1) === (gb.team1_score > gb.team2_score) ? "V" : "S";
 }
 
-export default function CodProfile({ profile, avatar }: { profile: Profile; avatar: ReactNode }) {
+export default function CodProfile({ profile, avatar, onEdit }: { profile: Profile; avatar: ReactNode; onEdit?: () => void }) {
   const { gbs, loading, error, load } = useCodGbs();
   const badges = codEmblems(gbs);
   const earnedCount = badges.filter(b => b.holders.includes(profile.id)).length;
@@ -34,26 +35,31 @@ export default function CodProfile({ profile, avatar }: { profile: Profile; avat
     const index = rows.findIndex(row => row.profileId === profile.id);
     return { mode, row: index >= 0 ? rows[index] : null, rank: index + 1, total: rows.length };
   });
+  // Il posto migliore fra le modalita giocate: va nella pastiglia.
+  const bestMode = modes.filter(item => item.row).sort((a, b) => a.rank - b.rank)[0];
+  const unplayed = modes.filter(item => !item.row).map(item => codModes[item.mode].label);
+  const singleMode = modes.filter(item => item.row).length === 1;
 
-  return <section className="page-section cod-page" aria-labelledby="cod-profile-title">
-    <header className={styles.head}>
-      {avatar}
-      <div>
-        <p className="eyebrow dark">CALL OF DUTY · MW4 · PROFILO</p>
-        <h1 id="cod-profile-title">{profile.display_name}</h1>
-      </div>
-    </header>
-
+  return <section className="page-section cod-page" aria-label={`Profilo MW4 di ${profile.display_name}`}>
     {error ? <p role="alert">{error} <button className="button button-ghost" onClick={() => void load()}>Aggiorna</button></p> : null}
     {loading ? <p role="status">Caricamento statistiche…</p> : <>
-      <dl className={styles.totals}>
-        <div><dt>GB</dt><dd>{played.length}</dd></div>
-        <div><dt>Vittorie</dt><dd>{wins}</dd></div>
-        <div><dt>% vittorie</dt><dd>{played.length ? `${Math.round(wins / played.length * 100)}%` : "—"}</dd></div>
-        <div><dt>K/D</dt><dd>{kd(kills, deaths)}</dd></div>
-        <div><dt>Uccisioni</dt><dd>{kills}</dd></div>
-        <div><dt>Morti</dt><dd>{deaths}</dd></div>
-      </dl>
+      {/* La stessa testata degli altri profili: chi sei, il tuo posto migliore,
+          tre numeri e sotto altri tre. */}
+      <div className="player-profile-head">
+        <ProfileHeader eyebrow="MW4 · profilo" name={profile.display_name} avatar={avatar} onEdit={onEdit}
+          pill={bestMode ? <><b>{bestMode.rank}°</b> su {bestMode.total} in {codModes[bestMode.mode].label}</> : "Nessuna GB ancora"}>
+          <StatRow dark stats={[
+            { label: "GB", value: played.length },
+            { label: "Vittorie", value: played.length ? Math.round(wins / played.length * 100) : "—", unit: played.length ? "%" : undefined },
+            { label: "K/D", value: kd(kills, deaths) },
+          ]} />
+        </ProfileHeader>
+        <StatRow stats={[
+          { label: "Vinte", value: wins },
+          { label: "Uccisioni", value: kills },
+          { label: "Morti", value: deaths },
+        ]} />
+      </div>
 
       <section className="player-trophies" aria-labelledby="cod-profile-emblems-title">
         <h2 id="cod-profile-emblems-title" className={styles.title}>Emblemi MW4</h2>
@@ -76,18 +82,24 @@ export default function CodProfile({ profile, avatar }: { profile: Profile; avat
 
       <h2 className={styles.title}>Per modalità</h2>
       <div className={styles.modes}>
-        {modes.map(({ mode, row, rank, total }) => <article key={mode} className={styles.mode}>
-          <header><h3>{codModes[mode].label}</h3>{row ? <span>#{rank} su {total}</span> : null}</header>
+        {modes.filter(item => item.row).map(({ mode, row, rank, total }) => <article key={mode} className={styles.mode}>
+          {/* Con una modalita sola, posto, GB, vittorie e K/D sono gia in
+              testata: qui restano i numeri propri della modalita. */}
+          <header><h3>{codModes[mode].label}</h3>{row && !singleMode ? <span>#{rank} su {total}</span> : null}</header>
           {row ? <dl>
-            <div><dt>GB</dt><dd>{row.games}</dd></div>
-            <div><dt>Vittorie</dt><dd>{row.wins}</dd></div>
-            <div><dt>K/D</dt><dd>{kd(row.kills, row.deaths)}</dd></div>
+            {singleMode ? null : <>
+              <div><dt>GB</dt><dd>{row.games}</dd></div>
+              <div><dt>Vittorie</dt><dd>{row.wins}</dd></div>
+              <div><dt>K/D</dt><dd>{kd(row.kills, row.deaths)}</dd></div>
+            </>}
             <div><dt>Danni</dt><dd>{row.damage ?? "—"}</dd></div>
             <div><dt>Punti medi</dt><dd>{row.score != null ? (row.score / row.games).toLocaleString("it-IT", { maximumFractionDigits: 1 }) : "—"}</dd></div>
             {codModeStatKeys[mode].map((key, i) => <div key={key}><dt>{codModes[mode].stats[i]}</dt><dd>{row[key] ?? "—"}</dd></div>)}
-          </dl> : <p>Nessuna GB registrata in questa modalità.</p>}
+          </dl> : null}
         </article>)}
       </div>
+      {/* Le modalita mai giocate in una riga sola, non una card vuota a testa. */}
+      {unplayed.length ? <p className={styles.unplayed}>Nessuna GB in {unplayed.length > 1 ? `${unplayed.slice(0, -1).join(", ")} e ${unplayed.at(-1)}` : unplayed[0]}.</p> : null}
 
       <h2 className={styles.title}>Ultime GB</h2>
       {played.length ? <ol className={styles.recent}>

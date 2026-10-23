@@ -24,7 +24,17 @@ marqueeModule.require = require;
 marqueeModule._compile(ts.transpileModule(readFileSync(marqueeFilename, 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
 }).outputText, marqueeFilename);
+// Le parti condivise dei profili (testata e numeri), compilate come sopra.
+const partsFilename = fileURLToPath(new URL('../app/profile/parts.tsx', import.meta.url));
+const partsModule = new Module(partsFilename);
+partsModule.require = (name) => name === './Profile.module.css'
+  ? { __esModule: true, default: new Proxy({}, { get: (_, key) => String(key) }) }
+  : require(name);
+partsModule._compile(ts.transpileModule(readFileSync(partsFilename, 'utf8'), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
+}).outputText, partsFilename);
 const stubs = {
+  './profile/parts': partsModule.exports,
   '@/lib/cod-gb': cod,
   '@/lib/cod-emblems': emblems,
   './CabinetMarquee': marqueeModule.exports,
@@ -41,7 +51,8 @@ const player = (id, team, kills, deaths) => ({ profile_id: id, nickname: id, tea
 test('il profilo MW4 senza partite mostra il nick COD e nessun dato padel', () => {
   snapshot = { ...snapshot, gbs: [] };
   const html = render();
-  assert.match(html, /MW4 · PROFILO/);
+  assert.match(html, /MW4 · profilo/);
+  assert.match(html, /Nessuna GB ancora/);
   assert.match(html, /Nessuna GB giocata/);
   assert.match(html, /Il mio nick Call of Duty/);
   assert.match(html, /Emblemi MW4/);
@@ -58,7 +69,7 @@ test('il profilo MW4 riassume solo le GB elaborate del giocatore', () => {
   ] };
   const html = render();
   assert.match(html, /<dt>K\/D<\/dt><dd>2\.00<\/dd>/);
-  assert.match(html, /#1 su 2/);
+  assert.match(html, /<b>1°<\/b> su 2 in Hardpoint/);
   assert.match(html, /Vista/);
   assert.match(html, /1 \/ 7 emblemi detenuti/);
   assert.match(html, /Detenuto da te/);

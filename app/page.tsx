@@ -9045,7 +9045,7 @@ function AppShell({ session }: { session: Session | null }) {
               : gamingView === "mw4-ranking"
                 ? <CodRanking profiles={profiles} />
                 : gamingView === "mw4-profile" && currentUser
-                  ? <CodProfile profile={currentUser} avatar={<Avatar profile={currentUser} size="lg" />} />
+                  ? <CodProfile profile={currentUser} avatar={<Avatar profile={currentUser} size="lg" />} onEdit={() => setShowProfileEdit(true)} />
                   : <CodGaming viewerId={session?.user.id ?? ""} profiles={profiles} startWithForm={gamingAction === "gb"} />}
           </>
         ) : null}
