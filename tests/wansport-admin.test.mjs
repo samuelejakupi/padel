@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 import ts from "typescript";
+import { readAppSource } from "./app-source.mjs";
 
 const source = await readFile(new URL("../supabase/functions/wansport-slots/index.ts", import.meta.url), "utf8");
 const code = ts.transpileModule(source.replace(/^import .*createClient.*;$/m, ""), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
@@ -41,7 +42,7 @@ test("la richiesta del tabellone non richiede il ruolo admin", async () => {
   assert.equal((await response.json()).errore, "Club sconosciuto");
 });
 test("il modulo Wansport viene montato solo nel pannello Admin", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readAppSource();
   const admin = await readFile(new URL("../app/AdminUsers.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(page, /WansportAccesso/);
   assert.match(admin, /<WansportAccesso \/>/);

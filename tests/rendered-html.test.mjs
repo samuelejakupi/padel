@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
+import { readAppSource } from "./app-source.mjs";
 
 const root = new URL("../", import.meta.url);
 
@@ -33,7 +34,7 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
     readFile(new URL("supabase/migration-trofei-immagine.sql", root), "utf8"),
     readFile(new URL("supabase/migration-cashout.sql", root), "utf8"),
     readFile(new URL("supabase/migration-paypal.sql", root), "utf8"),
-    readFile(new URL("app/page.tsx", root), "utf8"),
+    readAppSource(),
     readFile(new URL("app/Cashout.tsx", root), "utf8"),
     readFile(new URL("app/globals.css", root), "utf8"),
   ]);

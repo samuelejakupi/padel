@@ -269,6 +269,29 @@ centrate. Sulla home, che è scura, anche la barra in alto è scura.
   `app/CodProfile.module.css`). Stesse variabili, stesse regole di questo
   file; nei module i `@keyframes` sono locali.
 
+### Dove sta il codice
+
+`app/page.tsx` tiene solo il guscio dell'app (`AppShell`: dati, navigazione,
+quale pagina mostrare). Il resto sta per sezione:
+
+| File | Cosa |
+|---|---|
+| `app/core.tsx` | Tipi, formule e testi comuni (Elo, pizza, saluti) |
+| `app/ui.tsx` | Avatar, icone della barra, accesso, schermata di attesa |
+| `app/motion.tsx` | Scorrimento, caroselli, `useIsPhone` |
+| `app/BottomSheet.tsx` | Il foglio che sale dal basso |
+| `app/padel/matches.tsx` | Card partita, MVP, coppie |
+| `app/padel/match-form.tsx` | Registra partita |
+| `app/padel/ranking.tsx` | Classifica e grafici Elo |
+| `app/padel/emblems.tsx` | Emblemi e Prossimi traguardi |
+| `app/padel/tournaments.tsx` | Tornei, trofei, calendario |
+| `app/padel/plays.tsx` | Clip |
+| `app/pizza/modals.tsx` | Apri e vota la pizza |
+
+Un componente nuovo va nel file della sua sezione, non in `page.tsx`. I test
+che cercano testi nel sorgente leggono tutti questi file insieme
+(`tests/app-source.mjs`): se ne aggiungi uno, aggiungilo anche lì.
+
 ---
 
 ## 9. Immagini delle armi (Gaming)

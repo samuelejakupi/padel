@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { readFile, access } from "node:fs/promises";
 import test from "node:test";
+import { readAppSource } from "./app-source.mjs";
 
 const root = new URL("../", import.meta.url);
 test("gli emblemi ritirati non vengono più assegnati né pubblicati", async () => {
-  const page = await readFile(new URL("app/page.tsx", root), "utf8");
+  const page = await readAppSource();
   for (const name of ["sets", "comeback", "dominator"]) {
     assert.ok(!page.includes(`recordBadge("${name}"`));
     await assert.rejects(access(new URL(`public/emblems/${name}.webp`, root)), { code: "ENOENT" });
