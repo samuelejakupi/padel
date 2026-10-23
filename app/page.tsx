@@ -35,7 +35,7 @@ type PadelView = "overview" | "ranking" | "matches" | "tournaments" | "player";
 // Pizza e Gaming hanno una pagina principale e una classifica. Cash Out usa
 // invece una sola area operativa con gruppi, spese e resoconti.
 type SectionView = "overview" | "ranking";
-type GamingView = SectionView | "mw4";
+type GamingView = "overview" | "mw4" | "mw4-ranking";
 type PizzaRankingMode = "contemporary" | "classic" | "personal";
 type PizzaRankingEntry = {
   name: string;
@@ -7157,7 +7157,7 @@ function AppShell({ session }: { session: Session | null }) {
     : navSection === "pizza"
       ? pizzaView
       : navSection === "gaming"
-        ? (gamingView === "ranking" ? "ranking" : "overview")
+        ? (gamingView === "mw4-ranking" ? "ranking" : "overview")
         : "overview";
   const selectedPlayerRank = selectedPlayer?.matches_played ? rankOf(sorted, selectedPlayer.id) : 0;
   const selectedPlayerMatches = selectedPlayer
@@ -7354,7 +7354,6 @@ function AppShell({ session }: { session: Session | null }) {
     setView(section);
     if (section === "padel") setPadelView("ranking");
     if (section === "pizza") setPizzaView("ranking");
-    if (section === "gaming") setGamingView("ranking");
     scrollPageTo(0, "instant" as ScrollBehavior);
   }, []);
 
@@ -7431,14 +7430,35 @@ function AppShell({ session }: { session: Session | null }) {
     axis: "pending" | "horizontal" | "vertical";
   } | null>(null);
 
-  // La barra cambia con la sezione. In home ha due voci; Padel, Pizza e Gaming
-  // ne hanno quattro con la classifica, mentre Cash Out ne ha tre perché i
-  // saldi vivono dentro ogni gruppo e non formano un ranking.
+  // Gaming mostra la classifica solo dentro il gioco selezionato.
   const navItems = useMemo(() => {
     const home = { key: "home", glyph: "home" as GlyphName, label: "Home", active: view === "home", select: goHome };
     const profile = { key: "profile", glyph: "" as GlyphName, label: "Profilo", active: isOwnCard, select: openOwnCard };
     if (!navSection) return [home, profile];
     const meta = sectionMeta(navSection);
+    if (navSection === "gaming") {
+      const games = {
+        key: "gaming", glyph: "gamepad" as GlyphName, label: "Gaming",
+        active: !isPlayerCard && gamingView === "overview",
+        select: () => openSection("gaming"),
+      };
+      if (gamingView === "overview") return [home, games, profile];
+      const selectGameView = (next: GamingView) => {
+        setView("gaming");
+        setLastSection("gaming");
+        setGamingView(next);
+        scrollPageTo(0, "instant" as ScrollBehavior);
+      };
+      return [home, games, {
+        key: "mw4", glyph: "gamepad" as GlyphName, label: "MW4",
+        active: !isPlayerCard && gamingView === "mw4",
+        select: () => selectGameView("mw4"),
+      }, {
+        key: "mw4-ranking", glyph: "ranking" as GlyphName, label: "Classifica",
+        active: !isPlayerCard && gamingView === "mw4-ranking",
+        select: () => selectGameView("mw4-ranking"),
+      }, profile];
+    }
     if (navSection === "cashout") return [
       home,
       {
@@ -7468,7 +7488,7 @@ function AppShell({ session }: { session: Session | null }) {
       },
       profile,
     ];
-  }, [view, navSection, sectionView, isPlayerCard, isOwnCard, openOwnCard, goHome, openSection, openSectionRanking]);
+  }, [view, navSection, sectionView, gamingView, isPlayerCard, isOwnCard, openOwnCard, goHome, openSection, openSectionRanking]);
 
   const navActiveIndex = navItems.findIndex((item) => item.active);
 
@@ -8987,18 +9007,14 @@ function AppShell({ session }: { session: Session | null }) {
           </section>
         ) : null}
 
-        {!loading && view === "gaming" && gamingView === "ranking" ? (
+        {!loading && view === "gaming" && gamingView === "mw4-ranking" ? (
           <SectionPreview
-            eyebrow="THEBOYZ GAMING"
-            title="La classifica del salotto"
-            lead="Chi vince sale, chi perde scende: la stessa regola del padel, applicata a tutto quello che si gioca insieme."
-            points={[
-              { title: "Una classifica generale", copy: "Somma di tutte le partite, qualunque sia il gioco: dice chi vince più spesso, non chi è più bravo a una cosa sola." },
-              { title: "E una per gioco", copy: "Sotto la generale, il dettaglio: chi comanda a FIFA può essere l'ultimo a poker, e va scritto." },
-              { title: "Aggiornata a fine partita", copy: "Nessun calcolo a mano: si registra il risultato e la classifica cambia." },
-            ]}
+            eyebrow="CALL OF DUTY · MODERN WARFARE 4"
+            title="Classifica MW4"
+            lead="La classifica dei TheBoyz su Modern Warfare 4."
+            points={[]}
             emptyTitle="Classifica ancora vuota"
-            emptyCopy="Servono le prime partite. Appena il registro sarà attivo, questa pagina si riempie da sola."
+            emptyCopy="Qui arriveranno i risultati e la classifica dedicati a MW4."
           />
         ) : null}
 
