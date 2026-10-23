@@ -34,6 +34,7 @@ import { canRecordTournamentFixture } from "@/lib/tournament-fixture-order";
 import HomeProfile from "./profile/HomeProfile";
 import PizzaProfile from "./profile/PizzaProfile";
 import CashoutProfile from "./profile/CashoutProfile";
+import { ProfileHeader, StatRow } from "./profile/parts";
 
 // Le quattro sezioni del gruppo. La home non e una di loro: e lo smistamento
 // che le apre, e da li la barra in basso cambia voci.
@@ -8416,79 +8417,35 @@ function AppShell({ session }: { session: Session | null }) {
         {!loading && view === "padel" && padelView === "player" && selectedPlayer ? (
           <section className="page-section player-detail-page">
             {isOwnCard && session ? <AdminAccess viewerId={session.user.id} onChanged={loadData} /> : null}
-            <article className="player-detail-hero">
-              <BlockMark size="lg" />
-              {/* Il tasto di modifica sta nell'angolo, con la sola matita:
-                  accanto all'occhiello portava via mezza riga per una cosa
-                  che si cerca dove si cerca sempre. */}
-              {isOwnCard ? (
-                <button
-                  className="player-edit-button"
-                  type="button"
-                  onClick={() => setShowProfileEdit(true)}
-                  title="Modifica i dati del profilo"
-                  aria-label="Modifica i dati del profilo"
-                >
-                  <span aria-hidden="true">✎</span>
-                </button>
-              ) : null}
-              <div className="hero-stat-copy player-detail-copy">
-                {/* Lo stesso saluto della card in home, con la stessa battuta
-                    pescata per questa visita. Sulla scheda di un altro il
-                    saluto non ha senso: resta il nome. */}
-                <h1 className="hero-greeting">
-                  {isOwnCard ? heroGreeting.lead : selectedPlayer.display_name}
-                </h1>
-                {/* Al posto dell'occhiello "la tua posizione" c'e come si
-                    gioca: mano e lato di campo. La posizione la dice il
-                    numerone due righe sotto, non serve annunciarla. */}
-                <p className="eyebrow">
-                  {padelTraits(selectedPlayer)?.toUpperCase()
-                    ?? (isOwnCard ? "LA TUA POSIZIONE" : "POSIZIONE IN CLASSIFICA")}
-                </p>
-                <div className="hero-position-row">
-                  <div className="position">
-                    {selectedPlayer.matches_played && selectedPlayerRank
-                      ? <><span>#</span>{selectedPlayerRank}</>
-                      : "N/C"}
-                  </div>
-                  <div className="hero-player">
-                    <div className="profile-photo">
-                      <Avatar profile={selectedPlayer} size="xl" rank={selectedPlayerRank || undefined} />
-                    </div>
-                  </div>
-                </div>
-                {/* La stessa riga della card in home: quanto manca al posto
-                    sopra. Sulla scheda di un altro cambia solo la persona. */}
-                <p>
-                  {!selectedPlayer.matches_played
-                    ? (isOwnCard
-                      ? "Gioca la prima partita per entrare nella classifica."
-                      : "Entra in classifica al primo risultato.")
-                    : selectedPlayerRank === 1
-                      ? (isOwnCard ? "Sei in testa alla classifica." : "È in testa alla classifica.")
-                      : isOwnCard
-                        ? <>Sei a <b>{eloLabel(playerPointsToNext)} punti</b> dal prossimo posto.</>
-                        : <>È a <b>{eloLabel(playerPointsToNext)} punti</b> dal prossimo posto.</>}
-                </p>
-              </div>
-              {/* I numeri di carriera, due per riga. Senza insegna: "Numeri in
-                  campo · Carriera" diceva quello che i numeri dicono da soli.
-                  L'accoppiata di ogni riga e voluta — Elo con quante partite,
-                  win rate con le vittorie, serie con le sconfitte — perche i
-                  due numeri di una riga si leggono insieme. I pareggi restano
-                  fuori: sono pochi e allungavano la fila per niente. */}
-              <section className="player-stats-card" aria-label="Statistiche del giocatore">
-                <div className="player-kpis">
-                  <article><b>{selectedPlayer.matches_played ? eloLabel(selectedPlayer.rating) : "N/C"}</b><small>Elo</small></article>
-                  <article><b>{selectedPlayer.matches_played}</b><small>N. partite</small></article>
-                  <article><b>{padelWinRate(selectedPlayer.wins, selectedPlayer.losses)}%</b><small>Win rate</small></article>
-                  <article><b>{selectedPlayer.wins}</b><small>Vittorie</small></article>
-                  <article><b>{selectedPlayer.current_streak > 0 ? `+${selectedPlayer.current_streak}` : selectedPlayer.current_streak}</b><small>Serie</small></article>
-                  <article><b>{selectedPlayer.losses}</b><small>Sconfitte</small></article>
-                </div>
-              </section>
-            </article>
+            {/* ANTEPRIMA: la testata in stile PlayPro, come gli altri profili.
+                Chi sei e dove stai in alto, poi i numeri in due file da tre. */}
+            <div className="player-profile-head">
+            <ProfileHeader eyebrow={isOwnCard ? heroGreeting.lead.replace(/,$/, "") : "Padel · profilo"}
+              name={selectedPlayer.display_name}
+              avatar={<Avatar profile={selectedPlayer} size="lg" rank={selectedPlayerRank || undefined} />}
+              onEdit={isOwnCard ? () => setShowProfileEdit(true) : undefined}
+              pill={selectedPlayer.matches_played && selectedPlayerRank
+                ? <><b>{selectedPlayerRank}°</b> in classifica{padelTraits(selectedPlayer) ? ` · ${padelTraits(selectedPlayer)}` : ""}</>
+                : "Non ancora in classifica"}>
+              <StatRow dark stats={[
+                { label: "Elo", value: selectedPlayer.matches_played ? eloLabel(selectedPlayer.rating) : "N/C" },
+                { label: "Vittorie", value: padelWinRate(selectedPlayer.wins, selectedPlayer.losses), unit: "%" },
+                { label: "Partite", value: selectedPlayer.matches_played },
+              ]} />
+              <p className="player-next-note">
+                {!selectedPlayer.matches_played
+                  ? (isOwnCard ? "Gioca la prima partita per entrare nella classifica." : "Entra in classifica al primo risultato.")
+                  : selectedPlayerRank === 1
+                    ? (isOwnCard ? "Sei in testa alla classifica." : "È in testa alla classifica.")
+                    : <>{isOwnCard ? "Sei" : "È"} a <b>{eloLabel(playerPointsToNext)} punti</b> dal prossimo posto.</>}
+              </p>
+            </ProfileHeader>
+            <StatRow stats={[
+              { label: "Vinte", value: selectedPlayer.wins },
+              { label: "Perse", value: selectedPlayer.losses },
+              { label: "Serie", value: selectedPlayer.current_streak > 0 ? `+${selectedPlayer.current_streak}` : selectedPlayer.current_streak, tone: selectedPlayer.current_streak > 0 ? "up" : selectedPlayer.current_streak < 0 ? "down" : undefined },
+            ]} />
+            </div>
 
             <section className="player-trophies">
               <div className="player-history-head">

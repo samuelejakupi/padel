@@ -7778,6 +7778,22 @@ button.pizza-ranking-row {
   position: relative;
 }
 
+.player-profile-head {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* Sotto i numeri della testata Padel: quanto manca al posto sopra. */
+.player-next-note {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 14px;
+  margin: var(--space-2) 0 0;
+}
+
+.player-next-note b {
+  color: var(--lime);
+}
+
 /* Foto e tasto per cambiarla, in cima alla scheda "Dati del profilo". */
 .profile-edit-photo {
   align-items: center;
