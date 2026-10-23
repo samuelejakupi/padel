@@ -20,6 +20,7 @@ import WansportBoard from "./WansportBoard";
 import CashoutPage from "./Cashout";
 import AdminAccess from "./AdminUsers";
 import ProfilePassword from "./ProfilePassword";
+import CodGaming, { CodNickname } from "./CodGaming";
 import PlayerInsights from "./PlayerInsights";
 import { MatchFilterBar, MatchFormSteps } from "./PadelPresentation";
 import { filterMatchPeriod, filterMatchResults, type PeriodFilter, type ResultFilter } from "@/lib/padel-presentation";
@@ -6502,54 +6503,6 @@ function TournamentsPage({
   );
 }
 
-// Gaming e Cashout hanno la barra, la pagina e la classifica, ma non ancora i
-// dati: schema e funzioni arrivano nel passo successivo. Questa pagina esiste
-// perche una voce che apre il vuoto sembra un difetto, mentre una che dice
-// cosa ci sara e un appuntamento. Sparisce quando la sezione avra i suoi dati.
-function SectionPreview({
-  eyebrow,
-  title,
-  lead,
-  points,
-  emptyTitle,
-  emptyCopy,
-}: {
-  eyebrow: string;
-  title: string;
-  lead: string;
-  points: readonly { title: string; copy: string }[];
-  emptyTitle: string;
-  emptyCopy: string;
-}) {
-  return (
-    <section className="page-section">
-      <article className="section-hero">
-        <BlockMark size="lg" />
-        <div className="section-hero-head">
-          <div>
-            <p className="eyebrow">{eyebrow}</p>
-            <h1>{title}</h1>
-            <p>{lead}</p>
-          </div>
-        </div>
-      </article>
-      <div className="preview-points">
-        {points.map((point) => (
-          <article className="preview-point" key={point.title}>
-            <h3>{point.title}</h3>
-            <p>{point.copy}</p>
-          </article>
-        ))}
-      </div>
-      <div className="empty-board">
-        <span>00</span>
-        <h2>{emptyTitle}</h2>
-        <p>{emptyCopy}</p>
-      </div>
-    </section>
-  );
-}
-
 function AppShell({ session }: { session: Session | null }) {
   // Dopo il login si entra nello smistamento, non dentro una sezione: da li si
   // sceglie dove andare e la barra in basso si riempie di conseguenza.
@@ -7449,8 +7402,8 @@ function AppShell({ session }: { session: Session | null }) {
         setGamingView(next);
         scrollPageTo(0, "instant" as ScrollBehavior);
       };
-      return [home, games, {
-        key: "mw4", glyph: "gamepad" as GlyphName, label: "MW4",
+      return [home, {
+        key: "gb", glyph: "gamepad" as GlyphName, label: "GB",
         active: !isPlayerCard && gamingView === "mw4",
         select: () => selectGameView("mw4"),
       }, {
@@ -8985,39 +8938,12 @@ function AppShell({ session }: { session: Session | null }) {
           </section>
         ) : null}
 
-        {!loading && view === "gaming" && gamingView === "mw4" ? (
-          <section className="page-section gaming-page">
-            <button className="button button-ghost gaming-back" type="button" onClick={() => openSection("gaming")}>
-              ← Tutti i giochi
-            </button>
-            <article className="section-hero">
-              <BlockMark size="lg" />
-              <div className="section-hero-head">
-                <div>
-                  <p className="eyebrow">GAMING · CALL OF DUTY</p>
-                  <h1>Modern Warfare 4</h1>
-                  <p>Lo spazio di MW4 per i TheBoyz.</p>
-                </div>
-              </div>
-            </article>
-            <div className="empty-board">
-              <h2>La sezione prende forma</h2>
-              <p>Qui arriveranno i contenuti dedicati a Modern Warfare 4.</p>
-            </div>
-          </section>
+        {!loading && view === "gaming" && gamingView !== "overview" ? (
+          <>
+            <button className="button button-ghost gaming-back" type="button" onClick={() => openSection("gaming")}>← Tutti i giochi</button>
+            <CodGaming viewerId={session?.user.id ?? ""} profiles={profiles} ranking={gamingView === "mw4-ranking"} />
+          </>
         ) : null}
-
-        {!loading && view === "gaming" && gamingView === "mw4-ranking" ? (
-          <SectionPreview
-            eyebrow="CALL OF DUTY · MODERN WARFARE 4"
-            title="Classifica MW4"
-            lead="La classifica dei TheBoyz su Modern Warfare 4."
-            points={[]}
-            emptyTitle="Classifica ancora vuota"
-            emptyCopy="Qui arriveranno i risultati e la classifica dedicati a MW4."
-          />
-        ) : null}
-
         {!loading && view === "cashout" ? (
           <CashoutPage profiles={profiles} viewerId={session?.user.id ?? ""} />
         ) : null}
@@ -9389,6 +9315,7 @@ function AppShell({ session }: { session: Session | null }) {
                 <button className="button button-primary" disabled={!supabase}>Salva modifiche</button>
               </div>
             </form>
+            <CodNickname viewerId={currentUser.id} />
             {session?.user.email ? <ProfilePassword account={{ id: session.user.id, email: session.user.email }} /> : null}
           </section>
         </div>

@@ -1,5 +1,89 @@
 @import "tailwindcss";
 
+.cod-page > .section-head {
+  flex-wrap: wrap;
+  gap: var(--space-5);
+}
+
+.cod-page h1 {
+  font-size: clamp(27px, 4vw, 40px);
+  font-weight: 900;
+}
+
+.cod-mode-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block: var(--space-6) var(--space-3);
+}
+
+.cod-mode-tabs button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--lime);
+}
+
+.cod-nickname {
+  margin-block: var(--space-5);
+}
+
+.cod-stat-note,
+.cod-status {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.cod-gb-list {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.cod-gb-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-6);
+}
+
+.cod-gb-card h2 {
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.cod-photo-previews {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-block: var(--space-5);
+}
+
+.cod-photo-previews img {
+  border-radius: var(--radius-sm);
+  width: 100%;
+}
+
+.cod-table-wrap {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow-x: auto;
+}
+
+.cod-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.cod-table th,
+.cod-table td,
+.cod-table caption {
+  border-bottom: 1px solid var(--line);
+  padding: var(--space-4);
+}
+
 .gaming-grid {
   display: grid;
   gap: var(--space-5);

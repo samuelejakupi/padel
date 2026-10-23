@@ -95,7 +95,8 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(css, /grid-template-columns: repeat\(var\(--nav-count/);
   // La terza voce e sempre la classifica della sezione in cui ti trovi.
   assert.match(page, /label: "Classifica"/);
-  assert.match(page, /function SectionPreview/);
+  // Gaming ora usa il registro GB al posto della precedente anteprima statica.
+  assert.match(page, /<CodGaming /);
   // La navigazione interna al Padel non esiste piu: partite e ranking si
   // aprono nel foglio dal basso, quindi la voce nella barra e una sola.
   // Il presidio si sposta sul componente che ha preso quel ruolo.

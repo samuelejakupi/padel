@@ -1,0 +1,140 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import Image from "next/image";
+import { supabase, type Profile } from "@/lib/supabase";
+import { codModes, codRanking, compressScoreboard, type CodGb, type CodMode } from "@/lib/cod-gb";
+
+type Identity = { id: string; profile_id: string; nickname: string };
+const statusLabels = { pending: "In attesa · prossima lettura notturna", processing: "Lettura scoreboard in corso", needs_review: "Da verificare", processed: "Risultato registrato" };
+
+export function CodNickname({ viewerId }: { viewerId: string }) {
+  const [nick, setNick] = useState("");
+  const [aliases, setAliases] = useState<Identity[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    let live = true;
+    void supabase?.from("cod_identities").select("id,profile_id,nickname").eq("profile_id", viewerId).then(({ data, error }) => {
+      if (live) { setAliases(data ?? []); if (error) setMessage("Impossibile caricare i nick COD."); }
+    });
+    return () => { live = false; };
+  }, [viewerId]);
+  async function save(event: FormEvent) {
+    event.preventDefault(); if (!supabase || busy) return;
+    setBusy(true); setMessage("");
+    const { error } = await supabase.rpc("save_cod_nickname", { p_nickname: nick.trim() });
+    if (error) setMessage(error.code === "23505" ? "Questo nick è già associato a un profilo." : error.message);
+    else {
+      const { data } = await supabase.from("cod_identities").select("id,profile_id,nickname").eq("profile_id", viewerId);
+      setAliases(data ?? []); setNick(""); setMessage("Nick COD associato.");
+    }
+    setBusy(false);
+  }
+  return <details className="profile-password cod-nickname">
+    <summary>Il mio nick Call of Duty</summary>
+    <p>Inserisci il nick esatto che appare negli scoreboard, compreso #ID se visibile. Puoi aggiungere altri nick usati: quelli precedenti restano riconoscibili.</p>
+    {aliases.length ? <ul>{aliases.map(alias => <li key={alias.id}>{alias.nickname}</li>)}</ul> : <p>Nessun nick associato.</p>}
+    <form onSubmit={event => void save(event)}>
+      <label>Nick COD<input value={nick} onChange={e => setNick(e.target.value)} minLength={2} maxLength={80} required autoCapitalize="none" autoCorrect="off" spellCheck={false} disabled={busy} /></label>
+      <button className="button button-primary" disabled={busy || !viewerId}>{busy ? "Salvataggio…" : "Associa nick"}</button>
+      {message ? <p role="status">{message}</p> : null}
+    </form>
+  </details>;
+}
+
+function GbForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => Promise<void> }) {
+  const [mode, setMode] = useState<CodMode>("hardpoint");
+  const [map, setMap] = useState("");
+  const [playedAt, setPlayedAt] = useState(() => {
+    const date = new Date(); return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  });
+  const [images, setImages] = useState<{ data: string; bytes: number }[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const pending = useRef(false);
+  async function pick(files: File[]) {
+    if (pending.current) return;
+    setImages([]); setMessage("");
+    if (!files.length || files.length > 4) { setMessage("Scegli da 1 a 4 foto della stessa partita."); return; }
+    pending.current = true; setBusy(true);
+    try {
+      const compressed = [];
+      // Una foto alla volta limita la memoria occupata sui telefoni.
+      for (const file of files) compressed.push(await compressScoreboard(file));
+      setImages(compressed);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Compressione non riuscita."); }
+    finally { pending.current = false; setBusy(false); }
+  }
+  async function submit(event: FormEvent) {
+    event.preventDefault(); if (!supabase || pending.current || !images.length) return;
+    pending.current = true; setBusy(true); setMessage("");
+    try {
+      const { error } = await supabase.rpc("submit_cod_gb", { p_mode: mode, p_map: map.trim(), p_played_at: new Date(playedAt).toISOString(), p_images: images.map(({ data }) => ({ data })) });
+      if (error) throw new Error(error.code === "23505" ? "Uno scoreboard è già stato caricato. Controlla il registro GB." : error.message);
+      await onSaved(); onClose();
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Caricamento non riuscito."); }
+    finally { pending.current = false; setBusy(false); }
+  }
+  return <div className="modal-backdrop">
+    <section className="modal cod-gb-modal" role="dialog" aria-modal="true" aria-labelledby="cod-gb-title">
+      <div className="modal-head"><h2 id="cod-gb-title">Aggiungi GB</h2><button className="icon-button" type="button" aria-label="Chiudi" disabled={busy} onClick={onClose}>×</button></div>
+      <p>Una GB è una partita classificata. Carica da 1 a 4 foto della stessa partita: risultato finale e scoreboard completi di entrambe le squadre.</p>
+      <form onSubmit={event => void submit(event)}>
+        <label>Modalità<select value={mode} disabled={busy} onChange={e => setMode(e.target.value as CodMode)}>{Object.entries(codModes).map(([key, item]) => <option key={key} value={key}>{item.label}</option>)}</select></label>
+        <label>Mappa<input value={map} onChange={e => setMap(e.target.value)} maxLength={80} required disabled={busy} /></label>
+        <label>Data e ora<input type="datetime-local" value={playedAt} onChange={e => setPlayedAt(e.target.value)} required disabled={busy} /></label>
+        <label>Foto scoreboard<input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy} onChange={e => void pick(Array.from(e.target.files ?? []))} /></label>
+        <small>Compressione automatica in JPEG prima dell’invio. Non ritagliare nomi, punteggi e intestazioni delle colonne.</small>
+        <div className="cod-photo-previews">{images.map((photo, index) => <figure key={index}><Image src={`data:image/jpeg;base64,${photo.data}`} alt={`Scoreboard ${index + 1}`} width={480} height={270} unoptimized /><figcaption>{Math.ceil(photo.bytes / 1024)} KB</figcaption></figure>)}</div>
+        <p>{codModes[mode].stats.join(" · ")} · Uccisioni · Morti · Danni. I valori non visibili resteranno non disponibili.</p>
+        {message ? <p className="form-message" role="alert">{message}</p> : null}
+        <div className="modal-actions"><button className="button button-ghost" type="button" disabled={busy} onClick={onClose}>Annulla</button><button className="button button-primary" disabled={busy || !images.length}>{busy ? "Preparazione…" : "Carica GB"}</button></div>
+      </form>
+    </section>
+  </div>;
+}
+
+export default function CodGaming({ viewerId, profiles, ranking }: { viewerId: string; profiles: Profile[]; ranking: boolean }) {
+  const [gbs, setGbs] = useState<CodGb[]>([]);
+  const [mode, setMode] = useState<CodMode>("hardpoint");
+  const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [retrying, setRetrying] = useState(false);
+  const load = useCallback(async () => {
+    if (!supabase) return;
+    const { data, error: queryError } = await supabase.from("cod_gbs").select("id,created_by,mode,map_name,played_at,status,review_note,image_count,team1_score,team2_score,players").order("played_at", { ascending: false });
+    setError(queryError ? "Impossibile caricare le GB. Riprova." : "");
+    if (!queryError) setGbs((data ?? []) as CodGb[]);
+    setLoading(false);
+  }, []);
+  useEffect(() => {
+    const refresh = () => { void load(); };
+    const timer = window.setTimeout(refresh, 0);
+    window.addEventListener("focus", refresh);
+    return () => { window.clearTimeout(timer); window.removeEventListener("focus", refresh); };
+  }, [load]);
+  async function retry(id: string) {
+    if (!supabase || retrying) return;
+    setRetrying(true);
+    const { error: retryError } = await supabase.rpc("retry_cod_gb", { p_id: id });
+    if (retryError) setError(retryError.message); else await load();
+    setRetrying(false);
+  }
+  const name = (id: string) => profiles.find(p => p.id === id)?.display_name ?? "Giocatore";
+  const rows = codRanking(gbs, mode);
+  return <section className="page-section cod-page">
+    <div className="section-head"><div><p className="eyebrow dark">CALL OF DUTY · MW4</p><h1>{ranking ? "Classifica MW4" : "Le nostre GB"}</h1></div><button className="button button-primary" onClick={() => setShowForm(true)} disabled={!viewerId}>+ Aggiungi GB</button></div>
+    <p>Scoreboard elaborati ogni notte alle 03:00. Le statistiche vengono divise per modalità.</p>
+    {!ranking ? <CodNickname viewerId={viewerId} /> : null}
+    <div className="cod-mode-tabs" aria-label="Modalità CDL">{Object.entries(codModes).map(([key, item]) => <button className="button button-ghost" key={key} aria-pressed={mode === key} onClick={() => setMode(key as CodMode)}>{item.label}</button>)}</div>
+    <p className="cod-stat-note">{codModes[mode].stats.join(" · ")} · Uccisioni · Morti · K/D · Danni</p>
+    {error ? <p role="alert">{error} <button className="button button-ghost" onClick={() => void load()}>Aggiorna</button></p> : null}
+    {loading ? <p role="status">Caricamento GB…</p> : ranking ? <>
+      <p>Ordine per vittorie, poi K/D complessivo. Sono incluse solo le GB elaborate. “—” indica un dato non leggibile.</p>
+      {rows.length ? <div className="cod-table-wrap"><table className="cod-table"><caption>{codModes[mode].label}</caption><thead><tr>{["Giocatore", "GB", "Vittorie", "Uccisioni", "Morti", "K/D", "Danni", ...codModes[mode].stats].map(h => <th key={h}>{h}</th>)}</tr></thead><tbody>{rows.map(row => <tr key={row.profileId}><th scope="row">{name(row.profileId)}</th><td>{row.games}</td><td>{row.wins}</td><td>{row.kills}</td><td>{row.deaths}</td><td>{row.deaths ? (row.kills / row.deaths).toFixed(2) : row.kills ? "∞" : "—"}</td><td>{row.damage ?? "—"}</td>{(mode === "hardpoint" ? [row.hill_seconds, row.objective_kills] : mode === "search_destroy" ? [row.plants, row.defuses, row.first_bloods] : [row.overloads, row.carries, row.objective_kills]).map((stat, i) => <td key={i}>{stat ?? "—"}</td>)}</tr>)}</tbody></table></div> : <div className="empty-board"><h2>Nessuna GB elaborata</h2><p>La classifica di {codModes[mode].label} si popolerà dopo la lettura degli scoreboard.</p></div>}
+    </> : <div className="cod-gb-list">{gbs.filter(g => g.mode === mode).map(gb => <article className="cod-gb-card" key={gb.id}><div><h2>{gb.map_name}</h2><small>{new Date(gb.played_at).toLocaleString("it-IT")} · {gb.image_count} foto</small></div><p className="cod-status">{statusLabels[gb.status]}</p>{gb.status === "processed" ? <><strong>{gb.team1_score} – {gb.team2_score}</strong><ul>{gb.players.filter(p => p.profile_id).map(p => <li key={p.profile_id}>{name(p.profile_id!)} · {p.kills} U / {p.deaths} M</li>)}</ul></> : null}{gb.review_note ? <p>{gb.review_note}</p> : null}{gb.status === "needs_review" && gb.created_by === viewerId ? <button className="button button-ghost" disabled={retrying} onClick={() => void retry(gb.id)}>Ho aggiornato il nick: riprova</button> : null}</article>)}{!gbs.some(g => g.mode === mode) && !error ? <div className="empty-board"><h2>Nessuna GB caricata</h2><p>Aggiungi gli scoreboard di una partita {codModes[mode].label}.</p></div> : null}</div>}
+    {showForm ? <GbForm onClose={() => setShowForm(false)} onSaved={load} /> : null}
+  </section>;
+}
