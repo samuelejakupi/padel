@@ -44,9 +44,10 @@ ai file `.env` pubblicati, alle GitHub Actions o al codice frontend.
 10. Esegui `supabase/migration-trofei-immagine.sql` per associare ai tornei le immagini della sala trofei.
 11. Esegui `supabase/migration-paypal.sql` per consentire a ciascun profilo di aggiungere il proprio utente PayPal.Me e ricevere i saldi Cashout tramite un link con importo precompilato.
 12. Dopo le altre migrazioni Padel (incluse stagioni, premi Elo e tornei individuali), esegui `supabase/migration-elo-compromesso-decimali.sql`: ricalcola lo storico, salva l'Elo a decimali e applica i pesi per uno, due o tre set.
-13. In **Authentication → URL Configuration**, imposta **Site URL** con l’indirizzo Vercel finale, per esempio:
+13. Esegui `supabase/cod-meta-builds.sql` per le build MW4 caricate dall'app (a mano o da screenshot). Le build da screenshot le legge la routine notturna descritta in `docs/cod-meta-builds-nightly.md`.
+14. In **Authentication → URL Configuration**, imposta **Site URL** con l’indirizzo Vercel finale, per esempio:
    `https://nome-progetto.vercel.app/`
-14. In **Project Settings → API**, copia:
+15. In **Project Settings → API**, copia:
    - Project URL
    - anon / publishable key
 

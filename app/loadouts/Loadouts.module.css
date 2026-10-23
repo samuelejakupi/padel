@@ -53,6 +53,54 @@
   text-transform: uppercase;
 }
 
+/* Le build da screenshot di chi guarda, finche la routine non le legge. */
+.queue {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.queue ul {
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.queue li {
+  align-items: center;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--blue);
+  border-radius: var(--radius);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+}
+
+.queue li[data-status="needs_review"] {
+  border-left-color: var(--danger);
+}
+
+.queue strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.queue small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.queue li p {
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: var(--space-1);
+}
+
 /* Filtri */
 .filters {
   display: grid;

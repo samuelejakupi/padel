@@ -20,7 +20,7 @@ function Filter<T extends string>({ label, value, options, onChange }: {
   </div>;
 }
 
-export default function BestLoadouts({ entries, weapons, headerAction }: { entries: LoadoutEntry[]; weapons: Weapon[]; headerAction?: ReactNode }) {
+export default function BestLoadouts({ entries, weapons, headerAction, banner }: { entries: LoadoutEntry[]; weapons: Weapon[]; headerAction?: ReactNode; banner?: ReactNode }) {
   const [category, setCategory] = useState<WeaponCategory | null>(null);
   const [playstyle, setPlaystyle] = useState<Playstyle | null>(null);
   const [tier, setTier] = useState<Tier | null>(null);
@@ -43,6 +43,7 @@ export default function BestLoadouts({ entries, weapons, headerAction }: { entri
       </div>
       {headerAction}
     </header>
+    {banner}
     <div className={styles.filters}>
       <Filter label="Categoria" value={category} onChange={next => { setCategory(next); setWeaponId(null); }}
         options={(Object.keys(weaponCategories) as WeaponCategory[]).filter(key => usedCategories.has(key)).map(key => ({ key, label: weaponCategories[key].label }))} />
