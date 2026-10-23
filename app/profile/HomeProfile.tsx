@@ -28,7 +28,7 @@ export default function HomeProfile({ profile, profiles, avatar, icons, padel, p
   onSignOut?: () => void;
 }) {
   const { gbs, loading: gbLoading } = useCodGbs();
-  const cashout = useCashoutSummary(profile, profiles);
+  const cashout = useCashoutSummary(profile.id, profiles);
   const pizza = pizzaSummary(profile.id, pizzaSessions, pizzaVotes);
 
   const mw4Games = gbs.filter(gb => gb.status === "processed").flatMap(gb => gb.players.filter(p => p.profile_id === profile.id).map(player => ({ gb, player })));

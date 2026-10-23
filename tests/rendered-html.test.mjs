@@ -130,20 +130,21 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.match(cashoutMigration, /to_profile_id/);
   assert.match(cashoutPage, /function buildCashoutTransfers/);
   assert.match(cashoutPage, /Chi deve pagare chi/);
-  assert.match(cashoutPage, /PER CONTO DI/);
+  assert.match(cashoutPage, /divisa fra/);
+  assert.match(cashoutPage, /delete_cashout_expense/);
   assert.match(paypalMigration, /paypal_me_username/);
   assert.match(paypalMigration, /grant update \(paypal_me_username\)/);
   assert.match(page, /Utente PayPal\.Me/);
   assert.match(cashoutPage, /paypalMeUrl/);
   assert.match(cashoutPage, /Paga con PayPal/);
-  assert.match(cashoutPage, /transfer\.fromId === viewerId \? recipient\?\.paypal_me_username : null/);
+  assert.match(cashoutPage, /const iPay = transfer\.fromId === viewerId;[\s\S]*iPay \? recipient\?\.paypal_me_username : null/);
   // PayPal.Me deve continuare a ricevere l'importo nel percorso. Siccome
   // alcune versioni dell'app aprono comunque solo il profilo, il tap copia
   // anche il valore negli appunti come fallback pronto da incollare.
   assert.doesNotMatch(cashoutPage, /amount\.toFixed\(2\)\}EUR/);
   assert.match(cashoutPage, /function copyPayPalAmount/);
   assert.match(cashoutPage, /navigator\.clipboard\?\.writeText/);
-  assert.match(cashoutPage, /onClick=\{\(\) => copyPayPalAmount\(transfer\.amount\)\}/);
+  assert.match(cashoutPage, /onClick=\{\(\) => \{ copyPayPalAmount\(transfer\.amount\);/);
   assert.match(cashoutPage, /viene copiato quando tocchi il pulsante/);
   assert.doesNotMatch(cashoutPage, /set_cashout_share_settled/);
 
@@ -203,9 +204,9 @@ test("include configurazione Supabase e funzioni della webapp", async () => {
   assert.doesNotMatch(page, /recordBadge\("clutch"/);
   assert.match(page, /!drawn && setResults\[0\] === false/);
   assert.doesNotMatch(page, /recordBadge\("comeback"/);
-  assert.match(page, /I traguardi più vicini/);
+  assert.match(page, /Prossimi traguardi/);
   assert.match(page, /sort\(\(a, b\) => b\.progress - a\.progress/);
-  assert.match(page, /player-stats-card/);
+  assert.match(page, /player-profile-head/);
 
   // Il torneo si sceglie: set secco o due su tre, sola andata o andata e
   // ritorno. Il best of 5 non c'e apposta — ammetterlo vorrebbe dire allargare

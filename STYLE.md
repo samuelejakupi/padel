@@ -128,13 +128,20 @@ Scala tipografica in uso:
 | `27px` | 900 | Titolo di sezione |
 | `15px` | 400 | Testo corrente |
 | `13px` | 700 | Numeri delle statistiche |
-| `12px` | 900 | Tasti, nomi in classifica |
-| `10px` | 800/900 | Occhielli, etichette, unità di misura |
+| `12px` | 800/900 | Tasti, occhielli, etichette, unità di misura |
 
 Le etichette in maiuscolo vogliono sempre `letter-spacing` fra `0.4px` e
 `1px`: il maiuscolo senza spaziatura si legge male.
 
-**Mai sotto i 9px.**
+**Mai sotto i 12px**, e le frasi da leggere (spiegazioni, righe di un elenco,
+note sotto un numero) stanno a 13px o più. Sotto quella misura su telefono
+il testo non si legge: se non ci sta, si toglie qualcosa, non si rimpicciolisce.
+
+**Una cosa si dice una volta.** Se il numero è già in grande (−80,00 €), la
+riga sotto dice solo "Deve pagare", non "Deve pagare 80,00 €".
+
+**Gli stati in parole.** Card e righe dicono come sei messo ("Devi 20 €",
+"2 votazioni da fare", "Tutto saldato"), non solo un pallino o un colore.
 
 ---
 
@@ -195,6 +202,23 @@ Il minimo è WCAG 2.1 AA. In pratica:
   elemento con `role="alert"` e dicono cosa correggere.
 
 ---
+
+### Azioni che non si annullano
+
+Segnare un saldo, eliminare una spesa: un tocco apre la conferma **sul
+posto** (nella stessa card, "Sì, saldato" / "Non ancora"), niente finestre in
+più e niente `window.confirm`. Si elimina solo ciò che hai inserito tu.
+
+### Un tasto pieno per schermata
+
+Nella stessa testata un solo tasto è pieno (l'azione di tutti i giorni, es.
+"+ Spesa"); gli altri sono vetro (`.button-ghost-dark` sul fondo scuro,
+`.button-ghost` sul chiaro).
+
+### Desktop
+
+Le pagine fatte di una colonna (i profili) restano larghe al massimo 720px e
+centrate. Sulla home, che è scura, anche la barra in alto è scura.
 
 ## 7. Come si scrive una regola
 

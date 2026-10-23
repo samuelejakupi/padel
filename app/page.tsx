@@ -17,7 +17,7 @@ import {
 } from "@/lib/supabase";
 import MonthGroup from "./MonthGroup";
 import WansportBoard from "./WansportBoard";
-import CashoutPage from "./Cashout";
+import CashoutPage, { formatMoney } from "./Cashout";
 import AdminAccess from "./AdminUsers";
 import ProfilePassword from "./ProfilePassword";
 import CodGaming from "./CodGaming";
@@ -33,7 +33,7 @@ import { buildIndividualStandings } from "@/lib/individual-standings";
 import { canRecordTournamentFixture } from "@/lib/tournament-fixture-order";
 import HomeProfile from "./profile/HomeProfile";
 import PizzaProfile from "./profile/PizzaProfile";
-import CashoutProfile from "./profile/CashoutProfile";
+import CashoutProfile, { useCashoutSummary } from "./profile/CashoutProfile";
 import { ProfileHeader, StatRow } from "./profile/parts";
 
 // Le quattro sezioni del gruppo. La home non e una di loro: e lo smistamento
@@ -146,6 +146,13 @@ type PizzaSessionVote = {
 // il risultato definitivo; questa copia serve soltanto all'anteprima istantanea.
 const PIZZA_WEIGHTS = { location: 7, pizza: 10, dessert: 4, price: 10 } as const;
 const PIZZA_WEIGHT_TOTAL = 31;
+// I quattro criteri nell'ordine delle colonne della classifica.
+const PIZZA_CRITERIA_KEYS = [
+  { key: "location", label: "Location", weight: PIZZA_WEIGHTS.location },
+  { key: "pizza", label: "Pizza", weight: PIZZA_WEIGHTS.pizza },
+  { key: "dessert", label: "Dolce", weight: PIZZA_WEIGHTS.dessert },
+  { key: "price", label: "Prezzo", weight: PIZZA_WEIGHTS.price },
+] as const;
 
 function weightedPizzaAverage(vote: { location: number; pizza: number; dessert: number; price: number }) {
   return (
@@ -1690,31 +1697,31 @@ function FieldRegister({
     .sort((a, b) => b.progress - a.progress || a.label.localeCompare(b.label))
     .slice(0, 3);
 
+  if (!registerEntries.length) return null;
   return (
-    <article className="field-register">
+    <section className="field-register" aria-labelledby="field-register-title">
       <header className="field-register-head">
-        <span>THEBOYZ PADEL CLUB</span>
-        <b>REGISTRO DI CAMPO</b>
-        <small>I traguardi più vicini</small>
+        <h3 id="field-register-title">Prossimi traguardi</h3>
+        <small>Gli emblemi più vicini</small>
       </header>
-      <div className="field-register-page">
+      <ul className="field-register-list">
         {registerEntries.map((entry) => (
-          <div className={`field-register-card is-${entry.tone}`} key={entry.id}>
+          <li className="field-register-card" key={entry.id}>
             <span className="field-register-icon" aria-hidden="true">
               <BadgeGlyphIcon name={entry.glyph} />
             </span>
             <div>
               <b>{entry.label}</b>
               <p>{entry.value} · {entry.progressLabel}</p>
-              <span className="field-register-progress" aria-hidden="true">
+              <span className="field-register-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={entry.progress} aria-label={`${entry.label}: ${entry.progress}% del percorso`}>
                 <i style={{ width: `${entry.progress}%` }} />
               </span>
-              <small>{entry.progress}% DEL PERCORSO</small>
             </div>
-          </div>
+            <strong>{entry.progress}<small>%</small></strong>
+          </li>
         ))}
-      </div>
-    </article>
+      </ul>
+    </section>
   );
 }
 
@@ -6939,6 +6946,11 @@ function AppShell({ session }: { session: Session | null }) {
   // Votazioni ancora aperte: alimentano sia la card in cima alla pagina pizza
   // sia il pallino sull'icona della barra.
   const openPizzaSessions = pizzaSessions.filter(sessionIsOpen);
+  // Il nome della pizzeria dell'ultima serata chiusa, per il titolo di Pizza.
+  const lastClosedPizzaSession = pizzaSessions.find((item) => item.completed_at);
+  const lastPizzaNight = lastClosedPizzaSession
+    ? pizzaRestaurants.find((item) => item.id === lastClosedPizzaSession.restaurant_id)?.name ?? null
+    : null;
   const pendingPizzaVotes = openPizzaSessions.filter(
     (openSession) => openSession.participants.some((participant) => participant.voter_id === session?.user.id)
       && !pizzaSessionVotes.some(
@@ -7509,6 +7521,8 @@ function AppShell({ session }: { session: Session | null }) {
   const viewerHubId = session?.user.id;
   const hubMe = profiles.find((profile) => profile.id === viewerHubId);
   const hubLastMatch = matches.find((match) => match.players.some((player) => player.profile_id === viewerHubId));
+  // Il saldo Cashout di chi guarda, per dirlo in parole sulla card della home.
+  const hubCashout = useCashoutSummary(viewerHubId, profiles);
   const hubStatus: Record<Section, string> = {
     padel: hubMe?.matches_played
       ? [`#${currentRank} · ${eloLabel(hubMe.rating)} Elo`, hubLastMatch ? lastPlayedLabel(hubLastMatch.played_at) : ""]
@@ -7518,7 +7532,9 @@ function AppShell({ session }: { session: Session | null }) {
       ? `${pendingPizzaVotes.length} ${pendingPizzaVotes.length === 1 ? "votazione da fare" : "votazioni da fare"}`
       : pizzaEntries[0] ? `In testa: ${pizzaEntries[0].name}` : "",
     gaming: "",
-    cashout: "",
+    cashout: hubCashout.loading || !hubCashout.groups.length ? ""
+      : hubCashout.net < -0.005 ? `Devi ${formatMoney(hubCashout.net)}`
+        : hubCashout.net > 0.005 ? `Ti devono ${formatMoney(hubCashout.net)}` : "Sei in pari",
   };
   // Stessa formula di padelWinRate, scritta a mano solo qui: una chiamata a
   // funzione in questo punto del componente fa rinunciare il compilatore di
@@ -8093,19 +8109,12 @@ function AppShell({ session }: { session: Session | null }) {
           <>
             <section className="dashboard-grid dashboard-grid-single">
               <div className="dashboard-main">
-                <article
-                  className="hero-stat hero-stat-link"
-                  onClick={openOwnCard}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      openOwnCard();
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Apri la tua scheda"
-                >
+                {/* Tutta la card si tocca, ma non e un role="button": un bottone
+                    non puo contenere un titolo (h1) senza che lo screen reader
+                    lo perda. Da tastiera c'e il tasto vero qui sotto, che si
+                    vede quando prende il focus. */}
+                <article className="hero-stat hero-stat-link" onClick={openOwnCard}>
+                  <button type="button" className="hero-stat-open" onClick={(event) => { event.stopPropagation(); openOwnCard(); }}>Apri la tua scheda</button>
                   <BlockMark size="lg" />
                   <div className="hero-stat-copy">
                     {/* In alto il saluto, pescato a parte dalla frase. */}
@@ -8676,9 +8685,18 @@ function AppShell({ session }: { session: Session | null }) {
                 <span>Info</span>
               </button>
               <div className="pizza-hero-title">
-                {/* Il titolo dice cosa si fa qui. "Pizzeria Ranking" e passato
-                    alla pagina della classifica, che e la cosa che nomina. */}
-                <h1>Pizza<br /><span>Night.</span></h1>
+                {/* Il marchio resta piccolo in alto; il titolo grande dice come
+                    stanno le cose adesso: cosa ti aspetta, o l'ultima serata. */}
+                <p className="eyebrow">PIZZA NIGHT</p>
+                <h1 className="pizza-hero-status">
+                  {pendingPizzaVotes.length
+                    ? <>Hai <span>{pendingPizzaVotes.length} {pendingPizzaVotes.length === 1 ? "voto" : "voti"}</span> da dare</>
+                    : openPizzaSessions.length
+                      ? <><span>{openPizzaSessions.length}</span> {openPizzaSessions.length === 1 ? "votazione aperta" : "votazioni aperte"}</>
+                      : lastPizzaNight
+                        ? <>Ultima serata:<br /><span>{lastPizzaNight}</span></>
+                        : <>Pizza <span>Night.</span></>}
+                </h1>
               </div>
               <div className="pizza-hero-actions">
                 <div className="pizza-hero-buttons">
@@ -8815,9 +8833,17 @@ function AppShell({ session }: { session: Session | null }) {
                     <div className="pizza-name-cell">
                       <b>{restaurant.name}</b>
                       <small>{restaurant.isNew ? `${restaurant.place ?? "NUOVA SCHEDA"} · ${restaurant.votesCount ?? 0} ${restaurant.votesCount === 1 ? "VOTO" : "VOTI"}` : restaurant.address ? <a className="pizza-address-link" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.address)}`} target="_blank" rel="noopener noreferrer">{restaurant.address}</a> : (restaurant.place ?? "THEBOYZ TESTED")}</small>
+                      {/* Una barra sola a quattro colori: ogni tratto e quanto
+                          quel criterio pesa nel totale. Sotto, su telefono, i
+                          quattro voti in una riga al posto dei quattro riquadri. */}
                       <span className="pizza-score-track" aria-hidden="true">
-                        <i style={{ width: `${complete ? restaurant.total : 0}%` }} />
+                        {complete ? PIZZA_CRITERIA_KEYS.map(({ key, weight }) => (
+                          <i key={key} data-criterion={key} style={{ width: `${(restaurant[key] * weight * 10) / PIZZA_WEIGHT_TOTAL}%` }} />
+                        )) : null}
                       </span>
+                      {complete ? <span className="pizza-criteria-line">
+                        {PIZZA_CRITERIA_KEYS.map(({ key, label }) => <span key={key} data-criterion={key}>{label} <b>{restaurant[key].toFixed(1)}</b></span>)}
+                      </span> : null}
                     </div>
                     <span className="pizza-category-score"><b>{complete ? restaurant.location.toFixed(1) : "—"}</b><small>/10</small></span>
                     <span className="pizza-category-score"><b>{complete ? restaurant.pizza.toFixed(1) : "—"}</b><small>/10</small></span>

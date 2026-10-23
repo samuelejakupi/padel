@@ -27,7 +27,7 @@
 
 .totals dt {
   color: var(--blue);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -91,7 +91,7 @@
 .mode dt,
 .recent small {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 

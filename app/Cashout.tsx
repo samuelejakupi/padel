@@ -73,7 +73,7 @@ export async function fetchCashoutGroups() {
 
 const euro = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
 export const formatMoney = (value: number) => euro.format(Math.abs(value));
-const numericAmount = (value: string) => Math.round(Number(value.replace(",", ".")) * 100) / 100;
+const numericAmount = (value: string) => Math.round(Number(value.trim().replace(",", ".")) * 100) / 100;
 // PayPal.Me documenta l'importo nel percorso, ma alcune versioni dell'app
 // mobile aprono soltanto il profilo. Il tap copia quindi anche l'importo: il
 // percorso resta utile sul web e il valore è pronto da incollare nell'app.
@@ -256,31 +256,43 @@ function CashoutGroupModal({
 }
 
 function CashoutExpenseModal({
-  group,
+  groups,
+  initialGroupId,
   profiles,
   viewerId,
   onClose,
   onCreated,
 }: {
-  group: CashoutGroup;
+  groups: CashoutGroup[];
+  initialGroupId: string;
   profiles: Profile[];
   viewerId: string;
   onClose: () => void;
-  onCreated: () => Promise<void>;
+  onCreated: (groupId: string) => Promise<void>;
 }) {
+  const [groupId, setGroupId] = useState(initialGroupId);
+  const group = groups.find((item) => item.id === groupId) ?? groups[0];
   const memberProfiles = profiles.filter((profile) => group.members.some((member) => member.profile_id === profile.id));
   const memberIds = memberProfiles.map((profile) => profile.id);
   const [description, setDescription] = useState("");
   const [total, setTotal] = useState("");
   const [participants, setParticipants] = useState(memberIds);
-  const [payerAmounts, setPayerAmounts] = useState<Record<string, string>>({ [viewerId]: "" });
+  // Quasi sempre paga una persona sola, e di solito chi inserisce la spesa:
+  // e il caso di partenza. Piu pagatori si aprono da un link.
+  const [payerId, setPayerId] = useState(memberIds.includes(viewerId) ? viewerId : memberIds[0]);
+  const [splitPayers, setSplitPayers] = useState(false);
+  const [payerAmounts, setPayerAmounts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const payerIds = Object.keys(payerAmounts);
 
-  function changeTotal(value: string) {
-    setTotal(value);
-    if (payerIds.length === 1) setPayerAmounts({ [payerIds[0]]: value });
+  function chooseGroup(id: string) {
+    const next = groups.find((item) => item.id === id);
+    if (!next) return;
+    const ids = next.members.map((member) => member.profile_id);
+    setGroupId(id);
+    setParticipants(ids);
+    setPayerId(ids.includes(viewerId) ? viewerId : ids[0]);
+    setPayerAmounts({});
   }
 
   function toggleParticipant(profileId: string) {
@@ -289,29 +301,19 @@ function CashoutExpenseModal({
       : [...current, profileId]);
   }
 
-  function togglePayer(profileId: string) {
-    setPayerAmounts((current) => {
-      if (profileId in current) {
-        const next = Object.fromEntries(Object.entries(current).filter(([id]) => id !== profileId));
-        const remaining = Object.keys(next);
-        if (remaining.length === 1) next[remaining[0]] = total;
-        return next;
-      }
-      return { ...current, [profileId]: "" };
-    });
-  }
-
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!supabase) return;
     const amount = numericAmount(total);
-    const payers = Object.entries(payerAmounts).map(([profile_id, value]) => ({ profile_id, amount: numericAmount(value) }));
+    const payers = splitPayers
+      ? Object.entries(payerAmounts).filter(([, value]) => value.trim()).map(([profile_id, value]) => ({ profile_id, amount: numericAmount(value) }))
+      : [{ profile_id: payerId, amount }];
     const paidTotal = payers.reduce((sum, payer) => sum + Math.round(payer.amount * 100), 0) / 100;
-    if (description.trim().length < 2) return setError("Inserisci una descrizione.");
-    if (!Number.isFinite(amount) || amount <= 0) return setError("Inserisci un totale valido.");
-    if (!participants.length) return setError("Scegli almeno una persona a cui addebitare la spesa.");
-    if (!payers.length || payers.some((payer) => !Number.isFinite(payer.amount) || payer.amount <= 0)) return setError("Inserisci chi ha pagato e quanto.");
-    if (Math.round(paidTotal * 100) !== Math.round(amount * 100)) return setError("Gli anticipi devono sommare esattamente al totale.");
+    if (!Number.isFinite(amount) || amount <= 0) return setError("Scrivi quanto avete speso.");
+    if (description.trim().length < 2) return setError("Scrivi per cosa, es. «Cena».");
+    if (!participants.length) return setError("Scegli almeno una persona fra cui dividere.");
+    if (!payers.length || payers.some((payer) => !Number.isFinite(payer.amount) || payer.amount <= 0)) return setError("Scrivi chi ha pagato e quanto.");
+    if (Math.round(paidTotal * 100) !== Math.round(amount * 100)) return setError(`Gli importi pagati fanno ${formatMoney(paidTotal)}: devono fare ${formatMoney(amount)}.`);
 
     setBusy(true);
     setError("");
@@ -324,49 +326,77 @@ function CashoutExpenseModal({
     });
     setBusy(false);
     if (saveError) return setError(saveError.message);
-    await onCreated();
+    await onCreated(group.id);
   }
 
+  const amount = numericAmount(total);
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section className="modal cashout-modal cashout-expense-modal" role="dialog" aria-modal="true" aria-labelledby="cashout-expense-title">
         <div className="modal-head">
-          <div><p className="eyebrow dark">{group.name}</p><h2 id="cashout-expense-title">Aggiungi una spesa</h2></div>
+          <div><p className="eyebrow dark">NUOVA SPESA</p><h2 id="cashout-expense-title">Quanto avete speso?</h2></div>
           <button className="icon-button" type="button" onClick={onClose} aria-label="Chiudi">×</button>
         </div>
         <form onSubmit={submit}>
-          <div className="cashout-main-fields">
-            <label>Descrizione<input value={description} maxLength={120} onChange={(event) => setDescription(event.target.value)} placeholder="Spesa supermercato" autoFocus /></label>
-            <label>Totale (€)<input type="number" min="0.01" step="0.01" inputMode="decimal" value={total} onChange={(event) => changeTotal(event.target.value)} placeholder="0,00" /></label>
-          </div>
+          {/* Prima l'importo, grande: e la cosa che si ha in testa. Testo e
+              non number: cosi la virgola funziona su ogni tastiera. */}
+          <label className="cashout-amount-field">Importo
+            <span><input value={total} inputMode="decimal" autoFocus placeholder="0,00" aria-describedby="cashout-split-note"
+              onChange={(event) => setTotal(event.target.value.replace(/[^0-9.,]/g, ""))} /><b aria-hidden="true">€</b></span>
+          </label>
+          <label>Per cosa<input value={description} maxLength={120} onChange={(event) => setDescription(event.target.value)} placeholder="Cena, benzina, spesa…" /></label>
+          {groups.length > 1 ? (
+            <label>Gruppo<select value={group.id} onChange={(event) => chooseGroup(event.target.value)}>
+              {groups.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}
+            </select></label>
+          ) : null}
 
-          <fieldset className="cashout-payer-picker">
-            <legend>Chi ha anticipato?</legend>
-            <div>
-              {memberProfiles.map((profile) => {
-                const selected = profile.id in payerAmounts;
-                return (
-                  <div className={selected ? "cashout-payer-row is-selected" : "cashout-payer-row"} key={profile.id}>
-                    <label>
-                      <input type="checkbox" checked={selected} onChange={() => togglePayer(profile.id)} />
-                      <CashoutAvatar profile={profile} />
-                      <span>{profile.display_name}</span>
-                    </label>
-                    {selected ? <input aria-label={`Anticipo di ${profile.display_name}`} type="number" min="0.01" step="0.01" inputMode="decimal" value={payerAmounts[profile.id]} onChange={(event) => setPayerAmounts((current) => ({ ...current, [profile.id]: event.target.value }))} placeholder="0,00" /> : null}
-                  </div>
-                );
-              })}
-            </div>
+          <fieldset className="cashout-chip-picker">
+            <legend>Ha pagato</legend>
+            {splitPayers ? (
+              <div className="cashout-payer-split">
+                {memberProfiles.map((profile) => (
+                  <label key={profile.id}><CashoutAvatar profile={profile} /><span>{profile.display_name}</span>
+                    <input aria-label={`Quanto ha pagato ${profile.display_name}`} inputMode="decimal" placeholder="0,00" value={payerAmounts[profile.id] ?? ""}
+                      onChange={(event) => setPayerAmounts((current) => ({ ...current, [profile.id]: event.target.value.replace(/[^0-9.,]/g, "") }))} />
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <div>
+                {memberProfiles.map((profile) => (
+                  <label className={payerId === profile.id ? "is-selected" : ""} key={profile.id}>
+                    <input type="radio" name="cashout-payer" checked={payerId === profile.id} onChange={() => setPayerId(profile.id)} />
+                    <CashoutAvatar profile={profile} /><span>{profile.id === viewerId ? "Io" : profile.display_name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <button type="button" className="text-link cashout-split-toggle" onClick={() => setSplitPayers((current) => !current)}>
+              {splitPayers ? "Ha pagato una persona sola" : "Hanno pagato in più persone"}
+            </button>
           </fieldset>
 
-          <CashoutMemberPicker profiles={memberProfiles} selected={participants} onToggle={toggleParticipant} legend="A chi va addebitata?" />
-          {Number.isFinite(numericAmount(total)) && numericAmount(total) > 0 && participants.length ? (
-            <p className="cashout-live-split">Quota media attuale <b>{formatMoney(numericAmount(total) / participants.length)}</b> a persona</p>
-          ) : null}
-          {error ? <p className="form-message error">{error}</p> : null}
+          <fieldset className="cashout-chip-picker">
+            <legend>Diviso fra</legend>
+            <div>
+              {memberProfiles.map((profile) => (
+                <label className={participants.includes(profile.id) ? "is-selected" : ""} key={profile.id}>
+                  <input type="checkbox" checked={participants.includes(profile.id)} onChange={() => toggleParticipant(profile.id)} />
+                  <CashoutAvatar profile={profile} /><span>{profile.id === viewerId ? "Io" : profile.display_name}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <p className="cashout-live-split" id="cashout-split-note">
+            {Number.isFinite(amount) && amount > 0 && participants.length
+              ? <>Sono <b>{formatMoney(amount / participants.length)}</b> a testa, per {participants.length} {participants.length === 1 ? "persona" : "persone"}.</>
+              : "Scrivi l'importo: la quota a testa compare qui."}
+          </p>
+          {error ? <p className="form-message error" role="alert">{error}</p> : null}
           <div className="modal-actions">
             <button className="button button-ghost" type="button" onClick={onClose}>Annulla</button>
-            <button className="button button-primary" disabled={busy}>{busy ? "Salvataggio…" : "Salva spesa"}</button>
+            <button className="button button-primary" disabled={busy}>{busy ? "Salvataggio…" : "Aggiungi spesa"}</button>
           </div>
         </form>
       </section>
@@ -438,33 +468,86 @@ function CashoutSettlementModal({
   );
 }
 
+// Se la migrazione per eliminare non e ancora stata eseguita, lo diciamo
+// in parole invece di mostrare l'errore tecnico di Supabase.
+function deleteErrorMessage(message: string) {
+  return /delete_cashout|function|schema cache/i.test(message)
+    ? "Per eliminare va prima eseguita supabase/migration-cashout-elimina.sql su Supabase."
+    : message;
+}
+
 function CashoutGroupDetail({
   group,
   profiles,
   viewerId,
   onBack,
   onNewExpense,
-  onSettle,
+  onCustomSettle,
+  onChanged,
+  onNotice,
 }: {
   group: CashoutGroup;
   profiles: Profile[];
   viewerId: string;
   onBack: () => void;
   onNewExpense: () => void;
-  onSettle: (transfer: CashoutTransfer) => void;
+  onCustomSettle: (transfer: CashoutTransfer) => void;
+  onChanged: () => Promise<void>;
+  onNotice: (message: string) => void;
 }) {
   const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
+  const nameOf = (id: string) => profileMap.get(id)?.display_name ?? "Qualcuno";
   const memberProfiles = group.members.map((member) => profileMap.get(member.profile_id)).filter(Boolean) as Profile[];
   const total = group.expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
-  const balances = memberProfiles.map((profile) => {
-    const paid = group.expenses.reduce((sum, expense) => sum + paidBy(expense, profile.id), 0);
-    const share = group.expenses.reduce((sum, expense) => sum + shareOf(expense, profile.id), 0);
-    const sent = group.settlements.reduce((sum, settlement) => sum + (settlement.from_profile_id === profile.id ? settlement.amount : 0), 0);
-    const received = group.settlements.reduce((sum, settlement) => sum + (settlement.to_profile_id === profile.id ? settlement.amount : 0), 0);
-    return { profile, balance: paid - share + sent - received };
-  });
-  const transfers = buildCashoutTransfers(balances);
+  const balances = groupBalances(group, profiles);
+  // Prima i debiti che riguardano te: sono quelli su cui puoi agire.
+  const transfers = buildCashoutTransfers(balances).sort((a, b) =>
+    Number(b.fromId === viewerId || b.toId === viewerId) - Number(a.fromId === viewerId || a.toId === viewerId));
   const openAmount = transfers.reduce((sum, transfer) => sum + transfer.amount, 0);
+  // Un tocco su "Segna saldato" chiede conferma sul posto; dopo PayPal la
+  // stessa conferma compare da sola ("L'hai pagato?").
+  const [confirming, setConfirming] = useState<{ key: string; afterPayPal: boolean } | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const dateFormat = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", year: "numeric" });
+
+  async function settle(transfer: CashoutTransfer) {
+    if (!supabase) return;
+    setBusy(true);
+    const { error } = await supabase.rpc("record_cashout_settlement", {
+      p_group_id: group.id,
+      p_from_profile_id: transfer.fromId,
+      p_to_profile_id: transfer.toId,
+      p_amount: transfer.amount,
+    });
+    setBusy(false);
+    setConfirming(null);
+    if (error) return onNotice(error.message);
+    onNotice(`Segnato: ${nameOf(transfer.fromId)} ha dato ${formatMoney(transfer.amount)} a ${nameOf(transfer.toId)}.`);
+    await onChanged();
+  }
+
+  async function remove(kind: "expense" | "settlement", id: string) {
+    if (!supabase) return;
+    setBusy(true);
+    const { error } = kind === "expense"
+      ? await supabase.rpc("delete_cashout_expense", { p_expense_id: id })
+      : await supabase.rpc("delete_cashout_settlement", { p_settlement_id: id });
+    setBusy(false);
+    setDeleting(null);
+    if (error) return onNotice(deleteErrorMessage(error.message));
+    onNotice(kind === "expense" ? "Spesa eliminata: i conti sono ricalcolati." : "Saldo eliminato: i conti sono ricalcolati.");
+    await onChanged();
+  }
+
+  function deleteButton(kind: "expense" | "settlement", id: string, label: string) {
+    return deleting === id ? (
+      <span className="cashout-delete-confirm">
+        <button className="button button-danger" type="button" disabled={busy} onClick={() => void remove(kind, id)}>Sì, elimina</button>
+        <button className="button button-ghost" type="button" onClick={() => setDeleting(null)}>No</button>
+      </span>
+    ) : <button className="text-link cashout-delete" type="button" onClick={() => setDeleting(id)} aria-label={`Elimina ${label}`}>Elimina</button>;
+  }
 
   return (
     <section className="page-section cashout-page cashout-detail-page">
@@ -475,85 +558,109 @@ function CashoutGroupDetail({
           <h1>{group.name}</h1>
           <div className="cashout-member-stack">{memberProfiles.map((profile) => <CashoutAvatar profile={profile} key={profile.id} />)}<span>{memberProfiles.length} partecipanti</span></div>
         </div>
-        <button className="button button-primary cashout-new-expense" type="button" onClick={onNewExpense}>+ Nuova spesa</button>
+        <button className="button button-primary cashout-new-expense" type="button" onClick={onNewExpense}>+ Spesa</button>
       </article>
 
+      <section className="cashout-settlement-report">
+        <div className="section-head cashout-head"><div className="section-head-label"><p className="eyebrow dark">DA SALDARE</p><h2>Chi deve pagare chi</h2></div></div>
+        {transfers.length ? <div className="cashout-transfer-list">{transfers.map((transfer) => {
+          const key = `${transfer.fromId}:${transfer.toId}`;
+          const recipient = profileMap.get(transfer.toId);
+          const iPay = transfer.fromId === viewerId;
+          const paypalUsername = iPay ? recipient?.paypal_me_username : null;
+          const confirm = confirming?.key === key ? confirming : null;
+          return (
+            <article key={key} data-mine={iPay || transfer.toId === viewerId ? "" : undefined}>
+              <div className="cashout-transfer-people"><CashoutAvatar profile={profileMap.get(transfer.fromId)} /><b>{iPay ? "Tu" : nameOf(transfer.fromId)}</b><span>{iPay ? "devi a" : "deve a"}</span><CashoutAvatar profile={recipient} /><b>{transfer.toId === viewerId ? "te" : nameOf(transfer.toId)}</b></div>
+              <strong>{formatMoney(transfer.amount)}</strong>
+              {confirm ? (
+                <div className="cashout-settle-confirm" role="group" aria-label="Conferma saldo">
+                  <p>{confirm.afterPayPal ? `L'hai pagato? Segnalo come saldato.` : `Confermi che ${iPay ? "hai dato" : `${nameOf(transfer.fromId)} ha dato`} ${formatMoney(transfer.amount)} a ${transfer.toId === viewerId ? "te" : nameOf(transfer.toId)}?`}</p>
+                  <div className="cashout-transfer-actions">
+                    <button className="button button-primary" type="button" disabled={busy} onClick={() => void settle(transfer)}>{busy ? "Salvataggio…" : "Sì, saldato"}</button>
+                    <button className="button button-ghost" type="button" onClick={() => setConfirming(null)}>Non ancora</button>
+                    <button className="text-link" type="button" onClick={() => { setConfirming(null); onCustomSettle(transfer); }}>Importo diverso</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="cashout-transfer-actions">
+                  {paypalUsername ? (
+                    <a
+                      className="button cashout-paypal-button"
+                      href={paypalMeUrl(paypalUsername, transfer.amount)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Paga ${formatMoney(transfer.amount)} a ${recipient?.display_name} con PayPal`}
+                      onClick={() => { copyPayPalAmount(transfer.amount); setConfirming({ key, afterPayPal: true }); }}
+                    >
+                      <span className="cashout-paypal-mark" aria-hidden="true"><i>P</i><i>P</i></span>
+                      Paga con PayPal
+                    </a>
+                  ) : null}
+                  <button className="button button-primary" type="button" onClick={() => setConfirming({ key, afterPayPal: false })}>Segna saldato</button>
+                </div>
+              )}
+              {paypalUsername && !confirm ? <small className="cashout-paypal-hint">Su mobile, se PayPal non inserisce l’importo, incolla <b>{paypalClipboardAmount(transfer.amount)} €</b>: viene copiato quando tocchi il pulsante.</small> : null}
+            </article>
+          );
+        })}</div> : <p className="cashout-all-settled">Tutti i conti del gruppo sono in pari.</p>}
+      </section>
+
       <div className="cashout-summary-grid">
-        <article><small>TOTALE SPESO</small><b>{formatMoney(total)}</b></article>
-        <article><small>DA SALDARE</small><b>{formatMoney(openAmount)}</b></article>
-        <article><small>SALDI REGISTRATI</small><b>{group.settlements.length}</b></article>
+        <article><small>Totale speso</small><b>{formatMoney(total)}</b></article>
+        <article><small>Da saldare</small><b>{formatMoney(openAmount)}</b></article>
+        <article><small>Spese</small><b>{group.expenses.length}</b></article>
       </div>
 
       <section className="cashout-report">
-        <div className="section-head"><div className="section-head-label"><p className="eyebrow dark">RESOCONTO</p><h2>Situazione del gruppo</h2></div></div>
+        <div className="section-head cashout-head"><div className="section-head-label"><p className="eyebrow dark">RESOCONTO</p><h2>Situazione del gruppo</h2></div></div>
         <div className="cashout-balance-list">
           {balances.map(({ profile, balance }) => (
             <article key={profile.id}>
               <CashoutAvatar profile={profile} />
-              <div><b>{profile.display_name}</b><span>{balance > 0.005 ? `Deve ricevere ${formatMoney(balance)}` : balance < -0.005 ? `Deve pagare ${formatMoney(balance)}` : "In pari"}</span></div>
+              <div><b>{profile.id === viewerId ? `${profile.display_name} (tu)` : profile.display_name}</b><span>{balance > 0.005 ? "Deve ricevere" : balance < -0.005 ? "Deve pagare" : "In pari"}</span></div>
               <strong className={balance > 0.005 ? "is-credit" : balance < -0.005 ? "is-debt" : ""}>{balance > 0.005 ? "+" : balance < -0.005 ? "−" : ""}{formatMoney(balance)}</strong>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="cashout-settlement-report">
-        <div className="section-head"><div className="section-head-label"><p className="eyebrow dark">SALDI</p><h2>Chi deve pagare chi</h2></div><span>{transfers.length}</span></div>
-        {transfers.length ? <div className="cashout-transfer-list">{transfers.map((transfer) => {
-          const recipient = profileMap.get(transfer.toId);
-          const paypalUsername = transfer.fromId === viewerId ? recipient?.paypal_me_username : null;
-          return (
-            <article key={`${transfer.fromId}:${transfer.toId}`}>
-              <div className="cashout-transfer-people"><CashoutAvatar profile={profileMap.get(transfer.fromId)} /><b>{profileMap.get(transfer.fromId)?.display_name}</b><span>deve</span><CashoutAvatar profile={recipient} /><b>{recipient?.display_name}</b></div>
-              <strong>{formatMoney(transfer.amount)}</strong>
-              <div className="cashout-transfer-actions">
-                {paypalUsername ? (
-                  <a
-                    className="button cashout-paypal-button"
-                    href={paypalMeUrl(paypalUsername, transfer.amount)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Paga ${formatMoney(transfer.amount)} a ${recipient?.display_name} con PayPal`}
-                    onClick={() => copyPayPalAmount(transfer.amount)}
-                  >
-                    <span className="cashout-paypal-mark" aria-hidden="true"><i>P</i><i>P</i></span>
-                    Paga con PayPal
-                  </a>
-                ) : null}
-                <button className="button button-primary" type="button" onClick={() => onSettle(transfer)}>Segna saldato</button>
-              </div>
-              {paypalUsername ? <small className="cashout-paypal-hint">Su mobile, se PayPal non inserisce l’importo, incolla <b>{paypalClipboardAmount(transfer.amount)} €</b>: viene copiato quando tocchi il pulsante.</small> : null}
-            </article>
-          );
-        })}</div> : <p className="cashout-all-settled">Tutti i conti del gruppo sono in pari.</p>}
-        {group.settlements.length ? <div className="cashout-settlement-history"><small>PAGAMENTI REGISTRATI</small>{group.settlements.map((settlement) => <p key={settlement.id}><b>{profileMap.get(settlement.from_profile_id)?.display_name}</b> ha pagato <b>{profileMap.get(settlement.to_profile_id)?.display_name}</b><span>{formatMoney(settlement.amount)}</span></p>)}</div> : null}
-      </section>
-
       <section className="cashout-expenses">
-        <div className="section-head"><div className="section-head-label"><p className="eyebrow dark">REGISTRO</p><h2>Spese</h2></div><span>{group.expenses.length}</span></div>
+        <div className="section-head cashout-head"><div className="section-head-label"><p className="eyebrow dark">REGISTRO</p><h2>Spese</h2></div><span>{group.expenses.length}</span></div>
         {group.expenses.length ? (
           <div className="cashout-expense-list">
-            {group.expenses.map((expense) => {
-              return (
-                <article className="cashout-expense-card" key={expense.id}>
-                  <header>
-                    <div><span className="cashout-expense-state">SPESA</span><h3>{expense.description}</h3><small>{new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(expense.created_at))} · inserita da {profileMap.get(expense.created_by)?.display_name ?? "—"}</small></div>
-                    <b>{formatMoney(expense.amount)}</b>
-                  </header>
-                  <div className="cashout-paid-by">
-                    <small>ANTICIPATO DA</small>
-                    {expense.payers.map((payer) => <span key={payer.profile_id}><CashoutAvatar profile={profileMap.get(payer.profile_id)} />{profileMap.get(payer.profile_id)?.display_name} <b>{formatMoney(payer.amount)}</b></span>)}
-                  </div>
-                  <div className="cashout-paid-by cashout-charged-to">
-                    <small>PER CONTO DI</small>
-                    {expense.shares.map((share) => <span key={share.profile_id}><CashoutAvatar profile={profileMap.get(share.profile_id)} />{profileMap.get(share.profile_id)?.display_name} <b>{formatMoney(share.amount)}</b></span>)}
-                  </div>
-                </article>
-              );
-            })}
+            {group.expenses.map((expense) => (
+              <article className="cashout-expense-card" key={expense.id}>
+                <header>
+                  <div><h3>{expense.description}</h3><small>{dateFormat.format(new Date(expense.created_at))} · inserita da {expense.created_by === viewerId ? "te" : nameOf(expense.created_by)}</small></div>
+                  <b>{formatMoney(expense.amount)}</b>
+                </header>
+                <p className="cashout-expense-line">
+                  Pagata da <b>{expense.payers.map((payer) => `${payer.profile_id === viewerId ? "te" : nameOf(payer.profile_id)}${expense.payers.length > 1 ? ` (${formatMoney(payer.amount)})` : ""}`).join(", ")}</b>
+                  {" · "}divisa fra {expense.shares.length} {expense.shares.length === 1 ? "persona" : "persone"}
+                  {shareOf(expense, viewerId) ? <> · la tua quota <b>{formatMoney(shareOf(expense, viewerId))}</b></> : null}
+                </p>
+                {expense.created_by === viewerId ? <footer>{deleteButton("expense", expense.id, `la spesa ${expense.description}`)}</footer> : null}
+              </article>
+            ))}
           </div>
         ) : <div className="compact-empty"><span>00</span><p>Non ci sono ancora spese. Aggiungi la prima quando qualcuno anticipa.</p></div>}
       </section>
+
+      {group.settlements.length ? (
+        <section className="cashout-expenses">
+          <div className="section-head cashout-head"><div className="section-head-label"><p className="eyebrow dark">PAGAMENTI</p><h2>Saldi registrati</h2></div><span>{group.settlements.length}</span></div>
+          <ul className="cashout-settlement-history">
+            {group.settlements.map((settlement) => (
+              <li key={settlement.id}>
+                <p><b>{settlement.from_profile_id === viewerId ? "Tu" : nameOf(settlement.from_profile_id)}</b> {settlement.from_profile_id === viewerId ? "hai pagato" : "ha pagato"} <b>{settlement.to_profile_id === viewerId ? "te" : nameOf(settlement.to_profile_id)}</b><small>{dateFormat.format(new Date(settlement.created_at))}</small></p>
+                <span>{formatMoney(settlement.amount)}</span>
+                {settlement.created_by === viewerId ? deleteButton("settlement", settlement.id, `il saldo di ${formatMoney(settlement.amount)}`) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </section>
   );
 }
@@ -587,38 +694,62 @@ export default function CashoutPage({ profiles, viewerId, initialGroupId = null 
     return () => { active = false; };
   }, []);
   const selectedGroup = useMemo(() => groups.find((group) => group.id === selectedId) ?? null, [groups, selectedId]);
+  // Dalla lista, "+ Spesa" propone il gruppo usato per ultimo.
+  const lastActivity = (group: CashoutGroup) => [group.created_at, ...group.expenses.map((expense) => expense.created_at)].sort().at(-1) ?? "";
+  const recentGroup = [...groups].sort((a, b) => lastActivity(b).localeCompare(lastActivity(a)))[0];
+  const myTransfers = groups.flatMap((group) => buildCashoutTransfers(groupBalances(group, profiles)));
+  const owed = myTransfers.filter((transfer) => transfer.toId === viewerId).reduce((sum, transfer) => sum + transfer.amount, 0);
+  const owe = myTransfers.filter((transfer) => transfer.fromId === viewerId).reduce((sum, transfer) => sum + transfer.amount, 0);
+  const net = owed - owe;
+  const noticeBar = notice ? <button className="notice" type="button" onClick={() => setNotice("")} role="status">{notice}<span aria-hidden="true">×</span></button> : null;
+  const expenseModal = showExpenseCreate && groups.length ? (
+    <CashoutDialogPortal><CashoutExpenseModal groups={groups} initialGroupId={(selectedGroup ?? recentGroup).id} profiles={profiles} viewerId={viewerId}
+      onClose={() => setShowExpenseCreate(false)}
+      onCreated={async (groupId) => { setShowExpenseCreate(false); await loadGroups(); setSelectedId(groupId); setNotice("Spesa aggiunta."); }} /></CashoutDialogPortal>
+  ) : null;
 
   if (selectedGroup) return (
     <>
-      {notice ? <button className="notice" onClick={() => setNotice("")}>{notice}<span>×</span></button> : null}
-      <CashoutGroupDetail group={selectedGroup} profiles={profiles} viewerId={viewerId} onBack={() => setSelectedId(null)} onNewExpense={() => setShowExpenseCreate(true)} onSettle={setSettlementTransfer} />
-      {showExpenseCreate ? <CashoutDialogPortal><CashoutExpenseModal group={selectedGroup} profiles={profiles} viewerId={viewerId} onClose={() => setShowExpenseCreate(false)} onCreated={async () => { setShowExpenseCreate(false); await loadGroups(); }} /></CashoutDialogPortal> : null}
+      {noticeBar}
+      <CashoutGroupDetail group={selectedGroup} profiles={profiles} viewerId={viewerId} onBack={() => setSelectedId(null)} onNewExpense={() => setShowExpenseCreate(true)}
+        onCustomSettle={setSettlementTransfer} onChanged={loadGroups} onNotice={setNotice} />
+      {expenseModal}
       {settlementTransfer ? <CashoutDialogPortal><CashoutSettlementModal group={selectedGroup} profiles={profiles} transfer={settlementTransfer} onClose={() => setSettlementTransfer(null)} onCreated={async () => { setSettlementTransfer(null); await loadGroups(); }} /></CashoutDialogPortal> : null}
     </>
   );
 
   return (
     <>
+      {noticeBar}
       <section className="page-section cashout-page">
+        {/* La testata dice subito la cosa che conta: come sei messo. */}
         <article className="section-hero cashout-hero">
-          <div><p className="eyebrow">THEBOYZ CASH OUT</p><h1>Spese condivise,<br />conti chiari.</h1><p>Vacanze, grigliate e serate: si registra chi ha anticipato e l’app divide il resto.</p></div>
-          <button className="button button-primary cashout-new-group" type="button" disabled={!schemaReady} onClick={() => setShowGroupCreate(true)}>+ Nuovo gruppo</button>
+          <div>
+            <p className="eyebrow">CASHOUT · IL TUO SALDO</p>
+            <h1>{loading ? "…" : !groups.length ? "Nessun conto" : Math.abs(net) < 0.005 ? "Sei in pari" : net > 0 ? <>Ti devono<br />{formatMoney(net)}</> : <>Devi<br />{formatMoney(net)}</>}</h1>
+            <p>{!groups.length ? "Crea un gruppo, scegli chi partecipa e aggiungi le spese: l’app divide il resto." : `In ${groups.length} ${groups.length === 1 ? "gruppo" : "gruppi"}${owed > 0.005 && owe > 0.005 ? ` · ti devono ${formatMoney(owed)}, devi ${formatMoney(owe)}` : ""}.`}</p>
+          </div>
+          <div className="cashout-hero-actions">
+            {groups.length ? <button className="button button-primary cashout-new-expense" type="button" onClick={() => setShowExpenseCreate(true)}>+ Spesa</button> : null}
+            <button className={`button ${groups.length ? "button-ghost-dark" : "button-primary"} cashout-new-group`} type="button" disabled={!schemaReady} onClick={() => setShowGroupCreate(true)}>+ Nuovo gruppo</button>
+          </div>
         </article>
 
         {!schemaReady ? (
           <div className="compact-empty cashout-schema-empty"><span>!</span><div><h2>Cash Out va attivato</h2><p>Esegui <code>supabase/migration-cashout.sql</code> nel SQL Editor di Supabase.</p></div></div>
         ) : loading ? <div className="compact-empty"><span>…</span><p>Caricamento gruppi di spesa.</p></div> : groups.length ? (
           <section className="cashout-groups-section">
-            <div className="section-head"><div className="section-head-label"><p className="eyebrow dark">I TUOI GRUPPI</p><h2>Dove sono finiti i soldi</h2></div><span>{groups.length}</span></div>
+            <div className="section-head cashout-head"><div className="section-head-label"><p className="eyebrow dark">I TUOI GRUPPI</p><h2>Gruppi di spesa</h2></div><span>{groups.length}</span></div>
             <div className="cashout-group-grid">
               {groups.map((group) => {
                 const total = group.expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
-                const open = buildCashoutTransfers(groupBalances(group, profiles)).length;
+                const mine = buildCashoutTransfers(groupBalances(group, profiles));
+                const myBalance = mine.reduce((sum, transfer) => sum + (transfer.toId === viewerId ? transfer.amount : 0) - (transfer.fromId === viewerId ? transfer.amount : 0), 0);
+                const state = myBalance > 0.005 ? `Ti devono ${formatMoney(myBalance)}` : myBalance < -0.005 ? `Devi ${formatMoney(myBalance)}` : mine.length ? "Tu sei in pari" : "Tutto saldato";
                 return (
                   <button className="cashout-group-card" type="button" onClick={() => setSelectedId(group.id)} key={group.id}>
-                    <span className="cashout-group-icon">€</span>
-                    <div><small>{open ? `${open} ${open === 1 ? "SALDO APERTO" : "SALDI APERTI"}` : "TUTTO SALDATO"}</small><h2>{group.name}</h2><span>{group.members.length} partecipanti · {group.expenses.length} spese</span></div>
-                    <b>{formatMoney(total)}</b>
+                    <span className="cashout-group-icon" aria-hidden="true">€</span>
+                    <div><small data-tone={myBalance > 0.005 ? "up" : myBalance < -0.005 ? "down" : undefined}>{state}</small><h2>{group.name}</h2><span>{group.members.length} partecipanti · {group.expenses.length} {group.expenses.length === 1 ? "spesa" : "spese"} · {formatMoney(total)}</span></div>
                     <i aria-hidden="true">→</i>
                   </button>
                 );
@@ -627,6 +758,7 @@ export default function CashoutPage({ profiles, viewerId, initialGroupId = null 
           </section>
         ) : <div className="compact-empty cashout-first-empty"><span>00</span><div><h2>Nessun gruppo di spesa</h2><p>Crea “Grigliata” o “Vacanza Mykonos”, scegli chi partecipa e poi aggiungi le spese.</p></div></div>}
       </section>
+      {expenseModal}
       {showGroupCreate ? <CashoutDialogPortal><CashoutGroupModal profiles={profiles} viewerId={viewerId} onClose={() => setShowGroupCreate(false)} onCreated={async (groupId) => { setShowGroupCreate(false); await loadGroups(); setSelectedId(groupId); }} /></CashoutDialogPortal> : null}
     </>
   );

@@ -42,7 +42,7 @@ ai file `.env` pubblicati, alle GitHub Actions o al codice frontend.
 8. Esegui `supabase/migration-partite-casuali.sql` dopo `supabase/migration-pareggi.sql` per creare partite con squadre casuali e registrarne il risultato in seguito.
 9. Esegui `supabase/migration-partite-un-set.sql` per consentire partite secche da un set; il peso Elo iniziale viene poi aggiornato dalla migrazione del punto 12.
 10. Esegui `supabase/migration-trofei-immagine.sql` per associare ai tornei le immagini della sala trofei.
-11. Esegui `supabase/migration-paypal.sql` per consentire a ciascun profilo di aggiungere il proprio utente PayPal.Me e ricevere i saldi Cashout tramite un link con importo precompilato.
+11. Esegui `supabase/migration-paypal.sql` per consentire a ciascun profilo di aggiungere il proprio utente PayPal.Me e ricevere i saldi Cashout tramite un link con importo precompilato. Poi esegui `supabase/migration-cashout-elimina.sql`: permette a chi ha inserito una spesa o un saldo di eliminarlo (o a un admin).
 12. Dopo le altre migrazioni Padel (incluse stagioni, premi Elo e tornei individuali), esegui `supabase/migration-elo-compromesso-decimali.sql`: ricalcola lo storico, salva l'Elo a decimali e applica i pesi per uno, due o tre set.
 13. In **Authentication → URL Configuration**, imposta **Site URL** con l’indirizzo Vercel finale, per esempio:
    `https://nome-progetto.vercel.app/`

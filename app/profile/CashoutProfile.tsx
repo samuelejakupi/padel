@@ -11,27 +11,27 @@ const day = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short" })
 // Il riepilogo di Cashout per una persona: quanto deve o le devono, verso chi,
 // quanto ha anticipato, e cosa e successo di recente. Da qui si apre il
 // gruppo giusto per saldare.
-export function useCashoutSummary(profile: Profile, profiles: Profile[]) {
+export function useCashoutSummary(profileId: string | undefined, profiles: Profile[]) {
   const [groups, setGroups] = useState<CashoutGroup[] | null>(null);
   useEffect(() => {
     let live = true;
     void fetchCashoutGroups().then(result => { if (live) setGroups(result.schemaReady ? result.groups : []); });
     return () => { live = false; };
   }, []);
-  const mine = (groups ?? []).filter(group => group.members.some(member => member.profile_id === profile.id));
+  const mine = (groups ?? []).filter(group => group.members.some(member => member.profile_id === profileId));
   const debts = mine.flatMap(group => buildCashoutTransfers(groupBalances(group, profiles))
-    .filter(transfer => transfer.fromId === profile.id || transfer.toId === profile.id)
+    .filter(transfer => transfer.fromId === profileId || transfer.toId === profileId)
     .map(transfer => ({ group, ...transfer })));
-  const owed = debts.filter(debt => debt.toId === profile.id).reduce((sum, debt) => sum + debt.amount, 0);
-  const owe = debts.filter(debt => debt.fromId === profile.id).reduce((sum, debt) => sum + debt.amount, 0);
-  const advanced = mine.reduce((sum, group) => sum + group.expenses.reduce((total, expense) => total + paidBy(expense, profile.id), 0), 0);
+  const owed = debts.filter(debt => debt.toId === profileId).reduce((sum, debt) => sum + debt.amount, 0);
+  const owe = debts.filter(debt => debt.fromId === profileId).reduce((sum, debt) => sum + debt.amount, 0);
+  const advanced = mine.reduce((sum, group) => sum + group.expenses.reduce((total, expense) => total + (profileId ? paidBy(expense, profileId) : 0), 0), 0);
   return { loading: groups === null, groups: mine, debts, net: owed - owe, owed, owe, advanced };
 }
 
 export default function CashoutProfile({ profile, profiles, avatar, onOpenGroup, onEdit }: {
   profile: Profile; profiles: Profile[]; avatar: ReactNode; onOpenGroup: (groupId: string) => void; onEdit?: () => void;
 }) {
-  const summary = useCashoutSummary(profile, profiles);
+  const summary = useCashoutSummary(profile.id, profiles);
   const nameOf = (id: string) => profiles.find(item => item.id === id)?.display_name ?? "Qualcuno";
   const history = summary.groups.flatMap(group => [
     ...group.expenses.filter(expense => paidBy(expense, profile.id) || shareOf(expense, profile.id)).map(expense => ({

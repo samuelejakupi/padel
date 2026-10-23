@@ -5,6 +5,11 @@
 .page {
   display: grid;
   gap: var(--space-6);
+  /* Su desktop una colonna da telefono largo, al centro: righe lunghe
+     1400px con il numero all'estremo opposto non si leggono. */
+  margin-inline: auto;
+  max-width: 720px;
+  width: 100%;
 }
 
 /* Testata: lo stesso fondo scuro con griglia della home. */
