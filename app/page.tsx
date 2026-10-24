@@ -962,7 +962,9 @@ function AppShell({ session }: { session: Session | null }) {
 
   // Gaming mostra la classifica solo dentro il gioco selezionato.
   const navItems = useMemo(() => {
-    const home = { key: "home", glyph: "home" as GlyphName, label: "Home", active: view === "home", select: goHome };
+    // Dal profilo della home la voce Home non e accesa: e il tasto per
+    // tornare allo smistamento. Accesa, toccarla faceva solo scorrere in cima.
+    const home = { key: "home", glyph: "home" as GlyphName, label: "Home", active: view === "home" && !isOwnProfile, select: goHome };
     const profile = { key: "profile", glyph: "" as GlyphName, label: "Profilo", active: isOwnProfile, select: openProfile };
     if (!navSection) return [home, profile];
     const meta = sectionMeta(navSection);
