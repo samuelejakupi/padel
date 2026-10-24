@@ -44,6 +44,7 @@ ai file `.env` pubblicati, alle GitHub Actions o al codice frontend.
 10. Esegui `supabase/migration-trofei-immagine.sql` per associare ai tornei le immagini della sala trofei.
 11. Esegui `supabase/migration-paypal.sql` per consentire a ciascun profilo di aggiungere il proprio utente PayPal.Me e ricevere i saldi Cashout tramite un link con importo precompilato. Poi esegui `supabase/migration-cashout-elimina.sql`: permette a chi ha inserito una spesa o un saldo di eliminarlo (o a un admin).
 12. Dopo le altre migrazioni Padel (incluse stagioni, premi Elo e tornei individuali), esegui `supabase/migration-elo-compromesso-decimali.sql`: ricalcola lo storico, salva l'Elo a decimali e applica i pesi per uno, due o tre set.
+    Per la sincronizzazione con PlayPro esegui poi `supabase/migration-account-servizio.sql` (dopo che l'account `playpro` è stato creato dal pannello Admin): l'account di servizio sparisce dagli elenchi dei giocatori e dalla pagina di accesso, e può agganciare ai tornei le partite che registra.
 13. In **Authentication → URL Configuration**, imposta **Site URL** con l’indirizzo Vercel finale, per esempio:
    `https://nome-progetto.vercel.app/`
 14. In **Project Settings → API**, copia:
