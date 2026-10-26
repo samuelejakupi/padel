@@ -6,7 +6,7 @@ export const codEmblemDefinitions = [
   { id: "kd-last", title: "BERSAGLIO MOBILE", criterion: "K/D complessivo più basso", metric: "kd", direction: "min" },
   { id: "score-last", title: "PESO MORTO", criterion: "Media punti più bassa, tutte le modalità", metric: "score", direction: "min" },
   { id: "hardpoint", title: "RE DELLA ZONA", criterion: "Media punti più alta in Hardpoint", metric: "score", direction: "max", mode: "hardpoint" },
-  { id: "search-destroy", title: "SPECIALISTA", criterion: "Media punti più alta in Cerca e distruggi", metric: "score", direction: "max", mode: "search_destroy" },
+  { id: "search-destroy", title: "SPECIALISTA", criterion: "Media punti più alta in Search & Destroy", metric: "score", direction: "max", mode: "search_destroy" },
   { id: "overload", title: "CORRIERE ESPRESSO", criterion: "Media punti più alta in Overload", metric: "score", direction: "max", mode: "overload" },
 ] as const;
 

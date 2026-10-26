@@ -112,7 +112,7 @@ export default function CodProfile({ profile, avatar, onEdit }: { profile: Profi
           const result = outcome(gb, player.team);
           return <li key={gb.id}>
             <b data-result={result ?? undefined}>{result ?? "–"}</b>
-            <span><strong>{gb.map_name}</strong><small>{codModes[gb.mode].label} · {new Date(gb.played_at).toLocaleDateString("it-IT")}</small></span>
+            <span><strong>{gb.map_name}</strong><small>{codModes[gb.mode].short} · {new Date(gb.played_at).toLocaleDateString("it-IT")}</small></span>
             <span className={styles.line}>{gb.team1_score}–{gb.team2_score}<small>{player.kills} kill{player.deaths != null ? ` · ${player.deaths} morti` : ""}</small></span>
           </li>;
         })}

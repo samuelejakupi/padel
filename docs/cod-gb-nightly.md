@@ -68,7 +68,7 @@ esecuzione dopo l'elaborazione; non conservare copie nel repository.
 - Uccisioni non significa eliminazioni comprensive di assist: se lo scoreboard
   non distingue il dato, richiedi verifica. Non ricostruire uccisioni dai punti.
 - Hardpoint: `hill_seconds` (tempo zona MM:SS convertito in secondi),
-  `objective_kills`; Cerca e distruggi: `plants`, `defuses`, `first_bloods`;
+  `objective_kills`; Search & Destroy: `plants`, `defuses`, `first_bloods`;
   Overload: `overloads`, `carries`, `objective_kills`, solo se le colonne
   effettivamente mostrano quelle metriche. Non equiparare trasporti a consegne.
 - Comuni: `kills`, `deaths` (per ora null), `score` (punti individuali della colonna SCORE/PUNTI, mai il punteggio squadra), `damage`. Statistiche opzionali non visibili = null,

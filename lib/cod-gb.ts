@@ -1,7 +1,10 @@
+// Nomi e sigle in inglese, come nel gioco e nella CDL. Overload era la terza
+// modalita di Black Ops 7: in MW4 (CDL 2027) il suo posto lo prende Hijack,
+// da aggiungere quando si vedono le colonne del suo scoreboard.
 export const codModes = {
-  hardpoint: { label: "Hardpoint", stats: ["Tempo zona (s)", "Uccisioni obiettivo"] },
-  search_destroy: { label: "Cerca e distruggi", stats: ["Bombe piazzate", "Bombe disinnescate", "Prime uccisioni"] },
-  overload: { label: "Overload", stats: ["Sovraccarichi", "Trasporti", "Uccisioni obiettivo"] },
+  hardpoint: { label: "Hardpoint", short: "HP", stats: ["Tempo zona (s)", "Uccisioni obiettivo"] },
+  search_destroy: { label: "Search & Destroy", short: "SnD", stats: ["Bombe piazzate", "Bombe disinnescate", "Prime uccisioni"] },
+  overload: { label: "Overload", short: "OL", stats: ["Sovraccarichi", "Trasporti", "Uccisioni obiettivo"] },
 } as const;
 export type CodMode = keyof typeof codModes;
 export const codModeStatKeys = {
