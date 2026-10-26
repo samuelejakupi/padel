@@ -31,7 +31,10 @@ returning g.id,g.created_by,g.mode,g.map_name,g.played_at;
 
 Leggi `cod_identities` con `profiles(display_name)` tramite join SQL.
 Leggi per la GB acquisita `id, octet_length(image)` da `cod_gb_images`.
-Le foto appartengono alla stessa partita: non sommare righe duplicate fra foto.
+Le foto appartengono alla stessa GB. Una GB può essere **una serie al meglio
+di 1, 3 o 5 mappe**: foto con mappe e punteggi diversi sono normali, non un
+errore (vedi «Serie di più mappe»). Foto doppie della stessa mappa: non
+sommare due volte le stesse righe.
 
 ## Estrazione delle foto senza mostrare il base64 nella chat
 
@@ -68,7 +71,7 @@ esecuzione dopo l'elaborazione; non conservare copie nel repository.
   `objective_kills`; Cerca e distruggi: `plants`, `defuses`, `first_bloods`;
   Overload: `overloads`, `carries`, `objective_kills`, solo se le colonne
   effettivamente mostrano quelle metriche. Non equiparare trasporti a consegne.
-- Comuni: `kills`, `deaths`, `score` (punti individuali della colonna SCORE/PUNTI, mai il punteggio squadra), `damage`. Statistiche opzionali non visibili = null,
+- Comuni: `kills`, `deaths` (per ora null), `score` (punti individuali della colonna SCORE/PUNTI, mai il punteggio squadra), `damage`. Statistiche opzionali non visibili = null,
   mai zero inventato. Tutti i valori sono interi non negativi.
 - Non inferire vincitore dall'ordine delle righe: leggi punteggi e team.
 - Nick: corrispondenza esatta ignorando solo maiuscole e spazi esterni.
@@ -76,15 +79,39 @@ esecuzione dopo l'elaborazione; non conservare copie nel repository.
   il nick effettivamente visibile agli alias del profilo.
   Avversari esterni possono rimanere senza profilo. L'autore deve essere
   riconosciuto. Se un nick del gruppo è ambiguo, non pubblicare la GB.
-- Se modalità o mappa non corrispondono ai dati inseriti, foto insufficienti,
-  risultato non conclusivo, dubbio fra punteggio mappa e serie, oppure sospetto
+- Se la modalità non corrisponde ai dati inseriti, foto insufficienti,
+  risultato della serie non conclusivo, oppure sospetto
   duplicato di un'altra GB già elaborata, passa a `needs_review`.
+
+## Serie di più mappe
+
+- Ogni foto con un risultato di mappa diverso è una mappa della serie.
+  Riconoscila da nome mappa e punteggio finale di quella mappa.
+- `team1_score` e `team2_score` sono le **mappe vinte** da ciascuna squadra
+  (es. perse Munition 0-6 e Coal 1-6 → 0-2 per gli avversari), non i
+  punteggi interni delle mappe. Una mappa da sola vale 1-0.
+- Le squadre devono essere le stesse in tutte le mappe; se cambiano i
+  giocatori, passa a `needs_review`.
+- Statistiche di ogni giocatore: **somma** sulle mappe (uccisioni, punti,
+  danni e le statistiche di modalità). Se una statistica manca in una delle
+  mappe, mettila a null per quel giocatore.
+- `map_name` è quello scritto da chi ha caricato la GB, anche se generico
+  ("Boh"): non è un motivo per `needs_review`. Lo è solo se la modalità delle
+  foto è diversa da quella della GB.
+
+## Morti
+
+Questo Call of Duty nello scoreboard mostra le morti solo per alcuni
+giocatori. **Per ora `deaths` va sempre null**, anche quando per qualcuno sono
+visibili: un K/D parziale falserebbe classifiche ed emblemi. Le uccisioni
+restano obbligatorie. La mancanza delle morti non è un motivo per
+`needs_review`.
 
 ## Pubblicazione atomica e idempotente
 
 Prepara JSON con `mode`, `team1_score`, `team2_score`, `players`.
 Ogni giocatore: `nickname`, `team` (1 o 2 coerente con i punteggi),
-`kills`, `deaths` e tutte le chiavi opzionali sopra; non assegnare profile_id.
+`kills`, `deaths` (null, vedi «Morti») e tutte le chiavi opzionali sopra; non assegnare profile_id.
 La funzione lo risolve dai nick presenti nel database e valida i risultati.
 Salva con `select public.complete_cod_gb('UUID_GB', 'JSON'::jsonb)`.
 Usa SQL quoting sicuro: UUID validati e JSON con apostrofi raddoppiati, oppure

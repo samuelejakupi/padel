@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import type { Profile } from "@/lib/supabase";
-import { codModes, codModeStatKeys, codRanking, type CodMode } from "@/lib/cod-gb";
+import { codKd, codModes, codModeStatKeys, codRanking, type CodMode } from "@/lib/cod-gb";
 import useCodGbs from "./useCodGbs";
 import { codEmblems } from "@/lib/cod-emblems";
 
@@ -27,8 +27,8 @@ export default function CodRanking({ profiles }: { profiles: Profile[] }) {
         <caption>{codModes[mode].label}</caption>
         <thead><tr>{["Giocatore", "GB", "Vittorie", "Uccisioni", "Morti", "K/D", "Punti medi", "Danni", ...codModes[mode].stats].map(h => <th key={h} scope="col">{h}</th>)}</tr></thead>
         <tbody>{rows.map(row => <tr key={row.profileId}>
-          <th scope="row">{name(row.profileId)}<span className="cod-player-emblems">{badges.filter(b => b.holders.includes(row.profileId)).map(b => <Image key={b.id} src={`${basePath}/emblems/mw4/${b.id}.webp`} alt={b.title} title={`${b.title}: ${b.criterion}`} width={20} height={22} unoptimized />)}</span></th><td>{row.games}</td><td>{row.wins}</td><td>{row.kills}</td><td>{row.deaths}</td>
-          <td>{row.deaths ? (row.kills / row.deaths).toFixed(2) : row.kills ? "∞" : "—"}</td><td>{row.score != null ? (row.score / row.games).toLocaleString("it-IT", { maximumFractionDigits: 1 }) : "—"}</td><td>{row.damage ?? "—"}</td>
+          <th scope="row">{name(row.profileId)}<span className="cod-player-emblems">{badges.filter(b => b.holders.includes(row.profileId)).map(b => <Image key={b.id} src={`${basePath}/emblems/mw4/${b.id}.webp`} alt={b.title} title={`${b.title}: ${b.criterion}`} width={20} height={22} unoptimized />)}</span></th><td>{row.games}</td><td>{row.wins}</td><td>{row.kills}</td><td>{row.deathGames ? row.deaths : "—"}</td>
+          <td>{codKd(row.kdKills, row.deaths, row.deathGames)}</td><td>{row.score != null ? (row.score / row.games).toLocaleString("it-IT", { maximumFractionDigits: 1 }) : "—"}</td><td>{row.damage ?? "—"}</td>
           {codModeStatKeys[mode].map(key => <td key={key}>{row[key] ?? "—"}</td>)}
         </tr>)}</tbody>
       </table></div>

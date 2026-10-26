@@ -98,10 +98,10 @@ function GbForm({ onClose, onSaved, profiles, viewerId }: { onClose: () => void;
     <section className="modal cod-gb-modal" role="dialog" aria-modal="true" aria-labelledby="cod-gb-title">
       <div className="modal-head"><h2 id="cod-gb-title">Carica GB</h2><button className="icon-button" type="button" aria-label="Chiudi" disabled={busy} onClick={onClose}>×</button></div>
       <div className="cod-mode-tabs" role="group" aria-label="Metodo di inserimento"><button type="button" className="button button-ghost" aria-pressed={method === "photo"} disabled={busy} onClick={() => setMethod("photo")}>Da foto</button><button type="button" className="button button-ghost" aria-pressed={method === "manual"} disabled={busy} onClick={() => setMethod("manual")}>A mano</button></div>
-      <p>{method === "photo" ? "Carica da 1 a 4 foto della stessa partita: risultato finale e scoreboard completi di entrambe le squadre." : "Inserisci il risultato finale e le statistiche dei giocatori. La classifica si aggiorna subito. Associa prima il tuo nick COD."}</p>
+      <p>{method === "photo" ? "Carica lo scoreboard di ogni mappa giocata (da 1 a 4 foto). Una GB può essere al meglio di 1, 3 o 5 mappe: il risultato è in mappe vinte, per esempio 2-0. Le morti, se lo scoreboard non le mostra per tutti, restano vuote." : "Inserisci il risultato finale e le statistiche dei giocatori. La classifica si aggiorna subito. Associa prima il tuo nick COD."}</p>
       <form onSubmit={event => void submit(event)}>
         <label>Modalità<select value={mode} disabled={busy} onChange={e => setMode(e.target.value as CodMode)}>{Object.entries(codModes).map(([key, item]) => <option key={key} value={key}>{item.label}</option>)}</select></label>
-        <label>Mappa<input value={map} onChange={e => setMap(e.target.value)} maxLength={80} required disabled={busy} /></label>
+        <label>Mappa o mappe<input value={map} placeholder="Es. Munition, Coal" onChange={e => setMap(e.target.value)} maxLength={80} required disabled={busy} /></label>
         <label>Data e ora<input type="datetime-local" value={playedAt} onChange={e => setPlayedAt(e.target.value)} required disabled={busy} /></label>
         {method === "photo" ? <>
         <label>Foto scoreboard<input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy} onChange={e => void pick(Array.from(e.target.files ?? []))} /></label>
@@ -112,7 +112,7 @@ function GbForm({ onClose, onSaved, profiles, viewerId }: { onClose: () => void;
           {players.map((player, index) => <fieldset className="cod-manual-player" key={player.id}><legend>Giocatore {index + 1}</legend>
             <div className="cod-manual-grid"><label>Giocatore<select value={player.profile_id} disabled={busy} onChange={e => updatePlayer(player.id, { profile_id: e.target.value })}><option value="">Giocatore esterno</option>{profiles.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}</select></label><label>Squadra<select value={player.team} disabled={busy} onChange={e => updatePlayer(player.id, { team: Number(e.target.value) })}><option value={1}>Squadra 1</option><option value={2}>Squadra 2</option></select></label></div>
             {!player.profile_id ? <label>Nick COD<input minLength={2} maxLength={80} required disabled={busy} value={player.nickname} onChange={e => updatePlayer(player.id, { nickname: e.target.value })} /></label> : null}
-            <div className="cod-manual-grid">{[...[{ key: "kills", label: "Uccisioni" }, { key: "deaths", label: "Morti" }, { key: "score", label: "Punti individuali" }, { key: "damage", label: "Danni" }], ...codModeStatKeys[mode].map((key, i) => ({ key, label: codModes[mode].stats[i] }))].map(stat => <label key={stat.key}>{stat.label}<input type="number" min={0} max={stat.key === "kills" || stat.key === "deaths" ? 10000 : 1000000} step={1} required={stat.key === "kills" || stat.key === "deaths"} placeholder="Non disponibile" disabled={busy} value={player.stats[stat.key] ?? ""} onChange={e => updatePlayer(player.id, { stats: { ...player.stats, [stat.key]: e.target.value } })} /></label>)}</div>
+            <div className="cod-manual-grid">{[...[{ key: "kills", label: "Uccisioni" }, { key: "deaths", label: "Morti" }, { key: "score", label: "Punti individuali" }, { key: "damage", label: "Danni" }], ...codModeStatKeys[mode].map((key, i) => ({ key, label: codModes[mode].stats[i] }))].map(stat => <label key={stat.key}>{stat.label}<input type="number" min={0} max={stat.key === "kills" || stat.key === "deaths" ? 10000 : 1000000} step={1} required={stat.key === "kills"} placeholder="Non disponibile" disabled={busy} value={player.stats[stat.key] ?? ""} onChange={e => updatePlayer(player.id, { stats: { ...player.stats, [stat.key]: e.target.value } })} /></label>)}</div>
             {players.length > 2 ? <button type="button" className="button button-ghost" disabled={busy} onClick={() => setPlayers(current => current.filter(p => p.id !== player.id))}>Rimuovi giocatore</button> : null}
           </fieldset>)}
           <button type="button" className="button button-ghost" disabled={busy || players.length >= 16} onClick={() => setPlayers(current => [...current, { id: crypto.randomUUID(), profile_id: "", nickname: "", team: 1, stats: {} }])}>+ Giocatore</button>
@@ -168,12 +168,12 @@ export default function CodGaming({ viewerId, profiles, startWithForm = false }:
           </p>
           <div className="cod-teams">{[1, 2].map(team => <ul key={team} aria-label={`Squadra ${team}`}>
             {gb.players.filter(p => p.team === team && p.profile_id).map(p => <li key={p.profile_id} data-me={p.profile_id === viewerId || undefined}>
-              <span>{name(p.profile_id!)}</span><small>{p.kills} kill · {p.deaths} morti</small>
+              <span>{name(p.profile_id!)}</span><small>{p.kills} kill{p.deaths != null ? ` · ${p.deaths} morti` : ""}</small>
             </li>)}
           </ul>)}</div>
         </> : null}
         {gb.review_note ? <p className="cod-review-note">{gb.review_note}</p> : null}
-        {gb.status === "needs_review" && gb.created_by === viewerId ? <button className="button button-ghost" disabled={retrying} onClick={() => void retry(gb.id)}>Ho aggiornato il nick: riprova</button> : null}
+        {gb.status === "needs_review" && gb.created_by === viewerId ? <button className="button button-ghost" disabled={retrying} onClick={() => void retry(gb.id)}>Riprova la lettura</button> : null}
       </article>;
     })}{!shown.length && !error ? <div className="empty-board"><h2>Nessuna GB in {codModes[mode].label}</h2><p>Carica lo scoreboard della prossima partita {codModes[mode].label}: comparirà qui.</p></div> : null}</div>}
     {showForm ? <GbForm onClose={() => setShowForm(false)} onSaved={load} profiles={profiles} viewerId={viewerId} /> : null}

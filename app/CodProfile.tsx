@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
 import type { Profile } from "@/lib/supabase";
-import { codModes, codModeStatKeys, codRanking, type CodGb, type CodMode } from "@/lib/cod-gb";
+import { codKillDeathTotals, codKd, codModes, codModeStatKeys, codRanking, type CodGb, type CodMode } from "@/lib/cod-gb";
 import { CodNickname } from "./CodGaming";
 import { ProfileHeader, StatRow } from "./profile/parts";
 import useCodGbs from "./useCodGbs";
@@ -13,7 +13,6 @@ import CabinetMarquee from "./CabinetMarquee";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
-const kd = (kills: number, deaths: number) => deaths ? (kills / deaths).toFixed(2) : kills ? "∞" : "—";
 
 function outcome(gb: CodGb, team: number) {
   if (gb.team1_score === null || gb.team2_score === null || gb.team1_score === gb.team2_score) return null;
@@ -27,8 +26,9 @@ export default function CodProfile({ profile, avatar, onEdit }: { profile: Profi
   const played = gbs
     .filter(gb => gb.status === "processed")
     .flatMap(gb => gb.players.filter(p => p.profile_id === profile.id).map(player => ({ gb, player })));
-  const kills = played.reduce((sum, { player }) => sum + player.kills, 0);
-  const deaths = played.reduce((sum, { player }) => sum + player.deaths, 0);
+  // Le morti non sempre ci sono (lo scoreboard non le mostra per tutti): senza,
+  // al posto del K/D si mostrano le uccisioni.
+  const { kills, deaths, kdKills, deathGames } = codKillDeathTotals(played.map(({ player }) => player));
   const wins = played.filter(({ gb, player }) => outcome(gb, player.team) === "V").length;
   const modes = (Object.keys(codModes) as CodMode[]).map(mode => {
     const rows = codRanking(gbs, mode);
@@ -51,13 +51,18 @@ export default function CodProfile({ profile, avatar, onEdit }: { profile: Profi
           <StatRow dark stats={[
             { label: "GB", value: played.length },
             { label: "Vittorie", value: played.length ? Math.round(wins / played.length * 100) : "—", unit: played.length ? "%" : undefined },
-            { label: "K/D", value: kd(kills, deaths) },
+            deathGames ? { label: "K/D", value: codKd(kdKills, deaths, deathGames) } : { label: "Uccisioni", value: kills },
           ]} />
         </ProfileHeader>
         <StatRow stats={[
           { label: "Vinte", value: wins },
-          { label: "Uccisioni", value: kills },
-          { label: "Morti", value: deaths },
+          ...(deathGames ? [
+            { label: "Uccisioni", value: kills },
+            { label: "Morti", value: deaths },
+          ] : [
+            { label: "Perse", value: played.length - wins },
+            { label: "Kill a GB", value: played.length ? Math.round(kills / played.length) : "—" },
+          ]),
         ]} />
       </div>
 
@@ -90,7 +95,7 @@ export default function CodProfile({ profile, avatar, onEdit }: { profile: Profi
             {singleMode ? null : <>
               <div><dt>GB</dt><dd>{row.games}</dd></div>
               <div><dt>Vittorie</dt><dd>{row.wins}</dd></div>
-              <div><dt>K/D</dt><dd>{kd(row.kills, row.deaths)}</dd></div>
+              <div><dt>K/D</dt><dd>{codKd(row.kdKills, row.deaths, row.deathGames)}</dd></div>
             </>}
             <div><dt>Danni</dt><dd>{row.damage ?? "—"}</dd></div>
             <div><dt>Punti medi</dt><dd>{row.score != null ? (row.score / row.games).toLocaleString("it-IT", { maximumFractionDigits: 1 }) : "—"}</dd></div>
@@ -108,7 +113,7 @@ export default function CodProfile({ profile, avatar, onEdit }: { profile: Profi
           return <li key={gb.id}>
             <b data-result={result ?? undefined}>{result ?? "–"}</b>
             <span><strong>{gb.map_name}</strong><small>{codModes[gb.mode].label} · {new Date(gb.played_at).toLocaleDateString("it-IT")}</small></span>
-            <span className={styles.line}>{gb.team1_score}–{gb.team2_score}<small>{player.kills} kill · {player.deaths} morti</small></span>
+            <span className={styles.line}>{gb.team1_score}–{gb.team2_score}<small>{player.kills} kill{player.deaths != null ? ` · ${player.deaths} morti` : ""}</small></span>
           </li>;
         })}
       </ol> : <div className="empty-board"><h2>Nessuna GB giocata</h2><p>Le tue partite compariranno qui dopo la registrazione dei risultati.</p></div>}

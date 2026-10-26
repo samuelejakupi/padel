@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import type { Profile } from "@/lib/supabase";
 import useCodGbs from "../useCodGbs";
+import { codKd, codKillDeathTotals } from "@/lib/cod-gb";
 import { formatMoney } from "../Cashout";
 import { useCashoutSummary } from "./CashoutProfile";
 import { oneDecimal, pizzaSummary } from "./PizzaProfile";
@@ -34,8 +35,7 @@ export default function HomeProfile({ profile, profiles, avatar, icons, padel, p
   const mw4Games = gbs.filter(gb => gb.status === "processed").flatMap(gb => gb.players.filter(p => p.profile_id === profile.id).map(player => ({ gb, player })));
   const mw4Wins = mw4Games.filter(({ gb, player }) => gb.team1_score !== null && gb.team2_score !== null
     && gb.team1_score !== gb.team2_score && (player.team === 1) === (gb.team1_score > gb.team2_score)).length;
-  const kills = mw4Games.reduce((sum, { player }) => sum + player.kills, 0);
-  const deaths = mw4Games.reduce((sum, { player }) => sum + player.deaths, 0);
+  const { kills, deaths, kdKills, deathGames } = codKillDeathTotals(mw4Games.map(({ player }) => player));
 
   const padelStats: Stat[] | null = padel.played ? [
     { label: "Posizione", value: padel.rank ? `${padel.rank}°` : "NC" },
@@ -46,7 +46,7 @@ export default function HomeProfile({ profile, profiles, avatar, icons, padel, p
     : mw4Games.length ? [
       { label: "GB", value: mw4Games.length },
       { label: "Vittorie", value: mw4Wins },
-      { label: "K/D", value: deaths ? (kills / deaths).toFixed(2) : kills ? "∞" : "—" },
+      deathGames ? { label: "K/D", value: codKd(kdKills, deaths, deathGames) } : { label: "Uccisioni", value: kills },
     ] : null;
   const pizzaStats: Stat[] | null = pizza.votes ? [
     { label: "Serate", value: pizza.nights },
