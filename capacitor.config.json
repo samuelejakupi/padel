@@ -1,0 +1,22 @@
+{
+  "appId": "it.theboyz.hq",
+  "appName": "TheBoyz",
+  "webDir": "out",
+  "backgroundColor": "#f3f5f1",
+  "loggingBehavior": "debug",
+  "ios": {
+    "contentInset": "never",
+    "preferredContentMode": "mobile"
+  },
+  "plugins": {
+    "StatusBar": {
+      "style": "DARK",
+      "overlaysWebView": true
+    },
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "backgroundColor": "#0b1b2c",
+      "showSpinner": false
+    }
+  }
+}

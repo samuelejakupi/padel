@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const buildId = process.env.NEXT_PUBLIC_BUILD_ID ?? "";
@@ -11,6 +12,8 @@ const buildId = process.env.NEXT_PUBLIC_BUILD_ID ?? "";
 // pubblicata e, se differiscono, ricarichiamo una volta sola.
 export default function BuildWatcher() {
   useEffect(() => {
+    // Su iOS i file sono inclusi nell'app: un deploy web non li aggiorna.
+    if (Capacitor.isNativePlatform()) return;
     if (!buildId || buildId === "dev") return;
 
     let stopped = false;

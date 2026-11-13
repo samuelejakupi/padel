@@ -10,18 +10,26 @@
     "download:ghosts-emblems": "node scripts/download-ghosts-emblems.mjs",
     "prebuild": "node scripts/write-version.mjs",
     "build": "next build",
+    "mobile:build": "node scripts/build-mobile.mjs",
+    "ios:sync": "npm run mobile:build && cap sync ios",
+    "ios:open": "cap open ios",
     "start": "next dev",
     "test": "npm run build && node --experimental-strip-types --test tests/rendered-html.test.mjs tests/tournament-draw.test.mjs tests/individual-standings.test.mjs tests/tournament-fixture-order.test.mjs tests/emblem-assets.test.mjs tests/admin-users.test.mjs tests/change-password.test.mjs tests/wansport-admin.test.mjs tests/friendly-matches.test.mjs tests/player-insights.test.mjs tests/padel-presentation.test.mjs tests/cod-gb.test.mjs tests/cod-ranking-page.test.mjs tests/cod-profile.test.mjs tests/cod-emblems.test.mjs",
     "test:insights": "node --experimental-strip-types --test tests/player-insights.test.mjs",
     "lint": "eslint . --ignore-pattern out --ignore-pattern .next"
   },
   "dependencies": {
+    "@capacitor/core": "8.6.2",
+    "@capacitor/ios": "8.6.2",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.4",
     "@supabase/supabase-js": "2.57.4",
     "next": "16.2.12",
     "react": "19.2.6",
     "react-dom": "19.2.6"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.6.2",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",

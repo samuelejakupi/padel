@@ -9,11 +9,31 @@ perdono passando da una sessione all'altra.
 "in sospeso" a "deciso". Quando scarti una strada, scrivi perché: serve a non
 ripercorrerla fra un mese.
 
-Ultimo aggiornamento: 14 settembre 2026
+Ultimo aggiornamento: 13 novembre 2026
 
 ---
 
 ## In sospeso
+
+### App iPhone: prima prova sul dispositivo e sezione Sport
+
+Preparata la base Capacitor 8 con progetto iOS e Swift Package Manager,
+icona e splash TheBoyz, orientamento verticale su iPhone e aspetto chiaro.
+`npm run ios:sync` genera l'export senza basePath e lo copia nel progetto;
+`npm run ios:open` apre Xcode sul Mac. I deploy web non aggiornano il codice
+installato e il controllo delle versioni web è disattivato in Capacitor.
+
+La preparazione avviene da Windows; compilazione Swift, firma, accesso e
+comportamento sul telefono vanno ancora verificati sul Mac e sull'iPhone
+16e dell'utente. Questa copia non ha `.env.local`: configurare URL e chiave
+pubblica del backend sul Mac prima della build. Guida in `MOBILE.md`.
+Il passaggio completo alla nuova chat sul Mac, con richiesta dell'utente,
+stato verificato e piano GPS/Fitbit, è in `CONTINUA-DA-MAC.md`.
+
+Obiettivo successivo: sezione Sport con percorso GPS del telefono e dati
+Fitbit Air abbinati per orario. Registrazione in background, salvataggio
+locale degli allenamenti e integrazione Fitbit non sono ancora implementati.
+Prima di scegliere il plugin GPS e i permessi, verificare la base sul telefono.
 
 ### Gaming e Cashout esistono, ma sono vuote
 Il 24 agosto sono entrate nella barra e nella home, con pagina e classifica

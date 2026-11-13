@@ -85,6 +85,11 @@ Il vecchio workflow GitHub Pages resta eseguibile manualmente come fallback, ma 
 
 ## Comandi utili
 
+Per la versione iPhone con Capacitor, l'installazione da Mac e i limiti della
+prima versione, vedi [MOBILE.md](MOBILE.md).
+Per riprendere il lavoro sul Mac con il contesto e il piano GPS/Fitbit,
+parti da [CONTINUA-DA-MAC.md](CONTINUA-DA-MAC.md).
+
 ```bash
 npm run dev
 npm run build

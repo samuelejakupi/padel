@@ -11,6 +11,7 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "ios/**",
     "next-env.d.ts",
     // Le Edge Function girano su Deno, non su Node: importano da URL e usano
     // il global `Deno`. Compilarle o analizzarle qui darebbe solo errori su
