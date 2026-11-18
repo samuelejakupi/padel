@@ -379,11 +379,27 @@ export function matchChangeSummary(
 export function PlannedMatchCard({
   match,
   onResult,
+  onDelete,
 }: {
   match: PlannedMatch;
   onResult: (match: PlannedMatch) => void;
+  onDelete: (match: PlannedMatch) => Promise<string | undefined>;
 }) {
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const team = (number: number) => match.players.filter((player) => player.team === number);
+
+  async function remove() {
+    if (deleting || !window.confirm("Eliminare definitivamente questa partita programmata?")) return;
+    setDeleteError("");
+    setDeleting(true);
+    try {
+      const error = await onDelete(match);
+      if (error) setDeleteError(error);
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <article className="planned-match-card">
@@ -403,9 +419,15 @@ export function PlannedMatchCard({
           ))}
         </div>
       </div>
-      <button type="button" className="button button-primary planned-match-result" onClick={() => onResult(match)}>
-        Inserisci risultato
-      </button>
+      <div className="planned-match-actions">
+        <button type="button" className="button button-primary planned-match-result" disabled={deleting} onClick={() => onResult(match)}>
+          Inserisci risultato
+        </button>
+        <button type="button" className="button button-danger planned-match-result" disabled={deleting} onClick={() => void remove()}>
+          {deleting ? "Eliminazione…" : "Elimina partita"}
+        </button>
+      </div>
+      {deleteError ? <p className="planned-match-error" role="alert">{deleteError}</p> : null}
     </article>
   );
 }

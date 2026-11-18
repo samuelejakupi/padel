@@ -40,6 +40,7 @@ ai file `.env` pubblicati, alle GitHub Actions o al codice frontend.
 6. Esegui `supabase/migration-pizza-voti-0-10.sql` per uniformare i criteri a 0–10, calcolare il risultato nel backend e consentire al creatore di eliminare una votazione aperta.
 7. Esegui anche `supabase/migration-tornei.sql` per abilitare tornei, calendario e moltiplicatore Elo.
 8. Esegui `supabase/migration-partite-casuali.sql` dopo `supabase/migration-pareggi.sql` per creare partite con squadre casuali e registrarne il risultato in seguito.
+   Esegui poi `supabase/migration-elimina-partite-programmate.sql` per consentire a tutti i membri di eliminare le partite ancora da giocare.
 9. Esegui `supabase/migration-partite-un-set.sql` per consentire partite secche da un set; il peso Elo iniziale viene poi aggiornato dalla migrazione del punto 12.
 10. Esegui `supabase/migration-trofei-immagine.sql` per associare ai tornei le immagini della sala trofei.
 11. Esegui `supabase/migration-paypal.sql` per consentire a ciascun profilo di aggiungere il proprio utente PayPal.Me e ricevere i saldi Cashout tramite un link con importo precompilato. Poi esegui `supabase/migration-cashout-elimina.sql`: permette a chi ha inserito una spesa o un saldo di eliminarlo (o a un admin).

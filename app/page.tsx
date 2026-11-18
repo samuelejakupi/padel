@@ -1256,6 +1256,16 @@ function AppShell({ session }: { session: Session | null }) {
     setNotice("Partita eliminata. Classifica e statistiche sono state ricalcolate.");
   }
 
+  async function deletePlannedMatch(match: PlannedMatch) {
+    if (!supabase) return "Connessione al database non disponibile.";
+    const { data, error } = await supabase.from("planned_matches").delete().eq("id", match.id).select("id").maybeSingle();
+    if (error) return `Impossibile eliminare la partita. ${error.message}`;
+
+    setPlannedMatches((current) => current.filter((planned) => planned.id !== match.id));
+    if (!data) await loadData();
+    setNotice(data ? "Partita programmata eliminata." : "La partita non è più tra quelle da giocare.");
+  }
+
   async function uploadAvatar(file: File | undefined) {
     if (!file || !supabase || !session) return;
     const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
@@ -1880,6 +1890,7 @@ function AppShell({ session }: { session: Session | null }) {
                           key={planned.id}
                           match={planned}
                           onResult={setCompletingPlannedMatch}
+                          onDelete={deletePlannedMatch}
                         />
                       ))}
                     </div>
@@ -2813,6 +2824,7 @@ function AppShell({ session }: { session: Session | null }) {
                       key={planned.id}
                       match={planned}
                       onResult={(selected) => { setSheet(null); setCompletingPlannedMatch(selected); }}
+                      onDelete={deletePlannedMatch}
                     />
                   ))}
                 </div>
